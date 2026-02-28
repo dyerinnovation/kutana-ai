@@ -39,7 +39,7 @@
 - [x] Implement Deepgram STT provider (alternative provider)
 - [x] Implement Anthropic LLM provider (Claude tool_use for structured extraction)
 - [x] Implement provider registry with factory pattern
-- [ ] Write integration tests for provider registry
+- [x] Write integration tests for provider registry
 
 ## Phase 1C: Twilio Audio Pipeline (Step 4)
 
