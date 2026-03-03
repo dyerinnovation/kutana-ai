@@ -50,7 +50,7 @@ def do_run_migrations(connection: object) -> None:
         connection: A SQLAlchemy connection object.
     """
     context.configure(
-        connection=connection,  # type: ignore[arg-type]
+        connection=connection,  # type: ignore[arg-type]  # alembic config typing incomplete
         target_metadata=target_metadata,
     )
 

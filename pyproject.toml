@@ -1,7 +1,7 @@
 [project]
 name = "convene-ai"
 version = "0.1.0"
-description = "Voice-first AI agent that dials into meetings, extracts tasks, and reports progress"
+description = "Agent-first meeting platform — AI agents connect via native API, humans join via WebRTC"
 requires-python = ">=3.12"
 
 [tool.uv.workspace]
@@ -11,18 +11,26 @@ members = [
     "packages/convene-memory",
     "services/api-server",
     "services/audio-service",
+    "services/agent-gateway",
     "services/task-engine",
     "services/worker",
 ]
 
 [tool.uv]
 dev-dependencies = [
+    "groq>=0.11",
     "mypy>=1.19.1",
+    "pydantic>=2.12.5",
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
     "pytest-cov>=5.0",
     "ruff>=0.15.4",
+    "sqlalchemy>=2.0.47",
 ]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "--import-mode=importlib"
 
 [tool.hatch.build.targets.wheel]
 packages = []
