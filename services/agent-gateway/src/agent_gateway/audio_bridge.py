@@ -62,6 +62,9 @@ class AudioBridge:
         self._transcription_interval_s = transcription_interval_s
         self._pipelines: dict[UUID, AudioPipeline] = {}
         self._segment_tasks: dict[UUID, asyncio.Task[None]] = {}
+        logger.info("AudioBridge initialized (stt_provider=%s, whisper_api_url=%s)", stt_provider, whisper_api_url)
+        if stt_provider == "whisper-remote" and not whisper_api_url:
+            logger.warning("whisper-remote selected but whisper_api_url is empty!")
 
     async def ensure_pipeline(self, meeting_id: UUID) -> None:
         """Create an STT pipeline for a meeting if one doesn't exist.
@@ -141,35 +144,63 @@ class AudioBridge:
         This task loops every ``_transcription_interval_s`` seconds,
         triggering transcription of whatever audio has accumulated.
         On cancellation, one final pass captures any remaining audio.
+        Retries up to 5 times with exponential backoff on unexpected errors.
 
         Args:
             meeting_id: The meeting this pipeline belongs to.
             pipeline: The AudioPipeline to consume segments from.
         """
-        try:
-            while True:
-                async for segment in pipeline.get_segments():
-                    logger.debug(
-                        "Segment from meeting %s: %s",
+        max_retries = 5
+        retry = 0
+        delay = 2.0
+        while retry < max_retries:
+            try:
+                while True:
+                    logger.debug("Triggering transcription pass for meeting %s", meeting_id)
+                    segment_count = 0
+                    async for segment in pipeline.get_segments():
+                        logger.info(
+                            "Segment from meeting %s: %s",
+                            meeting_id,
+                            segment.text[:80] if segment.text else "",
+                        )
+                        segment_count += 1
+                    if segment_count:
+                        logger.info(
+                            "Transcription pass yielded %d segments for meeting %s",
+                            segment_count,
+                            meeting_id,
+                        )
+                    await asyncio.sleep(self._transcription_interval_s)
+            except asyncio.CancelledError:
+                # Final pass to capture any remaining buffered audio
+                with contextlib.suppress(Exception):
+                    async for segment in pipeline.get_segments():
+                        logger.info(
+                            "Final segment from meeting %s: %s",
+                            meeting_id,
+                            segment.text[:80] if segment.text else "",
+                        )
+                logger.info(
+                    "Segment consumer cancelled for meeting %s",
+                    meeting_id,
+                )
+                return
+            except Exception:
+                retry += 1
+                logger.exception(
+                    "Error consuming segments for meeting %s (retry %d/%d, next delay %.1fs)",
+                    meeting_id,
+                    retry,
+                    max_retries,
+                    delay,
+                )
+                if retry >= max_retries:
+                    logger.error(
+                        "Segment consumer exhausted %d retries for meeting %s",
+                        max_retries,
                         meeting_id,
-                        segment.text[:80] if segment.text else "",
                     )
-                await asyncio.sleep(self._transcription_interval_s)
-        except asyncio.CancelledError:
-            # Final pass to capture any remaining buffered audio
-            with contextlib.suppress(Exception):
-                async for segment in pipeline.get_segments():
-                    logger.debug(
-                        "Final segment from meeting %s: %s",
-                        meeting_id,
-                        segment.text[:80] if segment.text else "",
-                    )
-            logger.debug(
-                "Segment consumer cancelled for meeting %s",
-                meeting_id,
-            )
-        except Exception:
-            logger.exception(
-                "Error consuming segments for meeting %s",
-                meeting_id,
-            )
+                    return
+                await asyncio.sleep(delay)
+                delay *= 2

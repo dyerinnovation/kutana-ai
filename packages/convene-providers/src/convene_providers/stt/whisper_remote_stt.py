@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import math
 import tempfile
+import time
 import wave
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-import httpx
+import aiohttp
 
 from convene_core.interfaces.stt import STTProvider
 from convene_core.models.transcript import TranscriptSegment
@@ -26,12 +28,16 @@ class WhisperRemoteSTT(STTProvider):
     Buffers raw PCM16 16kHz mono audio and transcribes it by POSTing
     a WAV file to a remote ``/audio/transcriptions`` endpoint (e.g.
     vLLM serving ``openai/whisper-large-v3`` on DGX Spark).
+
+    Uses ``aiohttp`` instead of ``httpx`` because httpx hangs on
+    IPv6 link-local addresses (no Happy Eyeballs support).
     """
 
     def __init__(
         self,
         api_url: str,
         meeting_id: UUID | None = None,
+        request_timeout_s: float = 60.0,
     ) -> None:
         """Initialize the remote Whisper STT provider.
 
@@ -39,19 +45,23 @@ class WhisperRemoteSTT(STTProvider):
             api_url: Base URL of the OpenAI-compatible API
                 (e.g. ``http://spark-b0f2.local/convene-stt/v1``).
             meeting_id: Optional meeting ID to tag transcript segments.
+            request_timeout_s: Per-request timeout in seconds for the
+                Whisper HTTP POST call.
         """
         self._api_url = api_url.rstrip("/")
         self._meeting_id = meeting_id or uuid4()
+        self._request_timeout_s = request_timeout_s
         self._buffer = b""
         self._running = False
-        self._client: httpx.AsyncClient | None = None
+        self._session: aiohttp.ClientSession | None = None
 
     async def start_stream(self) -> None:
         """Initialize a new streaming transcription session."""
         self._buffer = b""
         self._running = True
-        self._client = httpx.AsyncClient(timeout=120.0)
-        logger.info("Remote Whisper streaming session started.")
+        timeout = aiohttp.ClientTimeout(total=self._request_timeout_s)
+        self._session = aiohttp.ClientSession(timeout=timeout)
+        logger.info("Remote Whisper streaming started (api_url=%s)", self._api_url)
 
     async def send_audio(self, chunk: bytes) -> None:
         """Append raw PCM16 audio bytes to the internal buffer.
@@ -75,11 +85,12 @@ class WhisperRemoteSTT(STTProvider):
             TranscriptSegment instances (speaker_id is None since
             Whisper does not perform diarization).
         """
-        if self._client is None:
-            msg = "Client not initialized. Call start_stream() first."
+        if self._session is None:
+            msg = "Session not initialized. Call start_stream() first."
             raise RuntimeError(msg)
 
         if not self._buffer:
+            logger.debug("get_transcript called with empty buffer, skipping")
             return
 
         tmp = tempfile.NamedTemporaryFile(  # noqa: SIM115
@@ -96,16 +107,49 @@ class WhisperRemoteSTT(STTProvider):
             with open(tmp.name, "rb") as f:
                 wav_bytes = f.read()
 
-            response = await self._client.post(
-                f"{self._api_url}/audio/transcriptions",
-                files={"file": ("audio.wav", wav_bytes, "audio/wav")},
-                data={
-                    "model": "openai/whisper-large-v3",
-                    "response_format": "verbose_json",
-                },
+            audio_duration_s = len(self._buffer) / 32000
+            post_url = f"{self._api_url}/audio/transcriptions"
+            logger.info(
+                "Whisper POST: url=%s buffer_size=%d audio_duration=%.2fs",
+                post_url, len(self._buffer), audio_duration_s,
             )
-            response.raise_for_status()
-            result = response.json()
+            t0 = time.monotonic()
+
+            try:
+                form = aiohttp.FormData()
+                form.add_field(
+                    "file",
+                    wav_bytes,
+                    filename="audio.wav",
+                    content_type="audio/wav",
+                )
+                form.add_field("model", "openai/whisper-large-v3")
+                form.add_field("response_format", "verbose_json")
+                form.add_field("language", "en")
+
+                async with self._session.post(post_url, data=form) as response:
+                    response.raise_for_status()
+                    elapsed = time.monotonic() - t0
+                    result = await response.json()
+                    logger.info(
+                        "Whisper POST response: status=%d elapsed=%.2fs",
+                        response.status, elapsed,
+                    )
+            except asyncio.TimeoutError:
+                logger.error(
+                    "Whisper POST timed out after %.1fs (url=%s)",
+                    self._request_timeout_s, post_url,
+                )
+                self._buffer = b""
+                return
+            except aiohttp.ClientError:
+                elapsed = time.monotonic() - t0
+                logger.exception(
+                    "Whisper POST failed after %.2fs (url=%s)",
+                    elapsed, post_url,
+                )
+                self._buffer = b""
+                return
 
             # Clear the buffer so the next call only transcribes new audio
             self._buffer = b""
@@ -115,6 +159,7 @@ class WhisperRemoteSTT(STTProvider):
                 # Fallback: API returned plain text without segments
                 text = result.get("text", "").strip()
                 if text:
+                    logger.info("Whisper returned plain text (no segments), len=%d", len(text))
                     yield TranscriptSegment(
                         meeting_id=self._meeting_id,
                         speaker_id=None,
@@ -123,8 +168,11 @@ class WhisperRemoteSTT(STTProvider):
                         end_time=0.01,
                         confidence=1.0,
                     )
+                else:
+                    logger.info("Whisper returned no segments and no text")
                 return
 
+            seg_count = 0
             for seg in segments:
                 end_time = seg.get("end", 0.0)
                 start_time = seg.get("start", 0.0)
@@ -146,16 +194,18 @@ class WhisperRemoteSTT(STTProvider):
                     end_time=end_time,
                     confidence=confidence,
                 )
+                seg_count += 1
+            logger.info("Whisper yielded %d segments", seg_count)
         finally:
             import os
 
             os.unlink(tmp.name)
 
     async def close(self) -> None:
-        """Clear the audio buffer and close the HTTP client."""
+        """Clear the audio buffer and close the HTTP session."""
         self._buffer = b""
         self._running = False
-        if self._client is not None:
-            await self._client.aclose()
-            self._client = None
+        if self._session is not None:
+            await self._session.close()
+            self._session = None
         logger.info("Remote Whisper streaming session closed.")

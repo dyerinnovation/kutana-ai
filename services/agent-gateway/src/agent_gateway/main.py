@@ -45,6 +45,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     global _settings, _connection_manager, _event_relay, _audio_bridge
 
     _settings = AgentGatewaySettings()
+    logger.info(
+        "Gateway settings: stt_provider=%s, whisper_api_url=%s, redis_url=%s",
+        _settings.stt_provider, _settings.whisper_api_url, _settings.redis_url,
+    )
     _connection_manager = ConnectionManager(max_connections=_settings.max_connections)
     _event_relay = EventRelay(
         redis_url=_settings.redis_url,

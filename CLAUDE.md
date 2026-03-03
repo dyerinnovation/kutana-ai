@@ -76,7 +76,7 @@ uv run alembic upgrade head
 
 # Start services (each in a separate terminal)
 uv run uvicorn services.api_server.main:app --reload --port 8000
-uv run uvicorn agent_gateway.main:app --reload --port 8003
+PYTHONPATH=services/agent-gateway/src:services/audio-service/src:packages/convene-core/src:packages/convene-providers/src:packages/convene-memory/src .venv/bin/uvicorn agent_gateway.main:app --reload --port 8003
 uv run python -m services.audio_service.main
 uv run python -m services.task_engine.main
 uv run python -m services.worker.main
@@ -152,6 +152,11 @@ Phase 1D — Task Extraction & Memory (completing core AI pipeline). Next: Phase
 
 ## Tooling
 - See `claude_docs/UV_Best_Practices.md` for uv workspace patterns, testing commands, and known pitfalls (UF_HIDDEN, UV_LINK_MODE, etc.)
+- See `claude_docs/PYTHONPATH_Workaround.md` for macOS UF_HIDDEN / .pth file workaround
+
+## Test Data
+- `data/input/` — sample audio files for STT testing (`librispeech_sample.flac`, `test-speech.wav`)
+- `data/output/` — test result output (e.g. `e2e_results.json`)
 
 ## Infrastructure
 - See `claude_docs/DGX_Spark_Reference.md` for DGX Spark connection details, K8s patterns, and deployment gotchas

@@ -32,4 +32,9 @@ class AgentGatewaySettings(BaseSettings):
     whisper_model_size: str = "small"
     whisper_api_url: str = ""
 
-    model_config = {"env_prefix": "AGENT_GATEWAY_", "case_sensitive": False}
+    model_config = {
+        "env_prefix": "AGENT_GATEWAY_",
+        "case_sensitive": False,
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+    }
