@@ -12,6 +12,7 @@ members = [
     "services/api-server",
     "services/audio-service",
     "services/agent-gateway",
+    "services/mcp-server",
     "services/task-engine",
     "services/worker",
 ]

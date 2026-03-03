@@ -27,6 +27,20 @@ services:
       timeout: 5s
       retries: 5
 
+  mcp-server:
+    build:
+      context: .
+      dockerfile: services/mcp-server/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      MCP_API_KEY: ${MCP_API_KEY:-}
+      MCP_AGENT_CONFIG_ID: ${MCP_AGENT_CONFIG_ID:-}
+      API_BASE_URL: http://host.docker.internal:8000
+      GATEWAY_WS_URL: ws://host.docker.internal:8003
+      MCP_HOST: "0.0.0.0"
+      MCP_PORT: "3001"
+
 volumes:
   postgres_data:
   redis_data:
