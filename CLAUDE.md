@@ -167,9 +167,10 @@ STRIPE_PUBLISHABLE_KEY=
 - See `charts/stt/` for the Whisper STT Helm chart deployed on DGX Spark
 
 ## CoWork Coordination
-- See `docs/TASKLIST.md` for the ordered development task queue
-- See `docs/cowork-tasks/` for scheduled task instructions
+- See `docs/TASKLIST.md` for the ordered development task queue (supports `🔗 BLOCK:` multi-task items)
+- See `docs/cowork-tasks/` for scheduled task instructions (daily-build supports block mode)
 - See `docs/SETUP_GUIDE.md` for full CoWork setup documentation
+- **Phase change rule:** When updating phase numbering, update all three files: `docs/TASKLIST.md`, `CLAUDE.md`, and `docs/README.md`
 
 ## TASKLIST Lock Protocol
 - **When starting work on a TASKLIST item:** Add 🔒 to the item to prevent CoWork or other sessions from picking it up
