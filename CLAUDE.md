@@ -20,7 +20,7 @@ This is a Python monorepo managed with `uv` workspaces. The project is organized
 - `services/worker/` — Background jobs: notifications, Slack integration, calendar sync
 
 ### Frontend
-- `web/` — Meeting web client (React + LiveKit SDK + Tailwind)
+- `web/` — React 19 + TypeScript + Vite + Tailwind v4 dashboard (auth, agent management, meetings)
 
 ### Infrastructure
 - PostgreSQL 16 with pgvector extension — single database for relational + vector storage
@@ -127,7 +127,7 @@ STRIPE_PUBLISHABLE_KEY=
 ## Current Phase
 **Phase 1** — Core AI Pipeline (in progress). STT wired, Redis Streams consumer implemented. Next task: transcript segment windowing, then LLM extraction pipeline and task persistence.
 
-**Phase 2** — Agent Platform (partially complete). Agent Gateway M3 verified (2026-03-02) — 29 segments E2E, 58 gateway tests passing. Remaining: multi-agent support, agent registration, agent modality support (Voice-to-Voice, Speech-to-Text, Text-only).
+**Phase 2** — Agent Platform (mostly complete). Agent Gateway M3 verified. User auth, agent registration with API keys, MCP server (Streamable HTTP / Docker), web dashboard, and Claude Agent SDK example agent implemented (2026-03-02). Remaining: multi-agent support, agent modality support (Voice-to-Voice, Speech-to-Text, Text-only).
 
 **Agent connection pattern:** Claude Agent SDK → MCP Server → Agent Gateway (WebSocket). See `docs/TASKLIST.md` for the full task queue (Phases 1–10) and `docs/technical/ROADMAP.md` for feature details.
 
@@ -153,6 +153,8 @@ STRIPE_PUBLISHABLE_KEY=
 - See `claude_docs/Memory_Architecture.md` for the four-layer memory system design and ORM-to-domain conversion patterns
 - See `claude_docs/Service_Patterns.md` for service layer conventions (health endpoints, lifespan, settings, DI, route organization)
 - See `claude_docs/Agent_Gateway_Architecture.md` for Agent Gateway WebSocket protocol details (if exists)
+- See `claude_docs/Auth_And_API_Keys.md` for user auth (JWT), API key system, and token exchange patterns
+- See `claude_docs/MCP_Server_Architecture.md` for MCP server tools, Streamable HTTP transport, and Docker setup
 
 ## Tooling
 - See `claude_docs/UV_Best_Practices.md` for uv workspace patterns, testing commands, and known pitfalls (UF_HIDDEN, UV_LINK_MODE, etc.)
