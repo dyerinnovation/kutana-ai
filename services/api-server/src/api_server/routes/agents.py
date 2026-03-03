@@ -1,12 +1,19 @@
-"""Agent configuration CRUD endpoints."""
+"""Agent configuration CRUD endpoints (wired to database)."""
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from api_server.auth_deps import CurrentUser
+from api_server.deps import get_db_session
+from convene_core.database.models import AgentConfigORM
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -71,24 +78,21 @@ class AgentListResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Placeholder helpers
+# Helpers
 # ---------------------------------------------------------------------------
 
 
-def _utc_now() -> datetime:
-    return datetime.now(tz=UTC)
-
-
-_PLACEHOLDER = AgentResponse(
-    id=UUID("00000000-0000-0000-0000-000000000100"),
-    name="Convene Bot",
-    voice_id=None,
-    system_prompt="You are Convene, an AI meeting assistant.",
-    capabilities=["transcribe", "extract_tasks"],
-    meeting_type_filter=["standup", "planning"],
-    created_at=_utc_now(),
-    updated_at=_utc_now(),
-)
+def _to_response(agent: AgentConfigORM) -> AgentResponse:
+    return AgentResponse(
+        id=agent.id,
+        name=agent.name,
+        voice_id=agent.voice_id,
+        system_prompt=agent.system_prompt,
+        capabilities=agent.capabilities or [],
+        meeting_type_filter=agent.meeting_type_filter or [],
+        created_at=agent.created_at,
+        updated_at=agent.updated_at,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -97,55 +101,126 @@ _PLACEHOLDER = AgentResponse(
 
 
 @router.get("", response_model=AgentListResponse)
-async def list_agents() -> AgentListResponse:
-    """List all agent configurations.
+async def list_agents(
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> AgentListResponse:
+    """List all agent configurations owned by the current user.
+
+    Args:
+        current_user: Authenticated user.
+        db: Database session.
 
     Returns:
-        AgentListResponse containing placeholder agent data.
+        AgentListResponse with agent data.
     """
-    return AgentListResponse(items=[_PLACEHOLDER], total=1)
+    result = await db.execute(
+        select(AgentConfigORM).where(AgentConfigORM.owner_id == current_user.id)
+    )
+    agents = result.scalars().all()
+
+    count_result = await db.execute(
+        select(func.count()).select_from(AgentConfigORM).where(
+            AgentConfigORM.owner_id == current_user.id
+        )
+    )
+    total = count_result.scalar_one()
+
+    return AgentListResponse(
+        items=[_to_response(a) for a in agents],
+        total=total,
+    )
 
 
 @router.post("", response_model=AgentResponse, status_code=201)
-async def create_agent(body: AgentCreateRequest) -> AgentResponse:
+async def create_agent(
+    body: AgentCreateRequest,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> AgentResponse:
     """Create a new agent configuration.
 
     Args:
         body: The agent creation payload.
+        current_user: Authenticated user.
+        db: Database session.
 
     Returns:
         AgentResponse with the newly created agent data.
     """
-    now = _utc_now()
-    return AgentResponse(
-        id=UUID("00000000-0000-0000-0000-000000000101"),
+    agent = AgentConfigORM(
         name=body.name,
         voice_id=body.voice_id,
         system_prompt=body.system_prompt,
         capabilities=body.capabilities,
         meeting_type_filter=body.meeting_type_filter,
-        created_at=now,
-        updated_at=now,
+        owner_id=current_user.id,
     )
+    db.add(agent)
+    await db.flush()
+    return _to_response(agent)
 
 
 @router.get("/{agent_id}", response_model=AgentResponse)
-async def get_agent(agent_id: UUID) -> AgentResponse:
+async def get_agent(
+    agent_id: UUID,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> AgentResponse:
     """Get a single agent configuration by ID.
 
     Args:
         agent_id: The UUID of the agent to retrieve.
+        current_user: Authenticated user.
+        db: Database session.
 
     Returns:
         AgentResponse for the requested agent.
+
+    Raises:
+        HTTPException: 404 if agent not found or not owned by user.
     """
-    return AgentResponse(
-        id=agent_id,
-        name=_PLACEHOLDER.name,
-        voice_id=_PLACEHOLDER.voice_id,
-        system_prompt=_PLACEHOLDER.system_prompt,
-        capabilities=_PLACEHOLDER.capabilities,
-        meeting_type_filter=_PLACEHOLDER.meeting_type_filter,
-        created_at=_PLACEHOLDER.created_at,
-        updated_at=_PLACEHOLDER.updated_at,
+    result = await db.execute(
+        select(AgentConfigORM).where(
+            AgentConfigORM.id == agent_id,
+            AgentConfigORM.owner_id == current_user.id,
+        )
     )
+    agent = result.scalar_one_or_none()
+    if agent is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Agent not found",
+        )
+    return _to_response(agent)
+
+
+@router.delete("/{agent_id}", status_code=204)
+async def delete_agent(
+    agent_id: UUID,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> None:
+    """Delete an agent configuration.
+
+    Args:
+        agent_id: The UUID of the agent to delete.
+        current_user: Authenticated user.
+        db: Database session.
+
+    Raises:
+        HTTPException: 404 if agent not found or not owned by user.
+    """
+    result = await db.execute(
+        select(AgentConfigORM).where(
+            AgentConfigORM.id == agent_id,
+            AgentConfigORM.owner_id == current_user.id,
+        )
+    )
+    agent = result.scalar_one_or_none()
+    if agent is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Agent not found",
+        )
+    await db.delete(agent)

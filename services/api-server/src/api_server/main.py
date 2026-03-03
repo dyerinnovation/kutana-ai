@@ -9,10 +9,13 @@ from typing import TYPE_CHECKING
 from fastapi import FastAPI
 
 from api_server.middleware import setup_cors
+from api_server.routes.agent_keys import router as agent_keys_router
 from api_server.routes.agents import router as agents_router
+from api_server.routes.auth import router as auth_router
 from api_server.routes.health import router as health_router
 from api_server.routes.meetings import router as meetings_router
 from api_server.routes.tasks import router as tasks_router
+from api_server.routes.token import router as token_router
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -48,6 +51,9 @@ app = FastAPI(
 setup_cors(app)
 
 app.include_router(health_router)
+app.include_router(auth_router, prefix="/api/v1")
 app.include_router(meetings_router, prefix="/api/v1")
 app.include_router(tasks_router, prefix="/api/v1")
 app.include_router(agents_router, prefix="/api/v1")
+app.include_router(agent_keys_router, prefix="/api/v1")
+app.include_router(token_router, prefix="/api/v1")
