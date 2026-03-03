@@ -114,6 +114,9 @@ class MockTTS(TTSProvider):
             ),
         ]
 
+    async def close(self) -> None:
+        """No resources to release in mock provider."""
+
 
 class MockLLM(LLMProvider):
     """Mock LLM that returns pre-configured responses.

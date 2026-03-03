@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 import tempfile
 import wave
 from typing import TYPE_CHECKING
@@ -125,7 +126,7 @@ class WhisperSTT(STTProvider):
 
             # Run transcription in a thread to avoid blocking
             segments_raw, _info = await asyncio.to_thread(
-                self._model.transcribe,  # type: ignore[union-attr]
+                self._model.transcribe,  # type: ignore[union-attr]  # _model is set before use
                 tmp.name,
             )
             # Materialise the generator in the thread
@@ -134,11 +135,17 @@ class WhisperSTT(STTProvider):
                 segments_raw,
             )
 
+            # Clear the buffer so the next call only transcribes new audio
+            self._buffer = b""
+
             for seg in segment_list:
                 # Guard against zero-length segments
                 end_time = seg.end
                 if end_time <= seg.start:
                     end_time = seg.start + 0.01
+
+                # avg_logprob is negative; convert to 0.0-1.0 range
+                confidence = max(0.0, min(1.0, math.exp(seg.avg_logprob)))
 
                 yield TranscriptSegment(
                     meeting_id=self._meeting_id,
@@ -146,7 +153,7 @@ class WhisperSTT(STTProvider):
                     text=seg.text.strip(),
                     start_time=seg.start,
                     end_time=end_time,
-                    confidence=seg.avg_logprob,
+                    confidence=confidence,
                 )
         finally:
             import os

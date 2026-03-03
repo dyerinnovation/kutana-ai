@@ -409,6 +409,6 @@ class TestRegistryNewProviders:
 
     def test_total_provider_counts(self) -> None:
         """Registry has correct total providers per type."""
-        assert len(default_registry.list_providers(ProviderType.STT)) == 3
+        assert len(default_registry.list_providers(ProviderType.STT)) == 4
         assert len(default_registry.list_providers(ProviderType.TTS)) == 3
         assert len(default_registry.list_providers(ProviderType.LLM)) == 3

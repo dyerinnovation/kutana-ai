@@ -128,6 +128,7 @@ def _build_default_registry() -> ProviderRegistry:
     from convene_providers.llm.ollama_llm import OllamaLLM
     from convene_providers.stt.assemblyai_stt import AssemblyAISTT
     from convene_providers.stt.deepgram_stt import DeepgramSTT
+    from convene_providers.stt.whisper_remote_stt import WhisperRemoteSTT
     from convene_providers.stt.whisper_stt import WhisperSTT
     from convene_providers.tts.cartesia_tts import CartesiaTTS
     from convene_providers.tts.elevenlabs_tts import ElevenLabsTTS
@@ -139,6 +140,7 @@ def _build_default_registry() -> ProviderRegistry:
     registry.register(ProviderType.STT, "assemblyai", AssemblyAISTT)
     registry.register(ProviderType.STT, "deepgram", DeepgramSTT)
     registry.register(ProviderType.STT, "whisper", WhisperSTT)
+    registry.register(ProviderType.STT, "whisper-remote", WhisperRemoteSTT)
 
     # TTS providers
     registry.register(ProviderType.TTS, "cartesia", CartesiaTTS)

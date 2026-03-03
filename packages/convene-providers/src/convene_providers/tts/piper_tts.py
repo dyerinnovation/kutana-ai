@@ -81,7 +81,7 @@ class PiperTTS(TTSProvider):
         buf = io.BytesIO()
 
         def _synthesize() -> bytes:
-            self._voice.synthesize(  # type: ignore[union-attr]
+            self._voice.synthesize(  # type: ignore[union-attr]  # _voice is set before use
                 text,
                 buf,
             )
@@ -101,3 +101,7 @@ class PiperTTS(TTSProvider):
             List of Voice objects supported by Piper.
         """
         return list(_DEFAULT_VOICES)
+
+    async def close(self) -> None:
+        """Release the loaded voice model."""
+        self._voice = None

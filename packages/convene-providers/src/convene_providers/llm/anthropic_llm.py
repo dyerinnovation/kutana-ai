@@ -177,7 +177,7 @@ class AnthropicLLM(LLMProvider):
             if block.name != "extract_tasks":
                 continue
 
-            tool_input: dict[str, Any] = block.input  # type: ignore[assignment]
+            tool_input: dict[str, Any] = block.input  # type: ignore[assignment]  # Anthropic SDK tool_input typed as object
             raw_tasks: list[dict[str, Any]] = tool_input.get("tasks", [])
 
             for raw in raw_tasks:
