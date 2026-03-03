@@ -1,0 +1,185 @@
+"""FastAPI application entry point for the Convene AI Agent Gateway."""
+
+from __future__ import annotations
+
+import logging
+from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
+
+from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
+from pydantic import BaseModel
+
+from agent_gateway.agent_session import AgentSessionHandler
+from agent_gateway.audio_bridge import AudioBridge
+from agent_gateway.auth import AuthError, validate_token
+from agent_gateway.connection_manager import ConnectionManager
+from agent_gateway.event_relay import EventRelay
+from agent_gateway.settings import AgentGatewaySettings
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Module-level state
+# ---------------------------------------------------------------------------
+
+_settings: AgentGatewaySettings | None = None
+_connection_manager: ConnectionManager | None = None
+_event_relay: EventRelay | None = None
+_audio_bridge: AudioBridge | None = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Manage application startup and shutdown lifecycle.
+
+    Args:
+        app: The FastAPI application instance.
+
+    Yields:
+        Control back to the ASGI server while the app is running.
+    """
+    global _settings, _connection_manager, _event_relay, _audio_bridge
+
+    _settings = AgentGatewaySettings()
+    _connection_manager = ConnectionManager(max_connections=_settings.max_connections)
+    _event_relay = EventRelay(
+        redis_url=_settings.redis_url,
+        connection_manager=_connection_manager,
+    )
+    _audio_bridge = AudioBridge(
+        redis_url=_settings.redis_url,
+        stt_provider=_settings.stt_provider,
+        stt_api_key=_settings.stt_api_key,
+        whisper_model_size=_settings.whisper_model_size,
+        whisper_api_url=_settings.whisper_api_url,
+    )
+
+    await _event_relay.start()
+    logger.info("agent-gateway starting up (max_connections=%d)", _settings.max_connections)
+
+    yield
+
+    logger.info("agent-gateway shutting down")
+    if _audio_bridge is not None:
+        await _audio_bridge.close()
+        _audio_bridge = None
+    if _event_relay is not None:
+        await _event_relay.stop()
+        _event_relay = None
+    _connection_manager = None
+    _settings = None
+
+
+app = FastAPI(
+    title="Convene AI Agent Gateway",
+    description="WebSocket gateway for AI agent connections to Convene meetings",
+    version="0.1.0",
+    lifespan=lifespan,
+)
+
+
+# ---------------------------------------------------------------------------
+# Health check
+# ---------------------------------------------------------------------------
+
+
+class HealthResponse(BaseModel):
+    """Response model for the health check endpoint.
+
+    Attributes:
+        status: Current health status of the service.
+        service: Name of the service reporting health.
+        active_connections: Number of active agent connections.
+    """
+
+    status: str
+    service: str
+    active_connections: int
+
+
+@app.get("/health", response_model=HealthResponse)
+async def health_check() -> HealthResponse:
+    """Return the health status of the agent gateway.
+
+    Returns:
+        HealthResponse with status, service name, and connection count.
+    """
+    count = _connection_manager.active_count if _connection_manager else 0
+    return HealthResponse(
+        status="healthy",
+        service="agent-gateway",
+        active_connections=count,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Agent WebSocket endpoint
+# ---------------------------------------------------------------------------
+
+
+@app.websocket("/agent/connect")
+async def agent_connect(
+    websocket: WebSocket,
+    token: str = Query(..., description="JWT authentication token"),
+) -> None:
+    """WebSocket endpoint for AI agent connections.
+
+    Validates the JWT token, creates a session, and enters the
+    message handling loop.
+
+    Args:
+        websocket: The incoming WebSocket connection.
+        token: JWT token for authentication.
+    """
+    if _settings is None or _connection_manager is None:
+        await websocket.accept()
+        await websocket.close(code=1011, reason="Service not initialized")
+        return
+
+    # Validate token before accepting the connection
+    try:
+        identity = validate_token(
+            token,
+            _settings.jwt_secret,
+            _settings.jwt_algorithm,
+        )
+    except AuthError as e:
+        await websocket.accept()
+        await websocket.close(code=4001, reason=f"{e.code}: {e.message}")
+        return
+
+    # Check connection limit
+    if _connection_manager.is_full():
+        await websocket.accept()
+        await websocket.close(code=4029, reason="Connection limit reached")
+        return
+
+    await websocket.accept()
+
+    # Create and register session
+    session = AgentSessionHandler(
+        websocket=websocket,
+        identity=identity,
+        connection_manager=_connection_manager,
+        audio_bridge=_audio_bridge,
+    )
+    _connection_manager.register(session)
+
+    logger.info(
+        "Agent connected: %s (config=%s)",
+        identity.name,
+        identity.agent_config_id,
+    )
+
+    try:
+        await session.handle()
+    except WebSocketDisconnect:
+        logger.info("Agent %s disconnected normally", identity.name)
+    except Exception:
+        logger.exception("Error in agent session %s", session.session_id)
+    finally:
+        _connection_manager.unregister(session.session_id)
