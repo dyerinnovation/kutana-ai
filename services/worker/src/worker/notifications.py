@@ -32,16 +32,16 @@ class NotificationService:
             redis_url: Redis connection URL.
         """
         self._redis_url = redis_url
-        self._redis: Redis | None = None  # type: ignore[type-arg]
+        self._redis: Redis | None = None  # type: ignore[type-arg]  # redis-py stubs incomplete
 
-    async def _get_client(self) -> Redis:  # type: ignore[type-arg]
+    async def _get_client(self) -> Redis:  # type: ignore[type-arg]  # redis-py stubs incomplete
         """Return or create the async Redis client.
 
         Returns:
             An initialised Redis async client.
         """
         if self._redis is None:
-            self._redis = Redis.from_url(  # type: ignore[assignment]
+            self._redis = Redis.from_url(  # type: ignore[assignment]  # redis-py stubs incomplete
                 self._redis_url,
                 decode_responses=True,
             )

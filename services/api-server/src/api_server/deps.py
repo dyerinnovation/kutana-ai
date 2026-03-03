@@ -54,10 +54,13 @@ def get_settings() -> Settings:
     return Settings()
 
 
+_session_factory: async_sessionmaker[AsyncSession] | None = None
+
+
 def _build_session_factory(
     settings: Settings,
 ) -> async_sessionmaker[AsyncSession]:
-    """Create an async session factory from settings.
+    """Return a cached async session factory, creating it on first call.
 
     Args:
         settings: Application settings with database_url.
@@ -65,16 +68,21 @@ def _build_session_factory(
     Returns:
         An async sessionmaker bound to the configured engine.
     """
+    global _session_factory
+    if _session_factory is not None:
+        return _session_factory
+
     engine = create_async_engine(
         settings.database_url,
         echo=settings.debug,
         pool_pre_ping=True,
     )
-    return async_sessionmaker(
+    _session_factory = async_sessionmaker(
         engine,
         class_=AsyncSession,
         expire_on_commit=False,
     )
+    return _session_factory
 
 
 async def get_db_session(
@@ -100,7 +108,7 @@ async def get_db_session(
 
 async def get_redis(
     settings: Annotated[Settings, Depends(get_settings)],
-) -> AsyncIterator[Redis]:  # type: ignore[type-arg]
+) -> AsyncIterator[Redis]:  # type: ignore[type-arg]  # redis-py stubs incomplete
     """Yield an async Redis client and close it after use.
 
     Args:
@@ -109,7 +117,7 @@ async def get_redis(
     Yields:
         A Redis async client instance.
     """
-    client: Redis = Redis.from_url(  # type: ignore[assignment]
+    client: Redis = Redis.from_url(  # type: ignore[assignment]  # redis-py stubs incomplete
         settings.redis_url,
         decode_responses=True,
     )

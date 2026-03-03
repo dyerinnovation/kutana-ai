@@ -1,158 +1,191 @@
-"""Audio pipeline for transcoding and streaming to STT providers."""
+"""Audio pipeline for streaming PCM16 audio to STT providers."""
 
 from __future__ import annotations
 
+import asyncio
 import logging
-import struct
 from typing import TYPE_CHECKING
+
+from convene_core.events.definitions import (
+    MeetingEnded,
+    MeetingStarted,
+    TranscriptSegmentFinal,
+)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+    from uuid import UUID
 
+    from audio_service.event_publisher import EventPublisher
     from convene_core.interfaces.stt import STTProvider
     from convene_core.models.transcript import TranscriptSegment
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Mu-law decoding table
-# ---------------------------------------------------------------------------
-# Pre-computed mu-law to 16-bit linear PCM lookup (ITU-T G.711).  Each
-# mu-law byte maps to a signed 16-bit integer.
-
-_MULAW_BIAS = 33
-_MULAW_CLIP = 0x1FFF
-
-_MULAW_DECODE_TABLE: list[int] = []
-
-
-def _build_mulaw_table() -> list[int]:
-    """Build the mu-law to PCM16 decode lookup table.
-
-    Returns:
-        A list of 256 signed 16-bit PCM values.
-    """
-    table: list[int] = []
-    for i in range(256):
-        val = ~i
-        sign = val & 0x80
-        exponent = (val >> 4) & 0x07
-        mantissa = val & 0x0F
-        sample = ((mantissa << 3) + _MULAW_BIAS) << exponent
-        sample -= _MULAW_BIAS
-        if sign:
-            sample = -sample
-        # Clamp to signed 16-bit range
-        sample = max(-32768, min(32767, sample))
-        table.append(sample)
-    return table
-
-
-_MULAW_DECODE_TABLE = _build_mulaw_table()
-
-# ---------------------------------------------------------------------------
-# Linear interpolation upsampler: 8 kHz -> 16 kHz
+# Audio buffering constants
 # ---------------------------------------------------------------------------
 
-
-def _upsample_8k_to_16k(samples: list[int]) -> list[int]:
-    """Upsample PCM16 samples from 8 kHz to 16 kHz via linear interpolation.
-
-    For each pair of consecutive samples, an interpolated sample is inserted
-    between them, effectively doubling the sample rate.
-
-    Args:
-        samples: List of signed 16-bit PCM values at 8 kHz.
-
-    Returns:
-        List of signed 16-bit PCM values at 16 kHz.
-    """
-    if not samples:
-        return []
-
-    out: list[int] = []
-    for i in range(len(samples) - 1):
-        out.append(samples[i])
-        # Interpolated midpoint
-        mid = (samples[i] + samples[i + 1]) // 2
-        out.append(mid)
-    # Append last sample and duplicate it for the interpolation pair
-    out.append(samples[-1])
-    out.append(samples[-1])
-    return out
+_MAX_RETRIES = 3
+_RETRY_DELAY_S = 0.5
+_MAX_BUFFER_BYTES = 5 * 1024 * 1024  # 5 MB
 
 
 class AudioPipeline:
-    """Transcodes Twilio mulaw 8 kHz audio to PCM16 16 kHz and streams
-    through an STT provider.
+    """Streams PCM16 16 kHz mono audio through an STT provider.
+
+    Publishes lifecycle events (MeetingStarted, MeetingEnded) and
+    transcript segment events via an optional EventPublisher.  Buffers
+    audio on STT send failure and retries to avoid data loss.
 
     Attributes:
         _stt: The speech-to-text provider to stream audio to.
         _started: Whether the STT stream has been started.
+        _event_publisher: Optional publisher for domain events.
+        _meeting_id: Meeting ID for event attribution.
+        _audio_buffer: Buffer for audio that failed to send.
     """
 
-    def __init__(self, stt_provider: STTProvider) -> None:
+    def __init__(
+        self,
+        stt_provider: STTProvider,
+        event_publisher: EventPublisher | None = None,
+        meeting_id: UUID | None = None,
+    ) -> None:
         """Initialise the audio pipeline.
 
         Args:
             stt_provider: An STT provider implementing the STTProvider ABC.
+            event_publisher: Optional EventPublisher for domain events.
+            meeting_id: Meeting ID for event attribution.
         """
         self._stt = stt_provider
         self._started = False
+        self._event_publisher = event_publisher
+        self._meeting_id = meeting_id
+        self._audio_buffer: bytearray = bytearray()
 
     async def _ensure_started(self) -> None:
-        """Start the STT stream if it hasn't been started yet."""
+        """Start the STT stream if it hasn't been started yet.
+
+        Publishes a MeetingStarted event on first audio receipt.
+        """
         if not self._started:
             await self._stt.start_stream()
             self._started = True
+            if self._event_publisher is not None and self._meeting_id is not None:
+                try:
+                    await self._event_publisher.publish(
+                        MeetingStarted(meeting_id=self._meeting_id)
+                    )
+                except Exception:
+                    logger.exception("Failed to publish MeetingStarted event")
 
     async def process_audio(self, chunk: bytes) -> None:
-        """Transcode a mulaw 8 kHz audio chunk and send to STT.
+        """Send a PCM16 16 kHz mono audio chunk to the STT provider.
 
-        Decodes the mu-law encoded bytes to linear PCM16, upsamples
-        from 8 kHz to 16 kHz, and forwards the result to the
-        configured STT provider.
+        On send failure, buffers audio and retries to avoid data loss.
 
         Args:
-            chunk: Raw mu-law 8 kHz audio bytes from Twilio.
+            chunk: PCM16 16 kHz mono audio bytes.
         """
         await self._ensure_started()
-        pcm16_bytes = self._transcode_mulaw_to_pcm16(chunk)
-        await self._stt.send_audio(pcm16_bytes)
+
+        # Flush any previously buffered audio first
+        await self._flush_buffer()
+
+        # Send current chunk with retry
+        await self._send_with_retry(chunk)
+
+    async def _send_with_retry(self, data: bytes) -> None:
+        """Send audio to STT with retry logic.
+
+        Args:
+            data: PCM16 audio bytes to send.
+        """
+        for attempt in range(_MAX_RETRIES):
+            try:
+                await self._stt.send_audio(data)
+                return
+            except Exception:
+                if attempt < _MAX_RETRIES - 1:
+                    logger.warning(
+                        "STT send_audio failed (attempt %d/%d), retrying",
+                        attempt + 1,
+                        _MAX_RETRIES,
+                    )
+                    await asyncio.sleep(_RETRY_DELAY_S)
+                else:
+                    logger.warning(
+                        "STT send_audio failed after %d attempts, buffering",
+                        _MAX_RETRIES,
+                    )
+                    self._buffer_audio(data)
+
+    def _buffer_audio(self, data: bytes) -> None:
+        """Append audio to the buffer, dropping oldest on overflow.
+
+        Args:
+            data: Audio bytes to buffer.
+        """
+        self._audio_buffer.extend(data)
+        if len(self._audio_buffer) > _MAX_BUFFER_BYTES:
+            overflow = len(self._audio_buffer) - _MAX_BUFFER_BYTES
+            self._audio_buffer = self._audio_buffer[overflow:]
+            logger.warning(
+                "Audio buffer overflow: dropped %d bytes (oldest)",
+                overflow,
+            )
+
+    async def _flush_buffer(self) -> None:
+        """Attempt to send buffered audio before new audio."""
+        if not self._audio_buffer:
+            return
+
+        buffered = bytes(self._audio_buffer)
+        self._audio_buffer.clear()
+
+        try:
+            await self._stt.send_audio(buffered)
+            logger.info("Flushed %d bytes of buffered audio", len(buffered))
+        except Exception:
+            logger.warning("Failed to flush audio buffer, re-buffering")
+            self._buffer_audio(buffered)
 
     async def get_segments(self) -> AsyncIterator[TranscriptSegment]:
         """Yield finalised transcript segments from the STT provider.
 
+        Publishes each segment as a TranscriptSegmentFinal event.
+        Skips silently if the STT stream has not been started yet
+        (no audio received).
+
         Yields:
             TranscriptSegment instances as they become available.
         """
+        if not self._started:
+            return
         async for segment in self._stt.get_transcript():
             yield segment
+            if self._event_publisher is not None and self._meeting_id is not None:
+                try:
+                    await self._event_publisher.publish(
+                        TranscriptSegmentFinal(
+                            meeting_id=self._meeting_id,
+                            segment=segment,
+                        )
+                    )
+                except Exception:
+                    logger.exception("Failed to publish TranscriptSegmentFinal event")
 
     async def close(self) -> None:
-        """Close the STT stream and release resources."""
+        """Close the STT stream and publish MeetingEnded event."""
         if self._started:
             await self._stt.close()
             self._started = False
-
-    @staticmethod
-    def _transcode_mulaw_to_pcm16(data: bytes) -> bytes:
-        """Convert mu-law 8 kHz audio to linear PCM16 16 kHz.
-
-        Decodes each byte using the mu-law lookup table, then
-        upsamples from 8 kHz to 16 kHz using linear interpolation.
-
-        Args:
-            data: Raw mu-law encoded bytes.
-
-        Returns:
-            PCM16 16 kHz mono audio as bytes (little-endian signed 16-bit).
-        """
-        # Decode mu-law -> PCM16 samples at 8 kHz
-        samples_8k: list[int] = [_MULAW_DECODE_TABLE[byte] for byte in data]
-
-        # Upsample 8 kHz -> 16 kHz
-        samples_16k = _upsample_8k_to_16k(samples_8k)
-
-        # Pack as little-endian signed 16-bit
-        return struct.pack(f"<{len(samples_16k)}h", *samples_16k)
+            if self._event_publisher is not None and self._meeting_id is not None:
+                try:
+                    await self._event_publisher.publish(
+                        MeetingEnded(meeting_id=self._meeting_id)
+                    )
+                except Exception:
+                    logger.exception("Failed to publish MeetingEnded event")
