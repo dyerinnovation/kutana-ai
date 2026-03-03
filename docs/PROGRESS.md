@@ -8,6 +8,81 @@
 
 <!-- New entries go at the top -->
 
+## 2026-03-02 — DGX Whisper Fix & E2E Verification
+
+**Roadmap item:** Agent Gateway M3 milestone verification + bug fixes
+**Branch:** scheduled/2026-03-01-redis-streams-consumer (merged to main)
+**Author:** Jonathan (manual session with Claude Code)
+
+### Changes
+- Replaced httpx with aiohttp in `WhisperRemoteSTT` — httpx lacks Happy Eyeballs (RFC 8305), hangs on `.local` mDNS hostnames trying IPv6 link-local first. aiohttp uses `aiohappyeyeballs` and works correctly
+- Fixed audio-service tests (`test_get_segments_yields_stt_segments`, `test_segments_published_as_events`) — added `process_audio()` before `get_segments()`. All 38 audio-service tests pass
+- Fixed pydantic-settings crash — added `"extra": "ignore"` in `model_config` for settings classes loading shared `.env` files
+- Verified full E2E pipeline: agent connects via WebSocket → sends real audio (`test-speech.wav`) → DGX Spark Whisper transcribes → 29 transcript segments returned → Redis XLEN=31 entries
+- Updated all documentation (TASKLIST, PROGRESS, HANDOFF, README, E2E test guide, DAILY_BRIEF, WEEKLY_REVIEW, CLAUDE.md)
+- Merged branch to main
+
+### Quality Check Results
+- pytest: ✅ All tests passing (38 audio-service + 58 gateway = 96+ service tests)
+- E2E: ✅ 29 transcript segments, Redis XLEN=31
+
+### Blockers
+None
+
+### Next Up
+- Implement transcript segment windowing (3-5 min windows with overlap)
+
+---
+
+## 2026-03-01 — Agent Gateway M3: Full Gateway Service Implementation
+
+**Roadmap item:** Phase 2 Agent Gateway & MCP — gateway service, auth, connections, audio routing, event relay
+**Branch:** scheduled/2026-03-01-redis-streams-consumer
+**Author:** Jonathan (manual session with Claude Code)
+
+### Changes
+
+**Agent Gateway service (`services/agent-gateway/`):**
+- Implemented `GatewayProtocol` — WebSocket message types: `join_meeting`, `leave_meeting`, `audio_data`, `heartbeat`, `event`, `transcript`, `error`
+- Implemented JWT-based agent authentication (API key validation on connect)
+- Implemented capability negotiation (`listen`, `speak`, `transcribe`, `push-ui`, `access-transcript`)
+- Implemented `ConnectionManager` — agent presence tracking, join/leave, heartbeat timeout (30s default)
+- Implemented `AudioBridge` — audio stream routing from agent → STT pipeline, batched transcription every 5 seconds
+- Implemented `EventRelay` — Redis Streams consumer that routes `transcript.segment.final` events back to connected agents
+- Implemented FastAPI service with WebSocket endpoint, health check, lifespan management
+- 58 tests across 6 test files: protocol, auth, connection manager, audio bridge, event relay, E2E flow
+
+**WhisperRemoteSTT provider (`packages/convene-providers/`):**
+- New STT provider targeting remote OpenAI-compatible Whisper API (DGX Spark)
+- Registered as `"whisper-remote"` in provider registry
+- One-shot transcription (not streaming) — `_consume_segments` loops periodically
+
+**Core model & event updates (`packages/convene-core/`):**
+- Added 6 new event types: `room.created`, `agent.joined`, `agent.left`, `participant.joined`, `participant.left`, `agent.data`
+- Updated `TranscriptSegment.confidence` handling — Whisper avg_logprob is negative, convert via `math.exp()`
+
+**Service refactors:**
+- Audio service refactored for transport-agnostic pipeline (not just Twilio)
+- STT provider wired into audio service lifespan via provider registry + config
+
+**E2E test infrastructure:**
+- `scripts/test_e2e_gateway.py` — automated E2E test script
+- `docs/manual-testing/E2E_Gateway_Test.md` — step-by-step walkthrough
+- `claude_docs/Agent_Gateway_Architecture.md` — gateway architecture reference
+- `claude_docs/UV_Best_Practices.md` — uv workspace patterns reference
+
+### Quality Check Results
+- pytest: ✅ 58 gateway tests passing
+- E2E: ✅ Verified with DGX Spark Whisper (29 segments)
+
+### Blockers
+None
+
+### Next Up
+- Implement transcript segment windowing (3-5 min windows with overlap)
+
+---
+
 ## 2026-03-01 — Redis Streams Consumer for transcript.segment.final Events
 
 **Roadmap item:** Implement Redis Streams consumer for transcript.segment.final events

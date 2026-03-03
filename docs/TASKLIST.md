@@ -122,7 +122,7 @@
 - [ ] Implement agent registration API (name, capabilities, description, owner)
 - [ ] Implement agent API key generation and management
 - [ ] Implement per-agent rate limiting and usage tracking
-- [ ] **🏁 Milestone M3: Agent connects via Gateway, receives audio, sends transcript events**
+- [x] **🏁 Milestone M3: Agent connects via Gateway, receives audio, sends transcript events** — verified 2026-03-02 (29 segments, Redis XLEN=31)
 - [ ] **🏁 Milestone M4: MCP client (Claude) joins a meeting and extracts tasks via MCP tools**
 
 ## Phase 3: User Authentication & Billing

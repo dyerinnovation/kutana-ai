@@ -27,6 +27,7 @@ convene-ai/
 │   ├── prompts/                   # Claude Code planning prompts
 │   ├── providers/                 # Provider setup guides
 │   └── milestone-testing/         # Milestone test plans
+├── cowork-tasks/                  # Scheduled CoWork task descriptions and output
 ├── claude_docs/                   # Claude Code development reference docs
 ├── packages/                      # Shared libraries
 │   ├── convene-core/              # Domain models, events, interfaces (ABCs)
@@ -89,9 +90,10 @@ Human (Browser)                    AI Agent (any framework)
 - **[GO_TO_MARKET.md](./technical/GO_TO_MARKET.md)** — Go-to-market strategy for the two-sided market. Developer track (API, SDK, MCP) and team track (meetings, task extraction, memory).
 
 ### Development
-- **[TASKLIST.md](./TASKLIST.md)** — Ordered task queue for manual and scheduled development sessions. Phases 1A-1C complete, 1D in progress. New Phases 2-7 cover Agent Gateway, auth, billing, WebRTC, dashboard, marketplace, and hardening.
+- **[TASKLIST.md](./TASKLIST.md)** — Ordered task queue for manual and scheduled development sessions. Phases 1A-1C complete, 1D in progress. Phase 2 Agent Gateway partially complete (M3 verified). New Phases 3-7 cover auth, billing, WebRTC, dashboard, marketplace, and hardening.
 - **[PROGRESS.md](./PROGRESS.md)** — Append-only log of completed work.
 - **[HANDOFF.md](./HANDOFF.md)** — Shift-change notes for CoWork sessions.
+- **[E2E Gateway Test](./manual-testing/E2E_Gateway_Test.md)** — Step-by-step E2E test walkthrough for the agent gateway pipeline.
 
 ## Architecture Decision: Agent-First Platform
 
@@ -108,9 +110,11 @@ The original phone dial-in architecture (Twilio) remains functional as a fallbac
 
 ## Current Phase
 
-**Phase 1D** — Task Extraction & Memory (in progress). The audio-to-transcript pipeline is proven (M1 milestone passed). Task extraction windowing, LLM pipeline, and memory system are next.
+**Phase 1D** — Task Extraction & Memory (in progress). Transcript segment windowing, LLM pipeline, and memory system are next.
 
-**Next up:** Phase 2 — Agent Gateway & MCP (the core platform differentiator).
+**Phase 2** — Agent Gateway M3 verified (2026-03-02). Agent connects via WebSocket, sends real audio, receives 29 transcript segments E2E through DGX Spark Whisper. 58 gateway tests passing.
+
+**Next task:** Implement transcript segment windowing (3-5 min windows with overlap).
 
 ## Getting Started with Development
 
@@ -136,4 +140,8 @@ uv run uvicorn services.api_server.main:app --reload --port 8000
 uv run python -m services.audio_service.main
 uv run python -m services.task_engine.main
 uv run python -m services.worker.main
+
+# Agent Gateway (requires PYTHONPATH for cross-package imports)
+PYTHONPATH=services/agent-gateway/src:services/audio-service/src:packages/convene-core/src:packages/convene-providers/src:packages/convene-memory/src \
+  .venv/bin/uvicorn agent_gateway.main:app --reload --port 8003
 ```

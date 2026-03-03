@@ -1,19 +1,20 @@
 # Convene AI
 
-**The AI meeting participant that listens, extracts, and speaks.**
+**The agent-first meeting platform — where AI agents are first-class participants.**
 
-Convene AI is a voice-first AI agent that dials into your meetings via phone, listens for commitments, extracts and tracks tasks across meetings, and speaks to report progress. It's not a transcription tool — it's a meeting participant.
+Convene AI is a meeting platform built from the ground up for AI agents. Agents connect via a native WebSocket gateway, humans join via browser (WebRTC planned), and every meeting automatically extracts tasks, builds persistent memory, and drives accountability. It's not a transcription tool — it's a platform where AI and humans collaborate in real-time.
 
 ---
 
 ## How It Works
 
-1. **Schedule a meeting** via the API with a dial-in number and meeting code
-2. **Convene dials in** using Twilio, enters the meeting code via DTMF tones, and starts listening
-3. **Real-time transcription** via STT providers (Deepgram, AssemblyAI, or local Whisper)
-4. **Task extraction** — an LLM identifies action items, owners, and deadlines from the transcript
-5. **Persistent memory** — tasks, decisions, and context accumulate across meetings
-6. **Voice output** — the agent speaks summaries and progress reports via TTS (ElevenLabs, Cartesia, or local Piper)
+1. **Agent connects** via the Agent Gateway WebSocket API (authenticated with JWT)
+2. **Audio streams in** — the agent sends audio frames; the gateway routes them to the STT pipeline
+3. **Real-time transcription** via STT providers (Whisper Remote on DGX Spark, Deepgram, AssemblyAI, or local Whisper)
+4. **Events flow back** — transcript segments are published to Redis Streams and relayed to connected agents
+5. **Task extraction** — an LLM identifies action items, owners, and deadlines from the transcript
+6. **Persistent memory** — tasks, decisions, and context accumulate across meetings
+7. **Voice output** (planned) — the agent speaks summaries and progress reports via TTS (ElevenLabs, Cartesia, or local Piper)
 
 ## Architecture
 
@@ -27,9 +28,12 @@ convene-ai/
 │   └── convene-memory/            # Four-layer persistent memory system
 ├── services/                      # Independently runnable services
 │   ├── api-server/                # FastAPI REST + WebSocket API
-│   ├── audio-service/             # Twilio Media Streams + audio pipeline
+│   ├── audio-service/             # Transport-agnostic audio pipeline + STT streaming
+│   ├── agent-gateway/             # WebSocket gateway for AI agent connections
+│   ├── mcp-server/                # Model Context Protocol server for Claude/MCP clients
 │   ├── task-engine/               # LLM-powered task extraction workers
 │   └── worker/                    # Background jobs (Slack, calendar, notifications)
+├── web/                           # Meeting web client (React + LiveKit SDK + Tailwind)
 ├── alembic/                       # Database migrations
 ├── charts/                        # Kubernetes Helm charts (DGX Spark)
 └── docs/                          # Documentation
@@ -38,20 +42,30 @@ convene-ai/
 ### Data Flow
 
 ```
-Twilio Call ──→ Audio Service ──→ STT Provider ──→ Redis Streams
-                                                       │
-                                                       ▼
-API Server ◄── PostgreSQL ◄── Task Engine ◄── LLM Provider
+AI Agent (any framework)
     │
+    │ WebSocket (JWT auth)
     ▼
- Dashboard / TTS Readback
+Agent Gateway ──→ AudioBridge ──→ STT Provider ──→ Redis Streams
+                                                        │
+                  EventRelay ◄──────────────────────────┘
+                      │                                 │
+                      ▼                                 ▼
+              Agent receives               Task Engine ──→ PostgreSQL
+              transcript events                    │
+                                                   ▼
+                                            API Server + Memory
 ```
 
-### Key Architectural Decision: Phone Dial-In
+### Architecture Decision: Agent-First Platform
 
-Convene uses **Twilio phone dial-in** instead of platform-specific bot SDKs (Zoom SDK, Teams Bot Framework). Every major meeting platform supports phone participants — one integration works everywhere.
+Convene **owns the meeting environment** rather than bolting onto existing platforms. Instead of hacking bots into Zoom/Teams via phone dial-in or browser automation, Convene is the meeting platform itself.
 
-**Tradeoff:** Phone-quality audio (8kHz) instead of 48kHz, no video access. Modern STT handles phone audio well, and for task extraction this is acceptable.
+- **AI agents connect natively** via the Agent Gateway API — clean audio streams, structured data, no workarounds
+- **MCP support** (planned) — any MCP-compatible AI assistant joins meetings through standard tool calls
+- **No platform lock-in** — no risk of Zoom/Teams blocking bots or changing APIs
+
+The original phone dial-in architecture (Twilio) remains functional as a fallback for joining external meetings with dial-in numbers.
 
 ## Tech Stack
 
@@ -67,13 +81,14 @@ Convene uses **Twilio phone dial-in** instead of platform-specific bot SDKs (Zoo
 | Linting | ruff |
 | Type checking | mypy (strict) |
 | Testing | pytest + pytest-asyncio |
-| Phone | Twilio (Media Streams) |
+| Phone | Twilio (legacy/optional) |
+| WebRTC | LiveKit (planned) |
 
 ### Provider Support
 
 | Category | Providers |
 |----------|----------|
-| **STT** | Deepgram, AssemblyAI, Whisper (local) |
+| **STT** | Deepgram, AssemblyAI, Whisper (local), Whisper Remote (DGX Spark) |
 | **TTS** | ElevenLabs, Cartesia, Piper (local) |
 | **LLM** | Anthropic Claude, Groq, Ollama (local) |
 
@@ -98,6 +113,10 @@ uv run uvicorn api_server.main:app --reload --port 8000
 uv run uvicorn audio_service.main:app --reload --port 8001
 uv run uvicorn task_engine.main:app --reload --port 8002
 
+# Agent Gateway (requires PYTHONPATH for cross-package imports)
+PYTHONPATH=services/agent-gateway/src:services/audio-service/src:packages/convene-core/src:packages/convene-providers/src:packages/convene-memory/src \
+  .venv/bin/uvicorn agent_gateway.main:app --reload --port 8003
+
 # Run tests
 UV_LINK_MODE=copy uv run pytest -x -v
 ```
@@ -120,9 +139,11 @@ For local-only development (no API keys needed): use Whisper (STT), Ollama (LLM)
 
 ## Current Status
 
-**Phase 1A-1C complete.** Domain models, all provider implementations, Twilio audio pipeline, and event publishing are built and tested (149 tests passing).
+**Phase 1A-1C complete.** Domain models, all provider implementations, Twilio audio pipeline, and event publishing are built and tested.
 
-**Phase 1D-1E in progress.** Task extraction pipeline, API database integration, and the path to the first live demo (agent dials into a real meeting, extracts notes, speaks them back via TTS).
+**Phase 1D in progress.** STT wired into audio service, Redis Streams consumer implemented. Next: transcript segment windowing, LLM pipeline, memory system.
+
+**Phase 2 Agent Gateway — M3 verified (2026-03-02).** Agent connects via WebSocket, sends real audio, receives 29 transcript segments E2E through DGX Spark Whisper. 58 gateway tests + 38 audio-service tests passing.
 
 See [docs/TASKLIST.md](docs/TASKLIST.md) for the full development task queue.
 
@@ -140,6 +161,10 @@ See [docs/TASKLIST.md](docs/TASKLIST.md) for the full development task queue.
 - [Provider Patterns](claude_docs/Provider_Patterns.md) — ABC signatures, registry usage
 - [Memory Architecture](claude_docs/Memory_Architecture.md) — four-layer memory system
 - [Service Patterns](claude_docs/Service_Patterns.md) — health endpoints, lifespan, settings, DI
+- [Agent Gateway Architecture](claude_docs/Agent_Gateway_Architecture.md) — WebSocket protocol, AudioBridge, EventRelay
+- [E2E Gateway Test](docs/manual-testing/E2E_Gateway_Test.md) — step-by-step E2E test walkthrough
+- [UV Best Practices](claude_docs/UV_Best_Practices.md) — uv workspace patterns and known pitfalls
+- [PYTHONPATH Workaround](claude_docs/PYTHONPATH_Workaround.md) — macOS UF_HIDDEN / .pth file fix
 - [DGX Spark Reference](claude_docs/DGX_Spark_Reference.md) — K8s deployment on DGX Spark
 
 ### Development Workflow

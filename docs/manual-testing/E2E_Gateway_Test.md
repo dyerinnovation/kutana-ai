@@ -59,9 +59,12 @@ chflags -R nohidden .venv
 export AGENT_GATEWAY_STT_PROVIDER=whisper-remote
 export AGENT_GATEWAY_WHISPER_API_URL=http://spark-b0f2.local/convene-stt/v1
 
-# Start the gateway
-uv run uvicorn agent_gateway.main:app --port 8003
+# Start the gateway (PYTHONPATH required for cross-package imports)
+PYTHONPATH=services/agent-gateway/src:services/audio-service/src:packages/convene-core/src:packages/convene-providers/src:packages/convene-memory/src \
+  .venv/bin/uvicorn agent_gateway.main:app --port 8003
 ```
+
+**Note:** The original `uv run uvicorn agent_gateway.main:app` may also work but can hang during lockfile resolution. The PYTHONPATH approach bypasses uv's resolver entirely. Also note that `httpx` was replaced with `aiohttp` in WhisperRemoteSTT (httpx hangs on `.local` mDNS hosts due to missing Happy Eyeballs support), and settings classes use `"extra": "ignore"` to prevent pydantic-settings crashes from shared `.env` files.
 
 You should see:
 ```
@@ -84,7 +87,13 @@ This sends a 3-second 440Hz sine wave. The STT will likely return garbled text o
 
 ```bash
 cd /path/to/convene-ai
+
+# Option 1: via uv run (may hang during lockfile resolution)
 uv run python scripts/test_e2e_gateway.py --generate-audio --wait-timeout 20
+
+# Option 2: via .venv directly (faster, no resolver)
+PYTHONPATH=services/agent-gateway/src:services/audio-service/src:packages/convene-core/src:packages/convene-providers/src:packages/convene-memory/src \
+  .venv/bin/python scripts/test_e2e_gateway.py --generate-audio --wait-timeout 20
 ```
 
 ### Option B: Real Audio File
@@ -181,3 +190,18 @@ Check if the consumer group exists:
 docker compose exec redis redis-cli XINFO GROUPS convene:events
 ```
 Should show group `agent-gateway` with consumer `gateway-0`.
+
+---
+
+## 8. Verified E2E Results (2026-03-02)
+
+Tested with real audio file (`data/input/test-speech.wav`) against DGX Spark Whisper (`spark-b0f2.local`):
+
+| Metric | Value |
+|--------|-------|
+| Audio file | `test-speech.wav` (LibriSpeech sample) |
+| STT provider | WhisperRemoteSTT → `spark-b0f2.local/convene-stt/v1` |
+| Transcript segments received | **29** |
+| Redis XLEN (convene:events) | **31** (29 segments + meeting.started + meeting.ended) |
+| HTTP client | aiohttp (replaced httpx — httpx hangs on `.local` hosts) |
+| All tests passing | 58 gateway + 38 audio-service = **96 service tests** |

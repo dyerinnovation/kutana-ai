@@ -11,17 +11,15 @@
 
 ## Latest Handoff
 
-**Author:** CoWork (scheduled)
-**Date:** 2026-03-01
-**What I did:** Implemented the Redis Streams consumer (`StreamConsumer`) for `transcript.segment.final` events in the task-engine service. Replaced the sleep-based placeholder in `main.py` with a real XREADGROUP consumer group loop with exponential back-off reconnection and per-entry XACK. Added 20 unit tests.
-**Branch:** scheduled/2026-03-01-redis-streams-consumer
-**Merge status:** Branch committed locally — CoWork could not push (no GitHub credentials in VM). Run `git push origin scheduled/2026-03-01-redis-streams-consumer` from your Mac, then merge after quality checks pass
+**Author:** Jonathan (manual session with Claude Code)
+**Date:** 2026-03-02
+**What I did:** Updated all documentation to reflect Agent Gateway M3 completion, DGX Whisper fix (httpx→aiohttp), audio-service test fixes, and E2E verification. Merged `scheduled/2026-03-01-redis-streams-consumer` to `main` and pushed. Deleted stale `scheduled/2026-02-28-registry-integration-tests` branch (work superseded by current branch's expanded registry tests).
+**Branch:** merged to main
+**Merge status:** Merged to main (fast-forward). Remote pushed.
 **Warnings:**
-- ⚠️ **Quality checks were not run** — the CoWork Linux VM only has Python 3.10 and the `.venv` is a macOS ARM64 environment. Before merging, run on your Mac: `uv run ruff check . && uv run ruff format --check . && uv run mypy --strict . && uv run pytest -x -v`
-- The branch is based on `scheduled/2026-02-28-registry-integration-tests` (which has the registry integration tests not yet merged to main). Rebase onto main or merge in order after pushing both branches.
-- Docker must be running for database access: `docker compose up -d`
-- Optional deps must be installed separately: `uv sync --all-extras` to get faster-whisper, piper-tts, groq
-**Dependencies introduced:** None (redis>=5.0 was already declared in task-engine/pyproject.toml)
+- ⚠️ **AudioBridge cross-service import** (`agent-gateway/audio_bridge.py` imports from `audio-service`) is known tech debt — noted in WEEKLY_REVIEW. Should be extracted to a shared package before the two services diverge further.
+- `scheduled/2026-02-28-registry-integration-tests` branch deleted — its registry integration tests were already included in the merged branch.
+**Dependencies introduced:** `aiohttp` (replaced `httpx` in WhisperRemoteSTT — httpx hangs on `.local` mDNS hosts due to missing Happy Eyeballs support)
 
 ---
 

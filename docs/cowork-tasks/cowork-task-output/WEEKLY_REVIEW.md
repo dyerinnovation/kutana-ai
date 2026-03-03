@@ -1,7 +1,7 @@
 # Weekly Architecture Review — Week of 2026-03-02
 
 ## Week Summary
-This week saw two scheduled CoWork sessions complete Phase 1B (provider registry integration tests) and begin Phase 1D (Redis Streams consumer for transcript events). The codebase now has a fully functioning event pipeline: audio service publishes transcript segments via Redis Streams, and the task engine consumes them with proper consumer groups, exponential backoff, and per-entry acknowledgment. Phase 2 (Agent Gateway) also received significant work previously — the gateway, auth, connection manager, event relay, and audio bridge are all implemented with 6 test files. The project is mid-Phase 1D with transcript segment windowing as the next task. Overall trajectory remains strong, though several prior-review issues persist and one new architectural violation was discovered.
+This week saw two scheduled CoWork sessions complete Phase 1B (provider registry integration tests) and begin Phase 1D (Redis Streams consumer for transcript events). The codebase now has a fully functioning event pipeline: audio service publishes transcript segments via Redis Streams, and the task engine consumes them with proper consumer groups, exponential backoff, and per-entry acknowledgment. Phase 2 (Agent Gateway) also received significant work previously — the gateway, auth, connection manager, event relay, and audio bridge are all implemented with 6 test files. On Mar 2, a manual session verified the full E2E pipeline (29 transcript segments via DGX Spark Whisper, Redis XLEN=31), fixed httpx→aiohttp for `.local` mDNS hosts, resolved audio-service test failures (38 tests passing), and merged everything to main. The project is mid-Phase 1D with transcript segment windowing as the next task. Overall trajectory remains strong, though several prior-review issues persist and one new architectural violation was discovered.
 
 ## Architecture Compliance
 
@@ -30,7 +30,7 @@ This week saw two scheduled CoWork sessions complete Phase 1B (provider registry
   - The **bare `list` type annotations** from last week have been fixed — all ORM model list types are now properly parameterized as `list[str]` or `list[SpecificORM]`. ✅ Fixed.
 
 ### Test Coverage
-- **Overall:** ~15 test files across the codebase. Last confirmed run: 96 tests passing (2026-02-27). New tests added: 20 registry integration tests + 20 stream consumer tests = ~136 total (unconfirmed — cannot run pytest in CoWork VM).
+- **Overall:** ~15 test files across the codebase. Last confirmed run: 96+ service tests passing (2026-03-02) — 58 gateway tests + 38 audio-service tests confirmed. New tests added this week: 20 registry integration tests + 20 stream consumer tests + 58 gateway tests.
 - **Gaps:**
   - **convene-memory:** ZERO tests — 4 core memory layer files (working, short-term, long-term, structured) completely untested
   - **api-server:** ZERO tests — 7 source files (routes, deps, main, middleware) untested
