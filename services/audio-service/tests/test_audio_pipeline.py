@@ -70,6 +70,7 @@ class TestAudioPipelineUnit:
         mock_stt = MockSTT(segments=segments)
         pipeline = AudioPipeline(stt_provider=mock_stt)
 
+        await pipeline.process_audio(_make_pcm16())
         result = [seg async for seg in pipeline.get_segments()]
         assert len(result) == 3
         assert result[0].text == "Segment 0"
@@ -153,6 +154,8 @@ class TestEventPublishing:
             meeting_id=MEETING_ID,
         )
 
+        await pipeline.process_audio(_make_pcm16())
+        mock_publisher.publish.reset_mock()
         result = [seg async for seg in pipeline.get_segments()]
         assert len(result) == 2
         assert mock_publisher.publish.call_count == 2
