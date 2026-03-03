@@ -38,15 +38,27 @@
 ## Task Selection
 
 1. Open `docs/TASKLIST.md`
-2. Find the **first unchecked item** (`- [ ]`) that does NOT have a 🔒 lock icon
-3. If all items in the current phase are complete, move to the next phase
-4. If all items are complete or locked, write to HANDOFF.md: "All tasklist items complete or locked. Waiting for Jonathan to add new items or unlock." Then stop.
+2. Find the **first unchecked item** (`- [ ]`) or **block** (`🔗 BLOCK:`) that does NOT have a 🔒 lock icon
+3. If the selected item is a `🔗 BLOCK:`, enter **block mode** (see below)
+4. If all items in the current phase are complete, move to the next phase
+5. If all items are complete or locked, write to HANDOFF.md: "All tasklist items complete or locked. Waiting for Jonathan to add new items or unlock." Then stop.
 
 **Rules:**
-- Pick exactly ONE item per session
+- Pick exactly **ONE BLOCK or ONE item** per session
 - Never pick a locked item (🔒)
 - Never skip ahead to a later phase if the current phase has unchecked items
 - If an item has dependencies on incomplete items, skip it and pick the next eligible one
+
+### Block Mode
+
+When the selected item is a `🔗 BLOCK:`, work through all sub-tasks as a unit:
+
+1. Implement the first sub-task following the Implementation steps below
+2. Run quality checks after each sub-task
+3. If a sub-task passes, check it off and move to the next
+4. If a sub-task fails after 3 fix attempts, document the failure and stop — **partial block completion is OK**
+5. Check off the entire `🔗 BLOCK:` line only when ALL sub-tasks pass
+6. If a block has >5 sub-tasks and quality checks pass on the first N, commit progress and continue to the next sub-task
 
 ---
 
@@ -90,12 +102,15 @@
    ```markdown
    - [x] AssemblyAI streaming STT implementation   ← change [ ] to [x]
    ```
+   For blocks, check off each sub-task AND the block header when all sub-tasks pass.
 
-2. Append an entry to `docs/PROGRESS.md`:
+2. Append an entry to `docs/PROGRESS.md`.
+
+   **For single items:**
    ```markdown
    ## YYYY-MM-DD — {Item Description}
 
-   **Roadmap item:** {exact text from ROADMAP.md}
+   **Roadmap item:** {exact text from TASKLIST.md}
    **Branch:** scheduled/YYYY-MM-DD-{feature-slug}
    **Author:** CoWork (scheduled)
 
@@ -116,7 +131,40 @@
    {List anything that needs Jonathan's input, or "None"}
 
    ### Next Up
-   {The next unchecked item in ROADMAP.md}
+   {The next unchecked item in TASKLIST.md}
+   ```
+
+   **For blocks:**
+   ```markdown
+   ## YYYY-MM-DD — BLOCK: {Block Title}
+
+   **Block status:** N/M sub-tasks complete
+   **Branch:** scheduled/YYYY-MM-DD-{feature-slug}
+   **Author:** CoWork (scheduled)
+
+   ### Sub-task 1: {Name}
+   **Status:** ✅
+   - Created `path/to/file.py`
+   - Quality: ruff ✅, mypy ✅, pytest ✅ (N passed)
+
+   ### Sub-task 2: {Name}
+   **Status:** ✅
+   - Created `path/to/file.py`
+   - Quality: ruff ✅, mypy ✅, pytest ✅ (N passed)
+
+   ### Sub-task 3: {Name}
+   **Status:** ❌ (failed after 3 attempts)
+   - Issue: {description of failure}
+   - Attempted fixes: {what was tried}
+
+   ### Notes
+   {Any implementation decisions, trade-offs, or assumptions made}
+
+   ### Blockers
+   {List anything that needs Jonathan's input, or "None"}
+
+   ### Next Up
+   {The next unchecked item/block in TASKLIST.md}
    ```
 
 3. Update `docs/HANDOFF.md` — replace the existing content with:
@@ -127,6 +175,7 @@
    **Date:** {today's date and time}
    **What I did:** {1-2 sentence summary}
    **Branch:** scheduled/YYYY-MM-DD-{feature-slug}
+   **Block progress:** {if block: "3 of 4 sub-tasks complete", else omit}
    **Merge status:** Ready for review — do `git merge scheduled/YYYY-MM-DD-{slug}` after reviewing
    **Warnings:** {anything the next session (human or scheduled) should know}
    **Dependencies introduced:** {any new packages added to pyproject.toml}
@@ -143,9 +192,10 @@
 
 ## Hard rules
 
-- **ONE item per session.** Never continue to the next roadmap item.
+- **ONE BLOCK or ONE item per session.** A block is complete when all sub-tasks pass quality checks. Never continue to the next block/item after completing one.
 - **Never force-push.** Always create new commits.
 - **Never modify files outside the scope of the current roadmap item** unless fixing an import or dependency required by your change.
 - **Never delete or overwrite PROGRESS.md entries.** Always append.
 - **If tests fail and you can't fix them in 3 attempts,** document the failure in PROGRESS.md, note it as a blocker in HANDOFF.md, and stop. Do not ship broken code.
 - **If you encounter a merge conflict on pull,** stop and document it in HANDOFF.md. Do not attempt to resolve code merge conflicts — only resolve conflicts in docs/PROGRESS.md and docs/HANDOFF.md by keeping both versions.
+- **Partial block completion is OK.** If 2 of 4 sub-tasks pass but the 3rd fails, commit the passing work, document the failure, and stop. Check off the completed sub-tasks but NOT the block header.

@@ -90,7 +90,7 @@ Human (Browser)                    AI Agent (any framework)
 - **[GO_TO_MARKET.md](./technical/GO_TO_MARKET.md)** — Go-to-market strategy for the two-sided market. Developer track (API, SDK, MCP) and team track (meetings, task extraction, memory).
 
 ### Development
-- **[TASKLIST.md](./TASKLIST.md)** — Ordered task queue for manual and scheduled development sessions. Phases 1A-1C complete, 1D in progress. Phase 2 Agent Gateway partially complete (M3 verified). New Phases 3-7 cover auth, billing, WebRTC, dashboard, marketplace, and hardening.
+- **[TASKLIST.md](./TASKLIST.md)** — Ordered task queue for manual and scheduled development sessions. Foundation (1A–1C) complete. Phase 1 (Core AI Pipeline) and Phase 2 (Agent Platform) in progress. Phases 3–10 cover MCP/SDK, auth/billing, meeting platform, memory, cloud deployment, voice, integrations, and hardening. Supports `🔗 BLOCK:` multi-task items for CoWork.
 - **[PROGRESS.md](./PROGRESS.md)** — Append-only log of completed work.
 - **[HANDOFF.md](./HANDOFF.md)** — Shift-change notes for CoWork sessions.
 - **[E2E Gateway Test](./manual-testing/E2E_Gateway_Test.md)** — Step-by-step E2E test walkthrough for the agent gateway pipeline.
@@ -110,9 +110,11 @@ The original phone dial-in architecture (Twilio) remains functional as a fallbac
 
 ## Current Phase
 
-**Phase 1D** — Task Extraction & Memory (in progress). Transcript segment windowing, LLM pipeline, and memory system are next.
+**Phase 1** — Core AI Pipeline (in progress). STT wired, Redis Streams consumer implemented. Next: transcript segment windowing, LLM extraction pipeline, task persistence.
 
-**Phase 2** — Agent Gateway M3 verified (2026-03-02). Agent connects via WebSocket, sends real audio, receives 29 transcript segments E2E through DGX Spark Whisper. 58 gateway tests passing.
+**Phase 2** — Agent Platform (partially complete). Agent Gateway M3 verified (2026-03-02) — 29 segments E2E, 58 gateway tests. Remaining: multi-agent support, agent registration & credentials, agent modality support (Voice-to-Voice, Speech-to-Text, Text-only).
+
+**Agent connection pattern:** Claude Agent SDK → MCP Server → Agent Gateway (WebSocket).
 
 **Next task:** Implement transcript segment windowing (3-5 min windows with overlap).
 

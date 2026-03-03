@@ -125,7 +125,11 @@ STRIPE_PUBLISHABLE_KEY=
 ```
 
 ## Current Phase
-Phase 1D — Task Extraction & Memory (in progress). STT wired, Redis Streams consumer implemented. Next task: transcript segment windowing, then LLM pipeline and memory system. Phase 2 Agent Gateway M3 verified (2026-03-02) — 29 segments E2E, 58 gateway tests passing. See `docs/TASKLIST.md` for the full task queue and `docs/technical/ROADMAP.md` for feature details.
+**Phase 1** — Core AI Pipeline (in progress). STT wired, Redis Streams consumer implemented. Next task: transcript segment windowing, then LLM extraction pipeline and task persistence.
+
+**Phase 2** — Agent Platform (partially complete). Agent Gateway M3 verified (2026-03-02) — 29 segments E2E, 58 gateway tests passing. Remaining: multi-agent support, agent registration, agent modality support (Voice-to-Voice, Speech-to-Text, Text-only).
+
+**Agent connection pattern:** Claude Agent SDK → MCP Server → Agent Gateway (WebSocket). See `docs/TASKLIST.md` for the full task queue (Phases 1–10) and `docs/technical/ROADMAP.md` for feature details.
 
 ## Git Workflow
 - **Commit and push after each plan** — don't let changes accumulate across sessions
