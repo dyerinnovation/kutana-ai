@@ -11,6 +11,9 @@ dependencies = [
     "asyncpg>=0.29",
     "redis>=5.0",
     "pydantic-settings>=2.0",
+    "passlib[bcrypt]>=1.7",
+    "PyJWT>=2.8",
+    "python-multipart>=0.0.9",
 ]
 
 [tool.uv.sources]

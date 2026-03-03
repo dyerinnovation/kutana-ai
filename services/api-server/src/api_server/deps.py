@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
     debug: bool = False
+    jwt_secret: str = "change-me-in-production"
+    agent_gateway_jwt_secret: str = "change-me-in-production"
 
 
 @lru_cache(maxsize=1)
