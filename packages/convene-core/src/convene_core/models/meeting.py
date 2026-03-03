@@ -24,14 +24,17 @@ def _utc_now() -> datetime:
 
 
 class Meeting(BaseModel):
-    """Represents a meeting that the AI agent can dial into.
+    """Represents a meeting that participants and agents can join.
 
     Attributes:
         id: Unique meeting identifier.
-        platform: Meeting platform (e.g., "zoom", "teams", "meet").
-        dial_in_number: Phone number to dial into the meeting.
-        meeting_code: Access code for the meeting.
+        platform: Meeting platform (e.g., "zoom", "teams", "meet", "convene").
+        dial_in_number: Phone number to dial into the meeting (legacy, optional).
+        meeting_code: Access code for the meeting (legacy, optional).
         title: Optional human-readable meeting title.
+        room_id: Associated room UUID (for agent-first meetings).
+        room_name: Room name for easy lookup.
+        meeting_type: Type of meeting (e.g., "standard", "agent_only", "webrtc").
         scheduled_at: When the meeting is scheduled to start (tz-aware).
         started_at: When the meeting actually started (tz-aware).
         ended_at: When the meeting ended (tz-aware).
@@ -43,9 +46,12 @@ class Meeting(BaseModel):
 
     id: UUID = Field(default_factory=uuid4)
     platform: str
-    dial_in_number: str
-    meeting_code: str
+    dial_in_number: str | None = None
+    meeting_code: str | None = None
     title: str | None = None
+    room_id: UUID | None = None
+    room_name: str | None = None
+    meeting_type: str = "standard"
     scheduled_at: datetime
     started_at: datetime | None = None
     ended_at: datetime | None = None

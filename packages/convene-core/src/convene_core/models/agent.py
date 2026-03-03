@@ -33,5 +33,9 @@ class AgentConfig(BaseModel):
     system_prompt: str
     capabilities: list[str] = Field(default_factory=list)
     meeting_type_filter: list[str] = Field(default_factory=list)
+    agent_type: str = "custom"
+    protocol_version: str = "1.0"
+    default_capabilities: list[str] = Field(default_factory=list)
+    max_concurrent_sessions: int = Field(default=1, ge=1)
     created_at: datetime = Field(default_factory=_utc_now)
     updated_at: datetime = Field(default_factory=_utc_now)

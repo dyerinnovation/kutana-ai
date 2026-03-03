@@ -6,10 +6,16 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from convene_core.events.definitions import (
+    AgentData,
+    AgentJoined,
+    AgentLeft,
     BaseEvent,
     DecisionRecorded,
     MeetingEnded,
     MeetingStarted,
+    ParticipantJoined,
+    ParticipantLeft,
+    RoomCreated,
     TaskCreated,
     TaskUpdated,
     TranscriptSegmentFinal,
@@ -221,3 +227,182 @@ class TestDecisionRecorded:
         data = event.to_dict()
         assert data["decision"]["description"] == "Migrate to AWS"
         assert len(data["decision"]["participants_present"]) == 2
+
+
+# ---- Room and Agent Events (Phase P-A) ----
+
+
+AGENT_CONFIG_ID = uuid4()
+ROOM_ID = uuid4()
+
+
+class TestRoomCreated:
+    """Tests for the RoomCreated event."""
+
+    def test_room_created_event(self) -> None:
+        """RoomCreated event can be created."""
+        event = RoomCreated(
+            room_id=ROOM_ID,
+            room_name="sprint-room",
+            meeting_id=MEETING_ID,
+        )
+        assert event.room_id == ROOM_ID
+        assert event.room_name == "sprint-room"
+        assert event.meeting_id == MEETING_ID
+
+    def test_room_created_event_type(self) -> None:
+        """RoomCreated has correct event_type."""
+        event = RoomCreated(room_id=ROOM_ID, room_name="test")
+        assert event.to_dict()["event_type"] == "room.created"
+
+    def test_room_created_optional_meeting_id(self) -> None:
+        """RoomCreated meeting_id is optional."""
+        event = RoomCreated(room_id=ROOM_ID, room_name="adhoc")
+        assert event.meeting_id is None
+
+
+class TestAgentJoined:
+    """Tests for the AgentJoined event."""
+
+    def test_agent_joined_event(self) -> None:
+        """AgentJoined event can be created."""
+        event = AgentJoined(
+            agent_config_id=AGENT_CONFIG_ID,
+            meeting_id=MEETING_ID,
+            room_name="sprint-room",
+            capabilities=["listen", "transcribe"],
+        )
+        assert event.agent_config_id == AGENT_CONFIG_ID
+        assert event.capabilities == ["listen", "transcribe"]
+
+    def test_agent_joined_event_type(self) -> None:
+        """AgentJoined has correct event_type."""
+        event = AgentJoined(
+            agent_config_id=AGENT_CONFIG_ID,
+            meeting_id=MEETING_ID,
+            room_name="test",
+            capabilities=[],
+        )
+        assert event.to_dict()["event_type"] == "agent.joined"
+
+    def test_agent_joined_serialization(self) -> None:
+        """AgentJoined to_dict includes capabilities."""
+        event = AgentJoined(
+            agent_config_id=AGENT_CONFIG_ID,
+            meeting_id=MEETING_ID,
+            room_name="room-1",
+            capabilities=["listen"],
+        )
+        data = event.to_dict()
+        assert data["capabilities"] == ["listen"]
+        assert data["room_name"] == "room-1"
+
+
+class TestAgentLeft:
+    """Tests for the AgentLeft event."""
+
+    def test_agent_left_event(self) -> None:
+        """AgentLeft event can be created."""
+        event = AgentLeft(
+            agent_config_id=AGENT_CONFIG_ID,
+            meeting_id=MEETING_ID,
+            room_name="sprint-room",
+        )
+        assert event.reason == "normal"
+
+    def test_agent_left_custom_reason(self) -> None:
+        """AgentLeft can have a custom reason."""
+        event = AgentLeft(
+            agent_config_id=AGENT_CONFIG_ID,
+            meeting_id=MEETING_ID,
+            room_name="test",
+            reason="timeout",
+        )
+        assert event.reason == "timeout"
+        assert event.to_dict()["event_type"] == "agent.left"
+
+
+class TestParticipantJoined:
+    """Tests for the ParticipantJoined event."""
+
+    def test_participant_joined_event(self) -> None:
+        """ParticipantJoined event can be created."""
+        event = ParticipantJoined(
+            participant_id=PARTICIPANT_ID,
+            meeting_id=MEETING_ID,
+            name="Alice",
+            role="host",
+            connection_type="webrtc",
+        )
+        assert event.name == "Alice"
+        assert event.role == "host"
+        assert event.connection_type == "webrtc"
+
+    def test_participant_joined_event_type(self) -> None:
+        """ParticipantJoined has correct event_type."""
+        event = ParticipantJoined(
+            participant_id=PARTICIPANT_ID,
+            meeting_id=MEETING_ID,
+            name="Bob",
+            role="participant",
+        )
+        assert event.to_dict()["event_type"] == "participant.joined"
+
+
+class TestParticipantLeft:
+    """Tests for the ParticipantLeft event."""
+
+    def test_participant_left_event(self) -> None:
+        """ParticipantLeft event can be created."""
+        event = ParticipantLeft(
+            participant_id=PARTICIPANT_ID,
+            meeting_id=MEETING_ID,
+        )
+        assert event.reason == "normal"
+        assert event.to_dict()["event_type"] == "participant.left"
+
+    def test_participant_left_custom_reason(self) -> None:
+        """ParticipantLeft can have a custom reason."""
+        event = ParticipantLeft(
+            participant_id=PARTICIPANT_ID,
+            meeting_id=MEETING_ID,
+            reason="kicked",
+        )
+        assert event.reason == "kicked"
+
+
+class TestAgentData:
+    """Tests for the AgentData event."""
+
+    def test_agent_data_event(self) -> None:
+        """AgentData event can be created."""
+        event = AgentData(
+            agent_config_id=AGENT_CONFIG_ID,
+            meeting_id=MEETING_ID,
+            channel="tasks",
+            payload={"action": "extract", "count": 3},
+        )
+        assert event.channel == "tasks"
+        assert event.payload["action"] == "extract"
+
+    def test_agent_data_event_type(self) -> None:
+        """AgentData has correct event_type."""
+        event = AgentData(
+            agent_config_id=AGENT_CONFIG_ID,
+            meeting_id=MEETING_ID,
+            channel="test",
+            payload={},
+        )
+        assert event.to_dict()["event_type"] == "agent.data"
+
+    def test_agent_data_serialization(self) -> None:
+        """AgentData to_dict includes channel and payload."""
+        event = AgentData(
+            agent_config_id=AGENT_CONFIG_ID,
+            meeting_id=MEETING_ID,
+            channel="summary",
+            payload={"text": "Meeting summary here"},
+        )
+        data = event.to_dict()
+        assert data["channel"] == "summary"
+        assert data["payload"]["text"] == "Meeting summary here"

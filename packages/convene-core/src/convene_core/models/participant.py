@@ -15,6 +15,7 @@ class ParticipantRole(enum.StrEnum):
     HOST = "host"
     PARTICIPANT = "participant"
     AGENT = "agent"
+    OBSERVER = "observer"
 
 
 def _utc_now() -> datetime:
@@ -39,4 +40,6 @@ class Participant(BaseModel):
     email: str | None = None
     speaker_id: str | None = None
     role: ParticipantRole = ParticipantRole.PARTICIPANT
+    connection_type: str | None = None
+    agent_config_id: UUID | None = None
     created_at: datetime = Field(default_factory=_utc_now)

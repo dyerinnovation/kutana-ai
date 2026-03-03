@@ -9,9 +9,15 @@ import pytest
 from pydantic import ValidationError
 
 from convene_core.models.agent import AgentConfig
+from convene_core.models.agent_session import (
+    AgentSession,
+    AgentSessionStatus,
+    ConnectionType,
+)
 from convene_core.models.decision import Decision
 from convene_core.models.meeting import Meeting, MeetingStatus
 from convene_core.models.participant import Participant, ParticipantRole
+from convene_core.models.room import Room, RoomStatus
 from convene_core.models.task import (
     VALID_TRANSITIONS,
     Task,
@@ -426,3 +432,204 @@ class TestAgentConfig:
         restored = AgentConfig.model_validate(data)
         assert restored.id == config.id
         assert restored.name == config.name
+
+    def test_agent_config_new_fields(self) -> None:
+        """AgentConfig has new agent-gateway fields with defaults."""
+        config = AgentConfig(
+            name="Gateway Agent",
+            system_prompt="Test.",
+        )
+        assert config.agent_type == "custom"
+        assert config.protocol_version == "1.0"
+        assert config.default_capabilities == []
+        assert config.max_concurrent_sessions == 1
+
+    def test_agent_config_custom_new_fields(self) -> None:
+        """AgentConfig new fields can be customized."""
+        config = AgentConfig(
+            name="LiveKit Agent",
+            system_prompt="Test.",
+            agent_type="livekit",
+            protocol_version="2.0",
+            default_capabilities=["listen", "speak"],
+            max_concurrent_sessions=5,
+        )
+        assert config.agent_type == "livekit"
+        assert config.protocol_version == "2.0"
+        assert config.default_capabilities == ["listen", "speak"]
+        assert config.max_concurrent_sessions == 5
+
+
+# ---- Room Tests ----
+
+
+class TestRoom:
+    """Tests for the Room model."""
+
+    def test_create_room_with_defaults(self) -> None:
+        """Room can be created with just a name."""
+        room = Room(name="sprint-planning-2026-03-01")
+        assert isinstance(room.id, UUID)
+        assert room.name == "sprint-planning-2026-03-01"
+        assert room.status == RoomStatus.PENDING
+        assert room.meeting_id is None
+        assert room.livekit_room_id is None
+        assert room.max_participants == 0
+
+    def test_create_room_with_all_fields(self) -> None:
+        """Room can be created with all fields populated."""
+        meeting_id = uuid4()
+        room = Room(
+            name="standup-daily",
+            meeting_id=meeting_id,
+            livekit_room_id="lk_room_abc123",
+            status=RoomStatus.ACTIVE,
+            max_participants=10,
+        )
+        assert room.meeting_id == meeting_id
+        assert room.livekit_room_id == "lk_room_abc123"
+        assert room.status == RoomStatus.ACTIVE
+        assert room.max_participants == 10
+
+    def test_room_status_enum_values(self) -> None:
+        """RoomStatus enum has all expected values."""
+        assert RoomStatus.PENDING == "pending"
+        assert RoomStatus.ACTIVE == "active"
+        assert RoomStatus.CLOSED == "closed"
+
+    def test_room_serialization_roundtrip(self) -> None:
+        """Room can be serialized and deserialized."""
+        room = Room(name="test-room")
+        data = room.model_dump(mode="json")
+        restored = Room.model_validate(data)
+        assert restored.id == room.id
+        assert restored.name == room.name
+
+
+# ---- AgentSession Tests ----
+
+
+class TestAgentSession:
+    """Tests for the AgentSession model."""
+
+    def test_create_session_with_defaults(self) -> None:
+        """AgentSession can be created with required fields."""
+        agent_id = uuid4()
+        meeting_id = uuid4()
+        session = AgentSession(
+            agent_config_id=agent_id,
+            meeting_id=meeting_id,
+        )
+        assert isinstance(session.id, UUID)
+        assert session.agent_config_id == agent_id
+        assert session.meeting_id == meeting_id
+        assert session.connection_type == ConnectionType.AGENT_GATEWAY
+        assert session.status == AgentSessionStatus.CONNECTING
+        assert session.capabilities == []
+        assert session.connected_at is None
+        assert session.disconnected_at is None
+
+    def test_create_session_with_all_fields(self) -> None:
+        """AgentSession with all fields populated."""
+        now = _utc(2026, 3, 1, 10)
+        session = AgentSession(
+            agent_config_id=uuid4(),
+            meeting_id=uuid4(),
+            room_name="sprint-room",
+            connection_type=ConnectionType.WEBRTC,
+            capabilities=["listen", "speak", "transcribe"],
+            status=AgentSessionStatus.ACTIVE,
+            connected_at=now,
+        )
+        assert session.room_name == "sprint-room"
+        assert session.connection_type == ConnectionType.WEBRTC
+        assert session.status == AgentSessionStatus.ACTIVE
+        assert len(session.capabilities) == 3
+
+    def test_connection_type_enum_values(self) -> None:
+        """ConnectionType enum has all expected values."""
+        assert ConnectionType.WEBRTC == "webrtc"
+        assert ConnectionType.AGENT_GATEWAY == "agent_gateway"
+        assert ConnectionType.PHONE == "phone"
+
+    def test_session_status_enum_values(self) -> None:
+        """AgentSessionStatus enum has all expected values."""
+        assert AgentSessionStatus.CONNECTING == "connecting"
+        assert AgentSessionStatus.ACTIVE == "active"
+        assert AgentSessionStatus.DISCONNECTED == "disconnected"
+
+    def test_session_serialization_roundtrip(self) -> None:
+        """AgentSession can be serialized and deserialized."""
+        session = AgentSession(
+            agent_config_id=uuid4(),
+            meeting_id=uuid4(),
+            capabilities=["listen"],
+        )
+        data = session.model_dump(mode="json")
+        restored = AgentSession.model_validate(data)
+        assert restored.id == session.id
+        assert restored.capabilities == ["listen"]
+
+
+# ---- Meeting Model Changes Tests ----
+
+
+class TestMeetingNewFields:
+    """Tests for Meeting model changes (optional dial-in, new fields)."""
+
+    def test_meeting_without_dial_in(self) -> None:
+        """Meeting can be created without dial_in_number and meeting_code."""
+        meeting = Meeting(
+            platform="convene",
+            scheduled_at=_utc(2026, 3, 1, 10),
+        )
+        assert meeting.dial_in_number is None
+        assert meeting.meeting_code is None
+        assert meeting.room_id is None
+        assert meeting.room_name is None
+        assert meeting.meeting_type == "standard"
+
+    def test_meeting_with_room_fields(self) -> None:
+        """Meeting with room-based fields."""
+        room_id = uuid4()
+        meeting = Meeting(
+            platform="convene",
+            scheduled_at=_utc(2026, 3, 1, 10),
+            room_id=room_id,
+            room_name="daily-standup",
+            meeting_type="agent_only",
+        )
+        assert meeting.room_id == room_id
+        assert meeting.room_name == "daily-standup"
+        assert meeting.meeting_type == "agent_only"
+
+
+# ---- Participant Model Changes Tests ----
+
+
+class TestParticipantNewFields:
+    """Tests for Participant model changes."""
+
+    def test_observer_role(self) -> None:
+        """Participant can have OBSERVER role."""
+        p = Participant(name="Observer Bot", role=ParticipantRole.OBSERVER)
+        assert p.role == ParticipantRole.OBSERVER
+        assert p.role == "observer"
+
+    def test_participant_connection_type(self) -> None:
+        """Participant can have a connection_type."""
+        p = Participant(
+            name="WebRTC User",
+            connection_type="webrtc",
+        )
+        assert p.connection_type == "webrtc"
+
+    def test_participant_agent_config_id(self) -> None:
+        """Participant can be linked to an agent config."""
+        agent_id = uuid4()
+        p = Participant(
+            name="Task Bot",
+            role=ParticipantRole.AGENT,
+            agent_config_id=agent_id,
+        )
+        assert p.agent_config_id == agent_id

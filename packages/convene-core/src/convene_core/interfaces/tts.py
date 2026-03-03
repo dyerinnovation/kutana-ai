@@ -52,3 +52,8 @@ class TTSProvider(ABC):
             List of Voice objects supported by the provider.
         """
         ...
+
+    @abstractmethod
+    async def close(self) -> None:
+        """Release any resources held by the provider."""
+        ...

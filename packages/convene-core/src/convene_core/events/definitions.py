@@ -111,8 +111,119 @@ class DecisionRecorded(BaseEvent):
     decision: Decision
 
 
+# ---------------------------------------------------------------------------
+# Room and agent events (Phase P-A: Agent Gateway)
+# ---------------------------------------------------------------------------
+
+
+class RoomCreated(BaseEvent):
+    """Emitted when a meeting room is created.
+
+    Attributes:
+        room_id: ID of the newly created room.
+        room_name: Human-readable room name.
+        meeting_id: Associated meeting ID (if any).
+    """
+
+    event_type: ClassVar[str] = "room.created"
+    room_id: UUID
+    room_name: str
+    meeting_id: UUID | None = None
+
+
+class AgentJoined(BaseEvent):
+    """Emitted when an AI agent joins a meeting.
+
+    Attributes:
+        agent_config_id: ID of the agent configuration.
+        meeting_id: ID of the meeting joined.
+        room_name: Room the agent joined.
+        capabilities: Capabilities granted to the agent.
+    """
+
+    event_type: ClassVar[str] = "agent.joined"
+    agent_config_id: UUID
+    meeting_id: UUID
+    room_name: str
+    capabilities: list[str]
+
+
+class AgentLeft(BaseEvent):
+    """Emitted when an AI agent leaves a meeting.
+
+    Attributes:
+        agent_config_id: ID of the agent configuration.
+        meeting_id: ID of the meeting left.
+        room_name: Room the agent left.
+        reason: Reason for leaving.
+    """
+
+    event_type: ClassVar[str] = "agent.left"
+    agent_config_id: UUID
+    meeting_id: UUID
+    room_name: str
+    reason: str = "normal"
+
+
+class ParticipantJoined(BaseEvent):
+    """Emitted when a participant joins a meeting.
+
+    Attributes:
+        participant_id: ID of the participant.
+        meeting_id: ID of the meeting joined.
+        name: Display name of the participant.
+        role: Participant role.
+        connection_type: How the participant is connected.
+    """
+
+    event_type: ClassVar[str] = "participant.joined"
+    participant_id: UUID
+    meeting_id: UUID
+    name: str
+    role: str
+    connection_type: str | None = None
+
+
+class ParticipantLeft(BaseEvent):
+    """Emitted when a participant leaves a meeting.
+
+    Attributes:
+        participant_id: ID of the participant.
+        meeting_id: ID of the meeting left.
+        reason: Reason for leaving.
+    """
+
+    event_type: ClassVar[str] = "participant.left"
+    participant_id: UUID
+    meeting_id: UUID
+    reason: str = "normal"
+
+
+class AgentData(BaseEvent):
+    """Emitted when an agent sends structured data.
+
+    Attributes:
+        agent_config_id: ID of the agent configuration.
+        meeting_id: ID of the meeting.
+        channel: Data channel name.
+        payload: Arbitrary data payload.
+    """
+
+    event_type: ClassVar[str] = "agent.data"
+    agent_config_id: UUID
+    meeting_id: UUID
+    channel: str
+    payload: dict[str, object]
+
+
 # Rebuild models to resolve forward references from __future__ annotations
 TranscriptSegmentFinal.model_rebuild()
 TaskCreated.model_rebuild()
 TaskUpdated.model_rebuild()
 DecisionRecorded.model_rebuild()
+RoomCreated.model_rebuild()
+AgentJoined.model_rebuild()
+AgentLeft.model_rebuild()
+ParticipantJoined.model_rebuild()
+ParticipantLeft.model_rebuild()
+AgentData.model_rebuild()
