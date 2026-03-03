@@ -1,0 +1,13 @@
+[project]
+name = "meeting-assistant-agent"
+version = "0.1.0"
+description = "Example Claude Agent SDK agent that participates in Convene AI meetings"
+requires-python = ">=3.12"
+dependencies = [
+    "claude-agent-sdk>=0.1",
+    "anthropic>=0.40",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
