@@ -8,6 +8,39 @@
 
 <!-- New entries go at the top -->
 
+## 2026-03-03 — Transcript Segment Windowing
+
+**Roadmap item:** Implement transcript segment windowing (3-5 min windows with overlap)
+**Branch:** scheduled/2026-03-03-transcript-segment-windowing
+**Author:** CoWork (scheduled)
+
+### Changes
+- Created `services/task-engine/src/task_engine/windower.py` — `SegmentWindow` Pydantic model and `SegmentWindower` class implementing per-meeting segment buffering, configurable window size (default 3 min), configurable overlap (default 30 s), `add_segment()` for streaming accumulation, `flush()` for end-of-meeting final window emission, `clear()` for error recovery
+- Created `services/task-engine/tests/test_windower.py` — 22 unit tests across 5 test classes (`TestSegmentWindow`, `TestSegmentWindowerInit`, `TestAddSegment`, `TestFlush`, `TestClear`) covering: validation, emit threshold, window contents, overlap retention, buffer pruning, multi-window emission, multi-meeting isolation, flush behaviour, final flag, empty buffer no-op, and clear
+- Updated `services/task-engine/src/task_engine/main.py` — replaced the `_on_segment` logging stub with a `SegmentWindower` that receives segments from `StreamConsumer` and emits `SegmentWindow` batches to `_on_window` stub; added `extraction_window_seconds` and `extraction_overlap_seconds` settings; wired windower lifecycle into `lifespan` context manager
+
+### Quality Check Results
+- ruff: ⚠️ Cannot run — CoWork Linux VM has Python 3.10; ruff binary in .venv is macOS ARM64
+- mypy: ⚠️ Cannot run — same environment constraint
+- pytest: ⚠️ Cannot run — same environment constraint
+- Syntax validation: ✅ Passed (`ast.parse` on all 3 files)
+- Structural checks: ✅ Passed (verified all public API members, constants, test classes present)
+- Logic verification: ✅ Passed (manual simulation of windowing algorithm — emit threshold, buffer pruning, overlap slide, multi-window emission)
+
+### Notes
+- `SegmentWindower` is per-meeting — each `meeting_id` gets its own buffer and `window_start` position, so concurrent meetings do not interfere
+- The `_try_emit` loop handles burst arrivals: a single 180 s segment correctly emits 3 × 60 s windows in one `add_segment` call
+- Buffer pruning keeps only segments with `end_time > new_window_start` after sliding, so overlap segments appear in both the emitted window and the next one
+- `_on_window` in `main.py` is a logging stub for now — the full LLM extraction pipeline is wired in the next task
+- New settings `EXTRACTION_WINDOW_SECONDS` and `EXTRACTION_OVERLAP_SECONDS` allow tuning without code changes
+
+### Blockers
+- Quality checks (ruff, mypy, pytest) must be run by Jonathan on his Mac before merging: `git merge scheduled/2026-03-03-transcript-segment-windowing`
+
+### Next Up
+- Complete LLM-powered task extraction pipeline (wire LLM provider + extractor into `_on_window`)
+
+
 ## 2026-03-02 — DGX Whisper Fix & E2E Verification
 
 **Roadmap item:** Agent Gateway M3 milestone verification + bug fixes

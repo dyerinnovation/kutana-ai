@@ -11,15 +11,14 @@
 
 ## Latest Handoff
 
-**Author:** Jonathan (manual session with Claude Code)
-**Date:** 2026-03-02
-**What I did:** Full rewrite of `docs/TASKLIST.md` — replaced old 7-phase structure with new 10-phase structure aligned with agent-first product vision. Added `🔗 BLOCK:` multi-task support to CoWork daily-build. Updated `CLAUDE.md`, `docs/README.md` for consistency with new phase numbering. Added agent modality notes (V2V, S2T, text-only) and Claude Agent SDK → MCP Server → Gateway connection pattern.
-**Branch:** `feature/2026-03-02-tasklist-rewrite`
-**Merge status:** Ready for review — do `git merge feature/2026-03-02-tasklist-rewrite` after reviewing
+**Author:** CoWork (scheduled)
+**Date:** 2026-03-03
+**What I did:** Implemented transcript segment windowing — created `SegmentWindower` and `SegmentWindow` in `task_engine/windower.py`, wired windower into `main.py` between `StreamConsumer` and the `_on_window` logging stub, and wrote 22 unit tests.
+**Branch:** scheduled/2026-03-03-transcript-segment-windowing
+**Merge status:** Ready for review — do `git merge scheduled/2026-03-03-transcript-segment-windowing` after running quality checks on Mac
 **Warnings:**
-- ⚠️ **AudioBridge cross-service import** (`agent-gateway/audio_bridge.py` imports from `audio-service`) is known tech debt — now tracked as explicit item in Phase 2.
-- Phase 1C deprecated items (MeetingDialer, TwilioHandler, meeting end detection) are annotated but kept checked off for historical record.
-- CoWork daily-build now supports `🔗 BLOCK:` items — ensure all scheduled sessions use the updated `daily-build.md`.
+- ⚠️ Quality checks (ruff, mypy, pytest) must be run on Mac before merging — `.venv` is macOS ARM64 and won't execute in this Linux VM
+- The `_on_window` handler in `main.py` is still a logging stub — next task wires the actual LLM extractor
 **Dependencies introduced:** None
 
 ---
