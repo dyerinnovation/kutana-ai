@@ -46,3 +46,7 @@ redis_data/
 
 # Test data
 data/
+
+# SSH keys
+dyerinnovation-key
+dyerinnovation-key.pub
