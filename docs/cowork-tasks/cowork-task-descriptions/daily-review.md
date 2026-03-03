@@ -38,7 +38,7 @@
 
 ## Write the briefing
 
-Overwrite `docs/DAILY_BRIEF.md` with the following format:
+Overwrite `docs/cowork-tasks/cowork-task-output/DAILY_BRIEF.md` with the following format:
 
 ```markdown
 # Daily Brief — {YYYY-MM-DD}
@@ -84,7 +84,7 @@ This means either:
 - The laptop was asleep and the task was skipped
 - All roadmap items were complete or locked
 
-Write a brief note to DAILY_BRIEF.md:
+Write a brief note to `docs/cowork-tasks/cowork-task-output/DAILY_BRIEF.md`:
 
 ```markdown
 # Daily Brief — {YYYY-MM-DD}
@@ -103,6 +103,6 @@ Check docs/HANDOFF.md for any notes from the last session.
 ## Hard rules
 
 - **Never modify code files.** This task is read-only analysis.
-- **Always overwrite DAILY_BRIEF.md** — it should only contain today's brief.
+- **Always overwrite `docs/cowork-tasks/cowork-task-output/DAILY_BRIEF.md`** — it should only contain today's brief.
 - **Be concise.** The goal is a 2-minute morning read, not a novel.
 - **Be honest about quality.** If tests are failing, say so clearly. Don't minimize issues.

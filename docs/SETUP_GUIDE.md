@@ -25,13 +25,22 @@ convene-ai/
 │   ├── TASKLIST.md                          # Ordered task checklist (your task queue)
 │   ├── PROGRESS.md                         # Running log of completed work
 │   ├── HANDOFF.md                          # Shift-change notes between you and CoWork
-│   ├── WEEKLY_REVIEW.md                    # Architecture review output (auto-generated)
-│   ├── DAILY_BRIEF.md                      # Morning briefing output (auto-generated)
+│   ├── technical/
+│   │   ├── BOOTSTRAP_REFERENCE.md          # Bootstrap reference documentation
+│   │   ├── COMPETITIVE_ANALYSIS.md         # Competitive analysis
+│   │   ├── GO_TO_MARKET.md                 # Go-to-market strategy
+│   │   ├── ROADMAP.md                      # Product roadmap
+│   │   └── VISION.md                       # Product vision
 │   └── cowork-tasks/
 │       ├── README.md                       # Explains the scheduling pattern
-│       ├── daily-build.md                  # Instructions for the daily build sprint
-│       ├── daily-review.md                 # Instructions for the daily review brief
-│       └── weekly-architecture-review.md   # Instructions for the Friday review
+│       ├── cowork-task-output/
+│       │   ├── WEEKLY_REVIEW.md            # Architecture review output (auto-generated)
+│       │   └── DAILY_BRIEF.md              # Morning briefing output (auto-generated)
+│       └── cowork-task-descriptions/
+│           ├── GUIDE.md                    # How to modify task descriptions
+│           ├── daily-build.md              # Instructions for the daily build sprint
+│           ├── daily-review.md             # Instructions for the daily review brief
+│           └── weekly-architecture-review.md # Instructions for the Friday review
 ```
 
 After copying, commit and push:
@@ -64,7 +73,7 @@ git push origin main
 5. In the **Prompt Instructions** field, paste this exact text:
 
 ```
-Follow the instructions in docs/cowork-tasks/daily-build.md exactly.
+Follow the instructions in docs/cowork-tasks/cowork-task-descriptions/daily-build.md exactly.
 Do not deviate from the process described in that file.
 Read CLAUDE.md first for project conventions.
 ```
@@ -91,7 +100,7 @@ Read CLAUDE.md first for project conventions.
 2. Prompt Instructions:
 
 ```
-Follow the instructions in docs/cowork-tasks/daily-review.md exactly.
+Follow the instructions in docs/cowork-tasks/cowork-task-descriptions/daily-review.md exactly.
 Read CLAUDE.md first for project conventions.
 ```
 
@@ -113,7 +122,7 @@ Read CLAUDE.md first for project conventions.
 2. Prompt Instructions:
 
 ```
-Follow the instructions in docs/cowork-tasks/weekly-architecture-review.md exactly.
+Follow the instructions in docs/cowork-tasks/cowork-task-descriptions/weekly-architecture-review.md exactly.
 Read CLAUDE.md first for project conventions.
 ```
 
@@ -143,12 +152,12 @@ Here's what a typical day looks like once everything is running:
 
 ### 8:30 AM (CoWork — Daily Review Brief)
 1. Reads PROGRESS.md and the latest branch diff
-2. Writes a concise briefing to DAILY_BRIEF.md
+2. Writes a concise briefing to `docs/cowork-tasks/cowork-task-output/DAILY_BRIEF.md`
 3. Flags any blockers, test failures, or decisions needed
 
 ### 9:00 AM (you — morning review)
 1. Open your laptop, grab coffee
-2. Read `docs/DAILY_BRIEF.md` — this is your 2-minute summary
+2. Read `docs/cowork-tasks/cowork-task-output/DAILY_BRIEF.md` — this is your 2-minute summary
 3. If the work looks good:
    ```bash
    git checkout main
@@ -164,7 +173,7 @@ Here's what a typical day looks like once everything is running:
 ### Friday 4:00 PM (CoWork — Weekly Architecture Review)
 1. Reviews entire codebase against CLAUDE.md design principles
 2. Checks test coverage, type safety, provider abstraction consistency
-3. Writes `docs/WEEKLY_REVIEW.md` with findings and priorities for next week
+3. Writes `docs/cowork-tasks/cowork-task-output/WEEKLY_REVIEW.md` with findings and priorities for next week
 4. You read it over the weekend or Monday morning and adjust TASKLIST.md accordingly
 
 ---
@@ -208,14 +217,14 @@ refactor the audio format constants into convene-core tomorrow.
 
 ### Modifying what the daily build does
 
-Since the real instructions live in `docs/cowork-tasks/daily-build.md`, just edit that file:
+Since the real instructions live in `docs/cowork-tasks/cowork-task-descriptions/daily-build.md`, just edit that file:
 
 ```bash
 # Edit the instructions
-vim docs/cowork-tasks/daily-build.md
+vim docs/cowork-tasks/cowork-task-descriptions/daily-build.md
 
 # Commit the change
-git add docs/cowork-tasks/daily-build.md
+git add docs/cowork-tasks/cowork-task-descriptions/daily-build.md
 git commit -m "Update daily build: add integration test step"
 git push origin main
 ```
@@ -226,7 +235,7 @@ The next morning's scheduled run will automatically use the updated instructions
 
 ```bash
 git checkout -b experiment/new-build-strategy
-# Edit docs/cowork-tasks/daily-build.md with experimental instructions
+# Edit docs/cowork-tasks/cowork-task-descriptions/daily-build.md with experimental instructions
 git commit -am "Experiment: have daily build focus on test coverage"
 git push origin experiment/new-build-strategy
 ```
@@ -263,6 +272,6 @@ Check if the daily build task is trying to do too much. The one-item-per-session
 | `docs/TASKLIST.md` | Ordered task queue | You (CoWork checks items off) |
 | `docs/PROGRESS.md` | Running development log | CoWork (you review) |
 | `docs/HANDOFF.md` | Shift change notes | Both |
-| `docs/DAILY_BRIEF.md` | Morning summary | CoWork (daily review task) |
-| `docs/WEEKLY_REVIEW.md` | Architecture assessment | CoWork (weekly review task) |
-| `docs/cowork-tasks/*.md` | Task instructions (version controlled) | You |
+| `docs/cowork-tasks/cowork-task-output/DAILY_BRIEF.md` | Morning summary | CoWork (daily review task) |
+| `docs/cowork-tasks/cowork-task-output/WEEKLY_REVIEW.md` | Architecture assessment | CoWork (weekly review task) |
+| `docs/cowork-tasks/cowork-task-descriptions/*.md` | Task instructions (version controlled) | You |

@@ -64,7 +64,7 @@
 
 ## Write the review
 
-Overwrite `docs/WEEKLY_REVIEW.md` with:
+Overwrite `docs/cowork-tasks/cowork-task-output/WEEKLY_REVIEW.md` with:
 
 ```markdown
 # Weekly Architecture Review — Week of {YYYY-MM-DD}

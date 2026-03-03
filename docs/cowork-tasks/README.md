@@ -7,7 +7,7 @@ This directory contains version-controlled instructions for CoWork scheduled tas
 CoWork scheduled tasks are configured in the Claude Desktop app with minimal prompt instructions that simply point to these files:
 
 ```
-Follow the instructions in docs/cowork-tasks/daily-build.md exactly.
+Follow the instructions in docs/cowork-tasks/cowork-task-descriptions/daily-build.md exactly.
 ```
 
 The detailed logic lives here in the repo, not in the CoWork UI. This gives you:
@@ -21,30 +21,32 @@ The detailed logic lives here in the repo, not in the CoWork UI. This gives you:
 
 | Task | File | Schedule | Model | Purpose |
 |---|---|---|---|---|
-| Daily Build Sprint | `daily-build.md` | Weekdays 7:00 AM | Sonnet | Implements one roadmap item |
-| Daily Review Brief | `daily-review.md` | Weekdays 8:30 AM | Haiku | Summarizes build results |
-| Weekly Architecture Review | `weekly-architecture-review.md` | Fridays 4:00 PM | Opus | Deep codebase analysis |
+| Daily Build Sprint | `cowork-task-descriptions/daily-build.md` | Weekdays 7:00 AM | Sonnet | Implements one roadmap item |
+| Daily Review Brief | `cowork-task-descriptions/daily-review.md` | Weekdays 8:30 AM | Haiku | Summarizes build results |
+| Weekly Architecture Review | `cowork-task-descriptions/weekly-architecture-review.md` | Fridays 4:00 PM | Opus | Deep codebase analysis |
 
 ## Coordination files
 
-These files (in `docs/`) enable sync between you and the scheduled tasks:
+These files enable sync between you and the scheduled tasks:
 
 | File | Purpose | Who writes |
 |---|---|---|
-| `TASKLIST.md` | Ordered task queue | You (CoWork checks items off) |
-| `PROGRESS.md` | Append-only development log | CoWork daily build |
-| `HANDOFF.md` | Shift change notes | Both you and CoWork |
-| `DAILY_BRIEF.md` | Morning summary for review | CoWork daily review |
-| `WEEKLY_REVIEW.md` | Architecture assessment | CoWork weekly review |
+| `docs/TASKLIST.md` | Ordered task queue | You (CoWork checks items off) |
+| `docs/PROGRESS.md` | Append-only development log | CoWork daily build |
+| `docs/HANDOFF.md` | Shift change notes | Both you and CoWork |
+| `cowork-task-output/DAILY_BRIEF.md` | Morning summary for review | CoWork daily review |
+| `cowork-task-output/WEEKLY_REVIEW.md` | Architecture assessment | CoWork weekly review |
 
 ## Modifying task behavior
 
-1. Edit the relevant `.md` file in this directory
+1. Edit the relevant `.md` file in `cowork-task-descriptions/`
 2. Commit and push to `main`
 3. The next scheduled run will use the updated instructions
 
+See `cowork-task-descriptions/GUIDE.md` for a detailed walkthrough.
+
 ## Adding new scheduled tasks
 
-1. Create a new `.md` file in this directory with the task instructions
+1. Create a new `.md` file in `cowork-task-descriptions/` with the task instructions
 2. In CoWork Scheduled sidebar, create a new task pointing to your file
 3. Update the table above in this README

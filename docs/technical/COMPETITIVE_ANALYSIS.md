@@ -29,6 +29,10 @@ Key demand-side metrics supporting this estimate:
 
 Realistic Year 1–2 target: **$2–5M ARR** capturing a fraction of mid-market teams willing to adopt an active (speaking) meeting agent. At $39/seat/month average, this represents 4,000–10,700 paid seats, or roughly 200–500 teams of 20 people.
 
+### Agent Infrastructure Sub-Market
+
+There is no clean TAM for "meeting platforms designed for AI agents," but infrastructure validation is strong. Recall.ai's $250M valuation on $51.5M funding suggests significant investor appetite for the space. This sub-market is nascent but growing as AI agents become first-class meeting participants rather than observer bots.
+
 ---
 
 ## Competitive Landscape
@@ -96,18 +100,32 @@ Realistic Year 1–2 target: **$2–5M ARR** capturing a fraction of mid-market 
 - **Capabilities**: Meeting notes with Gemini, "take notes for me" feature, audio summaries, Q&A about meeting content
 - **Threat level**: Low-medium. Google's meeting AI features lag behind Zoom and Microsoft. Primarily a Workspace upsell.
 
-### Tier 4: Infrastructure / Enabling Platforms
+### Tier 4: Infrastructure / WebRTC Enabling Platforms
+
+#### LiveKit
+- **What it is**: Open-source WebRTC infrastructure and SFU (Selective Forwarding Unit) for real-time communication.
+- **Relevance to Convene**: Enables the WebRTC layer for browser-based human meeting access. Not a direct competitor — it's an enabling layer Convene builds on top of. Represents a build-vs-buy decision that Convene resolves by using LiveKit for WebRTC infrastructure while building the agent integration layer natively.
+
+#### Daily.co
+- **What it is**: Commercial WebRTC provider and Meeting BaaS. Hosts Pipecat framework.
+- **Relevance to Convene**: Similar to LiveKit — infrastructure enabling browser-based meetings. Can be swapped with LiveKit or custom WebRTC stack depending on feature needs and cost.
+
+#### Pipecat
+- **Status**: Open source, 10.4k GitHub stars (maintained by Daily.co)
+- **What they do**: Framework for voice and multimodal conversational AI. Pipeline of "Frame Processors" with 40+ AI model integrations. Used by AWS and NVIDIA.
+- **Relevance to Convene**: A toolkit for building speaking AI agents. Pipecat is *not* a platform — it's a framework. You could use Pipecat to build something Convene-like, but Convene is the opinionated application layer that Pipecat components might power in Phase 2-3.
+
+---
+
+### Tier 5: Agent Infrastructure Competitors
 
 #### Recall.ai
 - **Valuation**: ~$250M (Series B, September 2025)
 - **Funding**: $51.5M total ($38M Series B led by Bessemer)
-- **What they do**: Universal API for meeting bots. Powers 90%+ of third-party meeting AI tools (including many competitors listed above). Processes billions of meeting minutes.
-- **Relevance to Convene**: Potential infrastructure partner if we move beyond phone dial-in. Their Output Media feature enables speaking in meetings. But for Phase 1, Twilio dial-in is simpler and cheaper.
-
-#### Pipecat (by Daily.co)
-- **Status**: Open source, 10.4k GitHub stars
-- **What they do**: Framework for voice and multimodal conversational AI. Pipeline of "Frame Processors" with 40+ AI model integrations. Used by AWS and NVIDIA.
-- **Relevance to Convene**: Primary framework candidate for Phase 2-3 voice pipeline. Already has reference implementations of speaking meeting bots (via Meeting BaaS integration).
+- **What they do**: Universal API for meeting bot infrastructure. Powers 90%+ of third-party meeting AI tools (including many competitors listed above). Processes billions of meeting minutes. Provides access layers to Zoom, Teams, Meet, and other platforms. Output Media feature enables audio responses in meetings.
+- **Business Model**: Platform-agnostic infrastructure provider. Act as the connective layer between AI agents and existing meeting platforms.
+- **Convene's Counter-Positioning**: Instead of building bots that hack into resistant platforms (as Recall.ai enables for others), Convene owns the meeting environment itself. Recall.ai validates that there is strong market demand for bot infrastructure, but serves a fundamentally different architecture: access layer vs. native platform. Convene's thesis is that agent-native platforms will eventually outcompete platform-agnostic overlays because they can provide better UX, deeper integrations, and native API surfaces. Recall.ai's distributed model creates business pressure to stay compatible with existing platforms rather than innovating on the agent experience.
+- **Risk worth monitoring**: Recall.ai could theoretically build their own hosted meeting platform. However, it would directly conflict with their partnerships with Zoom, Teams, and Microsoft. Their core value is being platform-agnostic; building a platform would fracture their go-to-market. Unlikely but worth monitoring.
 
 ---
 
@@ -124,10 +142,14 @@ Realistic Year 1–2 target: **$2–5M ARR** capturing a fraction of mid-market 
 | Progress reporting | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (Phase 2) |
 | Multi-turn dialogue | ❌ | ❌ | Scripted | ❌ | ❌ | ✅ (Phase 3) |
 | Conflict detection | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (Phase 3) |
+| Native agent API | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| MCP server support | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Owns meeting environment | ❌ | ❌ | ❌ | ❌ (Teams) | ❌ (Teams) | ✅ |
+| Agent marketplace | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (Phase 4) |
 | No platform SDK needed | ❌ | ❌ | ❌ | N/A | N/A | ✅ |
 | Consent-first design | ❌ | ❌ | Partial | ✅ | ✅ | ✅ |
 
-The key takeaway: **persistent task memory + autonomous progress reporting** is the whitespace. Everyone else treats meetings as isolated events. Convene treats them as chapters in an ongoing accountability narrative.
+The key takeaway: **persistent task memory + autonomous progress reporting + native agent API + agent-first platform** is the whitespace. Everyone else treats meetings as isolated events within existing platforms. Convene treats them as chapters in an ongoing accountability narrative and owns the meeting environment itself, making agents first-class participants rather than bolt-on features.
 
 ---
 
@@ -147,3 +169,12 @@ The key takeaway: **persistent task memory + autonomous progress reporting** is 
 
 ### Risk: Solo founder execution capacity
 **Mitigation**: Claude Code as a force multiplier. Sell the service while building the product — manual meeting analysis consulting validates demand and generates revenue before the product is fully automated. Focus ruthlessly on the core loop (join → listen → extract → remember) and defer polish.
+
+### Risk: Building a meeting platform is a massive engineering undertaking
+**Mitigation**: LiveKit handles the hard WebRTC/SFU work. Start with audio-only meetings (simpler) before adding video. Existing codebase provides the AI pipeline. Phase the build: Agent Gateway API first (enabling integrations), then WebRTC browser access, then full meeting UI. Don't boil the ocean.
+
+### Risk: Two-sided marketplace cold start (agent adoption and team adoption)
+**Mitigation**: Convene's built-in agents (task tracker, note taker, standup facilitator) provide immediate value to teams without requiring third-party agents. Developers can then build custom agents against the Agent Gateway API and publish to a marketplace. Team adoption comes first, network effects follow naturally.
+
+### Risk: Recall.ai adds a hosted meeting platform
+**Mitigation**: Unlikely but worth monitoring. Recall.ai's business model depends on being platform-agnostic infrastructure. Building their own meeting platform would conflict directly with partnerships and go-to-market strategy. They validate the market demand but create friction if they try to serve both sides. If they do move upmarket, Convene's agent-native design and developer ecosystem provide defensibility that a platform-agnostic overlay cannot match.

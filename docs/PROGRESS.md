@@ -8,6 +8,72 @@
 
 <!-- New entries go at the top -->
 
+## 2026-03-01 — Redis Streams Consumer for transcript.segment.final Events
+
+**Roadmap item:** Implement Redis Streams consumer for transcript.segment.final events
+**Branch:** scheduled/2026-03-01-redis-streams-consumer
+**Author:** CoWork (scheduled)
+
+### Changes
+- Created `services/task-engine/src/task_engine/stream_consumer.py` — `StreamConsumer` class using XREADGROUP consumer groups, exponential back-off reconnection, and per-entry XACK after processing
+- Updated `services/task-engine/src/task_engine/main.py` — replaced sleep-based placeholder with real `StreamConsumer` wired into the FastAPI lifespan; added `consumer_group` and `consumer_name` settings; added thin `_on_segment` logging handler
+- Created `services/task-engine/tests/test_stream_consumer.py` — 20 unit tests across 7 classes covering: initialisation defaults, consumer group creation (incl. BUSYGROUP handling), per-entry processing (happy path, non-segment skip, parse error, callback error, missing field), stop/cancellation, consume loop reconnection, and TaskEngineSettings env-var overrides
+
+### Quality Check Results
+- ruff: ⚠️ Could not run — CoWork Linux VM has Python 3.10; ruff binary in .venv is macOS ARM64
+- mypy: ⚠️ Could not run — same environment constraint
+- pytest: ⚠️ Could not run — same environment constraint
+- Syntax validation: ✅ Passed (ast.parse on all 3 files)
+- Structural checks: ✅ Passed (verified XREADGROUP, xgroup_create, xack, BUSYGROUP, backoff, CancelledError present)
+
+### Notes
+- Consumer group uses `id="$"` so the task-engine only processes events published after it first starts; historical replay is not needed
+- Malformed or unhandled entries are ACKed immediately to prevent PEL accumulation — failures are logged at ERROR level for observability
+- `_on_segment` is a logging stub; the full extraction pipeline (windowing → LLM → dedup → persist) will replace it in the next Phase 1D tasks
+- The `consumer_name` setting defaults to `worker-<hostname>` so multiple replicas automatically get distinct identities
+
+### Blockers
+- Quality checks (ruff, mypy, pytest) must be run by Jonathan on his Mac before merging: `uv run ruff check . && uv run ruff format --check . && uv run mypy --strict . && uv run pytest -x -v`
+
+### Next Up
+- Implement transcript segment windowing (3-5 min windows with overlap)
+
+---
+
+## 2026-02-28 — Integration Tests for Provider Registry
+
+**Roadmap item:** Write integration tests for provider registry
+**Branch:** scheduled/2026-02-28-registry-integration-tests
+**Author:** CoWork (scheduled)
+
+### Changes
+- Expanded `packages/convene-providers/tests/test_registry_integration.py` from 8 tests to 20 tests across 6 test classes:
+  - `TestSTTLifecycle` — added `test_audio_buffer_accumulates`, `test_multiple_segments_ordered`, `test_close_resets_state`
+  - `TestTTSLifecycle` — added `test_synthesize_different_texts_return_same_audio`, `test_get_voices_returns_voice_objects`
+  - `TestLLMLifecycle` — added `test_extract_tasks_returns_configured_tasks`, `test_generate_report_with_tasks`, `test_defaults_when_no_kwargs`
+  - `TestRegistryBehaviour` — added `test_same_name_different_type_allowed`, `test_unregistered_is_registered_returns_false`, `test_error_does_not_corrupt_registry`, `test_list_providers_empty_registry`, `test_list_providers_sorted`, `test_list_providers_type_isolation`
+  - `TestDefaultRegistry` (new class) — smoke tests for all 4 instantiable provider types (whisper, piper, ollama, groq), completeness checks for all 9 registered providers, sorted output check, mutation safety check
+
+### Quality Check Results
+- ruff: ⚠️ Could not run — CoWork Linux VM has only Python 3.10; ruff binary in .venv is macOS ARM64
+- mypy: ⚠️ Could not run — same environment constraint
+- pytest: ⚠️ Could not run — same environment constraint
+- Syntax validation: ✅ Passed (via `python3 ast.parse`)
+- Manual code review: ✅ Passed — imports, type hints, docstrings, and test logic are correct
+
+### Notes
+- The CoWork Linux VM does not have Python 3.12+ and network access to download it is blocked, so quality tools from the `.venv` (which is a macOS ARM64 virtualenv) cannot execute
+- All 20 tests follow the project's existing patterns — pytest-asyncio for async tests, Google-style docstrings, strict type annotations, fixtures via helper functions
+- Tests cover: full provider lifecycle (start/send/stream/close), registry isolation, kwargs pass-through, duplicate registration, type-namespace isolation, sorted list output, error recovery, and default registry completeness
+
+### Blockers
+- Quality checks (ruff, mypy, pytest) must be run by Jonathan on his Mac before merging: `git merge scheduled/2026-02-28-registry-integration-tests`
+
+### Next Up
+- Phase 1C: Implement MeetingDialer (outbound call + DTMF meeting code entry)
+
+---
+
 ## 2026-02-27 — Local/Free Providers, Mock Providers, Provider Docs
 
 **Roadmap items:** Local providers for API-free development, mock providers for testing, provider setup documentation

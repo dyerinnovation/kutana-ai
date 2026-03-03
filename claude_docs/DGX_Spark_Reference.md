@@ -80,3 +80,4 @@ Access: `http://spark-b0f2.local/convene-stt/v1/models`
 8. **Recreate deployment strategy** — single GPU means `RollingUpdate` deadlocks; always use `strategy: type: Recreate`
 9. **uv not in PATH** — use full path `~/.local/bin/uv` or `~/.local/bin/uvx`
 10. **Externally-managed Python** — cannot `pip install` system-wide; use `uvx` for one-off tools
+11. **vLLM audio support** — the NVIDIA vLLM image may not include `vllm[audio]` by default. The `/v1/models` endpoint will show Whisper loaded, but `/v1/audio/transcriptions` will return HTTP 500 with `"Please install vllm[audio] for audio support"`. Fix: rebuild the container image with `pip install vllm[audio]` or install at runtime in the pod
