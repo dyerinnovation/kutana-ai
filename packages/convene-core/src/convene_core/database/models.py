@@ -207,6 +207,39 @@ class TranscriptSegmentORM(Base):
     __table_args__ = (Index("ix_transcript_segments_meeting_id", "meeting_id"),)
 
 
+class UserORM(Base):
+    """ORM model for users table.
+
+    Attributes:
+        id: Primary key UUID.
+        email: Unique email address.
+        hashed_password: Bcrypt-hashed password.
+        name: Display name.
+        is_active: Whether the account is active.
+        created_at: Record creation timestamp.
+        updated_at: Record update timestamp.
+    """
+
+    __tablename__ = "users"
+
+    id: Mapped[UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid4)
+    email: Mapped[str] = mapped_column(sa.String(255), nullable=False, unique=True)
+    hashed_password: Mapped[str] = mapped_column(sa.String(255), nullable=False)
+    name: Mapped[str] = mapped_column(sa.String(255), nullable=False)
+    is_active: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.func.now(),
+        onupdate=sa.func.now(),
+    )
+
+    __table_args__ = (Index("ix_users_email", "email", unique=True),)
+
+
 class AgentConfigORM(Base):
     """ORM model for agent_configs table.
 
@@ -221,6 +254,7 @@ class AgentConfigORM(Base):
         protocol_version: Protocol version the agent supports.
         default_capabilities: Default capabilities for the agent.
         max_concurrent_sessions: Max concurrent sessions allowed.
+        owner_id: FK to users table (nullable for backward compat).
         created_at: Record creation timestamp.
         updated_at: Record update timestamp.
     """
@@ -239,6 +273,9 @@ class AgentConfigORM(Base):
         JSONB, nullable=True, default=list
     )
     max_concurrent_sessions: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=1)
+    owner_id: Mapped[UUID | None] = mapped_column(
+        sa.Uuid, ForeignKey("users.id"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
     )
@@ -247,6 +284,48 @@ class AgentConfigORM(Base):
         nullable=False,
         server_default=sa.func.now(),
         onupdate=sa.func.now(),
+    )
+
+    __table_args__ = (Index("ix_agent_configs_owner_id", "owner_id"),)
+
+
+class AgentApiKeyORM(Base):
+    """ORM model for agent_api_keys table.
+
+    Attributes:
+        id: Primary key UUID.
+        key_prefix: First 8 chars of the raw key (for display).
+        key_hash: SHA-256 hash of the full raw key (for lookup).
+        agent_config_id: FK to agent_configs table.
+        user_id: FK to users table.
+        name: Human-readable key name.
+        revoked_at: When the key was revoked (null = active).
+        created_at: Record creation timestamp.
+    """
+
+    __tablename__ = "agent_api_keys"
+
+    id: Mapped[UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid4)
+    key_prefix: Mapped[str] = mapped_column(sa.String(8), nullable=False)
+    key_hash: Mapped[str] = mapped_column(sa.String(255), nullable=False, unique=True)
+    agent_config_id: Mapped[UUID] = mapped_column(
+        sa.Uuid, ForeignKey("agent_configs.id"), nullable=False
+    )
+    user_id: Mapped[UUID] = mapped_column(
+        sa.Uuid, ForeignKey("users.id"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(sa.String(255), nullable=False, default="default")
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+
+    __table_args__ = (
+        Index("ix_agent_api_keys_key_hash", "key_hash", unique=True),
+        Index("ix_agent_api_keys_agent_config_id", "agent_config_id"),
+        Index("ix_agent_api_keys_user_id", "user_id"),
     )
 
 

@@ -19,6 +19,7 @@ from convene_core.models.task import (
     TaskStatus,
 )
 from convene_core.models.transcript import TranscriptSegment
+from convene_core.models.user import User
 
 __all__ = [
     "VALID_TRANSITIONS",
@@ -37,4 +38,5 @@ __all__ = [
     "TaskPriority",
     "TaskStatus",
     "TranscriptSegment",
+    "User",
 ]
