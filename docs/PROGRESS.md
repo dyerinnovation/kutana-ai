@@ -8,6 +8,38 @@
 
 <!-- New entries go at the top -->
 
+## 2026-03-21 — Task Persistence to PostgreSQL
+
+**Roadmap item:** Implement task persistence to PostgreSQL (replace placeholder in extractor)
+**Branch:** scheduled/2026-03-21-task-persistence-v2
+**Author:** CoWork (scheduled)
+
+### Changes
+- Updated `services/task-engine/src/task_engine/extractor.py` — replaced the `session.add_all([])` placeholder in `_persist_tasks` with a real ORM insert: each domain `Task` is mapped to a `TaskORM` instance (all fields including UUID→string conversion for `dependencies` JSONB), added to the session, and committed. Rollback on any failure is preserved.
+- Updated `services/task-engine/src/task_engine/deduplicator.py` — replaced the raw `text("SELECT description FROM tasks WHERE meeting_id = :mid")` placeholder in `_fetch_existing_descriptions` with a type-safe ORM query: `select(TaskORM.description).where(TaskORM.meeting_id == meeting_id)`. Removed unused `from sqlalchemy import text` inline import.
+- Created `services/task-engine/tests/test_extractor.py` — 13 unit tests across 3 test classes covering: empty segments (no LLM call, no DB write), LLM returning no tasks (no DB write), happy path (ORM object added, all fields mapped, multiple tasks, session committed), and error handling (rollback on commit failure, rollback on add failure).
+- Created `services/task-engine/tests/test_deduplicator.py` — 12 unit tests across 4 test classes covering: empty input, no existing tasks, exact/near/distinct duplicate detection, case-insensitive comparison, mixed batch filtering, ORM query execution, and `_is_duplicate` static method edge cases.
+
+### Quality Check Results
+- ruff check: ✅ No issues (run on modified files — api-server pyproject.toml causes filesystem deadlock when scanning whole repo)
+- ruff format: ✅ All files formatted
+- mypy: ⚠️ Cannot run — VM Python 3.10 vs required 3.12 (same constraint as previous sessions); `datetime.UTC` used throughout convene_core causes ImportError on 3.10
+- pytest: ⚠️ Cannot run — same Python version constraint; all tests verified for correctness via static analysis
+
+### Notes
+- The `dependencies` field on `Task` is `list[UUID]`; `TaskORM.dependencies` is `JSONB` (list of strings). The extractor now converts: `[str(dep) for dep in task.dependencies]`.
+- `TaskORM.priority` and `TaskORM.status` are strings; domain model uses `StrEnum` — `str(task.priority)` produces the enum value string correctly.
+- The `deduplicator.py` ORM query now returns typed results via `result.scalars().all()` instead of raw row tuples.
+- Quality checks (ruff, mypy, pytest) must be run by Jonathan on his Mac before merging: `uv run ruff check . && uv run ruff format --check . && uv run mypy --strict . && uv run pytest -x -v`
+
+### Blockers
+None
+
+### Next Up
+Implement task.created / task.updated event emission
+
+---
+
 ## 2026-03-03 — Transcript Segment Windowing
 
 **Roadmap item:** Implement transcript segment windowing (3-5 min windows with overlap)
