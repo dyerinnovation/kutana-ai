@@ -162,6 +162,7 @@ STRIPE_PUBLISHABLE_KEY=
 - See `claude_docs/MCP_Server_Architecture.md` for MCP server tools, Streamable HTTP transport, and Docker setup
 
 ## Agent Platform & Integrations
+- Agent context is provided through three layers: platform context (fixed, explains Convene AI to agents), meeting context (dynamic, from calendar invite), and meeting recap (live, for late joiners). See `docs/technical/agent-context-seeding.md`.
 - See `docs/technical/AGENT_PLATFORM.md` for three-tier agent architecture and access matrix
 - See `docs/technical/MCP_AUTH.md` for MCP OAuth 2.1 authorization flow
 - See `docs/integrations/OPENCLAW.md` for OpenClaw plugin integration

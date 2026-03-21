@@ -115,7 +115,60 @@
 
 ---
 
-## Phase 3: MCP Server & Agent SDK
+## Phase 3: Meeting Intelligence & Agent Integration
+
+> Portable messaging layer, real-time meeting insights, and Claude Code channel integration.
+
+- [ ] 🔗 BLOCK: Portable Message Bus Abstraction
+  - [ ] Define MessageBus ABC (publish, subscribe, ack) in convene-core
+  - [ ] Implement RedisStreamsMessageBus provider (wrap existing Redis code)
+  - [ ] Register in provider registry
+  - [ ] Migrate existing services to MessageBus interface
+  - [ ] Integration tests for message bus abstraction
+
+- [ ] 🔗 BLOCK: Meeting Insight Stream
+  - [ ] Define Entity schema (Pydantic models: task, decision, question, entity_mention, key_point, blocker, follow_up)
+  - [ ] Define Extractor ABC and register in provider registry
+  - [ ] Implement built-in LLM extractor using existing LLM provider abstraction
+  - [ ] Build batch collector (subscribe to transcript, buffer, trigger extraction)
+  - [ ] Build entity deduplicator
+  - [ ] Build insight publisher (publish to meeting.*.insights topics)
+  - [ ] Configuration: batch window, confidence thresholds
+  - [ ] Pipeline integration tests
+
+- [ ] 🔗 BLOCK: Claude Code Channel Integration
+  - [ ] Create TypeScript MCP server with claude/channel capability
+  - [ ] Implement Convene AI API connection (WebSocket/HTTP)
+  - [ ] Implement agent choice model (transcript mode, insight mode, both, selective)
+  - [ ] Implement reply/action tools (reply, accept_task, update_status, request_context)
+  - [ ] Implement sender gating via agent API keys
+  - [ ] Package as Claude Code plugin
+  - [ ] Integration tests
+
+- [ ] 🔗 BLOCK: Custom Extractors & Cloud Providers
+  - [ ] Document Extractor ABC, publish SDK/example
+  - [ ] Implement extractor hot-loading (runtime registration)
+  - [ ] Implement SQSMessageBus (AWS SNS+SQS)
+  - [ ] Implement PubSubMessageBus (GCP Cloud Pub/Sub)
+  - [ ] Implement NATSMessageBus (self-hosted NATS JetStream)
+  - [ ] Deployment config templates per cloud provider
+  - [ ] Cross-provider integration tests
+
+- [ ] 🔗 BLOCK: Agent Context Seeding
+  - [ ] Define context document schema (Pydantic models for platform context, meeting context, meeting recap)
+  - [ ] Create `convene-ai-platform.md` template — fixed platform-level context explaining Convene AI, message formats, available tools, agent behavior norms
+  - [ ] Build MeetingContextGenerator — populates meeting-context.md from calendar invite, attendees, agenda, linked docs
+  - [ ] Build MeetingRecapGenerator — creates/updates meeting-recap.md from Meeting Insight Stream snapshots for late joiners
+  - [ ] Integrate context seeding with Claude Code Channel (maps to MCP instructions + initial notifications)
+  - [ ] Integrate context seeding with Gemini Live API (maps to system_instruction field)
+  - [ ] Add context refresh mechanism — recap updates every extraction batch
+  - [ ] Tests for context generation and recap accuracy
+
+- Plan only (no implementation): Dynamic entity discovery based on conversation content
+
+---
+
+## Phase 4: MCP Server & Agent SDK
 
 > Developer GTM wedge — make it trivial for any AI agent to join a Convene meeting.
 
@@ -136,7 +189,7 @@
 
 ---
 
-## Phase 4: User Platform & Auth
+## Phase 5: User Platform & Auth
 
 > User-facing product — sign up, create workspaces, manage agents.
 
@@ -173,7 +226,7 @@
 
 ---
 
-## Phase 5: Meeting Platform (WebRTC + Browser UI)
+## Phase 6: Meeting Platform (WebRTC + Browser UI)
 
 > Humans join meetings via browser — the other side of the two-sided platform.
 
@@ -203,7 +256,7 @@
 
 ---
 
-## Phase 6: Memory & Intelligence
+## Phase 7: Memory & Intelligence
 
 > Persistent memory is the competitive moat — agents that remember everything across meetings.
 
@@ -219,7 +272,7 @@
 
 ---
 
-## Phase 7: Cloud Deployment & STT
+## Phase 8: Cloud Deployment & STT
 
 > Production deployment on AWS/GCP with native cloud STT providers.
 
@@ -237,7 +290,7 @@
 
 ---
 
-## Phase 8: Voice Output & Dialogue
+## Phase 9: Voice Output & Dialogue
 
 > Speaking agents — bidirectional audio for agents that talk in meetings.
 
@@ -254,7 +307,7 @@
 
 ---
 
-## Phase 9: Ecosystem & Integrations
+## Phase 10: Ecosystem & Integrations
 
 > Third-party integrations and the agent marketplace.
 
@@ -273,7 +326,7 @@
 
 ---
 
-## Phase 10: Hardening
+## Phase 11: Hardening
 
 > Security, performance, and enterprise readiness.
 
@@ -295,11 +348,11 @@
 - **M1:** Audio → Transcript → Redis (Phase 1C/1D) ✅
 - **M2:** Redis → Task Extraction → PostgreSQL (Phase 1)
 - **M3:** Agent connects via Gateway, receives audio, sends transcript events (Phase 2) ✅
-- **M4:** MCP client joins a meeting via MCP tools (Phase 3)
-- **M5:** User signs up, creates workspace, subscribes to paid plan (Phase 4)
-- **M6:** Browser-based meeting with agents and humans (Phase 5)
-- **M7+:** Full product experience with integrations and marketplace (Phase 9)
-- **M8:** Enterprise hardening and security review (Phase 10)
+- **M4:** MCP client joins a meeting via MCP tools (Phase 4)
+- **M5:** User signs up, creates workspace, subscribes to paid plan (Phase 5)
+- **M6:** Browser-based meeting with agents and humans (Phase 6)
+- **M7+:** Full product experience with integrations and marketplace (Phase 10)
+- **M8:** Enterprise hardening and security review (Phase 11)
 
 ### CoWork Edit Protocol
 
