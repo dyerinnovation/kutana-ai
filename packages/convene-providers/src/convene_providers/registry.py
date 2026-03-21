@@ -129,6 +129,9 @@ def _build_default_registry() -> ProviderRegistry:
     from convene_providers.llm.anthropic_llm import AnthropicLLM
     from convene_providers.llm.groq_llm import GroqLLM
     from convene_providers.llm.ollama_llm import OllamaLLM
+    from convene_providers.messaging.aws_sns_sqs import SQSMessageBus
+    from convene_providers.messaging.gcp_pubsub import PubSubMessageBus
+    from convene_providers.messaging.nats_jetstream import NATSMessageBus
     from convene_providers.messaging.redis_streams import RedisStreamsMessageBus
     from convene_providers.stt.assemblyai_stt import AssemblyAISTT
     from convene_providers.stt.deepgram_stt import DeepgramSTT
@@ -158,6 +161,9 @@ def _build_default_registry() -> ProviderRegistry:
 
     # Message bus providers
     registry.register(ProviderType.MESSAGE_BUS, "redis", RedisStreamsMessageBus)
+    registry.register(ProviderType.MESSAGE_BUS, "aws-sns-sqs", SQSMessageBus)
+    registry.register(ProviderType.MESSAGE_BUS, "gcp-pubsub", PubSubMessageBus)
+    registry.register(ProviderType.MESSAGE_BUS, "nats", NATSMessageBus)
 
     # Extractor providers
     registry.register(ProviderType.EXTRACTOR, "llm", LLMExtractor)

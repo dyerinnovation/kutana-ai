@@ -1,0 +1,244 @@
+# Convene AI — Self-Hosted Deployment (NATS JetStream)
+#
+# This compose file runs the full Convene AI stack on your own infrastructure
+# using NATS JetStream as the message bus.  Suitable for on-premises, bare
+# metal, or private cloud deployments that require data sovereignty.
+#
+# All infrastructure (NATS, PostgreSQL, Redis) is included in this file.
+#
+# Usage:
+#   cp .env.example .env       # fill in your secrets
+#   docker compose -f deploy/self-hosted/docker-compose.yml up -d
+#
+# Scale workers independently:
+#   docker compose -f deploy/self-hosted/docker-compose.yml \
+#       up -d --scale task-engine=4
+
+version: "3.9"
+
+x-common-env: &common-env
+  CONVENE_MESSAGE_BUS: nats
+  NATS_URL: nats://nats:4222
+  NATS_STREAM_NAME: CONVENE
+  DATABASE_URL: postgresql+asyncpg://convene:${POSTGRES_PASSWORD:-convene}@postgres:5432/convene
+  REDIS_URL: redis://redis:6379/0
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+  DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+x-healthcheck: &healthcheck
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 10s
+
+services:
+  # ------------------------------------------------------------------
+  # Infrastructure
+  # ------------------------------------------------------------------
+
+  nats:
+    image: nats:2.10-alpine
+    command: ["-js", "-m", "8222", "--log_size_limit", "1GB"]
+    ports:
+      - "4222:4222"   # Client connections
+      - "8222:8222"   # HTTP monitoring
+    volumes:
+      - nats-data:/data
+      - ./nats.conf:/etc/nats/nats.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:8222/healthz"]
+      <<: *healthcheck
+    restart: unless-stopped
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: convene
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-convene}
+      POSTGRES_DB: convene
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U convene"]
+      <<: *healthcheck
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb",
+              "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      <<: *healthcheck
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------
+  # Database migrations (runs once on startup)
+  # ------------------------------------------------------------------
+  migrate:
+    image: ${REGISTRY:-convene}/api-server:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: services/api-server/Dockerfile
+    command: ["uv", "run", "alembic", "upgrade", "head"]
+    environment:
+      <<: *common-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
+  # ------------------------------------------------------------------
+  # Application services
+  # ------------------------------------------------------------------
+
+  api-server:
+    image: ${REGISTRY:-convene}/api-server:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: services/api-server/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      <<: *common-env
+      SERVICE_NAME: api-server
+      PORT: "8000"
+      AGENT_GATEWAY_JWT_SECRET: ${AGENT_GATEWAY_JWT_SECRET:-change-me-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      <<: *healthcheck
+    restart: unless-stopped
+
+  agent-gateway:
+    image: ${REGISTRY:-convene}/agent-gateway:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: services/agent-gateway/Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      <<: *common-env
+      SERVICE_NAME: agent-gateway
+      AGENT_GATEWAY_PORT: "8003"
+      AGENT_GATEWAY_JWT_SECRET: ${AGENT_GATEWAY_JWT_SECRET:-change-me-in-production}
+    depends_on:
+      nats:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      <<: *healthcheck
+    restart: unless-stopped
+
+  audio-service:
+    image: ${REGISTRY:-convene}/audio-service:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: services/audio-service/Dockerfile
+    environment:
+      <<: *common-env
+      SERVICE_NAME: audio-service
+    depends_on:
+      nats:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+    restart: unless-stopped
+
+  task-engine:
+    image: ${REGISTRY:-convene}/task-engine:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: services/task-engine/Dockerfile
+    environment:
+      <<: *common-env
+      SERVICE_NAME: task-engine
+      TASK_EXTRACTOR: llm
+    depends_on:
+      nats:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+    restart: unless-stopped
+
+  mcp-server:
+    image: ${REGISTRY:-convene}/mcp-server:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: services/mcp-server/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      <<: *common-env
+      SERVICE_NAME: mcp-server
+      MCP_SERVER_PORT: "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      <<: *healthcheck
+    restart: unless-stopped
+
+  worker:
+    image: ${REGISTRY:-convene}/worker:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: services/worker/Dockerfile
+    environment:
+      <<: *common-env
+      SERVICE_NAME: worker
+    depends_on:
+      nats:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------
+  # NATS monitoring dashboard (optional, development convenience)
+  # ------------------------------------------------------------------
+  nats-surveyor:
+    image: natsio/nats-surveyor:latest
+    command: ["-s", "nats://nats:4222", "--port", "7777"]
+    ports:
+      - "7777:7777"
+    depends_on:
+      nats:
+        condition: service_healthy
+    profiles:
+      - monitoring
+    restart: unless-stopped
+
+volumes:
+  nats-data:
+  postgres-data:
+  redis-data:

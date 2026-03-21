@@ -327,13 +327,32 @@ class RedisStreamsMessageBus(MessageBus):
                     )
 
 
-def create_message_bus_from_env() -> RedisStreamsMessageBus:
+def create_message_bus_from_env() -> MessageBus:
     """Create a MessageBus instance from environment variables.
 
-    Reads ``CONVENE_MESSAGE_BUS`` (default: ``"redis"``) and ``REDIS_URL``
-    (default: ``"redis://localhost:6379/0"``) to construct the appropriate
-    provider. Currently only ``"redis"`` is supported; other values raise
-    ``ValueError``.
+    Reads ``CONVENE_MESSAGE_BUS`` to select the backend provider, then reads
+    provider-specific environment variables to configure it.
+
+    Supported backends:
+
+    ``redis`` (default)
+        Uses :class:`RedisStreamsMessageBus`.  Reads ``REDIS_URL``
+        (default: ``redis://localhost:6379/0``).
+
+    ``aws-sns-sqs``
+        Uses :class:`~convene_providers.messaging.aws_sns_sqs.SQSMessageBus`.
+        Reads ``AWS_REGION``, ``AWS_ACCESS_KEY_ID``, ``AWS_SECRET_ACCESS_KEY``,
+        and optionally ``AWS_SESSION_TOKEN``.  Requires ``aioboto3``.
+
+    ``gcp-pubsub``
+        Uses :class:`~convene_providers.messaging.gcp_pubsub.PubSubMessageBus`.
+        Reads ``GCP_PROJECT_ID`` and uses Application Default Credentials or
+        ``GOOGLE_APPLICATION_CREDENTIALS``.  Requires ``google-cloud-pubsub``.
+
+    ``nats``
+        Uses :class:`~convene_providers.messaging.nats_jetstream.NATSMessageBus`.
+        Reads ``NATS_URL`` (default: ``nats://localhost:4222``) and optionally
+        ``NATS_CREDENTIALS``.  Requires ``nats-py``.
 
     Returns:
         A configured MessageBus provider instance.
@@ -343,13 +362,42 @@ def create_message_bus_from_env() -> RedisStreamsMessageBus:
     """
     import os
 
-    backend = os.getenv("CONVENE_MESSAGE_BUS", "redis").lower()
-    if backend != "redis":
-        msg = (
-            f"Unsupported CONVENE_MESSAGE_BUS value: {backend!r}. "
-            "Currently only 'redis' is supported."
-        )
-        raise ValueError(msg)
 
-    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    return RedisStreamsMessageBus(url=redis_url)
+    backend = os.getenv("CONVENE_MESSAGE_BUS", "redis").lower()
+
+    if backend == "redis":
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        return RedisStreamsMessageBus(url=redis_url)
+
+    if backend == "aws-sns-sqs":
+        from convene_providers.messaging.aws_sns_sqs import SQSMessageBus
+
+        return SQSMessageBus(
+            region=os.getenv("AWS_REGION", "us-east-1"),
+            access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            session_token=os.getenv("AWS_SESSION_TOKEN"),
+        )
+
+    if backend == "gcp-pubsub":
+        from convene_providers.messaging.gcp_pubsub import PubSubMessageBus
+
+        return PubSubMessageBus(
+            project_id=os.getenv("GCP_PROJECT_ID"),
+        )
+
+    if backend == "nats":
+        from convene_providers.messaging.nats_jetstream import NATSMessageBus
+
+        return NATSMessageBus(
+            url=os.getenv("NATS_URL", "nats://localhost:4222"),
+            credentials_path=os.getenv("NATS_CREDENTIALS"),
+            stream_name=os.getenv("NATS_STREAM_NAME", "CONVENE"),
+        )
+
+    supported = ", ".join(["redis", "aws-sns-sqs", "gcp-pubsub", "nats"])
+    msg = (
+        f"Unsupported CONVENE_MESSAGE_BUS value: {backend!r}. "
+        f"Supported backends: {supported}"
+    )
+    raise ValueError(msg)

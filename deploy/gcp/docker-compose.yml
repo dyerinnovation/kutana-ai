@@ -1,0 +1,200 @@
+# Convene AI — GCP Deployment (Cloud Run ready)
+#
+# This compose file is designed to run on Google Cloud Run or GKE.
+# It uses GCP Pub/Sub as the message bus backend.
+#
+# Prerequisites:
+#   - GCP project with Pub/Sub API enabled
+#   - Cloud SQL PostgreSQL instance with pgvector extension
+#   - Memorystore (Redis) for cache
+#   - Artifact Registry for container images
+#   - Service account with pubsub.publisher and pubsub.subscriber roles
+#
+# Usage (local simulation with Pub/Sub emulator):
+#   docker compose -f deploy/gcp/docker-compose.yml up
+#
+# Cloud Run deployment:
+#   gcloud run services replace deploy/gcp/cloudrun-service.yaml
+
+version: "3.9"
+
+x-common-env: &common-env
+  CONVENE_MESSAGE_BUS: gcp-pubsub
+  GCP_PROJECT_ID: ${GCP_PROJECT_ID}
+  GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-/secrets/sa-key.json}
+  PUBSUB_EMULATOR_HOST: ${PUBSUB_EMULATOR_HOST:-}
+  PUBSUB_TOPIC_PREFIX: ${PUBSUB_TOPIC_PREFIX:-convene-prod-}
+  DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://convene:convene@cloudsql.internal:5432/convene}
+  REDIS_URL: ${REDIS_URL:-redis://memorystore.internal:6379/0}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+  DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+x-healthcheck: &healthcheck
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 10s
+
+services:
+  # ------------------------------------------------------------------
+  # Pub/Sub Emulator — simulates GCP Pub/Sub locally for development.
+  # Remove this service when deploying to actual GCP.
+  # ------------------------------------------------------------------
+  pubsub-emulator:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    command: ["gcloud", "beta", "emulators", "pubsub", "start",
+              "--host-port=0.0.0.0:8085"]
+    ports:
+      - "8085:8085"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085"]
+      <<: *healthcheck
+    profiles:
+      - localdev
+
+  # ------------------------------------------------------------------
+  # API Server
+  # ------------------------------------------------------------------
+  api-server:
+    image: ${ARTIFACT_REGISTRY:-gcr.io}/${GCP_PROJECT_ID}/api-server:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: services/api-server/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      <<: *common-env
+      SERVICE_NAME: api-server
+      PORT: "8000"
+    volumes:
+      - ${SA_KEY_PATH:-./sa-key.json}:/secrets/sa-key.json:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      <<: *healthcheck
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------
+  # Agent Gateway
+  # ------------------------------------------------------------------
+  agent-gateway:
+    image: ${ARTIFACT_REGISTRY:-gcr.io}/${GCP_PROJECT_ID}/agent-gateway:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: services/agent-gateway/Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      <<: *common-env
+      SERVICE_NAME: agent-gateway
+      AGENT_GATEWAY_PORT: "8003"
+      AGENT_GATEWAY_JWT_SECRET: ${AGENT_GATEWAY_JWT_SECRET}
+    volumes:
+      - ${SA_KEY_PATH:-./sa-key.json}:/secrets/sa-key.json:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      <<: *healthcheck
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------
+  # Audio Service
+  # ------------------------------------------------------------------
+  audio-service:
+    image: ${ARTIFACT_REGISTRY:-gcr.io}/${GCP_PROJECT_ID}/audio-service:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: services/audio-service/Dockerfile
+    environment:
+      <<: *common-env
+      SERVICE_NAME: audio-service
+    volumes:
+      - ${SA_KEY_PATH:-./sa-key.json}:/secrets/sa-key.json:ro
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------
+  # Task Engine (extraction workers)
+  # ------------------------------------------------------------------
+  task-engine:
+    image: ${ARTIFACT_REGISTRY:-gcr.io}/${GCP_PROJECT_ID}/task-engine:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: services/task-engine/Dockerfile
+    environment:
+      <<: *common-env
+      SERVICE_NAME: task-engine
+      TASK_EXTRACTOR: llm
+    volumes:
+      - ${SA_KEY_PATH:-./sa-key.json}:/secrets/sa-key.json:ro
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------
+  # MCP Server
+  # ------------------------------------------------------------------
+  mcp-server:
+    image: ${ARTIFACT_REGISTRY:-gcr.io}/${GCP_PROJECT_ID}/mcp-server:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: services/mcp-server/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      <<: *common-env
+      SERVICE_NAME: mcp-server
+      MCP_SERVER_PORT: "3000"
+    volumes:
+      - ${SA_KEY_PATH:-./sa-key.json}:/secrets/sa-key.json:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      <<: *healthcheck
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------
+  # Worker (background jobs)
+  # ------------------------------------------------------------------
+  worker:
+    image: ${ARTIFACT_REGISTRY:-gcr.io}/${GCP_PROJECT_ID}/worker:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: services/worker/Dockerfile
+    environment:
+      <<: *common-env
+      SERVICE_NAME: worker
+    volumes:
+      - ${SA_KEY_PATH:-./sa-key.json}:/secrets/sa-key.json:ro
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    restart: unless-stopped

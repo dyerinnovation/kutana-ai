@@ -1,0 +1,196 @@
+# Convene AI — AWS Deployment (ECS/Fargate ready)
+#
+# This compose file is designed to run on AWS ECS / Fargate.
+# It uses SNS+SQS as the message bus backend.
+#
+# Prerequisites:
+#   - AWS credentials configured (IAM role on ECS task, or explicit env vars)
+#   - Amazon RDS PostgreSQL instance with pgvector extension
+#   - Amazon ElastiCache (Redis) or MSK for cache/pub-sub fallback
+#   - ECR repositories for each service image
+#
+# Usage (local simulation with LocalStack):
+#   docker compose -f deploy/aws/docker-compose.yml up
+#
+# ECS deployment:
+#   ecs-cli compose --file deploy/aws/docker-compose.yml service up
+
+version: "3.9"
+
+x-common-env: &common-env
+  CONVENE_MESSAGE_BUS: aws-sns-sqs
+  AWS_REGION: ${AWS_REGION:-us-east-1}
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+  AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+  SNS_TOPIC_PREFIX: ${SNS_TOPIC_PREFIX:-convene-prod-}
+  DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://convene:convene@rds.internal:5432/convene}
+  REDIS_URL: ${REDIS_URL:-redis://elasticache.internal:6379/0}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+  DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+x-healthcheck: &healthcheck
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 10s
+
+services:
+  # ------------------------------------------------------------------
+  # LocalStack — simulates AWS SNS/SQS locally for development
+  # Remove this service when deploying to actual AWS.
+  # ------------------------------------------------------------------
+  localstack:
+    image: localstack/localstack:3
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: sns,sqs
+      DEFAULT_REGION: us-east-1
+      DOCKER_HOST: unix:///var/run/docker.sock
+    volumes:
+      - localstack-data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      <<: *healthcheck
+    profiles:
+      - localdev
+
+  # ------------------------------------------------------------------
+  # API Server
+  # ------------------------------------------------------------------
+  api-server:
+    image: ${ECR_REGISTRY:-convene}/api-server:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: services/api-server/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      <<: *common-env
+      SERVICE_NAME: api-server
+      PORT: "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      <<: *healthcheck
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------
+  # Agent Gateway
+  # ------------------------------------------------------------------
+  agent-gateway:
+    image: ${ECR_REGISTRY:-convene}/agent-gateway:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: services/agent-gateway/Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      <<: *common-env
+      SERVICE_NAME: agent-gateway
+      AGENT_GATEWAY_PORT: "8003"
+      AGENT_GATEWAY_JWT_SECRET: ${AGENT_GATEWAY_JWT_SECRET}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      <<: *healthcheck
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------
+  # Audio Service
+  # ------------------------------------------------------------------
+  audio-service:
+    image: ${ECR_REGISTRY:-convene}/audio-service:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: services/audio-service/Dockerfile
+    environment:
+      <<: *common-env
+      SERVICE_NAME: audio-service
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------
+  # Task Engine (extraction workers)
+  # ------------------------------------------------------------------
+  task-engine:
+    image: ${ECR_REGISTRY:-convene}/task-engine:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: services/task-engine/Dockerfile
+    environment:
+      <<: *common-env
+      SERVICE_NAME: task-engine
+      TASK_EXTRACTOR: llm
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------
+  # MCP Server
+  # ------------------------------------------------------------------
+  mcp-server:
+    image: ${ECR_REGISTRY:-convene}/mcp-server:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: services/mcp-server/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      <<: *common-env
+      SERVICE_NAME: mcp-server
+      MCP_SERVER_PORT: "3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      <<: *healthcheck
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    restart: unless-stopped
+
+  # ------------------------------------------------------------------
+  # Worker (background jobs)
+  # ------------------------------------------------------------------
+  worker:
+    image: ${ECR_REGISTRY:-convene}/worker:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: services/worker/Dockerfile
+    environment:
+      <<: *common-env
+      SERVICE_NAME: worker
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    restart: unless-stopped
+
+volumes:
+  localstack-data:
