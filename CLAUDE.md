@@ -185,6 +185,12 @@ STRIPE_PUBLISHABLE_KEY=
 - See `claude_docs/DGX_Spark_Reference.md` for DGX Spark connection details, K8s patterns, and deployment gotchas
 - See `charts/stt/` for the Whisper STT Helm chart deployed on DGX Spark
 
+## LLM Strategy
+All LLM operations use the Anthropic Claude API via the Claude Agent SDK. No OpenAI or Google model integrations. Model tiers: **Claude Haiku** for entity extraction (high volume, low cost), **Claude Sonnet** for meeting recaps and agent dialogue, **Claude Opus** for premium analysis (optional, Business/Enterprise tiers). See `docs/technical/cost-architecture.md` for full model and cost details.
+
+## STT Strategy
+Primary STT provider at launch: **Deepgram Nova-2** (all tiers) — $0.0043/min, speaker diarization included free, real-time streaming. Self-hosted faster-whisper + pyannote.audio is an Enterprise-only option (Phase D) for data sovereignty use cases requiring GPU compute. AWS Transcribe and GCP Speech-to-Text are available via provider abstraction but not recommended as primary.
+
 ## Billing Architecture
 Billing uses Stripe for subscription management and usage-based metering. Four tiers: Free (5 meetings/month), Pro ($29/user/month), Business ($79/user/month), Enterprise (custom). Plan tier gates feature access (entity types, diarization, custom extractors, model selection). Usage is metered per meeting minute, extraction call, and agent session. See `docs/technical/cost-architecture.md` for full cost model and Stripe integration details.
 

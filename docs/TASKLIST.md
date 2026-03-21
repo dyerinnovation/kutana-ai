@@ -167,9 +167,11 @@
   - [ ] Tests for context generation and recap accuracy
 
 - [ ] 🔗 BLOCK: Model Tiering & Cost Architecture
-  - [ ] Design tiered model strategy (small LLM for extraction, larger for complex reasoning)
+  - [ ] Integrate Claude Agent SDK for all LLM operations
+  - [ ] Design tiered model strategy: Claude Haiku (entity extraction), Claude Sonnet (recaps, agent dialogue), Claude Opus (premium analysis)
   - [ ] Implement LLM provider selection per task type (extraction vs. summarization vs. dialogue)
-  - [ ] STT provider cost modeling and selection (diarization-capable vs. basic)
+  - [ ] Launch STT: Deepgram Nova-2 (diarization included, real-time streaming, $0.0043/min)
+  - [ ] Enterprise STT: self-hosted faster-whisper + pyannote.audio (GPU compute, data sovereignty — Phase D only)
   - [ ] TTS provider cost modeling and selection
   - [ ] Speaker diarization integration (segment and label audio by speaker)
   - [ ] Usage metering and subscription/volume billing hooks

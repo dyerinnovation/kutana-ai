@@ -14,15 +14,22 @@
 - 30-min meeting (full stack: STT + diarization + extraction + recap): ~$0.35
 - 60-min meeting (full stack + agent participation): ~$0.56
 
+## LLM Platform
+All LLM operations use the Anthropic Claude API via the Claude Agent SDK. No OpenAI or Google model integrations.
+
 ## Model Tiering
-- Entity extraction: Small LLM (Haiku / GPT-4o-mini) — high volume, low cost
-- Meeting recaps: Medium LLM (Sonnet / GPT-4o) — needs reasoning quality
-- Agent dialogue: Medium LLM (Sonnet / GPT-4o) — contextual, multi-turn
-- Complex analysis: Large LLM (Opus, optional) — premium tier only
+- Entity extraction: Claude Haiku — high volume, low cost
+- Meeting recaps: Claude Sonnet — needs reasoning quality
+- Agent dialogue: Claude Sonnet — contextual, multi-turn
+- Complex analysis: Claude Opus (optional) — premium tier only
 
 ## STT Recommendation
-- Launch: Deepgram Nova-2 (diarization included, real-time, $0.0043/min)
-- Self-hosted option: faster-whisper + pyannote.audio (enterprise on-prem)
+- **Primary (all tiers at launch):** Deepgram Nova-2 — $0.0043/min, speaker diarization included free, real-time streaming
+- **Enterprise on-prem only (Phase D):** self-hosted faster-whisper + pyannote.audio on GPU instances
+  - Requires GPU compute: AWS A10G ~$0.75/hr or GCP T4 ~$0.35/hr
+  - Only cost-effective at 1,000+ hours/month
+  - Primary benefit: data sovereignty for customers who cannot send audio to third-party APIs
+- **Available as alternatives** (via provider abstraction): Google Cloud Speech-to-Text, AWS Transcribe — not recommended as primary due to higher cost and no free diarization
 
 ## TTS Recommendation
 - Real-time agent voice: Cartesia ($0.042/1K chars)
