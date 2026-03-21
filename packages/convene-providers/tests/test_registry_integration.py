@@ -123,6 +123,7 @@ class TestSTTLifecycle:
         await provider.close()
 
         assert not provider._started
+        assert provider._buffer == b""
 
 
 class TestTTSLifecycle:
