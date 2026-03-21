@@ -27,6 +27,89 @@ services:
       timeout: 5s
       retries: 5
 
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: alembic upgrade head
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://convene:convene@postgres:5432/convene
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uvicorn api_server.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://convene:convene@postgres:5432/convene
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  agent-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uvicorn agent_gateway.main:app --host 0.0.0.0 --port 8003
+    ports:
+      - "8003:8003"
+    env_file: .env
+    environment:
+      AGENT_GATEWAY_DATABASE_URL: postgresql+asyncpg://convene:convene@postgres:5432/convene
+      AGENT_GATEWAY_REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  audio-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uvicorn audio_service.main:app --host 0.0.0.0 --port 8001
+    ports:
+      - "8001:8001"
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  task-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uvicorn task_engine.main:app --host 0.0.0.0 --port 8002
+    ports:
+      - "8002:8002"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://convene:convene@postgres:5432/convene
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
   mcp-server:
     build:
       context: .
@@ -36,10 +119,13 @@ services:
     environment:
       MCP_API_KEY: ${MCP_API_KEY:-}
       MCP_AGENT_CONFIG_ID: ${MCP_AGENT_CONFIG_ID:-}
-      API_BASE_URL: http://host.docker.internal:8000
-      GATEWAY_WS_URL: ws://host.docker.internal:8003
+      API_BASE_URL: http://api-server:8000
+      GATEWAY_WS_URL: ws://agent-gateway:8003
       MCP_HOST: "0.0.0.0"
       MCP_PORT: "3001"
+    depends_on:
+      - api-server
+      - agent-gateway
 
 volumes:
   postgres_data:

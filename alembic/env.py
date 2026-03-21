@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from logging.config import fileConfig
 
 from sqlalchemy import pool
@@ -14,6 +15,10 @@ from alembic import context
 from convene_core.database.base import Base
 
 config = context.config
+
+# Allow DATABASE_URL env var to override alembic.ini (e.g. in Docker deployments)
+if db_url_env := os.environ.get("DATABASE_URL"):
+    config.set_main_option("sqlalchemy.url", db_url_env)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
