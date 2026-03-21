@@ -1,7 +1,7 @@
-"""Unit tests for TaskExtractor ORM persistence.
+"""Unit tests for TaskExtractor ORM persistence and event emission.
 
-All tests use mocked LLM providers and database sessions — no live
-database or LLM calls are made.
+All tests use mocked LLM providers, database sessions, and event publishers —
+no live database, LLM calls, or Redis connections are made.
 """
 
 from __future__ import annotations
@@ -63,8 +63,13 @@ def _make_task(
 
 def _make_extractor(
     extracted_tasks: list[Task] | None = None,
+    event_publisher: AsyncMock | None = None,
 ) -> tuple[TaskExtractor, AsyncMock, MagicMock]:
     """Build a TaskExtractor with a mocked LLM and session factory.
+
+    Args:
+        extracted_tasks: Tasks the mock LLM will return.
+        event_publisher: Optional mock EventPublisher.
 
     Returns:
         Tuple of (extractor, mock_session, mock_session_factory).
@@ -82,6 +87,7 @@ def _make_extractor(
     extractor = TaskExtractor(
         llm_provider=mock_llm,
         session_factory=mock_factory,
+        event_publisher=event_publisher,
     )
     return extractor, mock_session, mock_factory
 
@@ -283,3 +289,152 @@ class TestPersistTasksErrorHandling:
         await extractor._persist_tasks([])
         mock_session.add.assert_not_called()
         mock_session.commit.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Event emission — task.created
+# ---------------------------------------------------------------------------
+
+
+class TestEventEmission:
+    """Tests for task.created event emission after extraction."""
+
+    async def test_no_events_when_no_publisher(self) -> None:
+        """No events are emitted when event_publisher is None."""
+        meeting_id = uuid4()
+        segment = _make_segment(meeting_id)
+        task = _make_task(meeting_id=meeting_id)
+        extractor, _mock_session, _ = _make_extractor(extracted_tasks=[task])
+
+        # Should complete without errors even with no publisher
+        result = await extractor.extract_from_segments([segment], context="")
+        assert result == [task]
+
+    async def test_event_published_for_each_task(self) -> None:
+        """One task.created event is published per extracted task."""
+        meeting_id = uuid4()
+        segment = _make_segment(meeting_id)
+        tasks = [_make_task(meeting_id=meeting_id, description=f"Task {i}") for i in range(3)]
+
+        mock_publisher = AsyncMock()
+        mock_publisher.publish = AsyncMock(return_value="1234-0")
+
+        extractor, _mock_session, _ = _make_extractor(
+            extracted_tasks=tasks,
+            event_publisher=mock_publisher,
+        )
+
+        await extractor.extract_from_segments([segment], context="")
+
+        assert mock_publisher.publish.call_count == 3
+
+    async def test_event_type_is_task_created(self) -> None:
+        """Published event has event_type 'task.created'."""
+        from convene_core.events.definitions import TaskCreated
+
+        meeting_id = uuid4()
+        segment = _make_segment(meeting_id)
+        task = _make_task(meeting_id=meeting_id)
+
+        mock_publisher = AsyncMock()
+        mock_publisher.publish = AsyncMock(return_value="1234-0")
+
+        extractor, _, _ = _make_extractor(
+            extracted_tasks=[task],
+            event_publisher=mock_publisher,
+        )
+
+        await extractor.extract_from_segments([segment], context="")
+
+        published_event = mock_publisher.publish.call_args[0][0]
+        assert isinstance(published_event, TaskCreated)
+        assert published_event.task == task
+
+    async def test_no_events_when_llm_returns_nothing(self) -> None:
+        """No events are emitted when LLM finds no tasks."""
+        meeting_id = uuid4()
+        segment = _make_segment(meeting_id)
+
+        mock_publisher = AsyncMock()
+        mock_publisher.publish = AsyncMock(return_value="1234-0")
+
+        extractor, _, _ = _make_extractor(
+            extracted_tasks=[],
+            event_publisher=mock_publisher,
+        )
+
+        await extractor.extract_from_segments([segment], context="")
+
+        mock_publisher.publish.assert_not_called()
+
+    async def test_no_events_when_no_segments(self) -> None:
+        """No events are emitted when segments list is empty."""
+        mock_publisher = AsyncMock()
+        mock_publisher.publish = AsyncMock(return_value="1234-0")
+
+        extractor, _, _ = _make_extractor(
+            extracted_tasks=[],
+            event_publisher=mock_publisher,
+        )
+
+        await extractor.extract_from_segments([], context="")
+
+        mock_publisher.publish.assert_not_called()
+
+    async def test_publish_error_does_not_raise(self) -> None:
+        """A publish failure is swallowed — extraction still returns tasks."""
+        meeting_id = uuid4()
+        segment = _make_segment(meeting_id)
+        task = _make_task(meeting_id=meeting_id)
+
+        mock_publisher = AsyncMock()
+        mock_publisher.publish = AsyncMock(side_effect=RuntimeError("Redis down"))
+
+        extractor, _, _ = _make_extractor(
+            extracted_tasks=[task],
+            event_publisher=mock_publisher,
+        )
+
+        # Should not raise despite publish failure
+        result = await extractor.extract_from_segments([segment], context="")
+        assert result == [task]
+
+    async def test_publish_called_after_persist(self) -> None:
+        """Events are only emitted after the database commit succeeds."""
+        meeting_id = uuid4()
+        segment = _make_segment(meeting_id)
+        task = _make_task(meeting_id=meeting_id)
+
+        call_order: list[str] = []
+
+        mock_session = AsyncMock()
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=False)
+
+        async def _tracked_commit() -> None:
+            call_order.append("commit")
+
+        mock_session.commit = AsyncMock(side_effect=_tracked_commit)
+
+        mock_factory = MagicMock()
+        mock_factory.return_value = mock_session
+
+        mock_llm = AsyncMock()
+        mock_llm.extract_tasks.return_value = [task]
+
+        async def _tracked_publish(event: object) -> str:
+            call_order.append("publish")
+            return "1234-0"
+
+        mock_publisher = AsyncMock()
+        mock_publisher.publish = AsyncMock(side_effect=_tracked_publish)
+
+        extractor = TaskExtractor(
+            llm_provider=mock_llm,
+            session_factory=mock_factory,
+            event_publisher=mock_publisher,
+        )
+
+        await extractor.extract_from_segments([segment], context="")
+
+        assert call_order == ["commit", "publish"]

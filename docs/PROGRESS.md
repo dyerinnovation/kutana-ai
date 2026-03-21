@@ -8,6 +8,45 @@
 
 <!-- New entries go at the top -->
 
+## 2026-03-21 — task.created / task.updated Event Emission
+
+**Roadmap item:** Implement task.created / task.updated event emission
+**Branch:** scheduled/2026-03-21-task-event-emission
+**Author:** CoWork (scheduled)
+
+### Changes
+- Created `services/task-engine/src/task_engine/event_publisher.py` — `EventPublisher` class (redis-url-based, mirrors the audio-service publisher) that serialises `BaseEvent` instances and writes them to the `convene:events` Redis Stream with `XADD` and an approximate 10 000-entry cap.
+- Updated `services/task-engine/src/task_engine/extractor.py` — added optional `event_publisher: EventPublisher | None = None` constructor parameter; new `_emit_task_created_events` async method emits one `TaskCreated` event per persisted task; publish errors are swallowed (logged) so a Redis outage cannot break task extraction.
+- Updated `services/task-engine/src/task_engine/main.py` — creates an `EventPublisher` at startup, stores it in `_event_publisher` global, closes it on shutdown.
+- Created `services/api-server/src/api_server/event_publisher.py` — FastAPI-native `EventPublisher` variant; accepts a live `redis.asyncio.Redis` client instead of a URL, enabling clean dependency injection via the existing `get_redis` provider.
+- Updated `services/api-server/src/api_server/deps.py` — added `get_event_publisher` async dependency function that wraps `get_redis` in an `EventPublisher`.
+- Updated `services/api-server/src/api_server/routes/tasks.py` — `create_task` emits `TaskCreated` after flush; `update_task_status` captures `previous_status` and emits `TaskUpdated`; new `_orm_to_domain` and `_safe_publish` helpers.
+- Created `services/task-engine/tests/test_event_publisher.py` — 6 unit tests.
+- Updated `services/task-engine/tests/test_extractor.py` — 7 new event emission tests in `TestEventEmission` class.
+- Created `services/api-server/tests/test_task_events.py` — 9 unit tests.
+
+### Quality Check Results
+- Syntax validation: ✅ All 9 modified/created files parsed by `ast.parse` without errors
+- Structural checks: ✅ All public API members, constants, and test classes present
+- Logic verification: ✅ event_publisher wired through extractor, previous_status captured before update, EventPublisher closed on shutdown
+- ruff: ⚠️ Cannot run — VM Python 3.10 vs required 3.12 (pre-existing constraint)
+- mypy: ⚠️ Cannot run — same environment constraint
+- pytest: ⚠️ Cannot run — same environment constraint; 35 total tests verified via static analysis
+
+### Notes
+- `EventPublisher` is duplicated in `task-engine` and `api-server` rather than moved to `convene-core` because convene-core has no redis dependency.
+- All publish errors are intentionally swallowed with logging so a Redis outage cannot cascade to HTTP response failures.
+- `update_task_status` now stamps `task.updated_at` on every status change (previously omitted).
+
+### Blockers
+None — quality checks (ruff, mypy, pytest) must be run by Jonathan on his Mac before merging.
+
+### Next Up
+🏁 Milestone M2: Redis → Task Extraction → PostgreSQL (integration test)
+
+---
+
+
 ## 2026-03-21 — Task Persistence to PostgreSQL
 
 **Roadmap item:** Implement task persistence to PostgreSQL (replace placeholder in extractor)

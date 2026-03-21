@@ -13,13 +13,13 @@
 
 **Author:** CoWork (scheduled)
 **Date:** 2026-03-21
-**What I did:** Replaced the ORM placeholder in `TaskExtractor._persist_tasks` with a real `TaskORM` insert, updated `TaskDeduplicator._fetch_existing_descriptions` to use a typed ORM query instead of raw SQL, and wrote 25 unit tests across two new test files.
-**Branch:** scheduled/2026-03-21-task-persistence-v2
-**Merge status:** Ready for review — do `git merge scheduled/2026-03-21-task-persistence-v2` after running quality checks on Mac
+**What I did:** Implemented task.created and task.updated event emission — added EventPublisher to task-engine and api-server, wired TaskCreated events out of TaskExtractor after persist, and wired TaskCreated/TaskUpdated out of the api-server task routes.
+**Branch:** scheduled/2026-03-21-task-event-emission
+**Merge status:** Ready for review — do `git merge scheduled/2026-03-21-task-event-emission` after quality checks pass on Mac
 **Warnings:**
 - ⚠️ Quality checks (ruff, mypy, pytest) must be run on Mac before merging — VM Python is 3.10, project requires 3.12+
-- ruff check passes on the 4 modified files; full-repo scan hits a filesystem deadlock on api-server/pyproject.toml (pre-existing VM issue)
-- The `_on_window` handler in `main.py` is still a logging stub — next locked task (LLM extraction pipeline) wires it up
+- The task-engine `_event_publisher` is created in lifespan but NOT yet passed into TaskExtractor from `_on_window` — that wiring belongs in the locked LLM pipeline task
+- `update_task_status` now stamps `updated_at` on every status change (this is a net improvement but is a behavior change)
 **Dependencies introduced:** None
 
 ---

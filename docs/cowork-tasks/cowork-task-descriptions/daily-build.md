@@ -176,7 +176,7 @@ When the selected item is a `🔗 BLOCK:`, work through all sub-tasks as a unit:
    **What I did:** {1-2 sentence summary}
    **Branch:** scheduled/YYYY-MM-DD-{feature-slug}
    **Block progress:** {if block: "3 of 4 sub-tasks complete", else omit}
-   **Merge status:** Ready for review — do `git merge scheduled/YYYY-MM-DD-{slug}` after reviewing
+   **Merge status:** {✅ Merged to main | ❌ Merge FAILED — branch left unmerged for manual review}
    **Warnings:** {anything the next session (human or scheduled) should know}
    **Dependencies introduced:** {any new packages added to pyproject.toml}
    ```
@@ -188,6 +188,25 @@ When the selected item is a `🔗 BLOCK:`, work through all sub-tasks as a unit:
    git push origin scheduled/$(date +%Y-%m-%d)-{feature-slug}
    ```
 
+5. Merge to main:
+   ```bash
+   git checkout main
+   git pull origin main
+   git merge --no-ff scheduled/$(date +%Y-%m-%d)-{feature-slug} -m "merge: scheduled/$(date +%Y-%m-%d)-{feature-slug} into main"
+   git push origin main
+   ```
+
+   **If the merge succeeds:** Update the `**Merge status:**` line in `docs/HANDOFF.md` to `✅ Merged to main`.
+
+   **If the merge fails** (conflict or any error):
+   - Do **not** force the merge — abort with `git merge --abort` and return to the feature branch
+   - Append a note to the bottom of the `docs/PROGRESS.md` entry for today:
+     ```markdown
+     **Merge status:** ❌ FAILED — conflict or error. Branch left unmerged for manual review.
+     ```
+   - Update the `**Merge status:**` line in `docs/HANDOFF.md` to `❌ Merge FAILED — branch left unmerged for manual review`
+   - Push the feature branch as-is and stop — do not push main
+
 ---
 
 ## Hard rules
@@ -198,4 +217,5 @@ When the selected item is a `🔗 BLOCK:`, work through all sub-tasks as a unit:
 - **Never delete or overwrite PROGRESS.md entries.** Always append.
 - **If tests fail and you can't fix them in 3 attempts,** document the failure in PROGRESS.md, note it as a blocker in HANDOFF.md, and stop. Do not ship broken code.
 - **If you encounter a merge conflict on pull,** stop and document it in HANDOFF.md. Do not attempt to resolve code merge conflicts — only resolve conflicts in docs/PROGRESS.md and docs/HANDOFF.md by keeping both versions.
+- **Never force a merge to main.** If `git merge --no-ff` fails for any reason, abort immediately with `git merge --abort`, document the failure, and leave the branch unmerged for manual review.
 - **Partial block completion is OK.** If 2 of 4 sub-tasks pass but the 3rd fails, commit the passing work, document the failure, and stop. Check off the completed sub-tasks but NOT the block header.

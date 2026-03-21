@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+import logging
+from datetime import UTC, date, datetime
 from typing import Annotated
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -12,11 +13,15 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api_server.auth_deps import CurrentUser
-from api_server.deps import get_db_session
+from api_server.deps import get_db_session, get_event_publisher
+from api_server.event_publisher import EventPublisher
 from convene_core.database.models import TaskORM
-from convene_core.models.task import TaskPriority, TaskStatus
+from convene_core.events.definitions import TaskCreated, TaskUpdated
+from convene_core.models.task import Task, TaskPriority, TaskStatus
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -112,6 +117,49 @@ def _to_response(task: TaskORM) -> TaskResponse:
     )
 
 
+def _orm_to_domain(task: TaskORM) -> Task:
+    """Convert a TaskORM row to a domain Task model.
+
+    Args:
+        task: The ORM task row with all fields populated.
+
+    Returns:
+        A :class:`~convene_core.models.task.Task` domain model.
+    """
+    dep_ids: list[UUID] = [
+        UUID(dep) for dep in (task.dependencies or [])
+    ]
+    return Task(
+        id=task.id,
+        meeting_id=task.meeting_id,
+        description=task.description,
+        assignee_id=task.assignee_id,
+        due_date=task.due_date,
+        priority=TaskPriority(task.priority),
+        status=TaskStatus(task.status),
+        dependencies=dep_ids,
+        source_utterance=task.source_utterance,
+        created_at=task.created_at,
+        updated_at=task.updated_at,
+    )
+
+
+async def _safe_publish(publisher: EventPublisher, event: TaskCreated | TaskUpdated) -> None:
+    """Publish an event, swallowing errors to avoid breaking the HTTP response.
+
+    Args:
+        publisher: The event publisher to use.
+        event: The domain event to publish.
+    """
+    try:
+        await publisher.publish(event)
+    except Exception:
+        logger.exception(
+            "Failed to publish %s — continuing without event",
+            event.event_type,
+        )
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -157,27 +205,38 @@ async def create_task(
     body: TaskCreateRequest,
     _current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    publisher: Annotated[EventPublisher, Depends(get_event_publisher)],
 ) -> TaskResponse:
-    """Create a new task.
+    """Create a new task and emit a ``task.created`` event.
 
     Args:
         body: The task creation payload.
         _current_user: Authenticated user.
         db: Database session.
+        publisher: Redis event publisher.
 
     Returns:
         TaskResponse with the newly created task data.
     """
+    now = datetime.now(tz=UTC)
     task = TaskORM(
+        id=uuid4(),
         meeting_id=body.meeting_id,
         description=body.description,
         assignee_id=body.assignee_id,
         due_date=body.due_date,
         priority=body.priority.value,
         status=TaskStatus.PENDING.value,
+        dependencies=[],
+        created_at=now,
+        updated_at=now,
     )
     db.add(task)
     await db.flush()
+
+    domain_task = _orm_to_domain(task)
+    await _safe_publish(publisher, TaskCreated(task=domain_task))
+
     return _to_response(task)
 
 
@@ -216,14 +275,16 @@ async def update_task_status(
     body: TaskStatusUpdateRequest,
     _current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    publisher: Annotated[EventPublisher, Depends(get_event_publisher)],
 ) -> TaskResponse:
-    """Update the status of an existing task.
+    """Update the status of an existing task and emit a ``task.updated`` event.
 
     Args:
         task_id: The UUID of the task to update.
         body: The status update payload.
         _current_user: Authenticated user.
         db: Database session.
+        publisher: Redis event publisher.
 
     Returns:
         TaskResponse reflecting the updated status.
@@ -239,6 +300,15 @@ async def update_task_status(
             detail="Task not found",
         )
 
+    previous_status = TaskStatus(task.status)
     task.status = body.status.value
+    task.updated_at = datetime.now(tz=UTC)
     await db.flush()
+
+    domain_task = _orm_to_domain(task)
+    await _safe_publish(
+        publisher,
+        TaskUpdated(task=domain_task, previous_status=previous_status),
+    )
+
     return _to_response(task)
