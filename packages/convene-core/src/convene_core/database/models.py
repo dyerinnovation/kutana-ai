@@ -299,6 +299,7 @@ class AgentApiKeyORM(Base):
         agent_config_id: FK to agent_configs table.
         user_id: FK to users table.
         name: Human-readable key name.
+        expires_at: When the key expires (null = never).
         revoked_at: When the key was revoked (null = active).
         created_at: Record creation timestamp.
     """
@@ -315,6 +316,9 @@ class AgentApiKeyORM(Base):
         sa.Uuid, ForeignKey("users.id"), nullable=False
     )
     name: Mapped[str] = mapped_column(sa.String(255), nullable=False, default="default")
+    expires_at: Mapped[datetime | None] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
     revoked_at: Mapped[datetime | None] = mapped_column(
         sa.DateTime(timezone=True), nullable=True
     )
@@ -326,6 +330,37 @@ class AgentApiKeyORM(Base):
         Index("ix_agent_api_keys_key_hash", "key_hash", unique=True),
         Index("ix_agent_api_keys_agent_config_id", "agent_config_id"),
         Index("ix_agent_api_keys_user_id", "user_id"),
+    )
+
+
+class ApiKeyAuditLogORM(Base):
+    """ORM model for api_key_audit_log table.
+
+    Attributes:
+        id: Primary key UUID.
+        key_id: FK to agent_api_keys table.
+        action: What happened (created, used, revoked).
+        ip_address: Client IP address.
+        user_agent: Client User-Agent header.
+        created_at: When the event occurred.
+    """
+
+    __tablename__ = "api_key_audit_log"
+
+    id: Mapped[UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid4)
+    key_id: Mapped[UUID] = mapped_column(
+        sa.Uuid, ForeignKey("agent_api_keys.id"), nullable=False
+    )
+    action: Mapped[str] = mapped_column(sa.String(20), nullable=False)
+    ip_address: Mapped[str | None] = mapped_column(sa.String(45), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(sa.String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+
+    __table_args__ = (
+        Index("ix_api_key_audit_log_key_id", "key_id"),
+        Index("ix_api_key_audit_log_action", "action"),
     )
 
 
@@ -414,4 +449,82 @@ class AgentSessionORM(Base):
         Index("ix_agent_sessions_meeting_id", "meeting_id"),
         Index("ix_agent_sessions_agent_config_id", "agent_config_id"),
         Index("ix_agent_sessions_status", "status"),
+    )
+
+
+class AgentTemplateORM(Base):
+    """ORM model for agent_templates table.
+
+    Attributes:
+        id: Primary key UUID.
+        name: Template display name.
+        description: What the template does.
+        system_prompt: Default system prompt.
+        capabilities: Default capabilities.
+        category: Template category for filtering.
+        is_premium: Whether this is a premium template.
+        created_at: Record creation timestamp.
+    """
+
+    __tablename__ = "agent_templates"
+
+    id: Mapped[UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid4)
+    name: Mapped[str] = mapped_column(sa.String(255), nullable=False)
+    description: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    system_prompt: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    capabilities: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True, default=list)
+    category: Mapped[str] = mapped_column(sa.String(50), nullable=False, default="general")
+    is_premium: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+
+    __table_args__ = (Index("ix_agent_templates_category", "category"),)
+
+
+class HostedAgentSessionORM(Base):
+    """ORM model for hosted_agent_sessions table.
+
+    Attributes:
+        id: Primary key UUID.
+        user_id: User who activated the template.
+        template_id: Template being used.
+        meeting_id: Meeting the hosted agent is in.
+        status: Session status (active, stopped).
+        anthropic_api_key_encrypted: Encrypted API key (optional).
+        started_at: When the session started.
+        ended_at: When the session ended.
+        created_at: Record creation timestamp.
+    """
+
+    __tablename__ = "hosted_agent_sessions"
+
+    id: Mapped[UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(
+        sa.Uuid, ForeignKey("users.id"), nullable=False
+    )
+    template_id: Mapped[UUID] = mapped_column(
+        sa.Uuid, ForeignKey("agent_templates.id"), nullable=False
+    )
+    meeting_id: Mapped[UUID] = mapped_column(
+        sa.Uuid, ForeignKey("meetings.id"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="active")
+    anthropic_api_key_encrypted: Mapped[str | None] = mapped_column(
+        sa.Text, nullable=True
+    )
+    started_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+    ended_at: Mapped[datetime | None] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+
+    __table_args__ = (
+        Index("ix_hosted_agent_sessions_user_id", "user_id"),
+        Index("ix_hosted_agent_sessions_meeting_id", "meeting_id"),
+        Index("ix_hosted_agent_sessions_status", "status"),
     )

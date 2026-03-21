@@ -15,6 +15,7 @@ members = [
     "services/mcp-server",
     "services/task-engine",
     "services/worker",
+    "services/cli",
 ]
 
 [tool.uv]

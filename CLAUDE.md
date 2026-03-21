@@ -18,6 +18,7 @@ This is a Python monorepo managed with `uv` workspaces. The project is organized
 - `services/mcp-server/` — Model Context Protocol server exposing Convene tools for Claude and MCP clients
 - `services/task-engine/` — Redis Streams consumer, LLM-powered task extraction workers
 - `services/worker/` — Background jobs: notifications, Slack integration, calendar sync
+- `services/cli/` — Convene CLI tool (typer-based, wraps REST API)
 
 ### Frontend
 - `web/` — React 19 + TypeScript + Vite + Tailwind v4 dashboard (auth, agent management, meetings)
@@ -28,6 +29,9 @@ This is a Python monorepo managed with `uv` workspaces. The project is organized
 - LiveKit — self-hosted WebRTC SFU for browser-based human participants
 - Twilio (legacy/optional) — phone dial-in for joining external meetings with dial-in numbers
 - Stripe — payment processing, subscription management, usage-based billing
+
+### Messaging Layer
+The platform messaging layer is abstracted behind a MessageBus ABC. Services never import a specific messaging implementation directly. The provider registry resolves the bus implementation at startup based on `CONVENE_MESSAGE_BUS` config (`redis`, `aws-sns-sqs`, `gcp-pubsub`, `nats`). This ensures Convene AI is deployable on any infrastructure.
 
 ## Tech Stack & Conventions
 - **Python 3.12+** with strict type hints everywhere
@@ -127,9 +131,9 @@ STRIPE_PUBLISHABLE_KEY=
 ## Current Phase
 **Phase 1** — Core AI Pipeline (in progress). STT wired, Redis Streams consumer implemented. Next task: transcript segment windowing, then LLM extraction pipeline and task persistence.
 
-**Phase 2** — Agent Platform (mostly complete). Agent Gateway M3 verified. User auth, agent registration with API keys, MCP server (Streamable HTTP / Docker), web dashboard, and Claude Agent SDK example agent implemented (2026-03-02). Remaining: multi-agent support, agent modality support (Voice-to-Voice, Speech-to-Text, Text-only).
+**Phase 2** — Agent Platform (complete as of 2026-03-07). MCP OAuth 2.1 auth, meeting lifecycle, browser meeting room with mic audio, prebuilt agent templates, CLI tool, OpenClaw plugin, Claude Code skill, channel routing, API key security.
 
-**Agent connection pattern:** Claude Agent SDK → MCP Server → Agent Gateway (WebSocket). See `docs/TASKLIST.md` for the full task queue (Phases 1–10) and `docs/technical/ROADMAP.md` for feature details.
+**Agent connection pattern:** Claude Agent SDK → MCP Server (Bearer token) → Agent Gateway (WebSocket). See `docs/TASKLIST.md` for the full task queue (Phases 1–10) and `docs/technical/ROADMAP.md` for feature details.
 
 ## Git Workflow
 - **Commit and push after each plan** — don't let changes accumulate across sessions
@@ -150,11 +154,22 @@ STRIPE_PUBLISHABLE_KEY=
 ## Package Implementation Details
 - See `claude_docs/Convene_Core_Patterns.md` for convene-core package patterns (models, events, interfaces, database)
 - See `claude_docs/Provider_Patterns.md` for provider ABC signatures, third-party library conventions, and registry usage
+- See `claude_docs/MessageBus_Patterns.md` for MessageBus ABC, Redis Streams provider, MockMessageBus, and service wiring patterns
 - See `claude_docs/Memory_Architecture.md` for the four-layer memory system design and ORM-to-domain conversion patterns
 - See `claude_docs/Service_Patterns.md` for service layer conventions (health endpoints, lifespan, settings, DI, route organization)
 - See `claude_docs/Agent_Gateway_Architecture.md` for Agent Gateway WebSocket protocol details (if exists)
 - See `claude_docs/Auth_And_API_Keys.md` for user auth (JWT), API key system, and token exchange patterns
 - See `claude_docs/MCP_Server_Architecture.md` for MCP server tools, Streamable HTTP transport, and Docker setup
+
+## Agent Platform & Integrations
+- Agent context is provided through three layers: platform context (fixed, explains Convene AI to agents), meeting context (dynamic, from calendar invite), and meeting recap (live, for late joiners). See `docs/technical/agent-context-seeding.md`.
+- See `docs/technical/AGENT_PLATFORM.md` for three-tier agent architecture and access matrix
+- See `docs/technical/MCP_AUTH.md` for MCP OAuth 2.1 authorization flow
+- See `docs/integrations/OPENCLAW.md` for OpenClaw plugin integration
+- See `docs/integrations/CLAUDE_AGENT_SDK.md` for Claude Agent SDK setup
+- See `docs/integrations/CLI.md` for Convene CLI reference
+- See `integrations/openclaw-plugin/` for the OpenClaw plugin source
+- See `examples/meeting-assistant-agent/` for Claude Agent SDK example with 4 templates
 
 ## Tooling
 - See `claude_docs/UV_Best_Practices.md` for uv workspace patterns, testing commands, and known pitfalls (UF_HIDDEN, UV_LINK_MODE, etc.)
@@ -163,6 +178,8 @@ STRIPE_PUBLISHABLE_KEY=
 ## Test Data
 - `data/input/` — sample audio files for STT testing (`librispeech_sample.flac`, `test-speech.wav`)
 - `data/output/` — test result output (e.g. `e2e_results.json`)
+- See `docs/milestone-testing/` for per-feature QA playbooks (00-SETUP through 10-full-e2e-demo)
+- See `docs/manual-testing/E2E_Gateway_Test.md` for gateway + STT integration walkthrough
 
 ## Infrastructure
 - See `claude_docs/DGX_Spark_Reference.md` for DGX Spark connection details, K8s patterns, and deployment gotchas

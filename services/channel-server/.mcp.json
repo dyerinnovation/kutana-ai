@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "convene-ai": {
+      "command": "bun",
+      "args": ["./src/server.ts"],
+      "env": {
+        "CONVENE_API_URL": "ws://localhost:8003",
+        "CONVENE_HTTP_URL": "http://localhost:8000",
+        "CONVENE_MEETING_ID": ""
+      }
+    }
+  }
+}

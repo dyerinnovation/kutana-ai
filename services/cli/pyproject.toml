@@ -1,0 +1,20 @@
+[project]
+name = "convene-cli"
+version = "0.1.0"
+description = "CLI tool for Convene AI platform"
+requires-python = ">=3.12"
+dependencies = [
+    "typer>=0.12",
+    "aiohttp>=3.9",
+    "rich>=13.0",
+]
+
+[project.scripts]
+convene = "convene_cli.main:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/convene_cli"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

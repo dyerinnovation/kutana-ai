@@ -1,92 +1,86 @@
-# Weekly Architecture Review — Week of 2026-03-02
+# Weekly Architecture Review — Week of 2026-03-16
 
 ## Week Summary
-This week saw two scheduled CoWork sessions complete Phase 1B (provider registry integration tests) and begin Phase 1D (Redis Streams consumer for transcript events). The codebase now has a fully functioning event pipeline: audio service publishes transcript segments via Redis Streams, and the task engine consumes them with proper consumer groups, exponential backoff, and per-entry acknowledgment. Phase 2 (Agent Gateway) also received significant work previously — the gateway, auth, connection manager, event relay, and audio bridge are all implemented with 6 test files. On Mar 2, a manual session verified the full E2E pipeline (29 transcript segments via DGX Spark Whisper, Redis XLEN=31), fixed httpx→aiohttp for `.local` mDNS hosts, resolved audio-service test failures (38 tests passing), and merged everything to main. The project is mid-Phase 1D with transcript segment windowing as the next task. Overall trajectory remains strong, though several prior-review issues persist and one new architectural violation was discovered.
+No new code has landed since the last progress entry on 2026-03-03 (transcript segment windowing). The LLM-powered task extraction pipeline remains locked by Jonathan, blocking Phase 1 completion. Phase 2 Agent Gateway core (M3) is verified and stable, but the three follow-on blocks (Polish, Registration & Credentials, Modality Support) are untouched. Overall trajectory is stalled — the project needs either the extraction pipeline unlocked for CoWork or a manual push from Jonathan to regain momentum. Two weeks without a merge is the longest gap since project inception.
 
 ## Architecture Compliance
 
 ### Provider Abstraction
-- **Status:** ⚠️ Minor issues
-- **Details:** All 10 providers (4 STT, 3 TTS, 3 LLM) correctly extend their ABCs and are registered in `registry.py`. Services use the registry — no concrete provider imports found in service code (only in test files, which is appropriate). **TTSProvider ABC now has `close()` as an abstract method** — resolving last week's finding. However, **LLMProvider ABC still lacks a `close()` abstract method** (`packages/convene-core/src/convene_core/interfaces/llm.py`), even though all three concrete implementations (AnthropicLLM, GroqLLM, OllamaLLM) implement `close()`. Additionally, `MockLLM` in `convene_providers/testing.py` is missing `close()` entirely — it will break if `close()` is added to the ABC. A new `WhisperRemoteSTT` provider was added since last review and is properly registered as `"whisper-remote"`.
+- **Status:** ✅ Compliant
+- **Details:** All 10 providers (4 STT, 3 TTS, 3 LLM) correctly extend their ABCs in `packages/convene-core/src/convene_core/interfaces/`. All are registered in `packages/convene-providers/src/convene_providers/registry.py` (lines 140-153). No direct imports of concrete providers found in service code — services exclusively use the registry factory pattern. **Carried forward (3 weeks):** `LLMProvider` ABC still lacks an abstract `close()` method, though all 3 concrete implementations (AnthropicLLM:322, GroqLLM:268, OllamaLLM:259) define one. `STTProvider` and `TTSProvider` ABCs both define `close()` — this inconsistency should be resolved.
 
 ### Event-Driven Communication
-- **Status:** 🛑 Violation found
-- **Details:** Event definitions expanded from 6 to 12 types — new events include `room.created`, `agent.joined`, `agent.left`, `participant.joined`, `participant.left`, and `agent.data`. Redis Streams pipeline is correctly wired: audio service publishes via `EventPublisher` (XADD), task engine consumes via `StreamConsumer` (XREADGROUP with consumer groups), and agent gateway relays via `EventRelay` (separate consumer group). **However, a cross-service import violation exists:** `services/agent-gateway/src/agent_gateway/audio_bridge.py` (lines 10-12) directly imports `AudioPipeline`, `EventPublisher`, and `_create_stt_provider` from `audio-service`. This creates a tight coupling between agent-gateway and audio-service, violating the CLAUDE.md principle: "Services communicate via Redis Streams events, never direct calls." No direct HTTP calls between services were found.
+- **Status:** 🛑 Violations found (unchanged from last week)
+- **Details:** Two violations persist:
+  1. **Cross-service import:** `services/agent-gateway/src/agent_gateway/audio_bridge.py` (lines 10-12) directly imports `AudioPipeline`, `EventPublisher`, and `_create_stt_provider` from `audio-service`. The `agent-gateway/pyproject.toml` also declares `audio-service` as a workspace dependency — a service-to-service coupling that violates the event-driven principle.
+  2. **Ad-hoc event publishing:** `services/agent-gateway/src/agent_gateway/agent_session.py` (lines 218-224) publishes raw `data.channel.{name}` events via direct XADD instead of using the `AgentData` event class from `convene_core/events/definitions.py`.
+  The audio-service → task-engine path is correctly wired via EventPublisher and StreamConsumer with proper XREADGROUP/XACK semantics. 13 event types are defined; only 3 are actively published (`meeting.started`, `meeting.ended`, `transcript.segment.final`). The remaining 10 have no publishers or consumers yet.
 
 ### Async Correctness
-- **Status:** ⚠️ Minor issues
-- **Details:** The two high-severity issues from last week's review have been addressed:
-  1. **Session factory** (`services/api-server/src/api_server/deps.py`) — now correctly cached with `lru_cache` and module-level `_session_factory`. No longer recreated per request. ✅ Fixed.
-  2. **Twilio blocking call** — `meeting_dialer.py` was not re-examined in detail as Phase 1C is complete and the dialer is working.
-
-  **New issue found:** `packages/convene-providers/src/convene_providers/stt/whisper_remote_stt.py` (lines 85-97) performs synchronous file I/O (`wave.open`, `open/read`) inside `async def get_transcript()`. WAV file writing and reading will block the event loop. Should be wrapped in `asyncio.to_thread()`. All other async patterns are correct: `asyncio.to_thread()` properly used in WhisperSTT and PiperTTS for CPU-bound work, all HTTP clients are async (httpx, AsyncAnthropic, AsyncGroq), Redis operations use `redis.asyncio`, and the StreamConsumer implements proper async patterns with exponential backoff.
+- **Status:** ⚠️ Minor issues (unchanged)
+- **Details:** No `time.sleep()` or synchronous HTTP usage found. All database operations use async SQLAlchemy with `await db.execute()`. **Persistent issue (3 weeks):** `packages/convene-providers/src/convene_providers/stt/whisper_remote_stt.py` (lines 101-108) performs synchronous file I/O (`wave.open`, `open/read`) inside `async def get_transcript()`, blocking the event loop. The sibling `whisper_stt.py` correctly uses `asyncio.to_thread()` at line 128 — the fix pattern already exists in the codebase. Minor: `services/api-server/src/api_server/rate_limit.py` (line 74) uses `time.time()` in an async dispatch method — functionally harmless.
 
 ### Type Safety
-- **mypy results:** Could not run — CoWork Linux VM has Python 3.10; project requires 3.12+.
-- **Problem areas:** 16 `# type: ignore` comments found (up from 13 last week). 8 of these have proper explanatory comments (redis-py stubs, Anthropic SDK types, Piper/Whisper union attrs, Alembic config). **8 still lack explanations**, violating CLAUDE.md style guide:
-  - `packages/convene-memory/src/convene_memory/working.py` — 4 instances (lines 48, 62, 80, 94)
-  - `services/audio-service/tests/test_redis_integration.py` — 2 instances (lines 50, 62)
-  - `services/audio-service/tests/test_stt_wiring.py` — 1 instance (line 201)
-  - The **bare `list` type annotations** from last week have been fixed — all ORM model list types are now properly parameterized as `list[str]` or `list[SpecificORM]`. ✅ Fixed.
+- **mypy results:** Cannot run — CoWork Linux VM has Python 3.10; project requires 3.12+ and `.venv` contains macOS ARM64 binaries.
+- **Problem areas:** Syntax validation via `ast.parse` passes on all 132 Python files. All 25 `# type: ignore` comments have inline explanations per CLAUDE.md convention. 5 pytest fixtures in `services/agent-gateway/tests/` lack return type hints: `test_audio_bridge.py` (lines 13, 21, 36) and `test_event_relay_transcript.py` (lines 14, 20). Jonathan should run `uv run mypy --strict .` locally to validate.
 
 ### Test Coverage
-- **Overall:** ~15 test files across the codebase. Last confirmed run: 96+ service tests passing (2026-03-02) — 58 gateway tests + 38 audio-service tests confirmed. New tests added this week: 20 registry integration tests + 20 stream consumer tests + 58 gateway tests.
+- **Overall:** 16 test files, ~313 test functions across the codebase. Last confirmed run (2026-03-02): 96+ tests passing (58 gateway + 38 audio-service). Additional test files cover core models/events (2), providers (2), task-engine (2), and CLI (1).
 - **Gaps:**
-  - **convene-memory:** ZERO tests — 4 core memory layer files (working, short-term, long-term, structured) completely untested
-  - **api-server:** ZERO tests — 7 source files (routes, deps, main, middleware) untested
-  - **worker:** ZERO tests — 4 source files (notifications, slack_bot, calendar_sync) untested
-  - **ORM models:** No dedicated ORM/migration tests
-  - **Cloud providers:** assemblyai_stt, deepgram_stt, cartesia_tts, elevenlabs_tts have no unit tests (expected — require API keys)
-  - **Agent gateway** has strong test coverage: 6 test files covering protocol, auth, connection management, event relay, audio bridge, and e2e flow
+  - `packages/convene-memory/` — **0 test files** (4 memory layer implementations untested)
+  - `services/api-server/` — **0 test files** (routes, deps, auth, rate limiter untested)
+  - `services/worker/` — **0 test files** (notifications, slack_bot, calendar_sync untested)
+  - `services/mcp-server/` — **0 test files** (MCP tools, gateway client untested)
+  - Cloud STT/TTS providers have no unit tests (expected — require API keys)
 
 ### Code Organization
 - **Status:** ✅ Clean
-- **Details:** Pydantic models remain in `convene-core/models/`, ORM models in `convene-core/database/models.py`. API route handlers are still thin placeholder stubs (returning hardcoded data until Phase 1E). File naming is 100% snake_case across all 74+ source files. Google-style docstrings on public methods. Dependency graph is acyclic — no circular imports between packages. All dependencies use `>=` minimum version pinning with `uv.lock` for reproducibility.
+- **Details:** Pydantic domain models correctly in `convene-core/models/` (10 model files). ORM models in `convene-core/database/models.py` with additional structured memory models alongside `convene-memory`. API route handlers are thin CRUD stubs — no business logic leaks detected. All Python files follow snake_case naming. Google-style docstrings present on public methods. No circular dependencies between packages. All workspace packages use `{ workspace = true }` references with `>=` version constraints for externals.
 
 ## Technical Debt Identified
 
-1. **Cross-service import in audio_bridge.py** — **Severity:** High — **Suggested fix:** Extract shared audio pipeline logic into `convene-core` or a new shared package (e.g., `convene-audio`), or have agent-gateway instantiate its own STT pipeline using the provider registry directly instead of importing from audio-service. File: `services/agent-gateway/src/agent_gateway/audio_bridge.py:10-12`.
+1. **Cross-service import + dependency: agent-gateway → audio-service** — **Severity:** High — **Suggested fix:** Extract shared audio pipeline logic into `convene-core` or a new `convene-audio` shared package. Remove `audio-service` from `agent-gateway/pyproject.toml`. Files: `services/agent-gateway/src/agent_gateway/audio_bridge.py:10-12`, `services/agent-gateway/pyproject.toml`. **Carried forward 3 weeks — this is now the longest-standing architectural violation.**
 
-2. **LLMProvider ABC missing `close()` method** — **Severity:** Medium — **Suggested fix:** Add `async def close(self) -> None` as abstract method to `packages/convene-core/src/convene_core/interfaces/llm.py`, then add `close()` to `MockLLM` in `convene_providers/testing.py`.
+2. **LLMProvider ABC missing `close()` method** — **Severity:** Medium — **Suggested fix:** Add `@abstractmethod async def close(self) -> None` to `packages/convene-core/src/convene_core/interfaces/llm.py`, then add `close()` to `MockLLM` in `convene_providers/testing.py`. **Carried forward 3 weeks.**
 
-3. **Blocking file I/O in WhisperRemoteSTT** — **Severity:** Medium — **Suggested fix:** Wrap `wave.open()` and file read in `asyncio.to_thread()` at `packages/convene-providers/src/convene_providers/stt/whisper_remote_stt.py:85-97`.
+3. **Blocking file I/O in WhisperRemoteSTT** — **Severity:** Medium — **Suggested fix:** Wrap `wave.open()` and file read/write in `asyncio.to_thread()` at `packages/convene-providers/src/convene_providers/stt/whisper_remote_stt.py:101-108`. Fix pattern exists in `whisper_stt.py:128`. **Carried forward 3 weeks.**
 
-4. **8 unexplained `# type: ignore` comments** — **Severity:** Medium — **Suggested fix:** Add brief justification comments to all 8 instances in `working.py` (4), `test_redis_integration.py` (2), and `test_stt_wiring.py` (1). Most are likely redis-py stub issues.
+4. **Ad-hoc event publishing in agent_session.py** — **Severity:** Medium — **Suggested fix:** Use the `AgentData` event class from `convene_core/events/definitions.py` instead of raw XADD with `data.channel.{name}` at `services/agent-gateway/src/agent_gateway/agent_session.py:221`. **Carried forward 2 weeks.**
 
-5. **Zero test coverage for memory, api-server, worker** — **Severity:** Medium — **Suggested fix:** Prioritize memory layer unit tests before Phase 1D memory tasks. API server tests can wait until Phase 1E when real implementations replace placeholders.
+5. **Zero test coverage for memory, api-server, worker, mcp-server** — **Severity:** Medium — **Suggested fix:** Prioritize `convene-memory` unit tests before Phase 6 memory tasks. API server and worker tests should be added as those services get real implementations.
 
-6. **Task status transition not validated in API** — **Severity:** Low — **Suggested fix:** Wire `Task.validate_transition()` into task update routes when implementing Phase 1E. Carried forward from last week.
+6. **5 pytest fixtures missing type hints** — **Severity:** Low — **Suggested fix:** Add return type annotations to fixtures in `test_audio_bridge.py` (lines 13, 21, 36) and `test_event_relay_transcript.py` (lines 14, 20).
 
-7. **`tool.uv.dev-dependencies` deprecation** — **Severity:** Low — **Suggested fix:** Migrate root `pyproject.toml` from `[tool.uv.dev-dependencies]` to `[dependency-groups] dev = [...]`. Carried forward from last week.
-
-8. **CoWork quality gate limitation** — **Severity:** Low — **Suggested fix:** The CoWork Linux VM cannot run ruff, mypy, or pytest (Python 3.10 vs. 3.12+ requirement). All CoWork PRs require manual quality verification by Jonathan before merging. Consider adding a CI check that auto-runs on scheduled branches.
+7. **CoWork quality gate limitation** — **Severity:** Low — **Suggested fix:** CoWork VM cannot run ruff/mypy/pytest due to Python 3.10 + macOS ARM64 .venv mismatch. Add CI auto-check on `scheduled/*` branches. **Carried forward 3 weeks.**
 
 ## Refactoring Priorities for Next Week
 
-1. **Fix cross-service import in audio_bridge.py** — This is an architectural violation that will compound as both services evolve independently. Extract the shared audio pipeline concept into a shared package or have agent-gateway use the provider registry directly.
+1. **Fix cross-service import in audio_bridge.py** — This is the only architectural violation in the codebase and has now persisted for 3+ weeks. Extract the AudioPipeline/EventPublisher dependency into a shared package or have agent-gateway use the provider registry directly. This is explicitly listed in the TASKLIST as a standalone item under Phase 2.
 
-2. **Add `close()` to LLMProvider ABC** — Quick fix that standardizes resource cleanup across all provider types. Must also update MockLLM.
+2. **Add `close()` to LLMProvider ABC + MockLLM** — Quick 5-minute fix that standardizes resource cleanup across all provider types. No reason to carry this forward a fourth week.
 
-3. **Wrap WhisperRemoteSTT file I/O in asyncio.to_thread()** — Prevents event loop blocking during transcription. Small, targeted fix.
+3. **Wrap WhisperRemoteSTT file I/O** — Small targeted fix. The exact pattern already exists in `whisper_stt.py`. Prevents event loop blocking under concurrent transcription load.
 
-4. **Add explanations to all `# type: ignore`** — Quick cleanup pass (15 minutes). Keeps codebase honest with its own style guide.
+4. **Standardize agent-gateway event publishing** — Use the defined `AgentData` event class instead of ad-hoc XADD calls.
 
-5. **Write unit tests for convene-memory working layer** — The memory system is next in the Phase 1D queue. Tests should exist before implementation changes begin.
+5. **Unlock or complete the LLM extraction pipeline** — Phase 1 completion is blocked on this single locked item. If Jonathan's work is paused, unlocking it would let CoWork finish Phase 1.
 
 ## ROADMAP.md Suggestions
 
-- The next eligible Phase 1D task is "Implement transcript segment windowing (3-5 min windows with overlap)." This is well-scoped and independent.
-- Consider adding a Phase 1D sub-task: "Refactor audio_bridge.py to eliminate cross-service imports" — this should be done before the agent gateway and audio service diverge further.
-- The 4 memory layer tasks (Phase 1D items 9-12) depend on the memory context builder (item 13). Consider reordering so the context builder design is outlined first, then layers are implemented to satisfy its interface.
-- Phase 2 Agent Gateway has significant completed work (auth, connection manager, event relay, audio bridge, 6 test files) that isn't fully reflected in the tasklist checkboxes. Several items appear checked but the audio_bridge cross-service dependency should be noted as requiring refactoring.
+- The locked Phase 1 item (LLM-powered task extraction pipeline) has been blocking Phase 1 completion for 2+ weeks. Consider unlocking it for CoWork to complete, or provide a design doc so CoWork can implement it.
+- The tech debt item "Refactor AudioBridge cross-service import" is already in the TASKLIST under Phase 2 — consider promoting it to be the next unlocked item, since it's been flagged for 3 consecutive weekly reviews.
+- Phase 2 blocks (Agent Gateway Polish, Agent Registration & Credentials, Agent Modality Support) are large multi-task blocks. Consider breaking them into smaller independently-shippable tasks to improve CoWork throughput.
+- Phase 3 MCP Server block lists tasks that may already be partially implemented (`services/mcp-server/` exists with tools, gateway client, auth). Reconcile the TASKLIST with actual code state to avoid duplicate work.
+- Consider adding a "Tech Debt Sprint" phase between Phase 2 and Phase 3 to address the accumulated items before adding more features.
 
 ## Risk Register
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Cross-service import in audio_bridge.py creates hidden coupling; changes to audio-service break agent-gateway | High | High | Extract shared pipeline into convene-core or use provider registry directly |
+| Cross-service import creates hidden coupling; audio-service changes break agent-gateway silently | High | High | Extract shared pipeline into convene-core or new shared package. **3 weeks unresolved — escalating likelihood.** |
 | CoWork PRs merge without quality checks (ruff, mypy, pytest can't run in VM) | High | Med | Add CI auto-check on `scheduled/*` branches; block merge until green |
-| Memory layer implementation begins without tests; regressions go undetected | Med | Med | Write memory layer unit tests before starting Phase 1D memory tasks |
-| WhisperRemoteSTT blocks event loop under concurrent transcription load | Med | Med | Wrap file I/O in asyncio.to_thread() |
-| LLMProvider lacking close() causes resource leaks when provider implementations are swapped at runtime | Low | Med | Add close() to LLMProvider ABC; update all implementations and mocks |
-| Unpinned major versions could break CI on upstream releases | Low | Med | Pin major versions before production deployment |
+| Phase 1 stalls indefinitely due to locked extraction pipeline task | High | High | Unlock task for CoWork if Jonathan's work is paused. **Now 2+ weeks with no progress on this item.** |
+| Memory layer implementation begins (Phase 6) without test foundation | Med | Med | Write memory layer unit tests proactively |
+| WhisperRemoteSTT blocks event loop under concurrent transcription load | Med | Med | Wrap file I/O in asyncio.to_thread() — fix pattern exists in codebase |
+| 10 of 13 defined events never published — event schema may drift from implementation | Low | Med | Add event publishing as services implement features; review event definitions quarterly |
+| Tech debt items carried forward 3+ weeks without resolution | Med | Med | Dedicate a session to clearing top-3 debt items before starting new feature work |

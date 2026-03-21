@@ -8,14 +8,12 @@ import time
 from typing import Any
 from uuid import UUID
 
+import bcrypt
 import jwt
-from passlib.context import CryptContext
 
 # ---------------------------------------------------------------------------
 # Password hashing (bcrypt)
 # ---------------------------------------------------------------------------
-
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
@@ -27,7 +25,7 @@ def hash_password(password: str) -> str:
     Returns:
         The bcrypt hash string.
     """
-    return _pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
@@ -40,7 +38,7 @@ def verify_password(plain: str, hashed: str) -> bool:
     Returns:
         True if the password matches.
     """
-    return _pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
 # ---------------------------------------------------------------------------

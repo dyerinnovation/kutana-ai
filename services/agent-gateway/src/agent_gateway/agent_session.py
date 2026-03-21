@@ -24,6 +24,7 @@ from agent_gateway.protocol import (
 
 if TYPE_CHECKING:
     from fastapi import WebSocket
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
     from agent_gateway.audio_bridge import AudioBridge
     from agent_gateway.auth import AgentIdentity
@@ -52,6 +53,7 @@ class AgentSessionHandler:
         identity: AgentIdentity,
         connection_manager: ConnectionManager,
         audio_bridge: AudioBridge | None = None,
+        db_session_factory: async_sessionmaker[AsyncSession] | None = None,
     ) -> None:
         """Initialise the session handler.
 
@@ -60,15 +62,18 @@ class AgentSessionHandler:
             identity: Validated agent identity from JWT.
             connection_manager: The global connection manager.
             audio_bridge: Optional AudioBridge for STT processing.
+            db_session_factory: Optional async session factory for DB persistence.
         """
         self._ws = websocket
         self._identity = identity
         self._manager = connection_manager
         self._audio_bridge = audio_bridge
+        self._db_factory = db_session_factory
         self.session_id: UUID = uuid4()
         self.agent_name: str = identity.name
         self.meeting_id: UUID | None = None
         self.capabilities: list[str] = []
+        self.subscribed_channels: set[str] = set()
         self._connected_at: datetime = datetime.now(tz=UTC)
 
     async def handle(self) -> None:
@@ -136,6 +141,9 @@ class AgentSessionHandler:
         if self._audio_bridge is not None:
             await self._audio_bridge.ensure_pipeline(msg.meeting_id)
 
+        # Persist agent session record
+        await self._persist_join(msg.meeting_id)
+
         response = Joined(
             meeting_id=msg.meeting_id,
             granted_capabilities=self.capabilities,
@@ -185,6 +193,9 @@ class AgentSessionHandler:
     async def _handle_data(self, msg: DataMessage) -> None:
         """Handle structured data from the agent.
 
+        Publishes the data to Redis for routing to other agents in the
+        same meeting, filtered by channel and capabilities.
+
         Args:
             msg: The data message.
         """
@@ -192,7 +203,31 @@ class AgentSessionHandler:
             await self._send_error("not_in_meeting", "Join a meeting first")
             return
 
-        # Publish as AgentData event
+        # Publish data to Redis Streams for channel-based routing
+        if self._manager.redis is not None:
+            import json as _json
+
+            event_payload = _json.dumps({
+                "meeting_id": str(self.meeting_id),
+                "sender_session_id": str(self.session_id),
+                "sender_name": self.agent_name,
+                "channel": msg.channel,
+                "payload": msg.payload,
+            })
+            try:
+                await self._manager.redis.xadd(
+                    "convene:events",
+                    {
+                        "event_type": f"data.channel.{msg.channel}",
+                        "payload": event_payload,
+                    },
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to publish data channel event for %s",
+                    self.agent_name,
+                )
+
         logger.debug(
             "Data from agent %s on channel %s",
             self.agent_name,
@@ -209,6 +244,7 @@ class AgentSessionHandler:
             if self._audio_bridge is not None:
                 await self._audio_bridge.close_pipeline(self.meeting_id)
             self._manager.leave_meeting(self.session_id, self.meeting_id)
+            await self._persist_leave()
             logger.info(
                 "Agent %s left meeting %s: %s",
                 self.agent_name,
@@ -316,4 +352,69 @@ class AgentSessionHandler:
             if self._audio_bridge is not None:
                 await self._audio_bridge.close_pipeline(self.meeting_id)
             self._manager.leave_meeting(self.session_id, self.meeting_id)
+            await self._persist_leave()
         self._manager.unregister(self.session_id)
+
+    # ------------------------------------------------------------------
+    # Database persistence helpers
+    # ------------------------------------------------------------------
+
+    async def _persist_join(self, meeting_id: UUID) -> None:
+        """Create an AgentSessionORM record when joining a meeting.
+
+        Args:
+            meeting_id: The meeting being joined.
+        """
+        if self._db_factory is None:
+            return
+
+        try:
+            from convene_core.database.models import AgentSessionORM
+
+            async with self._db_factory() as db:
+                record = AgentSessionORM(
+                    id=self.session_id,
+                    agent_config_id=self._identity.agent_config_id,
+                    meeting_id=meeting_id,
+                    connection_type="agent_gateway",
+                    capabilities=self.capabilities,
+                    status="active",
+                    connected_at=datetime.now(tz=UTC),
+                )
+                db.add(record)
+                await db.commit()
+                logger.debug(
+                    "Persisted agent session %s (join)", self.session_id
+                )
+        except Exception:
+            logger.exception(
+                "Failed to persist agent session join for %s", self.session_id
+            )
+
+    async def _persist_leave(self) -> None:
+        """Update AgentSessionORM record when leaving a meeting."""
+        if self._db_factory is None:
+            return
+
+        try:
+            from sqlalchemy import update
+
+            from convene_core.database.models import AgentSessionORM
+
+            async with self._db_factory() as db:
+                await db.execute(
+                    update(AgentSessionORM)
+                    .where(AgentSessionORM.id == self.session_id)
+                    .values(
+                        status="disconnected",
+                        disconnected_at=datetime.now(tz=UTC),
+                    )
+                )
+                await db.commit()
+                logger.debug(
+                    "Persisted agent session %s (leave)", self.session_id
+                )
+        except Exception:
+            logger.exception(
+                "Failed to persist agent session leave for %s", self.session_id
+            )

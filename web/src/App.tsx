@@ -7,6 +7,8 @@ import { DashboardPage } from "@/pages/DashboardPage";
 import { AgentCreatePage } from "@/pages/AgentCreatePage";
 import { AgentDetailPage } from "@/pages/AgentDetailPage";
 import { MeetingsPage } from "@/pages/MeetingsPage";
+import { MeetingRoomPage } from "@/pages/MeetingRoomPage";
+import { AgentTemplatePage } from "@/pages/AgentTemplatePage";
 
 export default function App() {
   return (
@@ -27,6 +29,8 @@ export default function App() {
         <Route path="/agents/new" element={<AgentCreatePage />} />
         <Route path="/agents/:id" element={<AgentDetailPage />} />
         <Route path="/meetings" element={<MeetingsPage />} />
+        <Route path="/meetings/:id/room" element={<MeetingRoomPage />} />
+        <Route path="/templates" element={<AgentTemplatePage />} />
       </Route>
     </Routes>
   );

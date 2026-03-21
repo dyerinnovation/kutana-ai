@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 const navItems = [
   { to: "/", label: "Dashboard", icon: GridIcon },
   { to: "/meetings", label: "Meetings", icon: CalendarIcon },
+  { to: "/templates", label: "Templates", icon: TemplateIcon },
 ];
 
 export function Layout() {
@@ -107,6 +108,24 @@ function CalendarIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
+      />
+    </svg>
+  );
+}
+
+function TemplateIcon() {
+  return (
+    <svg
+      className="h-5 w-5"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6Zm0 9.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25Zm9.75-9.75A2.25 2.25 0 0 1 15.75 3.75H18A2.25 2.25 0 0 1 20.25 6v12A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18V6Z"
       />
     </svg>
   );
