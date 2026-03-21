@@ -12,13 +12,14 @@
 ## Latest Handoff
 
 **Author:** CoWork (scheduled)
-**Date:** 2026-03-03
-**What I did:** Implemented transcript segment windowing — created `SegmentWindower` and `SegmentWindow` in `task_engine/windower.py`, wired windower into `main.py` between `StreamConsumer` and the `_on_window` logging stub, and wrote 22 unit tests.
-**Branch:** scheduled/2026-03-03-transcript-segment-windowing
-**Merge status:** Ready for review — do `git merge scheduled/2026-03-03-transcript-segment-windowing` after running quality checks on Mac
+**Date:** 2026-03-21
+**What I did:** Implemented task.created and task.updated event emission — added EventPublisher to task-engine and api-server, wired TaskCreated events out of TaskExtractor after persist, and wired TaskCreated/TaskUpdated out of the api-server task routes.
+**Branch:** scheduled/2026-03-21-task-event-emission
+**Merge status:** Ready for review — do `git merge scheduled/2026-03-21-task-event-emission` after quality checks pass on Mac
 **Warnings:**
-- ⚠️ Quality checks (ruff, mypy, pytest) must be run on Mac before merging — `.venv` is macOS ARM64 and won't execute in this Linux VM
-- The `_on_window` handler in `main.py` is still a logging stub — next task wires the actual LLM extractor
+- ⚠️ Quality checks (ruff, mypy, pytest) must be run on Mac before merging — VM Python is 3.10, project requires 3.12+
+- The task-engine `_event_publisher` is created in lifespan but NOT yet passed into TaskExtractor from `_on_window` — that wiring belongs in the locked LLM pipeline task
+- `update_task_status` now stamps `updated_at` on every status change (this is a net improvement but is a behavior change)
 **Dependencies introduced:** None
 
 ---

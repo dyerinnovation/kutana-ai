@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from task_engine.event_publisher import EventPublisher
 from task_engine.stream_consumer import StreamConsumer
 from task_engine.windower import DEFAULT_OVERLAP_SECONDS, DEFAULT_WINDOW_SECONDS, SegmentWindower
 
@@ -89,13 +90,15 @@ async def _on_window(window: SegmentWindow) -> None:
 _consumer: StreamConsumer | None = None
 _consumer_task: asyncio.Task[None] | None = None
 _windower: SegmentWindower | None = None
+_event_publisher: EventPublisher | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Manage application startup and shutdown lifecycle.
 
-    Creates a :class:`~task_engine.windower.SegmentWindower` and a
+    Creates a :class:`~task_engine.windower.SegmentWindower`,
+    a :class:`~task_engine.event_publisher.EventPublisher`, and a
     :class:`~task_engine.stream_consumer.StreamConsumer`.  Segments
     received from Redis are forwarded to the windower, which emits
     :class:`~task_engine.windower.SegmentWindow` batches once enough
@@ -107,7 +110,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     Yields:
         Control back to the ASGI server while the app is running.
     """
-    global _consumer, _consumer_task, _windower
+    global _consumer, _consumer_task, _windower, _event_publisher
 
     settings = TaskEngineSettings()
     logger.info(
@@ -115,6 +118,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         settings.extraction_window_seconds,
         settings.extraction_overlap_seconds,
     )
+
+    _event_publisher = EventPublisher(redis_url=settings.redis_url)
 
     _windower = SegmentWindower(
         on_window=_on_window,
@@ -155,9 +160,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             _consumer_task.cancel()
             with suppress(asyncio.CancelledError):
                 await _consumer_task
+        if _event_publisher is not None:
+            await _event_publisher.close()
         _consumer = None
         _consumer_task = None
         _windower = None
+        _event_publisher = None
 
 
 app = FastAPI(

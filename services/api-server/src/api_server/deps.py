@@ -15,6 +15,8 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from api_server.event_publisher import EventPublisher
+
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
@@ -127,3 +129,17 @@ async def get_redis(
         yield client
     finally:
         await client.aclose()
+
+
+async def get_event_publisher(
+    redis_client: Annotated[Redis, Depends(get_redis)],  # type: ignore[type-arg]
+) -> EventPublisher:
+    """Return an EventPublisher wired to the active Redis client.
+
+    Args:
+        redis_client: Redis client provided by :func:`get_redis`.
+
+    Returns:
+        An :class:`~api_server.event_publisher.EventPublisher` instance.
+    """
+    return EventPublisher(redis_client)

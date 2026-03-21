@@ -77,7 +77,7 @@
 - [x] Implement transcript segment windowing (3-5 min windows with overlap)
 - [ ] Complete LLM-powered task extraction pipeline (wire LLM provider + extractor)
 - [x] Implement task persistence to PostgreSQL (replace placeholder in extractor)
-- [ ] Implement task.created / task.updated event emission
+- [x] Implement task.created / task.updated event emission
 - [x] **🏁 Milestone M1: Audio → Transcript → Redis (live dial-in test)** — see `docs/milestone-testing/M1_Live_Test.md`
 - [ ] **🏁 Milestone M2: Redis → Task Extraction → PostgreSQL (integration test)**
 
