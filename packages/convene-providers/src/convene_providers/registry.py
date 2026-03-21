@@ -15,6 +15,7 @@ class ProviderType(enum.StrEnum):
     STT = "stt"
     TTS = "tts"
     LLM = "llm"
+    MESSAGE_BUS = "message_bus"
 
 
 class ProviderRegistry:
@@ -126,6 +127,7 @@ def _build_default_registry() -> ProviderRegistry:
     from convene_providers.llm.anthropic_llm import AnthropicLLM
     from convene_providers.llm.groq_llm import GroqLLM
     from convene_providers.llm.ollama_llm import OllamaLLM
+    from convene_providers.messaging.redis_streams import RedisStreamsMessageBus
     from convene_providers.stt.assemblyai_stt import AssemblyAISTT
     from convene_providers.stt.deepgram_stt import DeepgramSTT
     from convene_providers.stt.whisper_remote_stt import WhisperRemoteSTT
@@ -151,6 +153,9 @@ def _build_default_registry() -> ProviderRegistry:
     registry.register(ProviderType.LLM, "anthropic", AnthropicLLM)
     registry.register(ProviderType.LLM, "ollama", OllamaLLM)
     registry.register(ProviderType.LLM, "groq", GroqLLM)
+
+    # Message bus providers
+    registry.register(ProviderType.MESSAGE_BUS, "redis", RedisStreamsMessageBus)
 
     return registry
 

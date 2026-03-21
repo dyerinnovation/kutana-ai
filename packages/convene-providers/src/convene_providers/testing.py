@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import fnmatch
+from typing import TYPE_CHECKING, Any
 
 from convene_core.interfaces.llm import LLMProvider
 from convene_core.interfaces.stt import STTProvider
 from convene_core.interfaces.tts import TTSProvider, Voice
+from convene_core.messaging.abc import MessageBus
+from convene_core.messaging.types import Message, Subscription
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from convene_core.messaging.types import MessageHandler
     from convene_core.models.task import Task
     from convene_core.models.transcript import TranscriptSegment
 
@@ -188,3 +192,90 @@ class MockLLM(LLMProvider):
             The fixed report string.
         """
         return self._report
+
+
+class MockMessageBus(MessageBus):
+    """Mock MessageBus for unit testing.
+
+    Dispatches published messages to matching subscribed handlers immediately
+    in-process without any network I/O. Supports fnmatch topic patterns.
+
+    Attributes:
+        published: List of all messages published via :meth:`publish`.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the mock message bus."""
+        self.published: list[Message] = []
+        self._subscriptions: dict[str, Subscription] = {}
+
+    async def publish(
+        self,
+        topic: str,
+        payload: dict[str, Any],
+        metadata: dict[str, str] | None = None,
+        source: str = "",
+    ) -> str:
+        """Record the message and dispatch to matching subscriptions.
+
+        Args:
+            topic: The topic to publish to.
+            payload: The message payload.
+            metadata: Optional routing metadata.
+            source: The publishing service name.
+
+        Returns:
+            The message ID.
+        """
+        message = Message(
+            topic=topic,
+            payload=payload,
+            metadata=metadata or {},
+            source=source,
+        )
+        self.published.append(message)
+        for sub in list(self._subscriptions.values()):
+            if fnmatch.fnmatch(topic, sub.topic) or sub.topic == topic:
+                await sub.handler(message)
+        return message.id
+
+    async def subscribe(
+        self,
+        topic: str,
+        handler: MessageHandler,
+        group: str | None = None,
+    ) -> Subscription:
+        """Register a subscription.
+
+        Args:
+            topic: The topic or fnmatch pattern to subscribe to.
+            handler: Async callback invoked for each matching message.
+            group: Consumer group name (recorded but not used for load
+                balancing in mock).
+
+        Returns:
+            A Subscription representing this active subscription.
+        """
+        sub = Subscription(topic=topic, handler=handler, group=group)
+        self._subscriptions[sub.subscription_id] = sub
+        return sub
+
+    async def unsubscribe(self, subscription: Subscription) -> None:
+        """Remove a subscription.
+
+        Args:
+            subscription: The subscription to remove.
+        """
+        self._subscriptions.pop(subscription.subscription_id, None)
+
+    async def ack(self, subscription: Subscription, message_id: str) -> None:
+        """No-op acknowledgment for mock.
+
+        Args:
+            subscription: The subscription that received the message.
+            message_id: The message ID to acknowledge (ignored in mock).
+        """
+
+    async def close(self) -> None:
+        """Clear all active subscriptions."""
+        self._subscriptions.clear()

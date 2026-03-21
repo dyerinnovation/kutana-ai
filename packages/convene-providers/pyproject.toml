@@ -9,6 +9,7 @@ dependencies = [
     "websockets>=13.0",
     "anthropic>=0.39",
     "aiohttp>=3.13.3",
+    "redis[asyncio]>=5.0",
 ]
 
 [tool.uv.sources]
