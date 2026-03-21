@@ -185,6 +185,9 @@ STRIPE_PUBLISHABLE_KEY=
 - See `claude_docs/DGX_Spark_Reference.md` for DGX Spark connection details, K8s patterns, and deployment gotchas
 - See `charts/stt/` for the Whisper STT Helm chart deployed on DGX Spark
 
+## Billing Architecture
+Billing uses Stripe for subscription management and usage-based metering. Four tiers: Free (5 meetings/month), Pro ($29/user/month), Business ($79/user/month), Enterprise (custom). Plan tier gates feature access (entity types, diarization, custom extractors, model selection). Usage is metered per meeting minute, extraction call, and agent session. See `docs/technical/cost-architecture.md` for full cost model and Stripe integration details.
+
 ## CoWork Coordination
 - See `docs/TASKLIST.md` for the ordered development task queue (supports `🔗 BLOCK:` multi-task items)
 - See `docs/cowork-tasks/` for scheduled task instructions (daily-build supports block mode)

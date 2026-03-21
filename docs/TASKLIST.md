@@ -174,6 +174,26 @@
   - [ ] Speaker diarization integration (segment and label audio by speaker)
   - [ ] Usage metering and subscription/volume billing hooks
   - [ ] Configuration: per-meeting model overrides, default tiers per plan
+  - [ ] Stripe integration: products and pricing for 4 tiers (Free, Pro $29/mo, Business $79/mo, Enterprise custom)
+  - [ ] Stripe Checkout / billing portal integration in web frontend
+  - [ ] Stripe webhook handler for subscription lifecycle (created, updated, cancelled, payment_failed)
+  - [ ] Usage-based metering: track meeting minutes, extraction calls, agent sessions per billing period
+  - [ ] Stripe usage records API integration for metered billing components
+  - [ ] Subscription middleware: gate features by plan tier (entity types, diarization, custom extractors, model selection)
+  - [ ] Free tier limits enforcement (5 meetings/month, basic extraction, no diarization)
+  - [ ] Billing dashboard in web frontend (current plan, usage, invoices)
+
+- [ ] 🔗 BLOCK: Subscription & Billing Infrastructure
+  - [ ] Stripe SDK integration (stripe-python for API server)
+  - [ ] Subscription plans configuration (products, prices, features matrix)
+  - [ ] Customer and subscription management (create customer on signup, link to Convene user)
+  - [ ] Checkout flow: upgrade/downgrade/cancel via Stripe billing portal
+  - [ ] Webhook endpoint for Stripe events (invoice.paid, customer.subscription.updated, etc.)
+  - [ ] Usage metering service: count meeting minutes, LLM calls, STT minutes per user per period
+  - [ ] Plan enforcement middleware: check user's plan before allowing premium features
+  - [ ] Grace period and dunning handling for failed payments
+  - [ ] Admin dashboard: revenue metrics, subscriber counts, churn tracking
+  - [ ] Tests for billing flows and plan enforcement
 
 - Plan only (no implementation): Dynamic entity discovery based on conversation content
 
