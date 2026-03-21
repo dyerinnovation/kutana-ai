@@ -156,13 +156,24 @@
 
 - [ ] 🔗 BLOCK: Agent Context Seeding
   - [ ] Define context document schema (Pydantic models for platform context, meeting context, meeting recap)
-  - [ ] Create `convene-ai-platform.md` template — fixed platform-level context explaining Convene AI, message formats, available tools, agent behavior norms
-  - [ ] Build MeetingContextGenerator — populates meeting-context.md from calendar invite, attendees, agenda, linked docs
-  - [ ] Build MeetingRecapGenerator — creates/updates meeting-recap.md from Meeting Insight Stream snapshots for late joiners
-  - [ ] Integrate context seeding with Claude Code Channel (maps to MCP instructions + initial notifications)
-  - [ ] Integrate context seeding with Gemini Live API (maps to system_instruction field)
-  - [ ] Add context refresh mechanism — recap updates every extraction batch
+  - [ ] Create `convene-ai-platform.md` template — fixed platform-level context for agents
+  - [ ] Implement as MCP Resources: `convene://platform/context` (static), `convene://meeting/{id}/context` (template with change notifications)
+  - [ ] Build MeetingContextGenerator — populates meeting context from calendar invite, attendees, agenda
+  - [ ] Build MeetingRecapGenerator — creates meeting-recap from Insight Stream snapshots for late joiners
+  - [ ] Implement as MCP Tools: `get_meeting_recap` (on-demand recap fetch), `get_entity_history` (filtered entity query)
+  - [ ] Integrate context seeding with Claude Code Channel (instructions + initial notifications)
+  - [ ] Integrate context seeding with Gemini Live API (system_instruction field)
+  - [ ] Add context refresh — recap updates every extraction batch
   - [ ] Tests for context generation and recap accuracy
+
+- [ ] 🔗 BLOCK: Model Tiering & Cost Architecture
+  - [ ] Design tiered model strategy (small LLM for extraction, larger for complex reasoning)
+  - [ ] Implement LLM provider selection per task type (extraction vs. summarization vs. dialogue)
+  - [ ] STT provider cost modeling and selection (diarization-capable vs. basic)
+  - [ ] TTS provider cost modeling and selection
+  - [ ] Speaker diarization integration (segment and label audio by speaker)
+  - [ ] Usage metering and subscription/volume billing hooks
+  - [ ] Configuration: per-meeting model overrides, default tiers per plan
 
 - Plan only (no implementation): Dynamic entity discovery based on conversation content
 
