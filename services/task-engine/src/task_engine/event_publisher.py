@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import redis.asyncio as redis
 
 if TYPE_CHECKING:
     from convene_core.events.definitions import BaseEvent
+    from convene_core.extraction.types import ExtractionResult
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,45 @@ class EventPublisher:
             entry_id,
         )
         return entry_id
+
+    async def publish_insights(
+        self,
+        meeting_id: str,
+        result: ExtractionResult,
+    ) -> None:
+        """Publish an extraction result to meeting insights pub/sub channels.
+
+        Publishes the full result to ``meeting.{meeting_id}.insights`` and
+        per-entity-type payloads to ``meeting.{meeting_id}.insights.{entity_type}``.
+
+        Args:
+            meeting_id: The meeting UUID as a string.
+            result: The deduplicated ExtractionResult to publish.
+        """
+        base_topic = f"meeting.{meeting_id}.insights"
+        payload = json.dumps(result.model_dump(mode="json"), default=str)
+        await self._redis.publish(base_topic, payload)
+
+        by_type: dict[str, list[Any]] = {}
+        for entity in result.entities:
+            by_type.setdefault(entity.entity_type, []).append(
+                entity.model_dump(mode="json")
+            )
+
+        for entity_type, entities in by_type.items():
+            await self._redis.publish(
+                f"{base_topic}.{entity_type}",
+                json.dumps(
+                    {"batch_id": result.batch_id, "entities": entities},
+                    default=str,
+                ),
+            )
+
+        logger.info(
+            "Published %d entities to %s",
+            len(result.entities),
+            base_topic,
+        )
 
     async def close(self) -> None:
         """Close the Redis connection."""
