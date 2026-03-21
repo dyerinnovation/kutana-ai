@@ -1,0 +1,85 @@
+{
+  "name": "@convene/openclaw-plugin",
+  "version": "0.1.0",
+  "description": "Convene AI meeting tools for OpenClaw agents",
+  "main": "dist/index.js",
+  "tools": [
+    {
+      "name": "convene_list_meetings",
+      "description": "List available Convene AI meetings",
+      "parameters": {}
+    },
+    {
+      "name": "convene_join_meeting",
+      "description": "Join a Convene AI meeting by ID",
+      "parameters": {
+        "meeting_id": {
+          "type": "string",
+          "description": "The meeting ID to join",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "convene_get_transcript",
+      "description": "Get recent transcript segments from the current meeting",
+      "parameters": {
+        "last_n": {
+          "type": "number",
+          "description": "Number of recent segments to return (default: 50)",
+          "required": false
+        }
+      }
+    },
+    {
+      "name": "convene_create_task",
+      "description": "Create a task/action item from a meeting",
+      "parameters": {
+        "meeting_id": {
+          "type": "string",
+          "description": "The meeting ID",
+          "required": true
+        },
+        "description": {
+          "type": "string",
+          "description": "Task description",
+          "required": true
+        },
+        "priority": {
+          "type": "string",
+          "description": "Priority: low, medium, high, critical",
+          "required": false
+        }
+      }
+    },
+    {
+      "name": "convene_get_participants",
+      "description": "List participants in the current meeting",
+      "parameters": {}
+    },
+    {
+      "name": "convene_create_meeting",
+      "description": "Create a new Convene AI meeting",
+      "parameters": {
+        "title": {
+          "type": "string",
+          "description": "Meeting title",
+          "required": true
+        }
+      }
+    }
+  ],
+  "skills": ["skills/convene"],
+  "config": {
+    "apiKey": {
+      "type": "string",
+      "description": "Convene API key (cvn_...)",
+      "required": true
+    },
+    "mcpUrl": {
+      "type": "string",
+      "description": "Convene MCP server URL",
+      "default": "http://localhost:3001/mcp"
+    }
+  }
+}

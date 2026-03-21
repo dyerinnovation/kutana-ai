@@ -50,3 +50,9 @@ data/
 # SSH keys
 dyerinnovation-key
 dyerinnovation-key.pub
+
+# Node
+node_modules/
+
+# Claude Code
+.claude/

@@ -31,9 +31,11 @@ class GatewayClient:
         self.token = token
         self._ws: websockets.WebSocketClientProtocol | None = None  # type: ignore[name-defined]
         self._transcript_buffer: list[dict[str, Any]] = []
+        self._channel_buffer: dict[str, list[dict[str, Any]]] = {}
         self._listener_task: asyncio.Task[None] | None = None
         self._meeting_id: str | None = None
         self._participants: list[dict[str, Any]] = []
+        self.subscribed_channels: set[str] = set()
 
     async def connect_and_join(
         self,
@@ -103,6 +105,13 @@ class GatewayClient:
                     event_type = msg.get("event_type", "unknown")
                     if event_type == "participant_joined":
                         self._participants.append(msg.get("data", {}))
+                    # Buffer data channel events
+                    if event_type.startswith("data.channel."):
+                        channel = event_type.removeprefix("data.channel.")
+                        if channel in self.subscribed_channels or "*" in self.subscribed_channels:
+                            if channel not in self._channel_buffer:
+                                self._channel_buffer[channel] = []
+                            self._channel_buffer[channel].append(msg.get("payload", {}))
                     logger.debug("Event: %s", event_type)
                 elif msg_type == "error":
                     logger.error(
@@ -133,6 +142,52 @@ class GatewayClient:
             List of participant dicts.
         """
         return self._participants
+
+    def subscribe_channel(self, channel: str) -> None:
+        """Subscribe to a data channel.
+
+        Args:
+            channel: Channel name to subscribe to.
+        """
+        self.subscribed_channels.add(channel)
+        if channel not in self._channel_buffer:
+            self._channel_buffer[channel] = []
+        logger.info("Subscribed to channel: %s", channel)
+
+    async def publish_to_channel(
+        self, channel: str, payload: dict[str, Any]
+    ) -> None:
+        """Publish a message to a data channel via the gateway.
+
+        Args:
+            channel: Channel name to publish to.
+            payload: Data to publish.
+        """
+        if self._ws is None:
+            raise RuntimeError("Not connected to gateway")
+
+        data_msg = {
+            "type": "data",
+            "channel": channel,
+            "payload": payload,
+        }
+        await self._ws.send(json.dumps(data_msg))
+        logger.debug("Published to channel %s", channel)
+
+    def get_channel_messages(
+        self, channel: str, last_n: int = 50
+    ) -> list[dict[str, Any]]:
+        """Get buffered messages from a data channel.
+
+        Args:
+            channel: Channel name.
+            last_n: Maximum number of messages to return.
+
+        Returns:
+            List of channel message dicts.
+        """
+        buffer = self._channel_buffer.get(channel, [])
+        return buffer[-last_n:]
 
     @property
     def meeting_id(self) -> str | None:

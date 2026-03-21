@@ -16,6 +16,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from mcp_server.api_client import ApiClient
+from mcp_server.auth import MCPAuthError, MCPIdentity, validate_mcp_token
 from mcp_server.gateway_client import GatewayClient
 from mcp_server.settings import MCPServerSettings
 
@@ -41,6 +42,7 @@ mcp = FastMCP(
 # Shared state (per-process; stateless_http means no session persistence)
 _api_client: ApiClient | None = None
 _gateway_client: GatewayClient | None = None
+_mcp_identity: MCPIdentity | None = None
 
 
 def _get_api_client() -> ApiClient:
@@ -55,6 +57,46 @@ def _get_api_client() -> ApiClient:
     return _api_client
 
 
+def authenticate_bearer(bearer_token: str) -> MCPIdentity:
+    """Validate a Bearer token and cache the identity.
+
+    Args:
+        bearer_token: The raw Bearer token (without 'Bearer ' prefix).
+
+    Returns:
+        The validated MCPIdentity.
+
+    Raises:
+        MCPAuthError: If validation fails.
+    """
+    global _mcp_identity
+    identity = validate_mcp_token(bearer_token, settings.mcp_jwt_secret)
+    _mcp_identity = identity
+    return identity
+
+
+async def _ensure_authenticated() -> MCPIdentity:
+    """Ensure MCP client is authenticated, exchanging API key for JWT if needed.
+
+    Returns:
+        The validated MCPIdentity.
+
+    Raises:
+        RuntimeError: If authentication fails.
+    """
+    global _mcp_identity
+    if _mcp_identity is not None:
+        return _mcp_identity
+
+    # Auto-exchange API key for MCP JWT on first call
+    client = _get_api_client()
+    try:
+        token = await client.exchange_for_mcp_token()
+        return authenticate_bearer(token)
+    except (RuntimeError, MCPAuthError) as e:
+        raise RuntimeError(f"MCP authentication failed: {e}") from e
+
+
 # ---------------------------------------------------------------------------
 # MCP Tools
 # ---------------------------------------------------------------------------
@@ -67,6 +109,7 @@ async def list_meetings() -> str:
     Returns a JSON array of meetings with their IDs, titles, and status.
     Use this to find meetings to join.
     """
+    await _ensure_authenticated()
     client = _get_api_client()
     meetings = await client.list_meetings()
     return json.dumps(meetings, indent=2, default=str)
@@ -92,6 +135,8 @@ async def join_meeting(
         JSON string with join confirmation details.
     """
     global _gateway_client
+
+    await _ensure_authenticated()
 
     if _gateway_client is not None and _gateway_client.meeting_id is not None:
         return json.dumps({
@@ -163,6 +208,7 @@ async def get_tasks(meeting_id: str) -> str:
     Returns:
         JSON array of tasks.
     """
+    await _ensure_authenticated()
     client = _get_api_client()
     tasks = await client.get_tasks(meeting_id)
     return json.dumps(tasks, indent=2, default=str)
@@ -187,6 +233,7 @@ async def create_task(
     Returns:
         JSON object of the created task.
     """
+    await _ensure_authenticated()
     client = _get_api_client()
     task = await client.create_task(meeting_id, description, priority)
     return json.dumps(task, indent=2, default=str)
@@ -204,6 +251,179 @@ async def get_participants() -> str:
 
     participants = _gateway_client.get_participants()
     return json.dumps(participants, indent=2, default=str)
+
+
+@mcp.tool()
+async def create_new_meeting(
+    title: str,
+    platform: str = "convene",
+) -> str:
+    """Create a new meeting.
+
+    Args:
+        title: Human-readable meeting title.
+        platform: Meeting platform (default: "convene").
+
+    Returns:
+        JSON object of the created meeting.
+    """
+    await _ensure_authenticated()
+    client = _get_api_client()
+    meeting = await client.create_meeting(title=title, platform=platform)
+    return json.dumps(meeting, indent=2, default=str)
+
+
+@mcp.tool()
+async def start_meeting_session(meeting_id: str) -> str:
+    """Start a meeting (transition from scheduled to active).
+
+    The meeting must be in 'scheduled' status. This sets the status to 'active'
+    and records the start time.
+
+    Args:
+        meeting_id: UUID of the meeting to start.
+
+    Returns:
+        JSON object of the updated meeting.
+    """
+    await _ensure_authenticated()
+    client = _get_api_client()
+    try:
+        meeting = await client.start_meeting(meeting_id)
+        return json.dumps(meeting, indent=2, default=str)
+    except RuntimeError as e:
+        return json.dumps({"error": str(e)})
+
+
+@mcp.tool()
+async def end_meeting_session(meeting_id: str) -> str:
+    """End a meeting (transition from active to completed).
+
+    The meeting must be in 'active' status. This sets the status to 'completed'
+    and records the end time.
+
+    Args:
+        meeting_id: UUID of the meeting to end.
+
+    Returns:
+        JSON object of the updated meeting.
+    """
+    await _ensure_authenticated()
+    client = _get_api_client()
+    try:
+        meeting = await client.end_meeting(meeting_id)
+        return json.dumps(meeting, indent=2, default=str)
+    except RuntimeError as e:
+        return json.dumps({"error": str(e)})
+
+
+@mcp.tool()
+async def join_or_create_meeting(
+    title: str,
+    capabilities: list[str] | None = None,
+) -> str:
+    """Find an active meeting with the given title and join it, or create a new one.
+
+    This is a convenience tool that:
+    1. Lists all meetings
+    2. Looks for an active meeting with matching title
+    3. If found, joins it; if not, creates a new meeting, starts it, and joins
+
+    Args:
+        title: Meeting title to search for or create.
+        capabilities: Optional capabilities to request when joining.
+
+    Returns:
+        JSON object with meeting details and join status.
+    """
+    await _ensure_authenticated()
+    client = _get_api_client()
+
+    # Search for existing active meeting with this title
+    meetings = await client.list_meetings()
+    created = False
+    meeting_data: dict[str, Any] | None = None
+    for m in meetings:
+        if m.get("title") == title and m.get("status") == "active":
+            meeting_data = m
+            break
+
+    if meeting_data is None:
+        # Create and start a new meeting
+        meeting_data = await client.create_meeting(title=title)
+        meeting_id = str(meeting_data["id"])
+        meeting_data = await client.start_meeting(meeting_id)
+        created = True
+
+    meeting_id = str(meeting_data["id"])
+
+    # Join the meeting
+    global _gateway_client
+    if _gateway_client is not None and _gateway_client.meeting_id is not None:
+        return json.dumps({
+            "meeting": meeting_data,
+            "join_status": "already_in_meeting",
+            "current_meeting_id": _gateway_client.meeting_id,
+            "created": created,
+        }, indent=2, default=str)
+
+    token = await client.exchange_for_gateway_token()
+    _gateway_client = GatewayClient(settings.gateway_ws_url, token)
+    join_result = await _gateway_client.connect_and_join(
+        meeting_id=meeting_id,
+        capabilities=capabilities,
+    )
+
+    return json.dumps({
+        "meeting": meeting_data,
+        "join_result": join_result,
+        "created": created,
+    }, indent=2, default=str)
+
+
+@mcp.tool()
+async def subscribe_channel(channel: str) -> str:
+    """Subscribe to a data channel in the current meeting.
+
+    Data channels allow agents to exchange structured messages.
+    After subscribing, you will receive events on this channel
+    via the gateway WebSocket connection.
+
+    Args:
+        channel: Channel name to subscribe to (e.g., "tasks", "decisions", "summaries").
+
+    Returns:
+        Confirmation of subscription.
+    """
+    if _gateway_client is None or _gateway_client.meeting_id is None:
+        return json.dumps({"error": "Not in a meeting. Call join_meeting() first."})
+
+    _gateway_client.subscribe_channel(channel)
+    return json.dumps({
+        "status": "subscribed",
+        "channel": channel,
+        "subscribed_channels": list(_gateway_client.subscribed_channels),
+    })
+
+
+@mcp.tool()
+async def publish_to_channel(channel: str, payload: dict[str, Any]) -> str:
+    """Publish a message to a data channel in the current meeting.
+
+    Other agents subscribed to this channel will receive the message.
+
+    Args:
+        channel: Channel name to publish to.
+        payload: JSON-serializable data to publish.
+
+    Returns:
+        Confirmation of publication.
+    """
+    if _gateway_client is None or _gateway_client.meeting_id is None:
+        return json.dumps({"error": "Not in a meeting. Call join_meeting() first."})
+
+    await _gateway_client.publish_to_channel(channel, payload)
+    return json.dumps({"status": "published", "channel": channel})
 
 
 # ---------------------------------------------------------------------------

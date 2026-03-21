@@ -162,12 +162,18 @@ class EventRelay:
         await self._ack(msg_id)
 
     @staticmethod
-    def _should_relay(event_type: str, capabilities: list[str]) -> bool:
+    def _should_relay(
+        event_type: str,
+        capabilities: list[str],
+        *,
+        subscribed_channels: set[str] | None = None,
+    ) -> bool:
         """Determine if an event should be relayed based on capabilities.
 
         Args:
             event_type: The event type string.
             capabilities: Agent's granted capabilities.
+            subscribed_channels: Optional set of data channels the agent subscribes to.
 
         Returns:
             True if the event should be relayed.
@@ -179,6 +185,13 @@ class EventRelay:
         # Task events require extract_tasks capability
         if event_type.startswith("task."):
             return "extract_tasks" in capabilities
+
+        # Data channel events — route based on channel subscriptions
+        if event_type.startswith("data.channel."):
+            if subscribed_channels is None:
+                return True  # No filter = receive all
+            channel = event_type.removeprefix("data.channel.")
+            return channel in subscribed_channels or "*" in subscribed_channels
 
         # Meeting/room/participant events go to all agents
         if event_type.startswith(("meeting.", "room.", "participant.", "agent.")):

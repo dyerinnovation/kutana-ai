@@ -51,3 +51,53 @@ export interface AuthResponse {
   token: string;
   user: User;
 }
+
+export interface TranscriptSegment {
+  speaker_id: string;
+  text: string;
+  start_time: number;
+  end_time: number;
+  confidence: number;
+  is_final: boolean;
+}
+
+export interface MeetingTokenResponse {
+  token: string;
+  meeting_id: string;
+}
+
+/** WebSocket message types for the agent gateway */
+export type GatewayMessage =
+  | { type: "join_meeting"; meeting_id: string }
+  | { type: "leave_meeting" }
+  | { type: "audio_data"; data: string; sample_rate: number }
+  | { type: "transcript"; segment: TranscriptSegment }
+  | { type: "participant_update"; participants: Participant[] }
+  | { type: "error"; code: string; message: string }
+  | { type: "joined"; meeting_id: string; participant_id: string }
+  | { type: "left"; meeting_id: string };
+
+export interface Participant {
+  id: string;
+  name: string;
+  role: string;
+  is_muted: boolean;
+}
+
+export interface AgentTemplate {
+  id: string;
+  name: string;
+  description: string;
+  system_prompt: string;
+  capabilities: string[];
+  category: string;
+  is_premium: boolean;
+}
+
+export interface HostedSession {
+  id: string;
+  template_id: string;
+  meeting_id: string;
+  status: string;
+  started_at: string;
+}

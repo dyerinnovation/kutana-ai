@@ -67,7 +67,7 @@ async def run_e2e_test() -> TestResult:
     """Run the complete E2E integration test."""
     result = TestResult()
     unique = uuid4().hex[:8]
-    email = f"test-{unique}@convene.test"
+    email = f"test-{unique}@example.com"
     password = "testpass12345"
     name = f"Test User {unique}"
     jwt_token = ""

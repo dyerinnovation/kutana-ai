@@ -15,7 +15,7 @@
 **Date:** 2026-03-21
 **What I did:** Implemented task.created and task.updated event emission — added EventPublisher to task-engine and api-server, wired TaskCreated events out of TaskExtractor after persist, and wired TaskCreated/TaskUpdated out of the api-server task routes.
 **Branch:** scheduled/2026-03-21-task-event-emission
-**Merge status:** Ready for review — do `git merge scheduled/2026-03-21-task-event-emission` after quality checks pass on Mac
+**Merge status:** Commit `036696d` on local branch — push from Mac with `git push origin scheduled/2026-03-21-task-event-emission`, then merge after quality checks pass
 **Warnings:**
 - ⚠️ Quality checks (ruff, mypy, pytest) must be run on Mac before merging — VM Python is 3.10, project requires 3.12+
 - The task-engine `_event_publisher` is created in lifespan but NOT yet passed into TaskExtractor from `_on_window` — that wiring belongs in the locked LLM pipeline task

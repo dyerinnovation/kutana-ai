@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Meeting } from "@/types";
-import { listMeetings, createMeeting } from "@/api/meetings";
+import { listMeetings, createMeeting, startMeeting, endMeeting } from "@/api/meetings";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import {
@@ -8,11 +9,11 @@ import {
   CardHeader,
   CardTitle,
   CardContent,
-  CardFooter,
 } from "@/components/ui/Card";
 import { Dialog, DialogTitle, DialogFooter } from "@/components/ui/Dialog";
 
 export function MeetingsPage() {
+  const navigate = useNavigate();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +64,30 @@ export function MeetingsPage() {
       );
     } finally {
       setIsCreating(false);
+    }
+  }
+
+  async function handleStart(meetingId: string) {
+    setError(null);
+    try {
+      await startMeeting(meetingId);
+      await loadMeetings();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to start meeting"
+      );
+    }
+  }
+
+  async function handleEnd(meetingId: string) {
+    setError(null);
+    try {
+      await endMeeting(meetingId);
+      await loadMeetings();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to end meeting"
+      );
     }
   }
 
@@ -122,10 +147,10 @@ export function MeetingsPage() {
                   </div>
                   <span
                     className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${
-                      meeting.status === "scheduled"
-                        ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
-                        : meeting.status === "active"
-                          ? "bg-green-600/20 text-green-400 border border-green-500/30"
+                      meeting.status === "active"
+                        ? "bg-green-600/20 text-green-400 border border-green-500/30"
+                        : meeting.status === "completed"
+                          ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
                           : "bg-gray-600/20 text-gray-400 border border-gray-500/30"
                     }`}
                   >
@@ -134,14 +159,45 @@ export function MeetingsPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="flex gap-6 text-sm text-gray-400">
-                  <div>
-                    <span className="text-gray-500">Platform: </span>
-                    {meeting.platform}
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-6 text-sm text-gray-400">
+                    <div>
+                      <span className="text-gray-500">Platform: </span>
+                      {meeting.platform}
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Scheduled: </span>
+                      {formatDateTime(meeting.scheduled_at)}
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-gray-500">Scheduled: </span>
-                    {formatDateTime(meeting.scheduled_at)}
+                  <div className="flex gap-2">
+                    {meeting.status === "scheduled" && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleStart(meeting.id)}
+                      >
+                        Start
+                      </Button>
+                    )}
+                    {meeting.status === "active" && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            navigate(`/meetings/${meeting.id}/room`)
+                          }
+                        >
+                          Join Room
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleEnd(meeting.id)}
+                        >
+                          End
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </CardContent>

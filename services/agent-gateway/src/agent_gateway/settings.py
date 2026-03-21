@@ -21,6 +21,7 @@ class AgentGatewaySettings(BaseSettings):
         whisper_api_url: Remote Whisper API URL for whisper-remote.
     """
 
+    database_url: str = "postgresql+asyncpg://convene:convene@localhost:5432/convene"
     redis_url: str = "redis://localhost:6379/0"
     jwt_secret: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"

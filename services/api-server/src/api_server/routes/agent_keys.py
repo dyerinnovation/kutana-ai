@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api_server.auth import generate_api_key
 from api_server.auth_deps import CurrentUser
 from api_server.deps import get_db_session
-from convene_core.database.models import AgentApiKeyORM, AgentConfigORM
+from convene_core.database.models import AgentApiKeyORM, AgentConfigORM, ApiKeyAuditLogORM
 
 router = APIRouter(prefix="/agents/{agent_id}/keys", tags=["agent-keys"])
 
@@ -29,9 +29,11 @@ class KeyCreateRequest(BaseModel):
 
     Attributes:
         name: Human-readable name for the key.
+        expires_at: Optional expiry datetime (null = never expires).
     """
 
     name: str = "default"
+    expires_at: datetime | None = None
 
 
 class KeyCreateResponse(BaseModel):
@@ -42,6 +44,7 @@ class KeyCreateResponse(BaseModel):
         raw_key: The full API key (only returned on creation).
         key_prefix: First 8 characters for display.
         name: Key name.
+        expires_at: When the key expires (null = never).
         created_at: Creation timestamp.
     """
 
@@ -49,6 +52,7 @@ class KeyCreateResponse(BaseModel):
     raw_key: str
     key_prefix: str
     name: str
+    expires_at: datetime | None
     created_at: datetime
 
 
@@ -59,6 +63,7 @@ class KeyResponse(BaseModel):
         id: Key UUID.
         key_prefix: First 8 characters for display.
         name: Key name.
+        expires_at: When the key expires (null = never).
         revoked_at: When the key was revoked (null if active).
         created_at: Creation timestamp.
     """
@@ -66,6 +71,7 @@ class KeyResponse(BaseModel):
     id: UUID
     key_prefix: str
     name: str
+    expires_at: datetime | None
     revoked_at: datetime | None
     created_at: datetime
 
@@ -146,15 +152,24 @@ async def create_key(
         agent_config_id=agent_id,
         user_id=current_user.id,
         name=body.name,
+        expires_at=body.expires_at,
     )
     db.add(key)
     await db.flush()
+
+    # Audit log: key created
+    audit = ApiKeyAuditLogORM(
+        key_id=key.id,
+        action="created",
+    )
+    db.add(audit)
 
     return KeyCreateResponse(
         id=key.id,
         raw_key=raw_key,
         key_prefix=key.key_prefix,
         name=key.name,
+        expires_at=key.expires_at,
         created_at=key.created_at,
     )
 
@@ -188,6 +203,7 @@ async def list_keys(
                 id=k.id,
                 key_prefix=k.key_prefix,
                 name=k.name,
+                expires_at=k.expires_at,
                 revoked_at=k.revoked_at,
                 created_at=k.created_at,
             )
@@ -231,3 +247,10 @@ async def revoke_key(
         )
 
     key.revoked_at = datetime.now(tz=UTC)
+
+    # Audit log: key revoked
+    audit = ApiKeyAuditLogORM(
+        key_id=key.id,
+        action="revoked",
+    )
+    db.add(audit)

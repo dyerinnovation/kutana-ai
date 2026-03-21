@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -62,6 +62,20 @@ class MeetingResponse(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
+
+
+class MeetingUpdateRequest(BaseModel):
+    """Request body for updating a meeting.
+
+    Attributes:
+        title: Updated meeting title.
+        scheduled_at: Updated scheduled time.
+        platform: Updated platform.
+    """
+
+    title: str | None = None
+    scheduled_at: datetime | None = None
+    platform: str | None = None
 
 
 class MeetingListResponse(BaseModel):
@@ -152,6 +166,7 @@ async def create_meeting(
     )
     db.add(meeting)
     await db.flush()
+    await db.refresh(meeting)
     return _to_response(meeting)
 
 
@@ -183,4 +198,128 @@ async def get_meeting(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Meeting not found",
         )
+    return _to_response(meeting)
+
+
+@router.patch("/{meeting_id}", response_model=MeetingResponse)
+async def update_meeting(
+    meeting_id: UUID,
+    body: MeetingUpdateRequest,
+    _current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> MeetingResponse:
+    """Update meeting fields (title, scheduled_at, platform).
+
+    Args:
+        meeting_id: The UUID of the meeting to update.
+        body: Fields to update.
+        _current_user: Authenticated user.
+        db: Database session.
+
+    Returns:
+        Updated MeetingResponse.
+
+    Raises:
+        HTTPException: 404 if meeting not found.
+    """
+    result = await db.execute(
+        select(MeetingORM).where(MeetingORM.id == meeting_id)
+    )
+    meeting = result.scalar_one_or_none()
+    if meeting is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meeting not found",
+        )
+
+    update_data = body.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(meeting, field, value)
+
+    await db.flush()
+    await db.refresh(meeting)
+    return _to_response(meeting)
+
+
+@router.post("/{meeting_id}/start", response_model=MeetingResponse)
+async def start_meeting(
+    meeting_id: UUID,
+    _current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> MeetingResponse:
+    """Start a meeting (transition from scheduled to active).
+
+    Args:
+        meeting_id: The UUID of the meeting to start.
+        _current_user: Authenticated user.
+        db: Database session.
+
+    Returns:
+        Updated MeetingResponse with active status.
+
+    Raises:
+        HTTPException: 404 if not found, 409 if not in scheduled status.
+    """
+    result = await db.execute(
+        select(MeetingORM).where(MeetingORM.id == meeting_id)
+    )
+    meeting = result.scalar_one_or_none()
+    if meeting is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meeting not found",
+        )
+
+    if meeting.status != MeetingStatus.SCHEDULED.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot start meeting in '{meeting.status}' status; must be 'scheduled'",
+        )
+
+    meeting.status = MeetingStatus.ACTIVE.value
+    meeting.started_at = datetime.now(tz=UTC)
+    await db.flush()
+    await db.refresh(meeting)
+    return _to_response(meeting)
+
+
+@router.post("/{meeting_id}/end", response_model=MeetingResponse)
+async def end_meeting(
+    meeting_id: UUID,
+    _current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> MeetingResponse:
+    """End a meeting (transition from active to completed).
+
+    Args:
+        meeting_id: The UUID of the meeting to end.
+        _current_user: Authenticated user.
+        db: Database session.
+
+    Returns:
+        Updated MeetingResponse with completed status.
+
+    Raises:
+        HTTPException: 404 if not found, 409 if not in active status.
+    """
+    result = await db.execute(
+        select(MeetingORM).where(MeetingORM.id == meeting_id)
+    )
+    meeting = result.scalar_one_or_none()
+    if meeting is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meeting not found",
+        )
+
+    if meeting.status != MeetingStatus.ACTIVE.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot end meeting in '{meeting.status}' status; must be 'active'",
+        )
+
+    meeting.status = MeetingStatus.COMPLETED.value
+    meeting.ended_at = datetime.now(tz=UTC)
+    await db.flush()
+    await db.refresh(meeting)
     return _to_response(meeting)

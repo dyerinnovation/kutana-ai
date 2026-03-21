@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -23,6 +23,7 @@ class ConnectionManager:
         _sessions: Map of session_id -> AgentSessionHandler.
         _meeting_sessions: Map of meeting_id -> set of session_ids.
         _max_connections: Maximum allowed concurrent connections.
+        redis: Optional Redis client for channel publishing.
     """
 
     def __init__(self, max_connections: int = 100) -> None:
@@ -34,6 +35,7 @@ class ConnectionManager:
         self._sessions: dict[UUID, AgentSessionHandler] = {}
         self._meeting_sessions: dict[UUID, set[UUID]] = {}
         self._max_connections = max_connections
+        self.redis: Any | None = None
 
     @property
     def active_count(self) -> int:

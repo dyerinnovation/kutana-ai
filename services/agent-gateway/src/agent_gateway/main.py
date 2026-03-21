@@ -8,6 +8,11 @@ from typing import TYPE_CHECKING
 
 from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from agent_gateway.agent_session import AgentSessionHandler
 from agent_gateway.audio_bridge import AudioBridge
@@ -30,6 +35,7 @@ _settings: AgentGatewaySettings | None = None
 _connection_manager: ConnectionManager | None = None
 _event_relay: EventRelay | None = None
 _audio_bridge: AudioBridge | None = None
+_db_session_factory: async_sessionmaker[AsyncSession] | None = None
 
 
 @asynccontextmanager
@@ -42,13 +48,25 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     Yields:
         Control back to the ASGI server while the app is running.
     """
-    global _settings, _connection_manager, _event_relay, _audio_bridge
+    global _settings, _connection_manager, _event_relay, _audio_bridge, _db_session_factory
 
     _settings = AgentGatewaySettings()
     logger.info(
         "Gateway settings: stt_provider=%s, whisper_api_url=%s, redis_url=%s",
         _settings.stt_provider, _settings.whisper_api_url, _settings.redis_url,
     )
+
+    # Database session factory for agent session persistence
+    engine = create_async_engine(
+        _settings.database_url,
+        pool_pre_ping=True,
+    )
+    _db_session_factory = async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
     _connection_manager = ConnectionManager(max_connections=_settings.max_connections)
     _event_relay = EventRelay(
         redis_url=_settings.redis_url,
@@ -75,6 +93,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await _event_relay.stop()
         _event_relay = None
     _connection_manager = None
+    _db_session_factory = None
+    await engine.dispose()
     _settings = None
 
 
@@ -170,6 +190,7 @@ async def agent_connect(
         identity=identity,
         connection_manager=_connection_manager,
         audio_bridge=_audio_bridge,
+        db_session_factory=_db_session_factory,
     )
     _connection_manager.register(session)
 
