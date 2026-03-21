@@ -12,14 +12,13 @@
 ## Latest Handoff
 
 **Author:** CoWork (scheduled)
-**Date:** 2026-03-21
-**What I did:** Replaced the ORM placeholder in `TaskExtractor._persist_tasks` with a real `TaskORM` insert, updated `TaskDeduplicator._fetch_existing_descriptions` to use a typed ORM query instead of raw SQL, and wrote 25 unit tests across two new test files.
-**Branch:** scheduled/2026-03-21-task-persistence-v2
-**Merge status:** Ready for review — do `git merge scheduled/2026-03-21-task-persistence-v2` after running quality checks on Mac
+**Date:** 2026-03-03
+**What I did:** Implemented transcript segment windowing — created `SegmentWindower` and `SegmentWindow` in `task_engine/windower.py`, wired windower into `main.py` between `StreamConsumer` and the `_on_window` logging stub, and wrote 22 unit tests.
+**Branch:** scheduled/2026-03-03-transcript-segment-windowing
+**Merge status:** Ready for review — do `git merge scheduled/2026-03-03-transcript-segment-windowing` after running quality checks on Mac
 **Warnings:**
-- ⚠️ Quality checks (ruff, mypy, pytest) must be run on Mac before merging — VM Python is 3.10, project requires 3.12+
-- ruff check passes on the 4 modified files; full-repo scan hits a filesystem deadlock on api-server/pyproject.toml (pre-existing VM issue)
-- The `_on_window` handler in `main.py` is still a logging stub — next locked task (LLM extraction pipeline) wires it up
+- ⚠️ Quality checks (ruff, mypy, pytest) must be run on Mac before merging — `.venv` is macOS ARM64 and won't execute in this Linux VM
+- The `_on_window` handler in `main.py` is still a logging stub — next task wires the actual LLM extractor
 **Dependencies introduced:** None
 
 ---

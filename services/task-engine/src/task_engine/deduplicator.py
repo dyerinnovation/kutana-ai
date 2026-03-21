@@ -6,10 +6,6 @@ import logging
 from difflib import SequenceMatcher
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select
-
-from convene_core.database.models import TaskORM
-
 if TYPE_CHECKING:
     from uuid import UUID
 
@@ -102,9 +98,6 @@ class TaskDeduplicator:
     ) -> list[str]:
         """Fetch descriptions of all existing tasks for a meeting.
 
-        Uses the ORM ``TaskORM`` model to query the database, so the
-        query is type-safe and avoids raw SQL strings.
-
         Args:
             meeting_id: The meeting whose tasks to retrieve.
 
@@ -112,9 +105,16 @@ class TaskDeduplicator:
             List of task description strings.
         """
         async with self._session_factory() as session:
-            stmt = select(TaskORM.description).where(TaskORM.meeting_id == meeting_id)
-            result = await session.execute(stmt)
-            return list(result.scalars().all())
+            # Placeholder query — will use the ORM Task model once
+            # the database layer is fully wired up.
+            from sqlalchemy import text
+
+            result = await session.execute(
+                text("SELECT description FROM tasks WHERE meeting_id = :mid"),
+                {"mid": str(meeting_id)},
+            )
+            rows = result.fetchall()
+            return [str(row[0]) for row in rows]
 
     @staticmethod
     def _is_duplicate(
