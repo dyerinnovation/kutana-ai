@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from convene_core.database.models import TaskORM
+
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import (
         AsyncSession,
@@ -81,10 +83,11 @@ class TaskExtractor:
         return tasks
 
     async def _persist_tasks(self, tasks: list[Task]) -> None:
-        """Store extracted tasks in the database.
+        """Store extracted tasks in the database using ORM models.
 
-        Opens a new async session, adds serialised task data, and
-        commits.  On failure the transaction is rolled back.
+        Opens a new async session, maps each domain ``Task`` to a
+        ``TaskORM`` row, and commits the transaction.  If anything
+        fails the session is rolled back so no partial data is written.
 
         Args:
             tasks: List of Task domain models to persist.
@@ -92,16 +95,28 @@ class TaskExtractor:
         async with self._session_factory() as session:
             try:
                 for task in tasks:
-                    # Store as a dictionary for now; a proper ORM model
-                    # will be introduced when the database layer is
-                    # wired up with SQLAlchemy mapped models.
-                    session.add_all([])  # placeholder for ORM insert
+                    orm_task = TaskORM(
+                        id=task.id,
+                        meeting_id=task.meeting_id,
+                        description=task.description,
+                        assignee_id=task.assignee_id,
+                        due_date=task.due_date,
+                        priority=str(task.priority),
+                        status=str(task.status),
+                        # Convert UUID list to string list for JSONB storage
+                        dependencies=[str(dep) for dep in task.dependencies],
+                        source_utterance=task.source_utterance,
+                        created_at=task.created_at,
+                        updated_at=task.updated_at,
+                    )
+                    session.add(orm_task)
                     logger.debug(
-                        "Persisting task: id=%s, desc=%s",
+                        "Queued task for insert: id=%s, desc=%s",
                         task.id,
                         task.description[:60],
                     )
                 await session.commit()
+                logger.info("Persisted %d tasks to database", len(tasks))
             except Exception:
                 await session.rollback()
                 logger.exception("Failed to persist extracted tasks")
