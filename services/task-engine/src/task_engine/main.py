@@ -12,11 +12,13 @@ from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from task_engine.stream_consumer import StreamConsumer
+from task_engine.windower import DEFAULT_OVERLAP_SECONDS, DEFAULT_WINDOW_SECONDS, SegmentWindower
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from convene_core.models.transcript import TranscriptSegment
+    from task_engine.windower import SegmentWindow
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +34,8 @@ class TaskEngineSettings(BaseSettings):
     Attributes:
         database_url: Async PostgreSQL connection string.
         redis_url: Redis connection string.
-        extraction_window_seconds: Transcript buffer window for extraction.
+        extraction_window_seconds: Transcript window size for LLM extraction.
+        extraction_overlap_seconds: Overlap between consecutive extraction windows.
         consumer_group: Redis consumer group name.
         consumer_name: Unique name for this consumer instance within the group.
             If empty, defaults to ``worker-<hostname>``.
@@ -47,31 +50,35 @@ class TaskEngineSettings(BaseSettings):
 
     database_url: str = "postgresql+asyncpg://convene:convene@localhost:5432/convene"
     redis_url: str = "redis://localhost:6379/0"
-    extraction_window_seconds: int = 180
+    extraction_window_seconds: float = DEFAULT_WINDOW_SECONDS
+    extraction_overlap_seconds: float = DEFAULT_OVERLAP_SECONDS
     consumer_group: str = "task-engine"
     consumer_name: str = ""
 
 
 # ---------------------------------------------------------------------------
-# Segment handler
+# Window handler (stub — LLM extraction wired in next phase)
 # ---------------------------------------------------------------------------
 
 
-async def _on_segment(segment: TranscriptSegment) -> None:
-    """Handle a single finalized transcript segment from the stream.
+async def _on_window(window: SegmentWindow) -> None:
+    """Handle a completed transcript window ready for task extraction.
 
-    In Phase 1D this is a thin receiver that logs the incoming segment.
-    The full extraction pipeline (windowing → LLM → dedup → persist) will
-    be wired in subsequent tasks.
+    This is a thin logging stub for Phase 1D.  The full LLM-powered
+    extraction pipeline (windowing → LLM → dedup → persist) will be
+    wired in the next task (Complete LLM-powered task extraction pipeline).
 
     Args:
-        segment: Finalized transcript segment from the Redis Stream.
+        window: A time-bounded batch of transcript segments.
     """
     logger.info(
-        "Received transcript segment: meeting=%s speaker=%s text=%.80r",
-        segment.meeting_id,
-        segment.speaker_id,
-        segment.text,
+        "Window ready for extraction: meeting=%s window=%.1f–%.1fs "
+        "segments=%d is_final=%s",
+        window.meeting_id,
+        window.window_start,
+        window.window_end,
+        len(window.segments),
+        window.is_final,
     )
 
 
@@ -81,14 +88,18 @@ async def _on_segment(segment: TranscriptSegment) -> None:
 
 _consumer: StreamConsumer | None = None
 _consumer_task: asyncio.Task[None] | None = None
+_windower: SegmentWindower | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Manage application startup and shutdown lifecycle.
 
-    Creates a :class:`~task_engine.stream_consumer.StreamConsumer`, starts
-    it as a background task on startup, and cancels it cleanly on shutdown.
+    Creates a :class:`~task_engine.windower.SegmentWindower` and a
+    :class:`~task_engine.stream_consumer.StreamConsumer`.  Segments
+    received from Redis are forwarded to the windower, which emits
+    :class:`~task_engine.windower.SegmentWindow` batches once enough
+    transcript has accumulated.
 
     Args:
         app: The FastAPI application instance.
@@ -96,10 +107,35 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     Yields:
         Control back to the ASGI server while the app is running.
     """
-    global _consumer, _consumer_task
+    global _consumer, _consumer_task, _windower
 
     settings = TaskEngineSettings()
-    logger.info("task-engine starting up")
+    logger.info(
+        "task-engine starting up (window=%.0fs, overlap=%.0fs)",
+        settings.extraction_window_seconds,
+        settings.extraction_overlap_seconds,
+    )
+
+    _windower = SegmentWindower(
+        on_window=_on_window,
+        window_size_seconds=settings.extraction_window_seconds,
+        overlap_seconds=settings.extraction_overlap_seconds,
+    )
+
+    async def _on_segment(segment: TranscriptSegment) -> None:
+        """Route an incoming segment into the windower.
+
+        Args:
+            segment: Finalized transcript segment from the Redis Stream.
+        """
+        assert _windower is not None
+        logger.debug(
+            "Buffering segment: meeting=%s speaker=%s text=%.80r",
+            segment.meeting_id,
+            segment.speaker_id,
+            segment.text,
+        )
+        await _windower.add_segment(segment)
 
     _consumer = StreamConsumer(
         redis_url=settings.redis_url,
@@ -121,6 +157,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 await _consumer_task
         _consumer = None
         _consumer_task = None
+        _windower = None
 
 
 app = FastAPI(

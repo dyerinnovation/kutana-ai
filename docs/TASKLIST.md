@@ -74,7 +74,7 @@
 
 - [x] Wire STT provider into audio service lifespan (provider registry + config)
 - [x] Implement Redis Streams consumer for transcript.segment.final events
-- [ ] Implement transcript segment windowing (3-5 min windows with overlap)
+- [x] Implement transcript segment windowing (3-5 min windows with overlap)
 - [ ] Complete LLM-powered task extraction pipeline (wire LLM provider + extractor)
 - [ ] Implement task persistence to PostgreSQL (replace placeholder in extractor)
 - [ ] Implement task.created / task.updated event emission
