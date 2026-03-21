@@ -181,6 +181,27 @@ STRIPE_PUBLISHABLE_KEY=
 - See `docs/milestone-testing/` for per-feature QA playbooks (00-SETUP through 10-full-e2e-demo)
 - See `docs/manual-testing/E2E_Gateway_Test.md` for gateway + STT integration walkthrough
 
+## Development Infrastructure
+
+### DGX Spark (Primary Compute)
+- All Docker containers, tests, and heavy compute run on the DGX Spark
+- Do NOT run Docker builds or container workloads on the personal Mac
+- **SSH:** `ssh jondyer3@spark-b0f2.local` (alias `spark-b0f2` in `~/.ssh/config` via NVIDIA Sync)
+- **SSH key:** `/Users/jonathandyer/Library/Application Support/NVIDIA/Sync/config/nvsync.key`
+- The DGX Spark runs: postgres, redis, api-server, agent-gateway, audio-service, task-engine
+- GPU available for self-hosted Whisper STT (NVIDIA GB10 Grace Blackwell, 128GB unified memory)
+- Always-on Claude Code with Discord channel
+
+### Personal Mac (Client Only)
+- Used for Dispatch/Cowork orchestration and code editing
+- SSH into DGX for running services and tests
+- No Docker containers should run here
+
+### Mac Mini (Control Plane — Planned)
+- Will run Claude Desktop with Dispatch/Cowork 24/7
+- Orchestrates work across DGX Spark and other nodes
+- Low-power, always-on
+
 ## Infrastructure
 - See `claude_docs/DGX_Spark_Reference.md` for DGX Spark connection details, K8s patterns, and deployment gotchas
 - See `charts/stt/` for the Whisper STT Helm chart deployed on DGX Spark
