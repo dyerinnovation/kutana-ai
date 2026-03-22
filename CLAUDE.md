@@ -192,6 +192,18 @@ STRIPE_PUBLISHABLE_KEY=
 - GPU available for self-hosted Whisper STT (NVIDIA GB10 Grace Blackwell, 128GB unified memory)
 - Always-on Claude Code with Discord channel
 
+#### SSH Connection Patterns
+- **Regular commands:** `ssh jondyer3@spark-b0f2.local '<command>'`
+- **Sudo commands:** Use `sshpass` with `DGX_PASSWORD` from `.env` for commands requiring sudo:
+  ```bash
+  sshpass -p "$DGX_PASSWORD" ssh jondyer3@spark-b0f2.local 'echo $DGX_PASSWORD | sudo -S <command>'
+  ```
+  - **Always use single quotes** around the remote command to prevent `!` in the password from being interpreted by the local shell
+- **KUBECONFIG:** `/etc/rancher/k3s/k3s.yaml` — always pass via `sudo env KUBECONFIG=...` (sudo drops the env var)
+- **Container runtime:** containerd, not Docker — import images via `sudo k3s ctr images import <file>`
+- **Helm path:** `/home/jondyer3/.local/bin/helm` — not in default PATH; `sudo env` does not inherit PATH so always use full path
+- **Spark PATH:** `$HOME/.local/bin:$HOME/.nvm/versions/node/v22.22.0/bin:$PATH`
+
 ### Personal Mac (Client Only)
 - Used for Dispatch/Cowork orchestration and code editing
 - SSH into DGX for running services and tests
