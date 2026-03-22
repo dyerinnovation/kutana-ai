@@ -95,6 +95,16 @@
 - [x] Implement agent presence management (join, leave, heartbeat, timeout)
 - [x] **🏁 Milestone M3: Agent connects via Gateway, receives audio, sends transcript events** — verified 2026-03-02 (29 segments, Redis XLEN=31)
 
+- [x] 🔗 BLOCK: Participant Abstraction & Human Connection Path
+  - [x] Base Participant ABC (human + agent types) in convene-core (`participants/base.py`)
+  - [x] Human WebSocket connection endpoint (`/human/connect`) — auto-joins, no capability negotiation
+  - [x] HumanSessionHandler — speak + listen + transcribe by default, PCM16 audio forwarding
+  - [x] ConnectionManager updated to accept both AgentSessionHandler and HumanSessionHandler
+  - [x] MeetingRoomPage.tsx updated to use `/human/connect` (meeting_id in URL, no join_meeting message)
+  - [ ] Participant registry per meeting (track connected participants, their type and capabilities)
+  - [ ] Participant events on MessageBus (participant.joined, participant.left)
+  - [ ] WebRTC/LiveKit integration for production human connections (Phase 5)
+
 - [ ] 🔗 BLOCK: Agent Gateway Polish
   - [ ] Implement multi-agent per meeting support
   - [ ] Implement audio stream routing (meeting audio → connected agents)

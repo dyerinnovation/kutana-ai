@@ -9,7 +9,8 @@ import type {
   GatewayMessage,
 } from "@/types";
 
-const GATEWAY_WS_URL = "ws://localhost:8003/agent/connect";
+const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
+const HUMAN_WS_BASE = `${wsProto}//${window.location.host}/human/connect`;
 const SAMPLE_RATE = 16000;
 
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
@@ -103,18 +104,14 @@ export function MeetingRoomPage() {
         const { token } = await getMeetingToken(meetingId!);
         if (cancelled) return;
 
-        // 2. Open WebSocket
-        const ws = new WebSocket(`${GATEWAY_WS_URL}?token=${token}`);
+        // 2. Open WebSocket — meeting_id in URL, no join_meeting message needed
+        const ws = new WebSocket(
+          `${HUMAN_WS_BASE}?token=${token}&meeting_id=${meetingId}`
+        );
         wsRef.current = ws;
 
-        ws.onopen = () => {
-          ws.send(
-            JSON.stringify({
-              type: "join_meeting",
-              meeting_id: meetingId,
-            })
-          );
-        };
+        // No onopen send needed: server auto-joins on connect and sends "joined"
+        ws.onopen = () => {};
 
         ws.onmessage = handleWsMessage;
 

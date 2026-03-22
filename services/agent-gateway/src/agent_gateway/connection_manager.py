@@ -1,26 +1,56 @@
-"""Active agent session registry for the gateway."""
+"""Active agent and human session registry for the gateway."""
 
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from uuid import UUID
 
 if TYPE_CHECKING:
-    from uuid import UUID
-
     from agent_gateway.agent_session import AgentSessionHandler
+    from agent_gateway.human_session import HumanSessionHandler
 
 logger = logging.getLogger(__name__)
 
 
+@runtime_checkable
+class SessionHandler(Protocol):
+    """Protocol satisfied by both AgentSessionHandler and HumanSessionHandler.
+
+    The EventRelay and ConnectionManager use this protocol so they can hold
+    and route to both agent and human sessions without a concrete base class.
+    """
+
+    session_id: UUID
+    agent_name: str
+    meeting_id: UUID | None
+    capabilities: list[str]
+
+    async def send_transcript(
+        self,
+        meeting_id: UUID,
+        speaker_id: str | None,
+        text: str,
+        start_time: float,
+        end_time: float,
+        confidence: float,
+    ) -> None: ...
+
+    async def send_event(self, event_type: str, payload: dict[str, Any]) -> None: ...
+
+
+# Union type used in type annotations only.
+AnySession = "AgentSessionHandler | HumanSessionHandler"
+
+
 class ConnectionManager:
-    """Registry of active agent WebSocket sessions.
+    """Registry of active WebSocket sessions (agents and human browsers).
 
     Thread-safe within a single asyncio event loop (no concurrent
     mutations from multiple threads).
 
     Attributes:
-        _sessions: Map of session_id -> AgentSessionHandler.
+        _sessions: Map of session_id -> session handler.
         _meeting_sessions: Map of meeting_id -> set of session_ids.
         _max_connections: Maximum allowed concurrent connections.
         redis: Optional Redis client for channel publishing.
@@ -30,9 +60,9 @@ class ConnectionManager:
         """Initialise the connection manager.
 
         Args:
-            max_connections: Maximum concurrent agent connections.
+            max_connections: Maximum concurrent connections.
         """
-        self._sessions: dict[UUID, AgentSessionHandler] = {}
+        self._sessions: dict[UUID, Any] = {}  # AgentSessionHandler | HumanSessionHandler
         self._meeting_sessions: dict[UUID, set[UUID]] = {}
         self._max_connections = max_connections
         self.redis: Any | None = None
@@ -46,11 +76,11 @@ class ConnectionManager:
         """Check if the maximum connection limit has been reached."""
         return self.active_count >= self._max_connections
 
-    def register(self, session: AgentSessionHandler) -> None:
-        """Register a new agent session.
+    def register(self, session: Any) -> None:
+        """Register a new session (agent or human).
 
         Args:
-            session: The session handler to register.
+            session: The session handler to register (AgentSessionHandler or HumanSessionHandler).
 
         Raises:
             RuntimeError: If the connection limit is reached.
@@ -115,7 +145,7 @@ class ConnectionManager:
             if not meeting_set:
                 del self._meeting_sessions[meeting_id]
 
-    def get_session(self, session_id: UUID) -> AgentSessionHandler | None:
+    def get_session(self, session_id: UUID) -> Any | None:
         """Get a session by ID.
 
         Args:
@@ -126,8 +156,8 @@ class ConnectionManager:
         """
         return self._sessions.get(session_id)
 
-    def get_meeting_sessions(self, meeting_id: UUID) -> list[AgentSessionHandler]:
-        """Get all sessions in a meeting.
+    def get_meeting_sessions(self, meeting_id: UUID) -> list[Any]:
+        """Get all sessions (agents + humans) in a meeting.
 
         Args:
             meeting_id: The meeting to look up.
@@ -142,6 +172,6 @@ class ConnectionManager:
             if sid in self._sessions
         ]
 
-    def get_all_sessions(self) -> list[AgentSessionHandler]:
+    def get_all_sessions(self) -> list[Any]:
         """Return all active sessions."""
         return list(self._sessions.values())

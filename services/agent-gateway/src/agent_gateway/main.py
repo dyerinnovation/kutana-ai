@@ -19,6 +19,7 @@ from agent_gateway.audio_bridge import AudioBridge
 from agent_gateway.auth import AuthError, validate_token
 from agent_gateway.connection_manager import ConnectionManager
 from agent_gateway.event_relay import EventRelay
+from agent_gateway.human_session import HumanSessionHandler
 from agent_gateway.settings import AgentGatewaySettings
 
 if TYPE_CHECKING:
@@ -206,5 +207,88 @@ async def agent_connect(
         logger.info("Agent %s disconnected normally", identity.name)
     except Exception:
         logger.exception("Error in agent session %s", session.session_id)
+    finally:
+        _connection_manager.unregister(session.session_id)
+
+
+# ---------------------------------------------------------------------------
+# Human WebSocket endpoint
+# ---------------------------------------------------------------------------
+
+
+@app.websocket("/human/connect")
+async def human_connect(
+    websocket: WebSocket,
+    token: str = Query(..., description="JWT authentication token"),
+    meeting_id: str = Query(..., description="UUID of the meeting to join"),
+) -> None:
+    """WebSocket endpoint for human browser connections.
+
+    Unlike /agent/connect, this endpoint:
+    - Auto-joins the meeting on connect (no join_meeting message required).
+    - Always grants speak + listen + transcribe capabilities.
+    - Accepts meeting_id as a URL query parameter.
+
+    Args:
+        websocket: The incoming WebSocket connection.
+        token: JWT token for authentication (obtained from /token/meeting).
+        meeting_id: UUID of the meeting to join.
+    """
+    if _settings is None or _connection_manager is None:
+        await websocket.accept()
+        await websocket.close(code=1011, reason="Service not initialized")
+        return
+
+    # Validate token
+    try:
+        identity = validate_token(
+            token,
+            _settings.jwt_secret,
+            _settings.jwt_algorithm,
+        )
+    except AuthError as e:
+        await websocket.accept()
+        await websocket.close(code=4001, reason=f"{e.code}: {e.message}")
+        return
+
+    # Parse meeting_id
+    from uuid import UUID as _UUID
+
+    try:
+        parsed_meeting_id = _UUID(meeting_id)
+    except ValueError:
+        await websocket.accept()
+        await websocket.close(code=4003, reason="invalid_meeting_id: must be a valid UUID")
+        return
+
+    # Check connection limit
+    if _connection_manager.is_full():
+        await websocket.accept()
+        await websocket.close(code=4029, reason="Connection limit reached")
+        return
+
+    await websocket.accept()
+
+    session = HumanSessionHandler(
+        websocket=websocket,
+        identity=identity,
+        meeting_id=parsed_meeting_id,
+        connection_manager=_connection_manager,
+        audio_bridge=_audio_bridge,
+    )
+    _connection_manager.register(session)
+
+    logger.info(
+        "Human connected: %s (meeting=%s)",
+        identity.name,
+        parsed_meeting_id,
+    )
+
+    try:
+        await session.handle()
+    except WebSocketDisconnect:
+        logger.info("Human %s disconnected normally", identity.name)
+    except Exception:
+        logger.exception("Error in human session %s", session.session_id)
     finally:
         _connection_manager.unregister(session.session_id)
