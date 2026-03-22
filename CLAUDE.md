@@ -193,18 +193,32 @@ STRIPE_PUBLISHABLE_KEY=
 - Always-on Claude Code with Discord channel
 
 #### SSH Connection Patterns
-- **Regular commands (preferred):** `ssh dgx '<command>'` — key-based auth, no password needed
-- **File transfer:** `scp file.txt dgx:~/path/` or `scp dgx:~/path/file.txt ./`
-- **File sync:** `rsync -av ./local/ dgx:~/remote/`
-- **Sudo commands (fallback):** Use `sshpass` with `DGX_PASSWORD` from `.env` (sudo requires password):
-  ```bash
-  export $(grep -v '^#' .env | xargs)
-  sshpass -p "$DGX_PASSWORD" ssh dgx 'echo '"$DGX_PASSWORD"' | sudo -S <command>'
-  ```
-  - **Always use single quotes** around the remote command to prevent `!` in the password from being interpreted by the local shell
-- **KUBECONFIG:** `/etc/rancher/k3s/k3s.yaml` — always pass via `sudo env KUBECONFIG=...` (sudo drops the env var)
+
+**Regular commands — use this pattern (no password needed):**
+```bash
+ssh dgx '<command>'
+scp local-file.txt dgx:~/path/        # copy TO DGX
+scp dgx:~/path/remote-file.txt ./     # copy FROM DGX
+rsync -avz --exclude='.venv' ./local/ dgx:~/remote/
+```
+
+**Sudo commands — use this pattern (password only required for sudo, not SSH):**
+```bash
+# Single quotes prevent ! from being shell-expanded locally
+ssh dgx 'echo JDf33nawm3! | sudo -S <command>'
+
+# kubectl (must pass KUBECONFIG — sudo drops env vars)
+ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get pods -A'
+
+# helm (full path required — not in sudo PATH)
+ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml /home/jondyer3/.local/bin/helm list -A'
+```
+
+**Do NOT use `sshpass` for basic SSH** — key auth works. Only pipe the password for sudo on the remote side.
+
+- **KUBECONFIG:** `/etc/rancher/k3s/k3s.yaml` — always pass via `sudo env KUBECONFIG=...` (sudo drops env vars)
 - **Container runtime:** containerd, not Docker — import images via `sudo k3s ctr images import <file>`
-- **Helm path:** `/home/jondyer3/.local/bin/helm` — not in default PATH; `sudo env` does not inherit PATH so always use full path
+- **Helm path:** `/home/jondyer3/.local/bin/helm` — always use full path; `sudo env` does not inherit PATH
 - **Spark PATH:** `$HOME/.local/bin:$HOME/.nvm/versions/node/v22.22.0/bin:$PATH`
 
 ### Personal Mac (Client Only)
