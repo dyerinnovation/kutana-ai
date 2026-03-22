@@ -60,10 +60,16 @@ export function MeetingRoomPage() {
   }, []);
 
   const handleWsMessage = useCallback((event: MessageEvent) => {
-    const msg = JSON.parse(event.data) as GatewayMessage;
+    let msg: GatewayMessage;
+    try {
+      msg = JSON.parse(event.data) as GatewayMessage;
+    } catch {
+      return;
+    }
 
     switch (msg.type) {
       case "transcript":
+        if (!msg.segment) break;
         setTranscripts((prev) => {
           // Replace non-final segment from same speaker, or append
           if (!msg.segment.is_final) {
