@@ -309,6 +309,13 @@
 
 > Production deployment on AWS/GCP with native cloud STT providers.
 
+- [ ] 🔗 BLOCK: Kubernetes & Helm Deployment (DGX Spark / K3s)
+  - [ ] Create Helm charts for all Convene AI services
+  - [ ] Kubernetes resource definitions (Deployments, Services, ConfigMaps, Secrets)
+  - [ ] K3s deployment guide for DGX Spark
+  - [ ] GPU-enabled pod spec for self-hosted Whisper STT
+  - [ ] Horizontal pod autoscaling configuration
+
 - [ ] 🔗 BLOCK: Cloud Infrastructure
   - [ ] Dockerize all services with multi-stage builds
   - [ ] Create Kubernetes deployment manifests (or ECS/Cloud Run)
