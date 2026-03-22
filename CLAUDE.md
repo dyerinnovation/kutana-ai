@@ -215,7 +215,8 @@ STRIPE_PUBLISHABLE_KEY=
 - Low-power, always-on
 
 ## Infrastructure
-- See `claude_docs/DGX_Spark_Reference.md` for DGX Spark connection details, K8s patterns, and deployment gotchas
+- See `claude_docs/DGX_Spark_Reference.md` for DGX Spark hardware, K8s patterns, and deployment gotchas
+- See `claude_docs/DGX_Spark_SSH_Connection.md` for full SSH connection patterns, sshpass usage, sudo patterns, and PATH gotchas
 - See `charts/stt/` for the Whisper STT Helm chart deployed on DGX Spark
 
 ## LLM Strategy

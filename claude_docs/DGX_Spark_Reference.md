@@ -21,12 +21,16 @@
 All `kubectl` and `helm` commands require sudo with KUBECONFIG:
 
 ```bash
-# Direct command
-echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get pods -A
+# Direct command (use DGX_PASSWORD from .env — see claude_docs/DGX_Spark_SSH_Connection.md)
+sshpass -p "$DGX_PASSWORD" ssh jondyer3@spark-b0f2.local \
+  'echo '"$DGX_PASSWORD"' | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get pods -A'
 
-# Helm (custom install path)
-echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml /home/jondyer3/.local/bin/helm list -A
+# Helm (custom install path — must use full path, not in sudo PATH)
+sshpass -p "$DGX_PASSWORD" ssh jondyer3@spark-b0f2.local \
+  'echo '"$DGX_PASSWORD"' | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml /home/jondyer3/.local/bin/helm list -A'
 ```
+
+See `claude_docs/DGX_Spark_SSH_Connection.md` for full SSH patterns, sshpass usage, and gotchas.
 
 ### Namespaces
 - `convene` — Convene AI services (STT, future LLM)
