@@ -186,17 +186,20 @@ STRIPE_PUBLISHABLE_KEY=
 ### DGX Spark (Primary Compute)
 - All Docker containers, tests, and heavy compute run on the DGX Spark
 - Do NOT run Docker builds or container workloads on the personal Mac
-- **SSH:** `ssh jondyer3@spark-b0f2.local` (alias `spark-b0f2` in `~/.ssh/config` via NVIDIA Sync)
-- **SSH key:** `/Users/jonathandyer/Library/Application Support/NVIDIA/Sync/config/nvsync.key`
+- **SSH alias:** `ssh dgx` (key-based auth, no password — see `~/.ssh/config`)
+- **SSH key:** `~/.ssh/id_dgx_spark` (ed25519, authorized on DGX since 2026-03-21)
 - The DGX Spark runs: postgres, redis, api-server, agent-gateway, audio-service, task-engine
 - GPU available for self-hosted Whisper STT (NVIDIA GB10 Grace Blackwell, 128GB unified memory)
 - Always-on Claude Code with Discord channel
 
 #### SSH Connection Patterns
-- **Regular commands:** `ssh jondyer3@spark-b0f2.local '<command>'`
-- **Sudo commands:** Use `sshpass` with `DGX_PASSWORD` from `.env` for commands requiring sudo:
+- **Regular commands (preferred):** `ssh dgx '<command>'` — key-based auth, no password needed
+- **File transfer:** `scp file.txt dgx:~/path/` or `scp dgx:~/path/file.txt ./`
+- **File sync:** `rsync -av ./local/ dgx:~/remote/`
+- **Sudo commands (fallback):** Use `sshpass` with `DGX_PASSWORD` from `.env` (sudo requires password):
   ```bash
-  sshpass -p "$DGX_PASSWORD" ssh jondyer3@spark-b0f2.local 'echo $DGX_PASSWORD | sudo -S <command>'
+  export $(grep -v '^#' .env | xargs)
+  sshpass -p "$DGX_PASSWORD" ssh dgx 'echo '"$DGX_PASSWORD"' | sudo -S <command>'
   ```
   - **Always use single quotes** around the remote command to prevent `!` in the password from being interpreted by the local shell
 - **KUBECONFIG:** `/etc/rancher/k3s/k3s.yaml` — always pass via `sudo env KUBECONFIG=...` (sudo drops the env var)
