@@ -102,6 +102,8 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://convene:convene@postgres:5432/convene
       REDIS_URL: redis://redis:6379/0
+      EXTRACTION_WINDOW_SECONDS: "30"
+      EXTRACTION_OVERLAP_SECONDS: "5"
     depends_on:
       postgres:
         condition: service_healthy
