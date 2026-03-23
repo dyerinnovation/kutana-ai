@@ -190,6 +190,54 @@
   - [x] Integration tests: subscribe flow, event buffering, source claim, channel routing
   - [ ] Write Claude Code channel setup guide (`docs/integrations/CLAUDE_CODE_CHANNEL.md`)
 
+- [ ] 🔗 BLOCK: Agent Capability Declaration (P0 — ships with April Release)
+  - [ ] Extend `convene_join_meeting` with `audio_capability` parameter (`text_only`, `voice_in`, `voice_out`, `voice_bidirectional`, `tts_enabled`)
+  - [ ] Extend `convene_join_meeting` with `tts_voice_id` optional override parameter
+  - [ ] Gateway routes audio based on declared capability at join time
+  - [ ] Participant events include `audio_capability` field for visibility
+  - [ ] Update OpenClaw plugin with new `audio_capability` parameter
+  - [ ] Integration tests: each capability value routes audio correctly
+
+- [ ] 🔗 BLOCK: convene_start_speaking MCP Tool (P0 — ships with April Release)
+  - [ ] Implement `convene_start_speaking` tool in mcp-server (text parameter for TTS agents, no text for voice agents)
+  - [ ] `wait_for_turn: true` path — enqueue in TurnManager, wait for `speaker.granted`, then open audio
+  - [ ] `wait_for_turn: false` path — immediate interrupt speak
+  - [ ] For `tts_enabled` agents: route text to TTS Engine in gateway, mix PCM16 into room, auto-call mark_finished_speaking
+  - [ ] For `voice_bidirectional` agents: open the sidecar stream for PCM16 transmit
+  - [ ] Integration tests: TTS agent speaks, voice agent speaks, turn-queue coordination
+
+- [ ] 🔗 BLOCK: TTS Pipeline — Gateway TTS Engine (P0 — ships with April Release)
+  - [ ] Implement `TTS Engine` component in agent-gateway (receives text from MCP, synthesizes, mixes into room)
+  - [ ] Voice resolution: per-call `tts_voice_id` → agent config → provider default
+  - [ ] TTS result cache in Redis (key: `tts:{provider}:{voice_id}:{sha256(text)[:16]}`, TTL: 24h)
+  - [ ] Character metering — append to `api_key_events` with `character_count` in metadata
+  - [ ] Per-tier character limits (500/Free, 2000/Pro, 5000/Business, unlimited/Enterprise)
+  - [ ] Integration tests: text → PCM16 → room broadcast, caching, length enforcement
+
+- [ ] 🔗 BLOCK: Voice Agent Audio Sidecar (P0 — ships with April Release)
+  - [ ] Add sidecar WebSocket endpoint to agent-gateway (`/v1/audio/{session_id}`)
+  - [ ] Sidecar auth: Bearer JWT in Authorization header (same session JWT from join_meeting)
+  - [ ] Frame format: raw PCM16 LE 16kHz mono, 20ms chunks (640 bytes)
+  - [ ] Mixed-minus mixing: agent receives room audio minus its own stream
+  - [ ] VADFilter wrapper: suppress silence frames from agent → STT pipeline
+  - [ ] Continuous 20ms frame streaming from gateway to agent (silence-padded)
+  - [ ] Integration tests: voice agent joins, sends audio, receives room audio, mixed-minus verified
+
+- [ ] 🔗 BLOCK: MCP Tool Prefix Standardization (P0 — ships with April Release)
+  - [ ] Rename all MCP tools from bare names to `convene_` prefix (e.g., `join_meeting` → `convene_join_meeting`)
+  - [ ] Update OpenClaw plugin with renamed tools
+  - [ ] Update `examples/meeting-assistant-agent/` with new tool names
+  - [ ] Update all integration tests to use `convene_` prefix
+  - [ ] Update `docs/research/channel-plugin.md` tool reference table (already uses `convene_` prefix)
+  - [ ] Update `docs/research/skill-architecture.md` capability mapping table
+
+- [ ] 🔗 BLOCK: Developer Onboarding Documentation (P0 — ships with April Release)
+  - [ ] Write `docs/integrations/CLAUDE_CODE_CHANNEL.md` — end-to-end setup guide (API key → settings.json → first join)
+  - [ ] Write `docs/integrations/VOICE_AGENT_QUICKSTART.md` — voice agent setup (sidecar, PCM16, VAD)
+  - [ ] Write `docs/integrations/TTS_AGENT_QUICKSTART.md` — TTS agent setup (tts_enabled, voice assignment, start_speaking)
+  - [ ] Update `examples/meeting-assistant-agent/` templates to use new capability declaration + `convene_` prefix
+  - [ ] Add developer onboarding checklist to `docs/SETUP_GUIDE.md`
+
 - [ ] 🔗 BLOCK: Frontend — Turn Management & Chat UI
   - [ ] Speaker queue panel (ordered list, current speaker highlighted, position indicators)
   - [ ] Hand-raise button for human participants in the meeting room
