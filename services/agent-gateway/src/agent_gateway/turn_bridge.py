@@ -186,6 +186,32 @@ class TurnBridge:
         # Broadcast updated queue
         await self._broadcast_queue_updated(meeting_id)
 
+    async def handle_start_speaking(
+        self,
+        meeting_id: UUID,
+        participant_id: UUID,
+    ) -> None:
+        """Process a start_speaking signal and broadcast to all participants.
+
+        Args:
+            meeting_id: The meeting.
+            participant_id: The participant who has started speaking.
+        """
+        started_at = await self.turn_manager.start_speaking(meeting_id, participant_id)  # type: ignore[attr-defined]
+        if started_at is None:
+            # Participant is not the active speaker — no-op
+            return
+
+        await self._broadcast_event(
+            meeting_id,
+            "turn.speaking.started",
+            {
+                "meeting_id": str(meeting_id),
+                "participant_id": str(participant_id),
+                "started_at": started_at.isoformat(),
+            },
+        )
+
     async def handle_set_speaker(
         self,
         meeting_id: UUID,
