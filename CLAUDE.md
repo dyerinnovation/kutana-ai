@@ -143,6 +143,13 @@ STRIPE_PUBLISHABLE_KEY=
 - **Co-author trailer** — always end commit messages with: `Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>`
 - See `claude_docs/Git_Best_Practices.md` for full details
 
+## Documentation Requirements
+Before pushing any new feature branch or merging to main, ensure relevant documentation is updated **alongside** the feature code (not as a separate follow-up commit):
+- **README.md** — project root and any affected package/service READMEs
+- **docs/** — `TASKLIST.md`, `ROADMAP.md`, and technical docs as needed
+- **claude_docs/** — CoWork task descriptions if the feature introduces new tasks or changes existing ones
+- **API documentation** — docstrings, OpenAPI descriptions, or `docs/technical/` pages for any new or changed endpoints
+
 ## What NOT to Do
 - Don't use platform-specific meeting SDKs (Zoom SDK, Teams SDK) — agents connect natively via agent-gateway
 - Don't use Poetry or pip — use uv exclusively
@@ -220,6 +227,12 @@ ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml /ho
 - **Container runtime:** containerd, not Docker — import images via `sudo k3s ctr images import <file>`
 - **Helm path:** `/home/jondyer3/.local/bin/helm` — always use full path; `sudo env` does not inherit PATH
 - **Spark PATH:** `$HOME/.local/bin:$HOME/.nvm/versions/node/v22.22.0/bin:$PATH`
+
+#### DGX K3s Cluster URLs
+- Services run on the DGX in a **K3s/Kubernetes cluster** with ingress hostnames under `spark-b0f2.local`
+- Frontend and API are accessible at `convene.spark-b0f2.local` (exact paths depend on deployed ingress rules)
+- When running browser tests or E2E verification, **point at the DGX cluster URL**, not localhost
+- Use `aiohttp` (not `httpx`) for programmatic HTTP to `*.spark-b0f2.local` — httpx hangs on IPv6/mDNS resolution
 
 ### Personal Mac (Client Only)
 - Used for Dispatch/Cowork orchestration and code editing
