@@ -162,14 +162,14 @@
   - [ ] Transcript access controls — `get_transcript` MCP tool enforces active session in requested `meeting_id`; 403 if not
   - [ ] Integration tests for all security controls (injection attempts, cross-meeting access, rate limit enforcement, scope violations)
 
-- [ ] 🔗 BLOCK: Turn Management MCP Tools
-  - [ ] `raise_hand` — request to speak, returns queue position
-  - [ ] `get_queue_status` — check speaker queue and current position
-  - [ ] `mark_finished_speaking` — signal done, promotes next in queue
-  - [ ] `cancel_hand_raise` — withdraw from speaker queue
-  - [ ] `get_speaking_status` — check if current session is active speaker
-  - [ ] Wire TurnManager into MCP server tools
-  - [ ] Integration tests for all 5 turn management tools
+- [x] 🔗 BLOCK: Turn Management MCP Tools
+  - [x] `raise_hand` — request to speak, returns queue position
+  - [x] `get_queue_status` — check speaker queue and current position
+  - [x] `mark_finished_speaking` — signal done, promotes next in queue
+  - [x] `cancel_hand_raise` — withdraw from speaker queue
+  - [x] `get_speaking_status` — check if current session is active speaker
+  - [x] Wire TurnManager into MCP server tools
+  - [x] Integration tests for all 5 turn management tools
 
 - [ ] 🔗 BLOCK: Chat & Status MCP Tools
   - [ ] `send_chat_message` — post a message to meeting chat

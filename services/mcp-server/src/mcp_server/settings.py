@@ -31,5 +31,6 @@ class MCPServerSettings(BaseSettings):
     mcp_jwt_secret: str = "change-me-in-production"
     api_base_url: str = "http://localhost:8000"
     gateway_ws_url: str = "ws://localhost:8003"
+    redis_url: str = "redis://localhost:6379/0"
     mcp_host: str = "0.0.0.0"
     mcp_port: int = 3001
