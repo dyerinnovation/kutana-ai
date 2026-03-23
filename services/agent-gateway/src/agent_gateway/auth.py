@@ -20,11 +20,13 @@ class AgentIdentity:
         agent_config_id: UUID of the agent configuration.
         name: Human-readable agent name.
         capabilities: Capabilities the agent is allowed to request.
+        source: Connection source identifier (e.g. "agent", "claude-code", "openclaw").
     """
 
     agent_config_id: UUID
     name: str
     capabilities: list[str]
+    source: str = "agent"
 
 
 class AuthError(Exception):
@@ -82,6 +84,7 @@ def validate_token(
 
     name = payload.get("name", "unnamed-agent")
     capabilities = payload.get("capabilities", ["listen", "transcribe"])
+    source = payload.get("source", "agent")
 
     if not isinstance(capabilities, list):
         raise AuthError("invalid_claim", "'capabilities' must be a list")
@@ -90,6 +93,7 @@ def validate_token(
         agent_config_id=agent_config_id,
         name=name,
         capabilities=capabilities,
+        source=source,
     )
 
 
@@ -100,6 +104,7 @@ def create_agent_token(
     secret: str,
     algorithm: str = "HS256",
     expire_seconds: int = 3600,
+    source: str = "agent",
 ) -> str:
     """Create a JWT token for an agent.
 
@@ -110,6 +115,7 @@ def create_agent_token(
         secret: Secret key for signing.
         algorithm: JWT algorithm (default HS256).
         expire_seconds: Token expiry in seconds (default 1 hour).
+        source: Connection source identifier (default "agent").
 
     Returns:
         Signed JWT token string.
@@ -121,6 +127,7 @@ def create_agent_token(
         "sub": str(agent_config_id),
         "name": name,
         "capabilities": capabilities,
+        "source": source,
         "iat": now,
         "exp": now + expire_seconds,
     }

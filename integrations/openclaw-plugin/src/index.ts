@@ -92,5 +92,58 @@ export default function register(ctx: PluginContext): void {
     return JSON.stringify(meeting, null, 2);
   });
 
-  ctx.logger.info("Convene AI plugin registered with 6 tools");
+  // Turn Management Tools
+  ctx.registerTool("convene_raise_hand", async (params) => {
+    await ensureAuth();
+    const meetingId = params.meeting_id as string;
+    const priority = (params.priority as string) ?? "normal";
+    const topic = params.topic as string | undefined;
+    if (!meetingId) return "Error: meeting_id is required";
+    return await client.raiseHand(meetingId, priority, topic);
+  });
+
+  ctx.registerTool("convene_get_queue_status", async (params) => {
+    await ensureAuth();
+    const meetingId = params.meeting_id as string;
+    if (!meetingId) return "Error: meeting_id is required";
+    return await client.getQueueStatus(meetingId);
+  });
+
+  ctx.registerTool("convene_mark_finished_speaking", async (params) => {
+    await ensureAuth();
+    const meetingId = params.meeting_id as string;
+    if (!meetingId) return "Error: meeting_id is required";
+    return await client.markFinishedSpeaking(meetingId);
+  });
+
+  ctx.registerTool("convene_cancel_hand_raise", async (params) => {
+    await ensureAuth();
+    const meetingId = params.meeting_id as string;
+    if (!meetingId) return "Error: meeting_id is required";
+    const handRaiseId = params.hand_raise_id as string | undefined;
+    return await client.cancelHandRaise(meetingId, handRaiseId);
+  });
+
+  // Chat Tools
+  ctx.registerTool("convene_send_chat_message", async (params) => {
+    await ensureAuth();
+    const meetingId = params.meeting_id as string;
+    const content = params.content as string;
+    const messageType = (params.message_type as string) ?? "text";
+    if (!meetingId || !content) {
+      return "Error: meeting_id and content are required";
+    }
+    return await client.sendChatMessage(meetingId, content, messageType);
+  });
+
+  ctx.registerTool("convene_get_chat_messages", async (params) => {
+    await ensureAuth();
+    const meetingId = params.meeting_id as string;
+    if (!meetingId) return "Error: meeting_id is required";
+    const limit = (params.limit as number) ?? 50;
+    const messageType = params.message_type as string | undefined;
+    return await client.getChatMessages(meetingId, limit, messageType);
+  });
+
+  ctx.logger.info("Convene AI plugin registered with 12 tools");
 }
