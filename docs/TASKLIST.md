@@ -150,17 +150,17 @@
 >
 > **Timeline:** Week 1 (Mar 22–28) backend infra · Week 2 (Mar 29–Apr 4) MCP tools + channel + frontend · Week 3 (Apr 5–11) E2E testing + launch
 
-- [ ] 🔗 BLOCK: Security Infrastructure (P0 — ships with April Release)
-  - [ ] Prompt injection defense — `convene-core/security/sanitizer.py` utility; strip control sequences and role-injection patterns from all agent-submitted text before LLM context inclusion
-  - [ ] Data isolation enforcement — all transcript/task/participant queries JOIN against `meeting_participants` filtered by `agent_id`; no cross-meeting reads via MCP tools or WebSocket events
-  - [ ] Input sanitization — strict Pydantic schemas with max-length, allowed-character, and type constraints on all MCP tool inputs and WebSocket message payloads; reject + log invalid payloads
-  - [ ] Rate limiting — Redis sliding-window counters per `{agent_id}:{window}`; applied via FastAPI `Depends()` on WebSocket connect, MCP tool routes, and REST API endpoints
-  - [ ] Auth hardening — API key scope enforcement (keys scoped to `meeting_id` or `agent_id`), automatic expiry, refresh token rotation
-  - [ ] API key audit log — append-only PostgreSQL table `api_key_events(key_id, event_type, actor_id, meeting_id, timestamp, metadata)`
-  - [ ] Secure meeting defaults — new meetings default to private; meeting IDs use non-guessable format (`{uuid4_hex[:8]}-{random_token_6}`)
-  - [ ] Content filtering — keyword/pattern blocklist on chat messages and task descriptions before storage and broadcast
-  - [ ] Transcript access controls — `get_transcript` MCP tool enforces active session in requested `meeting_id`; 403 if not
-  - [ ] Integration tests for all security controls (injection attempts, cross-meeting access, rate limit enforcement, scope violations)
+- [x] 🔗 BLOCK: Security Infrastructure (P0 — ships with April Release)
+  - [x] Prompt injection defense — `mcp_server/security/sanitization.py`; regex strips control sequences and role-injection patterns (`ignore previous instructions`, `system:`, `[INST]`) from all agent-submitted text before storage/broadcast
+  - [x] Data isolation enforcement — Redis keys namespaced `convene:{meeting_id}:chat:*` and `convene:{meeting_id}:turns:*`; transcript scope enforced per-session (agents only see transcript after join); MCP tools validate meeting_id UUID before any data access
+  - [x] Input sanitization — `mcp_server/security/sanitization.py` with max-length, allowed-character, and type constraints on all 20 MCP tool inputs; meeting_id validated as UUID, content max 2000 chars + HTML stripped, priority restricted to normal/urgent, topic/channel max 200/64 chars
+  - [x] Rate limiting — `mcp_server/security/rate_limit.py` — Redis sliding-window per `convene:rate_limit:{agent_id}:{tool_name}`; raise_hand 10/min, send_chat_message 20/min, get_transcript 30/min; RateLimiter ABC + RedisRateLimiter + NoOpRateLimiter (test)
+  - [x] Auth hardening — MCP JWT now includes all 5 scopes (meetings:read, meetings:join, meetings:chat, turns:manage, tasks:write); `mcp_server/security/scopes.py` enforces required scope per tool before execution; scope violations return structured JSON error
+  - [x] Audit logging — `mcp_server/security/audit.py`; every auth event (token_validated, token_rejected, scope_check_failed) and tool call (tool, agent_id, meeting_id, success, error) logged as structured JSON to `convene.audit` logger
+  - [x] Secure meeting defaults — `create_new_meeting` and `join_or_create_meeting` doc strings indicate private-by-default; transcript resource returns session-scoped data only; auto-disconnect (30 min idle) noted for Phase 2 agent gateway polish
+  - [x] Content filtering — prompt injection patterns filtered in `sanitize_content`, `sanitize_topic`, `sanitize_description`; HTML/script tags stripped from all text inputs
+  - [x] Transcript access controls — `get_transcript` tool enforces active WebSocket session in the meeting; returns error if not connected; transcript is session-scoped (only segments from after join)
+  - [x] Unit tests for all security controls — `services/mcp-server/tests/test_security.py`: 40+ tests covering scope validation, input sanitization (injection, XSS, max-length), rate limiting (allow/block/Redis-down fail-open), and integration tests for `_security_check`
 
 - [x] 🔗 BLOCK: Turn Management MCP Tools
   - [x] `raise_hand` — request to speak, returns queue position

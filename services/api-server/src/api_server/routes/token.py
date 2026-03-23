@@ -209,7 +209,16 @@ async def exchange_for_mcp_token(
             detail="Agent configuration not found",
         )
 
-    scopes = ["meetings:read", "meetings:join", "tasks:write"]
+    # All five scopes are included in the JWT.
+    # Future: store per-key granted scopes in AgentApiKeyORM; default to
+    # ["meetings:read", "meetings:join"] with full scopes requiring explicit grant.
+    scopes = [
+        "meetings:read",
+        "meetings:join",
+        "meetings:chat",
+        "turns:manage",
+        "tasks:write",
+    ]
 
     now = int(time.time())
     payload = {
