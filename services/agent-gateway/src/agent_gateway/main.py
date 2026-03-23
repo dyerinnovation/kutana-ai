@@ -3,7 +3,15 @@
 from __future__ import annotations
 
 import logging
+import sys
 from contextlib import asynccontextmanager
+
+# Enable application-level logging so session events are visible in docker logs
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s [%(name)s] %(message)s",
+    stream=sys.stdout,
+)
 from typing import TYPE_CHECKING
 
 from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect

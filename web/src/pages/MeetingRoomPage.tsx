@@ -68,26 +68,41 @@ export function MeetingRoomPage() {
     }
 
     switch (msg.type) {
-      case "transcript":
-        if (!msg.segment) break;
+      case "transcript": {
+        const seg: TranscriptSegment = {
+          speaker_id: msg.speaker_id ?? "unknown",
+          text: msg.text,
+          start_time: msg.start_time,
+          end_time: msg.end_time,
+          confidence: msg.confidence,
+          is_final: msg.is_final,
+        };
         setTranscripts((prev) => {
           // Replace non-final segment from same speaker, or append
-          if (!msg.segment.is_final) {
+          if (!seg.is_final) {
             const idx = prev.findIndex(
-              (s) =>
-                s.speaker_id === msg.segment.speaker_id && !s.is_final
+              (s) => s.speaker_id === seg.speaker_id && !s.is_final
             );
             if (idx !== -1) {
               const updated = [...prev];
-              updated[idx] = msg.segment;
+              updated[idx] = seg;
               return updated;
             }
           }
-          return [...prev, msg.segment];
+          return [...prev, seg];
         });
         break;
+      }
       case "participant_update":
-        setParticipants(msg.participants);
+        // Server sends one participant per update (join/leave notification)
+        setParticipants((prev) => {
+          if (msg.action === "joined") {
+            const p: Participant = { id: msg.participant_id, name: msg.name, role: msg.role, is_muted: false };
+            return prev.some((x) => x.id === p.id) ? prev : [...prev, p];
+          } else {
+            return prev.filter((x) => x.id !== msg.participant_id);
+          }
+        });
         break;
       case "joined":
         setStatus("connected");
@@ -105,34 +120,42 @@ export function MeetingRoomPage() {
     let cancelled = false;
 
     async function connect() {
+      console.log("[Meeting] connect() started, meetingId=", meetingId);
       try {
         // 1. Get gateway token
         const { token } = await getMeetingToken(meetingId!);
+        console.log("[Meeting] got token, cancelled=", cancelled);
         if (cancelled) return;
 
         // 2. Open WebSocket — meeting_id in URL, no join_meeting message needed
-        const ws = new WebSocket(
-          `${HUMAN_WS_BASE}?token=${token}&meeting_id=${meetingId}`
-        );
+        const wsUrl = `${HUMAN_WS_BASE}?token=${token}&meeting_id=${meetingId}`;
+        console.log("[Meeting] opening WS:", wsUrl.split("?")[0]);
+        const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
         // No onopen send needed: server auto-joins on connect and sends "joined"
-        ws.onopen = () => {};
+        ws.onopen = () => { console.log("[WS] opened"); };
 
-        ws.onmessage = handleWsMessage;
+        ws.onmessage = (event) => {
+          console.log("[WS] message:", event.data.slice(0, 200));
+          handleWsMessage(event);
+        };
 
-        ws.onerror = () => {
+        ws.onerror = (e) => {
+          console.error("[WS] error event:", e);
           if (!cancelled) {
             setStatus("error");
             setError("WebSocket connection failed");
           }
         };
 
-        ws.onclose = () => {
+        ws.onclose = (e) => {
+          console.log("[WS] closed: code=", e.code, "reason=", e.reason, "clean=", e.wasClean);
           if (!cancelled) setStatus("disconnected");
         };
 
         // 3. Start audio capture
+        console.log("[Meeting] calling getUserMedia, mediaDevices=", !!navigator.mediaDevices);
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: {
             sampleRate: SAMPLE_RATE,
@@ -141,6 +164,7 @@ export function MeetingRoomPage() {
             noiseSuppression: true,
           },
         });
+        console.log("[Meeting] getUserMedia succeeded, cancelled=", cancelled);
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
@@ -189,6 +213,7 @@ export function MeetingRoomPage() {
         source.connect(processor);
         processor.connect(audioCtx.destination);
       } catch (err) {
+        console.error("[Meeting] connect() error:", err);
         if (!cancelled) {
           setStatus("error");
           setError(
@@ -201,6 +226,7 @@ export function MeetingRoomPage() {
     connect();
 
     return () => {
+      console.log("[Meeting] effect cleanup, cancelled=", cancelled);
       cancelled = true;
       cleanup();
     };

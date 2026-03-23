@@ -118,11 +118,20 @@ class HumanSessionHandler:
                 data = json.loads(raw)
                 await self._dispatch(data)
         except Exception as e:
-            logger.info(
-                "Human session %s disconnected: %s",
-                self.session_id,
-                type(e).__name__,
-            )
+            from fastapi import WebSocketDisconnect
+            from starlette.websockets import WebSocketState
+            if isinstance(e, WebSocketDisconnect):
+                logger.warning(
+                    "Human session %s disconnected (code=%s)",
+                    self.session_id,
+                    e.code,
+                )
+            else:
+                logger.exception(
+                    "Human session %s crashed: %s",
+                    self.session_id,
+                    type(e).__name__,
+                )
         finally:
             await self._cleanup()
 

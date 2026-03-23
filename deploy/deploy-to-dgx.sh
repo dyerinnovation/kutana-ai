@@ -5,7 +5,7 @@ set -e
 # Usage: ./deploy/deploy-to-dgx.sh
 # Run this from your Mac. It will SSH into the DGX and set everything up.
 
-DGX_HOST="jondyer3@spark-b0f2.local"
+DGX_HOST="dgx"
 REPO_DIR="$HOME/convene-ai"
 REMOTE_URL="git@github.com:dyerinnovation/convene-ai.git"
 

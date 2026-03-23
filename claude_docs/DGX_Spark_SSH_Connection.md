@@ -3,24 +3,25 @@
 ## Credentials
 - **Host:** `spark-b0f2.local`
 - **User:** `jondyer3`
-- **Password:** stored as `DGX_PASSWORD` in `.env` (never hardcode it)
-- **SSH alias:** `spark-b0f2` (configured in `~/.ssh/config` via NVIDIA Sync)
+- **Password:** stored as `DGX_PASSWORD` in `.env` — only needed for sudo commands now
+- **SSH alias:** `dgx` (key-based auth via `~/.ssh/id_dgx_spark`, no password for regular commands)
+- **Also works:** `spark-b0f2`, `spark-b0f2.local`
 
 ## Basic Connection
 ```bash
-# Interactive shell
-ssh jondyer3@spark-b0f2.local
+# Interactive shell (no password)
+ssh dgx
 
-# Single command (non-sudo)
-ssh jondyer3@spark-b0f2.local '<command>'
+# Single command (non-sudo, no password)
+ssh dgx '<command>'
 ```
 
 ## Sudo Commands via sshpass
-Use `sshpass` to pass the password non-interactively for commands requiring sudo:
+sshpass is still required for commands needing sudo (sudo requires a password):
 
 ```bash
 # Load DGX_PASSWORD from .env first, then:
-sshpass -p "$DGX_PASSWORD" ssh jondyer3@spark-b0f2.local 'echo '"$DGX_PASSWORD"' | sudo -S <command>'
+sshpass -p "$DGX_PASSWORD" ssh dgx 'echo '"$DGX_PASSWORD"' | sudo -S <command>'
 ```
 
 **Critical: always use single quotes around the remote command** — the `!` character in the password is interpreted by the local bash shell if the command string is double-quoted.
@@ -29,7 +30,7 @@ Safe pattern (sourcing .env inline):
 ```bash
 # Source .env and run sudo command
 export $(grep -v '^#' .env | xargs)
-sshpass -p "$DGX_PASSWORD" ssh jondyer3@spark-b0f2.local 'echo '"$DGX_PASSWORD"' | sudo -S <command>'
+sshpass -p "$DGX_PASSWORD" ssh dgx 'echo '"$DGX_PASSWORD"' | sudo -S <command>'
 ```
 
 ## Kubernetes Commands (kubectl / helm)
@@ -37,11 +38,11 @@ K3s requires both `sudo` and an explicit `KUBECONFIG` env var (sudo drops the en
 
 ```bash
 # kubectl
-sshpass -p "$DGX_PASSWORD" ssh jondyer3@spark-b0f2.local \
+sshpass -p "$DGX_PASSWORD" ssh dgx \
   'echo '"$DGX_PASSWORD"' | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get pods -A'
 
 # helm (must use full path — not in default PATH)
-sshpass -p "$DGX_PASSWORD" ssh jondyer3@spark-b0f2.local \
+sshpass -p "$DGX_PASSWORD" ssh dgx \
   'echo '"$DGX_PASSWORD"' | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml /home/jondyer3/.local/bin/helm list -A'
 ```
 
@@ -70,11 +71,11 @@ Since K3s uses containerd instead of Docker, you cannot use `docker load`. Build
 # Save image locally
 docker save myimage:tag -o myimage.tar
 
-# Copy to Spark
-scp myimage.tar jondyer3@spark-b0f2.local:~/
+# Copy to Spark (key-based, no password)
+scp myimage.tar dgx:~/
 
-# Import on Spark
-sshpass -p "$DGX_PASSWORD" ssh jondyer3@spark-b0f2.local \
+# Import on Spark (sudo still requires sshpass)
+sshpass -p "$DGX_PASSWORD" ssh dgx \
   'echo '"$DGX_PASSWORD"' | sudo -S k3s ctr images import ~/myimage.tar'
 ```
 
@@ -86,10 +87,14 @@ sshpass -p "$DGX_PASSWORD" ssh jondyer3@spark-b0f2.local \
 5. **mDNS `.local` hostname** — use `aiohttp` (not `httpx`) for programmatic HTTP requests to `spark-b0f2.local`; httpx lacks Happy Eyeballs and hangs on IPv6 link-local resolution (see memory notes)
 
 ## SSH Config
-The NVIDIA Sync app manages an SSH key for passwordless access. Config in `~/.ssh/config`:
+Key-based auth configured in `~/.ssh/config` (set up 2026-03-21):
 ```
-Host spark-b0f2
+Host dgx spark-b0f2 spark-b0f2.local
     HostName spark-b0f2.local
     User jondyer3
-    IdentityFile "/Users/jonathandyer/Library/Application Support/NVIDIA/Sync/config/nvsync.key"
+    IdentityFile ~/.ssh/id_dgx_spark
+    StrictHostKeyChecking no
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
 ```
+The NVIDIA Sync app also has its own entry (`spark-b0f2` alias via included config) — the explicit entry above takes precedence for all three aliases.

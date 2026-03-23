@@ -11,6 +11,7 @@ export default defineConfig({
     },
   },
   server: {
+    allowedHosts: ["convene.spark-b0f2.local", "spark-b0f2.local"],
     proxy: {
       "/api": {
         target: "http://localhost:8000",

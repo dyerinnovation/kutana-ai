@@ -85,6 +85,12 @@ _db_engine: AsyncEngine | None = None
 # Per-meeting in-memory content-key dedup: meeting_id -> set of seen keys
 _seen_keys: dict[UUID, set[str]] = {}
 
+# Per-meeting context cache: meeting_id -> last N BatchSegments from the
+# previous window, passed as context_segments to the next extraction batch
+# so the LLM can maintain cross-window continuity.
+_CONTEXT_CACHE_MAX_SEGMENTS = 5
+_context_cache: dict[UUID, list[BatchSegment]] = {}
+
 
 # ---------------------------------------------------------------------------
 # Extraction helpers
@@ -161,6 +167,7 @@ async def _on_window(window: SegmentWindow) -> None:
         logger.debug("LLM extractor not configured — set ANTHROPIC_API_KEY to enable")
         if window.is_final:
             _seen_keys.pop(window.meeting_id, None)
+            _context_cache.pop(window.meeting_id, None)
         return
 
     # Build TranscriptBatch from window segments
@@ -174,9 +181,15 @@ async def _on_window(window: SegmentWindow) -> None:
         )
         for s in window.segments
     ]
+
+    # Populate context_segments from the previous window cache so the LLM
+    # can maintain continuity across window boundaries.
+    context_segs = _context_cache.get(window.meeting_id, [])
+
     batch = TranscriptBatch(
         meeting_id=str(window.meeting_id),
         segments=batch_segments,
+        context_segments=context_segs,
         batch_window_seconds=window.duration,
     )
 
@@ -187,12 +200,19 @@ async def _on_window(window: SegmentWindow) -> None:
         logger.exception("LLM extraction failed for meeting %s", window.meeting_id)
         if window.is_final:
             _seen_keys.pop(window.meeting_id, None)
+            _context_cache.pop(window.meeting_id, None)
         return
+
+    # Update context cache with the tail of the current window so the next
+    # extraction batch has continuity across the window boundary.
+    if batch_segments:
+        _context_cache[window.meeting_id] = batch_segments[-_CONTEXT_CACHE_MAX_SEGMENTS:]
 
     if not result.entities:
         logger.info("No entities extracted for meeting %s", window.meeting_id)
         if window.is_final:
             _seen_keys.pop(window.meeting_id, None)
+            _context_cache.pop(window.meeting_id, None)
         return
 
     # In-memory dedup using content_key()
@@ -232,9 +252,10 @@ async def _on_window(window: SegmentWindow) -> None:
     # Persist tasks to PostgreSQL (graceful fallback)
     await _persist_task_entities(unique, window.meeting_id)
 
-    # Clean up dedup state for final window
+    # Clean up dedup and context state for final window
     if window.is_final:
         _seen_keys.pop(window.meeting_id, None)
+        _context_cache.pop(window.meeting_id, None)
 
 
 # ---------------------------------------------------------------------------
@@ -259,6 +280,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """
     global _consumer, _consumer_task, _windower, _event_publisher
     global _llm_extractor, _session_factory, _db_engine
+    global _seen_keys, _context_cache
 
     settings = TaskEngineSettings()
     logger.info(
@@ -336,6 +358,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         _session_factory = None
         _db_engine = None
         _seen_keys.clear()
+        _context_cache.clear()
 
 
 app = FastAPI(

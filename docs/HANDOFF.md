@@ -12,14 +12,14 @@
 ## Latest Handoff
 
 **Author:** CoWork (scheduled)
-**Date:** 2026-03-21
-**What I did:** Implemented task.created and task.updated event emission — added EventPublisher to task-engine and api-server, wired TaskCreated events out of TaskExtractor after persist, and wired TaskCreated/TaskUpdated out of the api-server task routes.
-**Branch:** scheduled/2026-03-21-task-event-emission
-**Merge status:** Commit `036696d` on local branch — push from Mac with `git push origin scheduled/2026-03-21-task-event-emission`, then merge after quality checks pass
+**Date:** 2026-03-22
+**What I did:** Completed the LLM-powered task extraction pipeline by adding cross-window context continuity (`_context_cache`) to `_on_window` in the task-engine, and wrote 27 unit tests for `test_main.py` covering all pipeline branches.
+**Branch:** scheduled/2026-03-22-llm-extraction-pipeline
+**Merge status:** ❌ Merge FAILED — branch left unmerged for manual review (push and quality checks required on Mac)
 **Warnings:**
-- ⚠️ Quality checks (ruff, mypy, pytest) must be run on Mac before merging — VM Python is 3.10, project requires 3.12+
-- The task-engine `_event_publisher` is created in lifespan but NOT yet passed into TaskExtractor from `_on_window` — that wiring belongs in the locked LLM pipeline task
-- `update_task_status` now stamps `updated_at` on every status change (this is a net improvement but is a behavior change)
+- ⚠️ Quality checks (ruff, mypy, pytest) must be run on Mac before merging — VM Python is 3.10, project requires 3.12+. Push the branch from Mac with `git push origin scheduled/2026-03-22-llm-extraction-pipeline`, run checks, then merge to main.
+- Syntax check (py_compile Python 3.10) passed for all changed files
+- Next item is Milestone M2 (integration test) — requires running PostgreSQL and Redis
 **Dependencies introduced:** None
 
 ---
