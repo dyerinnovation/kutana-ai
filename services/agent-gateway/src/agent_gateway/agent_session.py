@@ -14,10 +14,14 @@ from agent_gateway.protocol import (
     DataMessage,
     ErrorMessage,
     EventMessage,
+    FinishedSpeaking,
+    GetQueue,
     Joined,
     JoinMeeting,
     LeaveMeeting,
+    LowerHand,
     ParticipantUpdate,
+    RaiseHand,
     TranscriptMessage,
     parse_client_message,
 )
@@ -116,6 +120,14 @@ class AgentSessionHandler:
             await self._handle_data(msg)
         elif isinstance(msg, LeaveMeeting):
             await self._handle_leave(msg)
+        elif isinstance(msg, RaiseHand):
+            await self._handle_raise_hand(msg)
+        elif isinstance(msg, LowerHand):
+            await self._handle_lower_hand(msg)
+        elif isinstance(msg, FinishedSpeaking):
+            await self._handle_finished_speaking(msg)
+        elif isinstance(msg, GetQueue):
+            await self._handle_get_queue(msg)
 
     async def _handle_join(self, msg: JoinMeeting) -> None:
         """Handle a join_meeting request.
@@ -253,6 +265,80 @@ class AgentSessionHandler:
             )
             self.meeting_id = None
             self.capabilities = []
+
+    async def _handle_raise_hand(self, msg: RaiseHand) -> None:
+        """Handle a raise_hand request from the agent.
+
+        Args:
+            msg: The raise_hand message.
+        """
+        if self.meeting_id is None:
+            await self._send_error("not_in_meeting", "Join a meeting first")
+            return
+        if self._manager.turn_bridge is None:
+            await self._send_error("turn_unavailable", "Turn management is not available")
+            return
+        participant_id = self._identity.agent_config_id
+        await self._manager.turn_bridge.handle_raise_hand(
+            self.meeting_id,
+            participant_id,
+            priority=msg.priority,
+            topic=msg.topic,
+        )
+
+    async def _handle_lower_hand(self, msg: LowerHand) -> None:
+        """Handle a lower_hand request from the agent.
+
+        Args:
+            msg: The lower_hand message.
+        """
+        if self.meeting_id is None:
+            return
+        if self._manager.turn_bridge is None:
+            return
+        from uuid import UUID as _UUID
+
+        participant_id = self._identity.agent_config_id
+        hand_raise_id = _UUID(msg.hand_raise_id) if msg.hand_raise_id else None
+        await self._manager.turn_bridge.handle_lower_hand(
+            self.meeting_id,
+            participant_id,
+            hand_raise_id=hand_raise_id,
+        )
+
+    async def _handle_finished_speaking(self, msg: FinishedSpeaking) -> None:
+        """Handle a finished_speaking request from the agent.
+
+        Args:
+            msg: The finished_speaking message.
+        """
+        if self.meeting_id is None:
+            return
+        if self._manager.turn_bridge is None:
+            return
+        participant_id = self._identity.agent_config_id
+        await self._manager.turn_bridge.handle_finished_speaking(
+            self.meeting_id,
+            participant_id,
+        )
+
+    async def _handle_get_queue(self, msg: GetQueue) -> None:
+        """Handle a get_queue request from the agent (responds to requester only).
+
+        Args:
+            msg: The get_queue message.
+        """
+        if self.meeting_id is None:
+            return
+        if self._manager.turn_bridge is None:
+            payload: dict[str, Any] = {
+                "meeting_id": str(self.meeting_id),
+                "active_speaker_id": None,
+                "queue": [],
+            }
+        else:
+            payload = await self._manager.turn_bridge.get_queue_payload(self.meeting_id)
+        await self.send_event("turn.queue.updated", payload)
 
     async def send_transcript(
         self,

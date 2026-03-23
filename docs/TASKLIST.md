@@ -105,14 +105,14 @@
   - [ ] Participant events on MessageBus (participant.joined, participant.left)
   - [ ] WebRTC/LiveKit integration for production human connections (Phase 5)
 
-- [ ] 🔗 BLOCK: Turn Management Infrastructure
-  - [ ] Define TurnManager ABC in convene-core (raise_turn, release_turn, get_queue, get_active_speaker)
-  - [ ] Implement RedisTurnManager provider (ordered queue, atomic operations, position tracking)
-  - [ ] Register TurnManager in provider registry
-  - [ ] WebSocket events for queue changes (speaker.queue.updated, speaker.changed)
-  - [ ] Broadcast turn state to all connected participants
-  - [ ] Auto-transition support (configurable timeout-based speaker advancement)
-  - [ ] Unit and integration tests for TurnManager
+- [x] 🔗 BLOCK: Turn Management Infrastructure
+  - [x] Define TurnManager ABC in convene-core (raise_turn, release_turn, get_queue, get_active_speaker)
+  - [x] Implement RedisTurnManager provider (ordered queue, atomic operations, position tracking)
+  - [x] Register TurnManager in provider registry
+  - [x] WebSocket events for queue changes (speaker.queue.updated, speaker.changed)
+  - [x] Broadcast turn state to all connected participants
+  - [x] Auto-transition support (configurable timeout-based speaker advancement)
+  - [x] Unit and integration tests for TurnManager
 
 - [ ] 🔗 BLOCK: Meeting Chat Infrastructure
   - [ ] Define ChatStore ABC in convene-core (send_message, get_messages, subscribe)

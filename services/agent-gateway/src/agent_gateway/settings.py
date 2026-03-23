@@ -19,6 +19,7 @@ class AgentGatewaySettings(BaseSettings):
         stt_api_key: API key for cloud STT providers.
         whisper_model_size: Whisper model size for local whisper.
         whisper_api_url: Remote Whisper API URL for whisper-remote.
+        speaker_timeout_seconds: Seconds before auto-advancing speaker (default 300 / 5 min).
     """
 
     database_url: str = "postgresql+asyncpg://convene:convene@localhost:5432/convene"
@@ -32,6 +33,7 @@ class AgentGatewaySettings(BaseSettings):
     stt_api_key: str = ""
     whisper_model_size: str = "small"
     whisper_api_url: str = ""
+    speaker_timeout_seconds: int = 300
 
     model_config = {
         "env_prefix": "AGENT_GATEWAY_",

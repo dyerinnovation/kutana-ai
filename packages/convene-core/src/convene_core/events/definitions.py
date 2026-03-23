@@ -216,6 +216,88 @@ class AgentData(BaseEvent):
     payload: dict[str, object]
 
 
+# ---------------------------------------------------------------------------
+# Turn management events (Phase 3: Turn Management Infrastructure)
+# ---------------------------------------------------------------------------
+
+
+class HandRaised(BaseEvent):
+    """Emitted when a participant raises their hand to speak.
+
+    Attributes:
+        meeting_id: ID of the meeting.
+        participant_id: ID of the participant who raised their hand.
+        hand_raise_id: Unique identifier for this hand raise event.
+        queue_position: 1-based position in queue; 0 means immediately promoted.
+        priority: Queue priority — "normal" or "urgent".
+        topic: Optional topic the participant wants to discuss.
+    """
+
+    event_type: ClassVar[str] = "turn.hand.raised"
+    meeting_id: UUID
+    participant_id: UUID
+    hand_raise_id: UUID
+    queue_position: int
+    priority: str = "normal"
+    topic: str | None = None
+
+
+class SpeakerChanged(BaseEvent):
+    """Emitted when the active speaker changes.
+
+    Attributes:
+        meeting_id: ID of the meeting.
+        previous_speaker_id: ID of the outgoing speaker (None if no previous speaker).
+        new_speaker_id: ID of the incoming speaker (None if queue is now empty).
+    """
+
+    event_type: ClassVar[str] = "turn.speaker.changed"
+    meeting_id: UUID
+    previous_speaker_id: UUID | None = None
+    new_speaker_id: UUID | None = None
+
+
+class QueueUpdated(BaseEvent):
+    """Emitted when the speaker queue order changes.
+
+    Attributes:
+        meeting_id: ID of the meeting.
+        active_speaker_id: Current active speaker (None if no one is speaking).
+        queue: Ordered list of queue entry dicts (position, participant_id, priority, topic).
+    """
+
+    event_type: ClassVar[str] = "turn.queue.updated"
+    meeting_id: UUID
+    active_speaker_id: UUID | None = None
+    queue: list[dict[str, Any]] = []
+
+
+class FinishedSpeaking(BaseEvent):
+    """Emitted when a participant finishes their speaking turn.
+
+    Attributes:
+        meeting_id: ID of the meeting.
+        participant_id: ID of the participant who finished speaking.
+    """
+
+    event_type: ClassVar[str] = "turn.speaker.finished"
+    meeting_id: UUID
+    participant_id: UUID
+
+
+class YourTurn(BaseEvent):
+    """Targeted notification sent to the participant who is next to speak.
+
+    Attributes:
+        meeting_id: ID of the meeting.
+        participant_id: ID of the participant whose turn it is.
+    """
+
+    event_type: ClassVar[str] = "turn.your_turn"
+    meeting_id: UUID
+    participant_id: UUID
+
+
 # Rebuild models to resolve forward references from __future__ annotations
 TranscriptSegmentFinal.model_rebuild()
 TaskCreated.model_rebuild()
@@ -227,3 +309,8 @@ AgentLeft.model_rebuild()
 ParticipantJoined.model_rebuild()
 ParticipantLeft.model_rebuild()
 AgentData.model_rebuild()
+HandRaised.model_rebuild()
+SpeakerChanged.model_rebuild()
+QueueUpdated.model_rebuild()
+FinishedSpeaking.model_rebuild()
+YourTurn.model_rebuild()
