@@ -353,6 +353,71 @@ convene-ai/
 
 ---
 
+### F2.5 — Turn Management System
+**Status**: Planned (April Release — Week 1)
+
+**Context**: Structured turn-taking so multiple agents and humans can coordinate who is speaking. Required for coherent multi-agent meetings.
+
+**Acceptance Criteria**:
+- [ ] TurnManager ABC in convene-core (`raise_turn`, `release_turn`, `get_queue`, `get_active_speaker`)
+- [ ] RedisTurnManager provider (ordered queue using Redis sorted sets, atomic operations)
+- [ ] Registered in provider registry
+- [ ] WebSocket events broadcast to all participants: `speaker.queue.updated`, `speaker.changed`
+- [ ] Auto-transition: configurable timeout advances speaker queue automatically
+- [ ] Unit tests + integration tests (Redis-backed)
+- [ ] **MCP tools**: `raise_hand`, `get_queue_status`, `mark_finished_speaking`, `cancel_hand_raise`, `get_speaking_status`
+
+**Technical Notes**:
+- Redis sorted set: score = timestamp of hand raise, member = participant_id
+- Atomic pop + notify on `mark_finished_speaking`
+- Queue position visible to all participants via WebSocket push
+- TurnManager injected into agent-gateway and MCP server via provider registry
+
+---
+
+### F2.6 — Meeting Chat
+**Status**: Planned (April Release — Week 1)
+
+**Context**: Text chat separate from the audio transcript. Agents and humans can send/read messages in real time. This gives agents a way to communicate without needing to speak.
+
+**Acceptance Criteria**:
+- [ ] ChatStore ABC in convene-core (`send_message`, `get_messages`, `subscribe`)
+- [ ] RedisChatStore provider (message persistence in Redis Streams + pub/sub delivery)
+- [ ] Registered in provider registry
+- [ ] WebSocket event delivery: `chat.message.received` broadcast to all participants
+- [ ] Chat history with pagination (up to last N messages on join)
+- [ ] Unit tests + integration tests (Redis-backed)
+- [ ] **MCP tools**: `send_chat_message`, `get_chat_messages`
+
+**Technical Notes**:
+- Store messages in Redis Stream (`meeting:{id}:chat`), TTL matches meeting lifetime + 24h
+- On participant join, deliver last 50 messages as history
+- Message schema: `{id, meeting_id, sender_id, sender_type, content, timestamp}`
+- ChatStore injected into agent-gateway and MCP server via provider registry
+
+---
+
+### F2.7 — Claude Code Channel Integration
+**Status**: Planned (April Release — Week 2)
+
+**Context**: Claude Code sessions (running in a terminal/IDE) connect to Convene meetings via a channel, giving them full meeting participation: turn management, chat, transcript access, and task tools — all through MCP.
+
+**Acceptance Criteria**:
+- [ ] Channel server endpoint for Claude Code session connections
+- [ ] Full participant access via channel: all 8 new turn + chat MCP tools, plus existing tools
+- [ ] Sender gating via agent API keys (same auth path as agent-gateway)
+- [ ] Integration with agent-gateway session management (session appears in participant list)
+- [ ] Packaged as Claude Code plugin / skill
+- [ ] Integration tests: Claude Code session connects, raises hand, sends chat, reads transcript
+
+**Technical Notes**:
+- Channel server is an adapter layer: accepts Claude Code connections, proxies to agent-gateway WebSocket
+- Same authentication as agent-gateway: Bearer token → API key lookup
+- Channel participant type: `agent` with `source: "claude-code"`
+- See `docs/integrations/CLAUDE_CODE_CHANNEL.md` for setup guide (to be written)
+
+---
+
 ## Phase 3 — Meeting Platform (WebRTC + Browser UI)
 
 > Goal: Build the web-based meeting platform. Browser participants join via WebRTC, see live collaboration surfaces, receive real-time task updates.
@@ -789,6 +854,29 @@ convene-ai/
 
 ---
 
+### F6.6 — Existing Meeting Platform Integration (Adoption Accelerator — Post-April)
+**Context**: Reach teams where they already meet. A Convene bot joins Zoom/Meet/Teams as a transcription participant and uses that moment to show the value of native Convene, gradually migrating teams. This is not the core product — it's an adoption funnel.
+
+**Strategy**: Start as a transcription/task bot → show value → invite team to try native Convene meeting → graduated adoption.
+
+**Acceptance Criteria**:
+- [ ] MeetingPlatformAdapter ABC (`join`, `leave`, `receive_audio`, `send_audio`, `get_participants`)
+- [ ] ZoomAdapter via Zoom Meeting SDK (bot joins call, receives audio, provides transcription + tasks)
+- [ ] GoogleMeetAdapter (browser automation or Google Meet API when available)
+- [ ] TeamsAdapter via Teams Bot Framework SDK
+- [ ] Dashboard prompt: "Join this meeting in Convene instead" for users with existing integrations
+- [ ] Migration flow: external meeting → Convene meeting (invite link generation)
+
+**Technical Notes**:
+- All adapters implement MeetingPlatformAdapter ABC and register in provider registry
+- Audio from external meetings is routed through the same STT pipeline as native meetings
+- Bot identity: "Convene (tasks)" as the bot name on external platforms
+- Zoom: requires Zoom Meeting SDK and app marketplace approval
+- Google Meet: limited API surface, browser automation (Playwright headless) as fallback until Meet API matures
+- Teams: Teams Bot Framework is well-documented and allows audio access
+
+---
+
 ## Phase 7 — Platform Hardening
 
 > Goal: Security, compliance, and operational maturity.
@@ -842,32 +930,36 @@ convene-ai/
 For a solo founder or small team building with Claude Code, the recommended implementation order is:
 
 1. **F1.6** — Complete task extraction (in progress)
-2. **F1.7** — Memory system (scaffolded)
-3. **F2.1** — Agent Gateway (core differentiator)
-4. **F2.2** — MCP Server
-5. **F2.3** — Agent SDK
-6. **F2.4** — Agent Auth
-7. **F4.1** — User Auth & Workspaces
-8. **F3.1** — LiveKit Integration
-9. **F3.2** — Meeting Web Client
-10. **F3.3** — Real-Time Collaboration Sidebar
-11. **F3.4** — Meeting Management
-12. **F4.2** — Billing & Subscriptions
-13. **F4.3** — Workspace Dashboard
-14. **F5.1** — TTS Integration
-15. **F5.2** — Standup Report Generation
-16. **F5.3** — Speaking Interaction Protocol
-17. **F5.4** — Real-Time Task Confirmation
-18. **F5.5** — Multi-Turn Dialogue Engine
-19. **F5.6** — Conflict & Dependency Detection
-20. **F5.7** — Meeting Facilitation
-21. **F6.1** — Agent Marketplace
-22. **F6.2** — Integrations (Linear, Jira, GitHub, Notion, Asana)
-23. **F6.3** — Analytics & Insights
-24. **F6.4** — Calendar Integration
-25. **F6.5** — Slack Integration
-26. **F7.1** — Security & Compliance
-27. **F7.2** — Infrastructure & Operations
+2. **F2.5** — Turn Management System *(April Release — Week 1)*
+3. **F2.6** — Meeting Chat *(April Release — Week 1)*
+4. **F2.1** — Agent Gateway multi-agent refactor *(April Release — Week 1)*
+5. **F2.2** — MCP Server turn + chat tools *(April Release — Week 2)*
+6. **F2.7** — Claude Code Channel Integration *(April Release — Week 2)*
+7. **F1.7** — Memory system (scaffolded)
+8. **F2.3** — Agent SDK
+9. **F2.4** — Agent Auth
+10. **F4.1** — User Auth & Workspaces
+11. **F3.1** — LiveKit Integration
+12. **F3.2** — Meeting Web Client
+13. **F3.3** — Real-Time Collaboration Sidebar
+14. **F3.4** — Meeting Management
+15. **F4.2** — Billing & Subscriptions
+16. **F4.3** — Workspace Dashboard
+17. **F5.1** — TTS Integration
+18. **F5.2** — Standup Report Generation
+19. **F5.3** — Speaking Interaction Protocol
+20. **F5.4** — Real-Time Task Confirmation
+21. **F5.5** — Multi-Turn Dialogue Engine
+22. **F5.6** — Conflict & Dependency Detection
+23. **F5.7** — Meeting Facilitation
+24. **F6.1** — Agent Marketplace
+25. **F6.2** — Integrations (Linear, Jira, GitHub, Notion, Asana)
+26. **F6.3** — Analytics & Insights
+27. **F6.4** — Calendar Integration
+28. **F6.5** — Slack Integration
+29. **F6.6** — Existing Meeting Platform Integration (Zoom, Meet, Teams)
+30. **F7.1** — Security & Compliance
+31. **F7.2** — Infrastructure & Operations
 
 **Phase 1 MVP (Core AI + Foundation)**: Items 1-2, ~2-3 weeks
 
@@ -881,13 +973,15 @@ For a solo founder or small team building with Claude Code, the recommended impl
 
 ## Key Milestones
 
-- **Week 2**: Task extraction and memory system working end-to-end
-- **Week 5**: Agent Gateway running, first external agent connected
-- **Week 8**: Web client in browser, WebRTC meetings working
-- **Week 10**: Multi-user auth and workspace isolation
-- **Week 12**: Basic billing and subscription management
-- **Week 14**: TTS and agent speech in meetings
-- **Week 20**: Agent marketplace and ecosystem integrations
+- **2026-03-28** (Week 1): Backend infra complete — participant registry, turn manager, chat store, multi-agent gateway
+- **2026-04-04** (Week 2): MCP tools wired, Claude Code channel live, frontend turn/chat UI shipped, example agents updated
+- **2026-04-10** (M_APRIL): All 4 multi-party E2E scenarios pass — **April launch**
+- **Week +2 post-launch**: Memory system + task extraction fully wired E2E
+- **Week +5 post-launch**: Web client in browser, WebRTC meetings working
+- **Week +8 post-launch**: Multi-user auth and workspace isolation
+- **Week +10 post-launch**: Basic billing and subscription management
+- **Week +14 post-launch**: TTS and agent speech in meetings
+- **Week +20 post-launch**: Agent marketplace, ecosystem integrations, platform adapters (Zoom/Meet/Teams)
 
 ---
 

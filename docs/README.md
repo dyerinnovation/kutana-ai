@@ -110,13 +110,19 @@ The original phone dial-in architecture (Twilio) remains functional as a fallbac
 
 ## Current Phase
 
-**Phase 1** — Core AI Pipeline (in progress). STT wired, Redis Streams consumer implemented. Next: transcript segment windowing, LLM extraction pipeline, task persistence.
+**Phase 1** — Core AI Pipeline (nearly complete). STT wired, Redis Streams consumer, segment windowing, task persistence, and event emission all done. One item remaining: wire LLM provider into the extraction pipeline.
 
-**Phase 2** — Agent Platform (partially complete). Agent Gateway M3 verified (2026-03-02) — 29 segments E2E, 58 gateway tests. Remaining: multi-agent support, agent registration & credentials, agent modality support (Voice-to-Voice, Speech-to-Text, Text-only).
+**Phase 2 / April Release Sprint** — The active sprint through April 10, 2026. Building full multi-agent participation: turn management, meeting chat, 8 new MCP tools, and Claude Code channel integration. Target: all 4 multi-party E2E scenarios passing at launch.
 
-**Agent connection pattern:** Claude Agent SDK → MCP Server → Agent Gateway (WebSocket).
+| Week | Dates | Focus |
+|------|-------|-------|
+| Week 1 | Mar 22–28 | Backend infra — participant registry, turn manager (ABC + Redis), chat store (ABC + Redis), multi-agent gateway |
+| Week 2 | Mar 29–Apr 4 | MCP tools, Claude Code channel, frontend turn/chat UI, example agents |
+| Week 3 | Apr 5–11 | E2E scenario testing, polish, docs, launch |
 
-**Next task:** Implement transcript segment windowing (3-5 min windows with overlap).
+**Agent connection pattern:** Claude Agent SDK → MCP Server (Bearer token) → Agent Gateway (WebSocket). Claude Code sessions also connect via channel server.
+
+**Next task (CoWork):** Complete LLM-powered task extraction pipeline (Phase 1), then Participant registry → Turn Management Infrastructure → Meeting Chat Infrastructure.
 
 ## Getting Started with Development
 
