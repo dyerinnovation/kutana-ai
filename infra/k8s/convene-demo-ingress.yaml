@@ -1,0 +1,216 @@
+# Convene AI demo ingress — routes convene.spark-b0f2.local to host processes
+# Services use manual Endpoints pointing to the DGX node IP (172.20.14.68)
+# Apply with: kubectl apply -f convene-demo-ingress.yaml
+
+---
+# ── Frontend (Vite dev server, port 5173) ────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: convene-frontend
+  namespace: convene
+spec:
+  ports:
+    - port: 5173
+      targetPort: 5173
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: convene-frontend
+  namespace: convene
+subsets:
+  - addresses:
+      - ip: 172.20.14.68
+    ports:
+      - port: 5173
+
+---
+# ── API server (FastAPI, port 8000) ──────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: convene-api
+  namespace: convene
+spec:
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: convene-api
+  namespace: convene
+subsets:
+  - addresses:
+      - ip: 172.20.14.68
+    ports:
+      - port: 8000
+
+---
+# ── Agent Gateway (FastAPI + WebSocket /agent/connect, port 8003) ─────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: convene-gateway
+  namespace: convene
+spec:
+  ports:
+    - port: 8003
+      targetPort: 8003
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: convene-gateway
+  namespace: convene
+subsets:
+  - addresses:
+      - ip: 172.20.14.68
+    ports:
+      - port: 8003
+
+---
+# ── MCP server (Streamable HTTP SSE, port 3001) ───────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: convene-mcp
+  namespace: convene
+spec:
+  ports:
+    - port: 3001
+      targetPort: 3001
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: convene-mcp
+  namespace: convene
+subsets:
+  - addresses:
+      - ip: 172.20.14.68
+    ports:
+      - port: 3001
+
+---
+# ── Audio service (FastAPI, port 8001) ────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: convene-audio
+  namespace: convene
+spec:
+  ports:
+    - port: 8001
+      targetPort: 8001
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: convene-audio
+  namespace: convene
+subsets:
+  - addresses:
+      - ip: 172.20.14.68
+    ports:
+      - port: 8001
+
+---
+# ── Main Ingress: frontend + API + gateway ────────────────────────────────────
+# Paths are forwarded unchanged (no rewrite) — backend services use these exact prefixes:
+#   /api/v1/*       → api-server:8000
+#   /agent/connect  → agent-gateway:8003  (WebSocket, AI agents)
+#   /human/connect  → agent-gateway:8003  (WebSocket, human browsers)
+#   /mcp            → mcp-server:3001     (MCP Streamable HTTP SSE)
+#   /               → vite frontend:5173  (catch-all, last)
+# TLS: self-signed cert in secret convene-tls (regenerate with deploy/gen-tls-cert.sh)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: convene-main
+  namespace: convene
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - convene.spark-b0f2.local
+      secretName: convene-tls
+  rules:
+    - host: convene.spark-b0f2.local
+      http:
+        paths:
+          - path: /api/
+            pathType: Prefix
+            backend:
+              service:
+                name: convene-api
+                port:
+                  number: 8000
+          - path: /agent/
+            pathType: Prefix
+            backend:
+              service:
+                name: convene-gateway
+                port:
+                  number: 8003
+          - path: /human/
+            pathType: Prefix
+            backend:
+              service:
+                name: convene-gateway
+                port:
+                  number: 8003
+          - path: /mcp
+            pathType: Prefix
+            backend:
+              service:
+                name: convene-mcp
+                port:
+                  number: 3001
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: convene-frontend
+                port:
+                  number: 5173
+
+---
+# ── Audio Ingress: /audio/ → audio-service root (strip prefix) ───────────────
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: convene-audio
+  namespace: convene
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - convene.spark-b0f2.local
+      secretName: convene-tls
+  rules:
+    - host: convene.spark-b0f2.local
+      http:
+        paths:
+          - path: /audio(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: convene-audio
+                port:
+                  number: 8001
