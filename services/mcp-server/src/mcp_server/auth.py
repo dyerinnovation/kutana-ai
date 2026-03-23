@@ -24,6 +24,7 @@ class MCPIdentity:
 
     user_id: UUID
     agent_config_id: UUID
+    name: str = "Agent"
     scopes: list[str] = field(default_factory=list)
 
 
@@ -106,8 +107,12 @@ def validate_mcp_token(
     if not isinstance(scopes, list):
         raise MCPAuthError("invalid_claim", "'scopes' must be a list")
 
+    # Extract optional agent name (falls back to "Agent" if not present)
+    name: str = payload.get("name", "Agent")
+
     return MCPIdentity(
         user_id=user_id,
         agent_config_id=agent_config_id,
+        name=name,
         scopes=scopes,
     )
