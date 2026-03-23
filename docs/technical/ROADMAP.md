@@ -398,23 +398,94 @@ convene-ai/
 ---
 
 ### F2.7 — Claude Code Channel Integration
-**Status**: Planned (April Release — Week 2)
+**Status**: Complete (April Release — Week 2)
 
 **Context**: Claude Code sessions (running in a terminal/IDE) connect to Convene meetings via a channel, giving them full meeting participation: turn management, chat, transcript access, and task tools — all through MCP.
 
-**Acceptance Criteria**:
-- [ ] Channel server endpoint for Claude Code session connections
-- [ ] Full participant access via channel: all 8 new turn + chat MCP tools, plus existing tools
-- [ ] Sender gating via agent API keys (same auth path as agent-gateway)
-- [ ] Integration with agent-gateway session management (session appears in participant list)
-- [ ] Packaged as Claude Code plugin / skill
-- [ ] Integration tests: Claude Code session connects, raises hand, sends chat, reads transcript
+**Completed**:
+- Channel server endpoint for Claude Code session connections (`source: "claude-code"` propagated)
+- Full participant access via channel: turn management, chat, transcript, task, channel tools
+- Sender gating via agent API keys (same auth path as agent-gateway)
+- Two-way data channel (`subscribe_channel`, `publish_to_channel`, `get_channel_messages`)
+- Buffered event polling (`get_meeting_events`) for poll-based MCP transport
+- Integration tests: subscribe flow, event buffering, source claim, channel routing
+
+**Pending** (April Release P0 additions):
+- [ ] `audio_capability` parameter on `convene_join_meeting` (`text_only`, `tts_enabled`, `voice_bidirectional`)
+- [ ] `convene_start_speaking` tool with TTS path for `tts_enabled` agents
+- [ ] `convene_` prefix standardization across all MCP tools
+- [ ] Developer onboarding guide: `docs/integrations/CLAUDE_CODE_CHANNEL.md`
 
 **Technical Notes**:
 - Channel server is an adapter layer: accepts Claude Code connections, proxies to agent-gateway WebSocket
 - Same authentication as agent-gateway: Bearer token → API key lookup
 - Channel participant type: `agent` with `source: "claude-code"`
+- See `docs/research/channel-plugin.md` for full architecture and tool reference
 - See `docs/integrations/CLAUDE_CODE_CHANNEL.md` for setup guide (to be written)
+
+---
+
+### F2.9 — Agent Capability Declaration & Voice Pipeline (P0 — April Release)
+**Status**: Planned
+
+**Context**: Agents declare their audio mode on join. This drives gateway routing and enables three new participant classes: voice agents (bidirectional audio sidecar), TTS agents (text → synthesized speech), and voice-in agents (audio listener without speaking). These are the prerequisite for Phase 9 (Voice Output & Dialogue).
+
+**Acceptance Criteria**:
+- [ ] `audio_capability` parameter on `convene_join_meeting`: `text_only`, `voice_in`, `voice_out`, `voice_bidirectional`, `tts_enabled`
+- [ ] `tts_voice_id` optional parameter on `convene_join_meeting` for per-session voice override
+- [ ] `convene_start_speaking` MCP tool: text parameter (TTS agents), no text (voice agents), `wait_for_turn`, `priority`
+- [ ] Gateway audio sidecar endpoint: `/v1/audio/{session_id}` (PCM16 16kHz mono, 20ms frames)
+- [ ] Mixed-minus audio mixing: voice agents receive room audio minus their own stream
+- [ ] TTS Engine in gateway: text → TTSProvider → PCM16 → AudioRouter → room broadcast
+- [ ] TTS result cache in Redis (24h TTL, keyed by provider + voice + text hash)
+- [ ] Voice activity detection (VAD) filter on agent audio upstream to STT
+- [ ] Per-tier character limits (500/Free, 2000/Pro, 5000/Business)
+- [ ] Integration tests: TTS agent speaks, voice agent streams, mixed-minus verified
+
+**Technical Notes**:
+- See `docs/research/voice-agent-integration.md` for WebSocket sidecar protocol and PCM16 spec
+- See `docs/research/tts-text-agents.md` for TTSProvider ABC and provider comparison
+- Recommended TTS: Cartesia (lowest latency, PCM16 native); Piper for local dev
+- Audio sidecar is decoupled from MCP control plane to avoid head-of-line blocking
+- VAD: Silero VAD, threshold 0.5, 300ms min silence duration
+
+---
+
+### F2.10 — MCP Tool Prefix Standardization (P0 — April Release)
+**Status**: Planned
+
+**Context**: Bare tool names (e.g., `join_meeting`) conflict when multiple MCP servers are active in Claude Code or other clients. All Convene tools must use the `convene_` prefix.
+
+**Acceptance Criteria**:
+- [ ] All MCP tools renamed: `join_meeting` → `convene_join_meeting`, etc. (20 tools total)
+- [ ] OpenClaw plugin updated with new tool names
+- [ ] `examples/meeting-assistant-agent/` templates updated
+- [ ] All integration tests updated
+- [ ] `docs/research/channel-plugin.md` tool table is the canonical reference
+
+**Technical Notes**:
+- This is a breaking change for existing integrations — announce via CHANGELOG
+- Both old and new names can coexist during a 2-week deprecation window if needed
+- See `docs/research/channel-plugin.md` for the complete `convene_` tool table
+
+---
+
+### F2.11 — Developer Onboarding Documentation (P0 — April Release)
+**Status**: Planned
+
+**Context**: The April Release is a developer GTM event. Documentation quality is a first-class product feature — if developers can't get up and running in 10 minutes, the launch fails.
+
+**Acceptance Criteria**:
+- [ ] `docs/integrations/CLAUDE_CODE_CHANNEL.md` — end-to-end setup: API key → settings.json → first join → TTS
+- [ ] `docs/integrations/VOICE_AGENT_QUICKSTART.md` — sidecar protocol, PCM16 format, VAD, example code
+- [ ] `docs/integrations/TTS_AGENT_QUICKSTART.md` — tts_enabled capability, voice assignment, start_speaking
+- [ ] `examples/meeting-assistant-agent/` templates updated with new capability + tool names
+- [ ] Developer onboarding checklist added to `docs/SETUP_GUIDE.md`
+- [ ] All new docs cross-reference `docs/research/` for deeper technical context
+
+**Technical Notes**:
+- See `docs/research/channel-plugin.md` §Developer Onboarding Flow for the onboarding sequence
+- Target time-to-first-join: under 10 minutes from zero
 
 ---
 
