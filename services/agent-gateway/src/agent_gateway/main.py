@@ -26,6 +26,7 @@ import redis.asyncio as redis_async
 
 from agent_gateway.agent_session import AgentSessionHandler
 from agent_gateway.audio_bridge import AudioBridge
+from agent_gateway.audio_session import AudioSessionHandler
 from agent_gateway.auth import AuthError, validate_token
 from agent_gateway.chat_bridge import ChatBridge
 from agent_gateway.connection_manager import ConnectionManager
@@ -83,7 +84,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         expire_on_commit=False,
     )
 
-    _connection_manager = ConnectionManager(max_connections=_settings.max_connections)
+    _connection_manager = ConnectionManager(
+        max_connections=_settings.max_connections,
+        audio_vad_timeout_s=_settings.audio_vad_timeout_s,
+    )
     _redis_client = redis_async.from_url(_settings.redis_url, decode_responses=True)
     _connection_manager.redis = _redis_client
     _event_relay = EventRelay(
@@ -245,6 +249,8 @@ async def agent_connect(
         connection_manager=_connection_manager,
         audio_bridge=_audio_bridge,
         db_session_factory=_db_session_factory,
+        jwt_secret=_settings.jwt_secret,
+        gateway_url=_settings.gateway_url,
     )
     _connection_manager.register(session)
 
@@ -345,3 +351,104 @@ async def human_connect(
         logger.exception("Error in human session %s", session.session_id)
     finally:
         _connection_manager.unregister(session.session_id)
+
+
+# ---------------------------------------------------------------------------
+# Audio sidecar WebSocket endpoint
+# ---------------------------------------------------------------------------
+
+
+@app.websocket("/audio/connect")
+async def audio_connect(
+    websocket: WebSocket,
+    token: str = Query(..., description="Audio JWT token (from join_meeting response)"),
+    meeting_id: str = Query(..., description="UUID of the meeting to connect audio for"),
+    audio_format: str = Query("pcm16", description="Audio format: pcm16 (default) or opus"),
+) -> None:
+    """WebSocket endpoint for bidirectional agent audio streaming (voice sidecar).
+
+    This endpoint is the audio plane for voice-capable agents. The control plane
+    (MCP tools, turn management, chat) remains on /agent/connect.
+
+    Protocol:
+        Client → Server:
+            { type: "start_speaking" }
+            { type: "stop_speaking" }
+            { type: "audio_data", data: "<base64 PCM16>", timestamp: <ms> }
+            { type: "ping" }
+
+        Server → Client:
+            { type: "audio_session_joined", session_id, meeting_id, format }
+            { type: "mixed_audio", data: "<base64 PCM16>", speakers: [participant_id] }
+            { type: "speaker_changed", participant_id, action: "started"|"stopped" }
+            { type: "pong" }
+            { type: "error", code, message }
+
+    Args:
+        websocket: The incoming WebSocket connection.
+        token: Short-lived audio JWT obtained from the join_meeting Joined response.
+        meeting_id: UUID of the meeting (must match the meeting in the audio token).
+        audio_format: Negotiated audio format (pcm16 or opus; pcm16 is always supported).
+    """
+    if _settings is None or _connection_manager is None:
+        await websocket.accept()
+        await websocket.close(code=1011, reason="Service not initialized")
+        return
+
+    # Validate audio token
+    try:
+        identity = validate_token(
+            token,
+            _settings.jwt_secret,
+            _settings.jwt_algorithm,
+        )
+    except AuthError as e:
+        await websocket.accept()
+        await websocket.close(code=4001, reason=f"{e.code}: {e.message}")
+        return
+
+    # Parse and validate meeting_id
+    from uuid import UUID as _UUID
+
+    try:
+        parsed_meeting_id = _UUID(meeting_id)
+    except ValueError:
+        await websocket.accept()
+        await websocket.close(code=4003, reason="invalid_meeting_id: must be a valid UUID")
+        return
+
+    # Validate audio_format
+    if audio_format not in ("pcm16", "opus"):
+        await websocket.accept()
+        await websocket.close(code=4003, reason="invalid_format: supported formats are pcm16, opus")
+        return
+
+    await websocket.accept()
+
+    # Get or create the per-meeting AudioRouter
+    audio_router = _connection_manager.get_or_create_audio_router(parsed_meeting_id)
+
+    audio_session = AudioSessionHandler(
+        websocket=websocket,
+        identity=identity,
+        meeting_id=parsed_meeting_id,
+        audio_router=audio_router,
+        audio_format=audio_format,
+    )
+
+    logger.info(
+        "Audio session connecting: agent=%s, meeting=%s, format=%s",
+        identity.name,
+        parsed_meeting_id,
+        audio_format,
+    )
+
+    try:
+        await audio_session.handle()
+    except WebSocketDisconnect:
+        logger.info("Audio session %s disconnected normally", audio_session.session_id)
+    except Exception:
+        logger.exception("Error in audio session %s", audio_session.session_id)
+    finally:
+        # Clean up the router if it has no remaining sessions
+        await _connection_manager.cleanup_audio_router(parsed_meeting_id)

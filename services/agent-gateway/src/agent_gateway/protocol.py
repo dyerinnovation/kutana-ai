@@ -31,6 +31,9 @@ class Capability(enum.StrEnum):
     TRANSCRIBE = "transcribe"
     EXTRACT_TASKS = "extract_tasks"
     DATA_ONLY = "data_only"
+    # Voice capabilities — enable the /audio/connect sidecar
+    VOICE_IN = "voice_in"   # agent can send audio into the meeting
+    VOICE_OUT = "voice_out"  # agent can receive mixed audio from the meeting
 
 
 # ---------------------------------------------------------------------------
@@ -121,6 +124,9 @@ class Joined(BaseModel):
     room_name: str | None = None
     participants: list[dict[str, Any]] = Field(default_factory=list)
     granted_capabilities: list[str] = Field(default_factory=list)
+    # Audio sidecar — only present when voice_in or voice_out is granted.
+    audio_ws_url: str | None = None   # Full WebSocket URL including token + meeting_id
+    audio_token: str | None = None    # Short-lived JWT for /audio/connect
 
 
 class TranscriptMessage(BaseModel):

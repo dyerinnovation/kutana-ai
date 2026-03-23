@@ -8,6 +8,7 @@ from uuid import UUID
 
 if TYPE_CHECKING:
     from agent_gateway.agent_session import AgentSessionHandler
+    from agent_gateway.audio_router import AudioRouter
     from agent_gateway.chat_bridge import ChatBridge
     from agent_gateway.human_session import HumanSessionHandler
     from agent_gateway.turn_bridge import TurnBridge
@@ -54,19 +55,28 @@ class ConnectionManager:
     Attributes:
         _sessions: Map of session_id -> session handler.
         _meeting_sessions: Map of meeting_id -> set of session_ids.
+        _audio_routers: Map of meeting_id -> AudioRouter for the audio sidecar.
         _max_connections: Maximum allowed concurrent connections.
         redis: Optional Redis client for channel publishing.
+        _audio_vad_timeout_s: VAD silence timeout forwarded to new AudioRouters.
     """
 
-    def __init__(self, max_connections: int = 100) -> None:
+    def __init__(
+        self,
+        max_connections: int = 100,
+        audio_vad_timeout_s: int = 10,
+    ) -> None:
         """Initialise the connection manager.
 
         Args:
             max_connections: Maximum concurrent connections.
+            audio_vad_timeout_s: Silence seconds before VAD auto-stops a speaker.
         """
         self._sessions: dict[UUID, Any] = {}  # AgentSessionHandler | HumanSessionHandler
         self._meeting_sessions: dict[UUID, set[UUID]] = {}
+        self._audio_routers: dict[UUID, AudioRouter] = {}
         self._max_connections = max_connections
+        self._audio_vad_timeout_s = audio_vad_timeout_s
         self.redis: Any | None = None
         self.turn_bridge: TurnBridge | None = None
         self.chat_bridge: ChatBridge | None = None
@@ -179,3 +189,50 @@ class ConnectionManager:
     def get_all_sessions(self) -> list[Any]:
         """Return all active sessions."""
         return list(self._sessions.values())
+
+    # ------------------------------------------------------------------
+    # Audio router management
+    # ------------------------------------------------------------------
+
+    def get_or_create_audio_router(self, meeting_id: UUID) -> AudioRouter:
+        """Return the AudioRouter for a meeting, creating one if needed.
+
+        The router is started on first creation so its VAD monitor is running
+        before the first audio session connects.
+
+        Args:
+            meeting_id: The meeting to get or create a router for.
+
+        Returns:
+            The active AudioRouter for the meeting.
+        """
+        from agent_gateway.audio_router import AudioRouter
+
+        if meeting_id not in self._audio_routers:
+            router = AudioRouter(
+                meeting_id=meeting_id,
+                vad_timeout_s=self._audio_vad_timeout_s,
+            )
+            router.start()
+            self._audio_routers[meeting_id] = router
+            logger.info(
+                "AudioRouter created for meeting %s (vad_timeout=%ds)",
+                meeting_id,
+                self._audio_vad_timeout_s,
+            )
+        return self._audio_routers[meeting_id]
+
+    async def cleanup_audio_router(self, meeting_id: UUID) -> None:
+        """Stop and remove the AudioRouter for a meeting if it is empty.
+
+        Should be called after an audio session disconnects so idle routers
+        don't accumulate.
+
+        Args:
+            meeting_id: The meeting whose router to clean up.
+        """
+        router = self._audio_routers.get(meeting_id)
+        if router is not None and router.is_empty:
+            await router.stop()
+            del self._audio_routers[meeting_id]
+            logger.info("AudioRouter cleaned up for meeting %s", meeting_id)
