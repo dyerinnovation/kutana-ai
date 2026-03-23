@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from agent_gateway.agent_session import AgentSessionHandler
     from agent_gateway.chat_bridge import ChatBridge
     from agent_gateway.human_session import HumanSessionHandler
+    from agent_gateway.tts_bridge import TTSBridge
     from agent_gateway.turn_bridge import TurnBridge
 
 logger = logging.getLogger(__name__)
@@ -70,6 +71,7 @@ class ConnectionManager:
         self.redis: Any | None = None
         self.turn_bridge: TurnBridge | None = None
         self.chat_bridge: ChatBridge | None = None
+        self.tts_bridge: TTSBridge | None = None
 
     @property
     def active_count(self) -> int:

@@ -427,10 +427,18 @@
 
 - [x] Implement Cartesia TTS provider
 - [x] Implement ElevenLabs TTS provider
+- [x] Implement Piper TTS provider (self-hosted, zero cost, graceful ImportError fallback)
 
-- [ ] 🔗 BLOCK: TTS Pipeline
-  - [ ] Implement bidirectional audio pipeline (meeting → STT + TTS → meeting)
-  - [ ] Implement standup report generation (pre-meeting context assembly, LLM report)
+- [x] 🔗 BLOCK: TTS Pipeline (Phase 9A — text-only agents)
+  - [x] Extend TTSProvider ABC: synthesize_stream, synthesize_batch, list_voices, get_cost_per_char
+  - [x] Update CartesiaTTS, ElevenLabsTTS, PiperTTS to implement new ABC
+  - [x] TTSBridge: voice pool (distinct voices per agent), char budget (100K/session), phrase cache
+  - [x] Protocol: StartSpeaking, SpokenText, StopSpeaking messages; tts_enabled/tts_voice in JoinMeeting
+  - [x] Agent gateway: TTS mode activation, synthesis → broadcast tts.audio events to listeners
+  - [x] Settings: AGENT_GATEWAY_TTS_PROVIDER, TTS_CARTESIA_API_KEY, TTS_ELEVENLABS_API_KEY, TTS_CHAR_LIMIT
+  - [x] Provider selection by config (cartesia → elevenlabs → piper fallback)
+  - [ ] Full bidirectional audio pipeline (meeting → STT + TTS → meeting — Phase 9B)
+  - [ ] Standup report generation (pre-meeting context assembly, LLM report)
 
 - [ ] Implement speaking interaction protocol (cued speaking, silence detection, interruption handling, VAD)
 - [ ] Implement multi-turn dialogue engine (conversation state machine, context window)
