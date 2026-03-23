@@ -28,16 +28,19 @@ class Voice(BaseModel):
 class TTSProvider(ABC):
     """Abstract base class for text-to-speech providers.
 
-    Implementations must support streaming audio synthesis
-    and voice listing.
+    Implementations must support streaming and batch audio synthesis,
+    voice listing, and per-character cost reporting.
     """
 
     @abstractmethod
-    def synthesize(self, text: str) -> AsyncIterator[bytes]:
+    def synthesize_stream(
+        self, text: str, voice: str | None = None
+    ) -> AsyncIterator[bytes]:
         """Synthesize text into streaming audio chunks.
 
         Args:
             text: The text to synthesize into speech.
+            voice: Voice ID to use; falls back to the provider's default if None.
 
         Yields:
             Audio bytes in the provider's native format.
@@ -45,11 +48,39 @@ class TTSProvider(ABC):
         ...
 
     @abstractmethod
-    async def get_voices(self) -> list[Voice]:
+    async def synthesize_batch(self, text: str, voice: str | None = None) -> bytes:
+        """Synthesize text into a single audio bytes object.
+
+        Accumulates all chunks from the streaming synthesis into one
+        contiguous buffer. Suitable for short phrases and cache fills.
+
+        Args:
+            text: The text to synthesize into speech.
+            voice: Voice ID to use; falls back to the provider's default if None.
+
+        Returns:
+            Complete audio bytes in the provider's native format.
+        """
+        ...
+
+    @abstractmethod
+    async def list_voices(self) -> list[Voice]:
         """Retrieve the list of available voices.
 
         Returns:
             List of Voice objects supported by the provider.
+        """
+        ...
+
+    @abstractmethod
+    def get_cost_per_char(self) -> float:
+        """Return the approximate cost per character in USD.
+
+        Used by the TTS pipeline for tier-based provider selection
+        and usage cost estimation.
+
+        Returns:
+            Cost per character as a float (e.g., 0.000024 for $0.024/1K chars).
         """
         ...
 

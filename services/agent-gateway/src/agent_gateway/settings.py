@@ -20,6 +20,11 @@ class AgentGatewaySettings(BaseSettings):
         whisper_model_size: Whisper model size for local whisper.
         whisper_api_url: Remote Whisper API URL for whisper-remote.
         speaker_timeout_seconds: Seconds before auto-advancing speaker (default 300 / 5 min).
+        tts_provider: TTS provider to use (piper, cartesia, elevenlabs).
+        tts_cartesia_api_key: Cartesia API key (required when tts_provider=cartesia).
+        tts_elevenlabs_api_key: ElevenLabs API key (required when tts_provider=elevenlabs).
+        tts_char_limit: Per-agent character budget per session (default 100 K).
+        tts_default_voice: Default voice ID when the pool is exhausted or provider-specific.
     """
 
     database_url: str = "postgresql+asyncpg://convene:convene@localhost:5432/convene"
@@ -34,6 +39,12 @@ class AgentGatewaySettings(BaseSettings):
     whisper_model_size: str = "small"
     whisper_api_url: str = ""
     speaker_timeout_seconds: int = 300
+    # TTS settings
+    tts_provider: str = "piper"  # piper | cartesia | elevenlabs
+    tts_cartesia_api_key: str = ""
+    tts_elevenlabs_api_key: str = ""
+    tts_char_limit: int = 100_000
+    tts_default_voice: str = "en_US-lessac-medium"
 
     model_config = {
         "env_prefix": "AGENT_GATEWAY_",

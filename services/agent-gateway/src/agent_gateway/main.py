@@ -12,7 +12,7 @@ logging.basicConfig(
     format="%(levelname)s [%(name)s] %(message)s",
     stream=sys.stdout,
 )
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
@@ -50,6 +50,7 @@ _event_relay: EventRelay | None = None
 _audio_bridge: AudioBridge | None = None
 _turn_bridge: TurnBridge | None = None
 _chat_bridge: ChatBridge | None = None
+_tts_bridge: Any | None = None  # TTSBridge; imported lazily to avoid circular deps
 _db_session_factory: async_sessionmaker[AsyncSession] | None = None
 _redis_client: redis_async.Redis | None = None  # type: ignore[type-arg]
 
@@ -64,7 +65,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     Yields:
         Control back to the ASGI server while the app is running.
     """
-    global _settings, _connection_manager, _event_relay, _audio_bridge, _turn_bridge, _chat_bridge, _db_session_factory, _redis_client
+    global _settings, _connection_manager, _event_relay, _audio_bridge, _turn_bridge, _chat_bridge, _tts_bridge, _db_session_factory, _redis_client
 
     _settings = AgentGatewaySettings()
     logger.info(
@@ -125,6 +126,35 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     _connection_manager.chat_bridge = _chat_bridge
     _chat_bridge.start()
 
+    # Initialise TTSBridge (provider selection based on config)
+    from agent_gateway.tts_bridge import TTSBridge
+
+    _tts_provider_name = _settings.tts_provider.lower()
+    if _tts_provider_name == "cartesia" and _settings.tts_cartesia_api_key:
+        from convene_providers.tts.cartesia_tts import CartesiaTTS
+
+        _raw_tts_provider = CartesiaTTS(api_key=_settings.tts_cartesia_api_key)
+        logger.info("TTS provider: Cartesia")
+    elif _tts_provider_name == "elevenlabs" and _settings.tts_elevenlabs_api_key:
+        from convene_providers.tts.elevenlabs_tts import ElevenLabsTTS
+
+        _raw_tts_provider = ElevenLabsTTS(api_key=_settings.tts_elevenlabs_api_key)
+        logger.info("TTS provider: ElevenLabs")
+    else:
+        from convene_providers.tts.piper_tts import PiperTTS
+
+        _raw_tts_provider = PiperTTS(voice_name=_settings.tts_default_voice)
+        logger.info(
+            "TTS provider: Piper (available=%s)", getattr(_raw_tts_provider, "is_available", False)
+        )
+
+    _tts_bridge = TTSBridge(
+        tts_provider=_raw_tts_provider,
+        manager=_connection_manager,
+        char_limit=_settings.tts_char_limit,
+    )
+    _connection_manager.tts_bridge = _tts_bridge
+
     await _event_relay.start()
     logger.info("agent-gateway starting up (max_connections=%d)", _settings.max_connections)
 
@@ -137,6 +167,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if _turn_bridge is not None:
         await _turn_bridge.stop()
         _turn_bridge = None
+    if _tts_bridge is not None:
+        await _tts_bridge.close()
+        _tts_bridge = None
     if _audio_bridge is not None:
         await _audio_bridge.close()
         _audio_bridge = None
@@ -245,6 +278,7 @@ async def agent_connect(
         connection_manager=_connection_manager,
         audio_bridge=_audio_bridge,
         db_session_factory=_db_session_factory,
+        tts_bridge=_tts_bridge,
     )
     _connection_manager.register(session)
 
