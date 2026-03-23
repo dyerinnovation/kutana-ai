@@ -20,6 +20,11 @@ class AgentGatewaySettings(BaseSettings):
         whisper_model_size: Whisper model size for local whisper.
         whisper_api_url: Remote Whisper API URL for whisper-remote.
         speaker_timeout_seconds: Seconds before auto-advancing speaker (default 300 / 5 min).
+        audio_vad_timeout_s: Silence seconds before the VAD monitor auto-stops a speaker
+            on the audio sidecar (default 10 s).
+        gateway_url: Base WebSocket URL of this gateway, used to build the audio_ws_url
+            returned in join responses (e.g. ``ws://localhost:8003`` or
+            ``wss://gateway.example.com``).
     """
 
     database_url: str = "postgresql+asyncpg://convene:convene@localhost:5432/convene"
@@ -34,6 +39,11 @@ class AgentGatewaySettings(BaseSettings):
     whisper_model_size: str = "small"
     whisper_api_url: str = ""
     speaker_timeout_seconds: int = 300
+    # Audio sidecar settings
+    audio_vad_timeout_s: int = 10  # Silence seconds before auto-stopping a speaker
+    # Base WebSocket URL of this gateway, used to build audio_ws_url in join responses.
+    # Override with AGENT_GATEWAY_GATEWAY_URL in production (e.g. wss://gateway.example.com).
+    gateway_url: str = "ws://localhost:8003"
 
     model_config = {
         "env_prefix": "AGENT_GATEWAY_",
