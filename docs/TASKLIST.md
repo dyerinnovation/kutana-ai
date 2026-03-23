@@ -213,6 +213,42 @@
 
 ---
 
+## Post-April: Scheduled Agent Participation (F2.9)
+
+> Autonomous agent joining recurring meetings on behalf of a user. Built on the existing MCP tool suite — no new protocol required.
+>
+> **Prerequisite:** April Release Sprint complete (MCP tools, turn management, chat, security).
+> **Research doc:** `docs/research/scheduled-agent-participation.md`
+
+- [ ] 🔗 BLOCK: F2.9-A — Observer Mode (MVP)
+  - [ ] Implement `MeetingObserver` agent template in `examples/` — joins via `join_meeting`, listens to full transcript, calls `leave_meeting` on meeting end
+  - [ ] Implement post-meeting summary prompt chain (transcript → structured summary via Claude Sonnet: participants, decisions, action items)
+  - [ ] Implement summary delivery: post structured summary to meeting chat + return in scheduled task result
+  - [ ] Write scheduled task definition for observer mode (CoWork `create_scheduled_task` pattern)
+  - [ ] Write observer mode docs and example (`docs/integrations/SCHEDULED_AGENT.md`)
+  - [ ] Integration tests: scheduled task joins meeting, transcript captured, summary produced
+  - [ ] **🏁 Milestone M_OBSERVER: Scheduled task joins meeting, completes observe-and-summarize cycle, produces well-structured summary**
+
+- [ ] 🔗 BLOCK: F2.9-B — Reporter Mode
+  - [ ] Implement periodic heartbeat loop in agent (configurable N-minute intervals)
+  - [ ] Add `send_chat_message` calls with live extraction status updates ("Tracking: N action items. Current speaker: [name].")
+  - [ ] Task confirmation flow: post proposed task to chat → wait for participant reaction → confirm via `create_task`
+
+- [ ] 🔗 BLOCK: F2.9-C — Active Mode
+  - [ ] Implement ambiguity detector in extraction pipeline: flag commitments with missing owner or due date
+  - [ ] Turn management integration: `raise_hand` → wait for active-speaker turn → speak clarifying question via TTS
+  - [ ] Chat-based Q&A handler: parse `@agent` mentions in chat, generate and post responses
+  - [ ] Extend `create_task` usage: agent creates tasks in real-time based on confirmed commitments
+
+- [ ] 🔗 BLOCK: F2.9-D — Delegate Mode
+  - [ ] Pre-meeting context assembly: fetch user's open tasks, meeting context, and optional user-provided briefing doc
+  - [ ] Commitment acceptance: agent can accept action items on user's behalf with explicit chat confirmation
+  - [ ] Conflict detection: compare new commitments against user's open task list; flag over-allocation
+  - [ ] Post-meeting task-list update: sync accepted commitments back to user's task store
+  - [ ] User notification: email/Slack summary with accepted commitments and flagged conflicts
+
+---
+
 ## Phase 3: Meeting Intelligence & Agent Integration
 
 > Portable messaging layer, real-time meeting insights, and Claude Code channel integration.

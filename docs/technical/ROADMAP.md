@@ -443,6 +443,46 @@ convene-ai/
 
 ---
 
+### F2.9 — Scheduled Agent Participation
+**Status**: Planned (post-April Release)
+
+**Context**: Users configure a scheduled task that has their AI agent automatically join recurring meetings, participate on their behalf, and report back. The agent is a first-class meeting participant — the user doesn't need to attend. Autonomy levels range from silent observer (just listen and summarize) to full delegate (make decisions, commit to action items). Built entirely on the existing Convene MCP tool suite; no new protocol is needed — scheduling is a behavior layer on top of existing tools.
+
+See `docs/research/scheduled-agent-participation.md` for full use-case research, tool mapping, and implementation phases.
+
+**Acceptance Criteria**:
+- [ ] Scheduled task can join a meeting via `join_meeting` MCP tool at a configured time
+- [ ] **Observer mode**: agent listens to full meeting without interacting, produces structured post-meeting summary (participants, decisions, action items)
+- [ ] **Reporter mode**: agent posts periodic live status updates to meeting chat; confirms extracted tasks with participants
+- [ ] **Active mode**: agent asks clarifying questions via chat or voice (raise hand → wait for turn → speak); resolves ambiguous task assignments (missing owner/due date)
+- [ ] **Delegate mode**: agent reads pre-meeting briefing (user's open tasks, meeting context), accepts action items on user's behalf, flags scheduling conflicts, posts post-meeting task-list update
+- [ ] Post-meeting summary delivered to configured channel (meeting chat, Slack, email)
+- [ ] Milestone: scheduled task joins meeting, completes full observe-and-summarize cycle, produces well-structured meeting summary
+
+**Autonomy Level Summary**:
+
+| Level | Name | Interacts? | Accepts Commitments? | Pre-Meeting Briefing? |
+|-------|------|------------|---------------------|----------------------|
+| 0 | Observer | No | No | No |
+| 1 | Reporter | Chat only (status posts) | No | No |
+| 2 | Active | Chat + voice (Q&A) | No | No |
+| 3 | Delegate | Full participation | Yes | Yes |
+
+**MCP Tools Used**:
+- All levels: `join_meeting`, `get_transcript`, `get_meeting_status`, `get_tasks`, `leave_meeting`
+- Reporter+: `send_chat_message`, `get_chat_messages`
+- Active+: `get_queue_status`, `raise_hand`, `mark_finished_speaking`, `create_task`
+- Delegate only: `get_meeting_context` (pre-meeting), task-list update (post-meeting)
+
+**Technical Notes**:
+- Scheduling integration: uses CoWork `create_scheduled_task` / `anthropic-skills:schedule` skill with a recurring trigger matching the meeting cadence
+- Meeting ID resolution: Phase A uses static meeting IDs (user provides); dynamic calendar-driven resolution requires Phase 10 calendar sync
+- Agent identity: agent joins as "[User]'s Agent" — participant list shows it clearly; consent is platform-enforced on join
+- Failure handling: reconnect up to 3× with exponential backoff; on persistent failure, post disconnect notice to chat and continue from transcript checkpoint on reconnect
+- Implementation order: Observer (Phase A) → Reporter (Phase B) → Active (Phase C) → Delegate (Phase D)
+
+---
+
 ## Phase 3 — Meeting Platform (WebRTC + Browser UI)
 
 > Goal: Build the web-based meeting platform. Browser participants join via WebRTC, see live collaboration surfaces, receive real-time task updates.
