@@ -12,9 +12,12 @@ from __future__ import annotations
 import json
 import logging
 from typing import Any
+from uuid import UUID
 
+import redis.asyncio as aioredis
 from mcp.server.fastmcp import FastMCP
 
+from convene_providers.turn_management.redis_turn_manager import RedisTurnManager
 from mcp_server.api_client import ApiClient
 from mcp_server.auth import MCPAuthError, MCPIdentity, validate_mcp_token
 from mcp_server.gateway_client import GatewayClient
@@ -43,6 +46,16 @@ mcp = FastMCP(
 _api_client: ApiClient | None = None
 _gateway_client: GatewayClient | None = None
 _mcp_identity: MCPIdentity | None = None
+_turn_manager: RedisTurnManager | None = None
+
+
+def _get_turn_manager() -> RedisTurnManager:
+    """Get or create the TurnManager singleton."""
+    global _turn_manager
+    if _turn_manager is None:
+        redis_client = aioredis.from_url(settings.redis_url)
+        _turn_manager = RedisTurnManager(redis_client)
+    return _turn_manager
 
 
 def _get_api_client() -> ApiClient:
@@ -424,6 +437,185 @@ async def publish_to_channel(channel: str, payload: dict[str, Any]) -> str:
 
     await _gateway_client.publish_to_channel(channel, payload)
     return json.dumps({"status": "published", "channel": channel})
+
+
+# ---------------------------------------------------------------------------
+# Turn Management Tools
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+async def raise_hand(
+    meeting_id: str,
+    priority: str = "normal",
+    topic: str | None = None,
+) -> str:
+    """Raise your hand to request a turn to speak in a meeting.
+
+    Adds you to the speaker queue. If no one is currently speaking,
+    you are immediately promoted to active speaker.
+
+    Args:
+        meeting_id: UUID of the meeting.
+        priority: Queue priority — "normal" (FIFO) or "urgent" (front of queue).
+        topic: Optional short description of what you want to discuss.
+
+    Returns:
+        JSON with queue_position, hand_raise_id, estimated_wait, current_speaker.
+        queue_position=0 means you were immediately promoted to active speaker.
+    """
+    identity = await _ensure_authenticated()
+    tm = _get_turn_manager()
+    mid = UUID(meeting_id)
+    pid = identity.agent_config_id
+
+    result = await tm.raise_hand(mid, pid, priority=priority, topic=topic)
+    current_speaker_id = await tm.get_active_speaker(mid)
+
+    return json.dumps({
+        "queue_position": result.queue_position,
+        "hand_raise_id": str(result.hand_raise_id),
+        "estimated_wait": None,
+        "current_speaker": str(current_speaker_id) if current_speaker_id else None,
+    })
+
+
+@mcp.tool()
+async def get_queue_status(meeting_id: str) -> str:
+    """Get the current speaker queue status for a meeting.
+
+    Shows who is currently speaking, who is waiting, and your position.
+
+    Args:
+        meeting_id: UUID of the meeting.
+
+    Returns:
+        JSON with current_speaker, ordered queue entries with positions,
+        your_position (null if not in queue), and total_in_queue.
+    """
+    identity = await _ensure_authenticated()
+    tm = _get_turn_manager()
+    mid = UUID(meeting_id)
+    pid = identity.agent_config_id
+
+    status = await tm.get_queue_status(mid)
+
+    your_position: int | None = None
+    for entry in status.queue:
+        if entry.participant_id == pid:
+            your_position = entry.position
+            break
+
+    return json.dumps({
+        "current_speaker": str(status.active_speaker_id) if status.active_speaker_id else None,
+        "queue": [
+            {
+                "position": e.position,
+                "participant_id": str(e.participant_id),
+                "priority": e.priority.value,
+                "topic": e.topic,
+                "raised_at": e.raised_at.isoformat(),
+            }
+            for e in status.queue
+        ],
+        "your_position": your_position,
+        "total_in_queue": len(status.queue),
+    })
+
+
+@mcp.tool()
+async def mark_finished_speaking(meeting_id: str) -> str:
+    """Signal that you have finished speaking, advancing the queue.
+
+    Removes you as the active speaker and promotes the next participant
+    in the queue. If the queue is empty, the floor becomes open.
+
+    This is a no-op if you are not the current active speaker.
+
+    Args:
+        meeting_id: UUID of the meeting.
+
+    Returns:
+        JSON with status, next_speaker (UUID or null), and queue_remaining count.
+    """
+    identity = await _ensure_authenticated()
+    tm = _get_turn_manager()
+    mid = UUID(meeting_id)
+    pid = identity.agent_config_id
+
+    next_speaker_id = await tm.mark_finished_speaking(mid, pid)
+    queue_status = await tm.get_queue_status(mid)
+
+    return json.dumps({
+        "status": "finished",
+        "next_speaker": str(next_speaker_id) if next_speaker_id else None,
+        "queue_remaining": len(queue_status.queue),
+    })
+
+
+@mcp.tool()
+async def cancel_hand_raise(
+    meeting_id: str,
+    hand_raise_id: str | None = None,
+) -> str:
+    """Withdraw from the speaker queue (lower your hand).
+
+    Removes you from the queue. If hand_raise_id is provided, cancels
+    that specific hand raise; otherwise cancels your current hand raise.
+
+    Args:
+        meeting_id: UUID of the meeting.
+        hand_raise_id: Specific hand raise UUID to cancel (optional).
+
+    Returns:
+        JSON with status ("cancelled" or "not_in_queue") and was_position.
+    """
+    identity = await _ensure_authenticated()
+    tm = _get_turn_manager()
+    mid = UUID(meeting_id)
+    pid = identity.agent_config_id
+
+    speaking_status = await tm.get_speaking_status(mid, pid)
+    was_position = speaking_status.queue_position
+
+    hrid: UUID | None = UUID(hand_raise_id) if hand_raise_id else None
+    removed = await tm.cancel_hand_raise(mid, pid, hrid)
+
+    return json.dumps({
+        "status": "cancelled" if removed else "not_in_queue",
+        "was_position": was_position,
+    })
+
+
+@mcp.tool()
+async def get_speaking_status(meeting_id: str) -> str:
+    """Check your current speaking status in a meeting.
+
+    Returns whether you are the active speaker, in the queue,
+    and who is currently speaking.
+
+    Args:
+        meeting_id: UUID of the meeting.
+
+    Returns:
+        JSON with is_speaking, is_in_queue, queue_position, current_speaker,
+        and meeting_phase.
+    """
+    identity = await _ensure_authenticated()
+    tm = _get_turn_manager()
+    mid = UUID(meeting_id)
+    pid = identity.agent_config_id
+
+    status = await tm.get_speaking_status(mid, pid)
+    current_speaker_id = await tm.get_active_speaker(mid)
+
+    return json.dumps({
+        "is_speaking": status.is_speaking,
+        "is_in_queue": status.in_queue,
+        "queue_position": status.queue_position,
+        "current_speaker": str(current_speaker_id) if current_speaker_id else None,
+        "meeting_phase": "active",
+    })
 
 
 # ---------------------------------------------------------------------------
