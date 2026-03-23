@@ -23,6 +23,7 @@ from agent_gateway.connection_manager import ConnectionManager
 from agent_gateway.event_relay import EventRelay
 from agent_gateway.human_session import HumanSessionHandler
 from agent_gateway.settings import AgentGatewaySettings
+from agent_gateway.turn_bridge import TurnBridge
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -38,6 +39,7 @@ _settings: AgentGatewaySettings | None = None
 _connection_manager: ConnectionManager | None = None
 _event_relay: EventRelay | None = None
 _audio_bridge: AudioBridge | None = None
+_turn_bridge: TurnBridge | None = None
 _db_session_factory: async_sessionmaker[AsyncSession] | None = None
 _redis_client: redis_async.Redis | None = None  # type: ignore[type-arg]
 
@@ -52,7 +54,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     Yields:
         Control back to the ASGI server while the app is running.
     """
-    global _settings, _connection_manager, _event_relay, _audio_bridge, _db_session_factory, _redis_client
+    global _settings, _connection_manager, _event_relay, _audio_bridge, _turn_bridge, _db_session_factory, _redis_client
 
     _settings = AgentGatewaySettings()
     logger.info(
@@ -86,12 +88,30 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         whisper_api_url=_settings.whisper_api_url,
     )
 
+    # Initialise TurnBridge (Redis-backed turn management)
+    from convene_providers.turn_management.redis_turn_manager import RedisTurnManager
+
+    _turn_manager = RedisTurnManager(
+        redis_url=_settings.redis_url,
+        speaker_timeout_seconds=_settings.speaker_timeout_seconds,
+    )
+    _turn_bridge = TurnBridge(
+        turn_manager=_turn_manager,
+        manager=_connection_manager,
+        speaker_timeout_seconds=_settings.speaker_timeout_seconds,
+    )
+    _connection_manager.turn_bridge = _turn_bridge
+    _turn_bridge.start()
+
     await _event_relay.start()
     logger.info("agent-gateway starting up (max_connections=%d)", _settings.max_connections)
 
     yield
 
     logger.info("agent-gateway shutting down")
+    if _turn_bridge is not None:
+        await _turn_bridge.stop()
+        _turn_bridge = None
     if _audio_bridge is not None:
         await _audio_bridge.close()
         _audio_bridge = None

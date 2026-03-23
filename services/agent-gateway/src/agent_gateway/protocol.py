@@ -1,11 +1,13 @@
 """WebSocket protocol message schemas for the agent gateway.
 
 Client -> Server messages:
-    JoinMeeting, AudioData, DataMessage, LeaveMeeting
+    JoinMeeting, AudioData, DataMessage, LeaveMeeting,
+    RaiseHand, LowerHand, FinishedSpeaking, GetQueue
 
 Server -> Client messages:
     Joined, TranscriptMessage, AudioMessage, EventMessage,
-    ParticipantUpdate, ErrorMessage
+    ParticipantUpdate, ErrorMessage,
+    TurnQueueUpdated, TurnSpeakerChanged, TurnYourTurn
 """
 
 from __future__ import annotations
@@ -65,6 +67,33 @@ class LeaveMeeting(BaseModel):
 
     type: Literal["leave_meeting"] = "leave_meeting"
     reason: str = "normal"
+
+
+class RaiseHand(BaseModel):
+    """Request to join the speaking queue."""
+
+    type: Literal["raise_hand"] = "raise_hand"
+    priority: str = "normal"
+    topic: str | None = None
+
+
+class LowerHand(BaseModel):
+    """Request to leave the speaking queue."""
+
+    type: Literal["lower_hand"] = "lower_hand"
+    hand_raise_id: str | None = None
+
+
+class FinishedSpeaking(BaseModel):
+    """Signal that the active speaker has finished their turn."""
+
+    type: Literal["finished_speaking"] = "finished_speaking"
+
+
+class GetQueue(BaseModel):
+    """Request the current queue status."""
+
+    type: Literal["get_queue"] = "get_queue"
 
 
 # ---------------------------------------------------------------------------
@@ -131,6 +160,31 @@ class ErrorMessage(BaseModel):
     details: dict[str, Any] | None = None
 
 
+class TurnQueueUpdated(BaseModel):
+    """Broadcast when the speaker queue changes."""
+
+    type: Literal["turn_queue_updated"] = "turn_queue_updated"
+    meeting_id: UUID
+    active_speaker_id: UUID | None = None
+    queue: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class TurnSpeakerChanged(BaseModel):
+    """Broadcast when the active speaker changes."""
+
+    type: Literal["turn_speaker_changed"] = "turn_speaker_changed"
+    meeting_id: UUID
+    previous_speaker_id: UUID | None = None
+    new_speaker_id: UUID | None = None
+
+
+class TurnYourTurn(BaseModel):
+    """Targeted notification sent to the participant who is next to speak."""
+
+    type: Literal["turn_your_turn"] = "turn_your_turn"
+    meeting_id: UUID
+
+
 # ---------------------------------------------------------------------------
 # Message type unions for parsing
 # ---------------------------------------------------------------------------
@@ -140,6 +194,10 @@ CLIENT_MESSAGE_TYPES = {
     "audio_data": AudioData,
     "data": DataMessage,
     "leave_meeting": LeaveMeeting,
+    "raise_hand": RaiseHand,
+    "lower_hand": LowerHand,
+    "finished_speaking": FinishedSpeaking,
+    "get_queue": GetQueue,
 }
 
 SERVER_MESSAGE_TYPES = {
@@ -149,6 +207,9 @@ SERVER_MESSAGE_TYPES = {
     "event": EventMessage,
     "participant_update": ParticipantUpdate,
     "error": ErrorMessage,
+    "turn_queue_updated": TurnQueueUpdated,
+    "turn_speaker_changed": TurnSpeakerChanged,
+    "turn_your_turn": TurnYourTurn,
 }
 
 

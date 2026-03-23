@@ -20,8 +20,12 @@ from agent_gateway.protocol import (
     AudioData,
     ErrorMessage,
     EventMessage,
+    FinishedSpeaking,
+    GetQueue,
     Joined,
+    LowerHand,
     ParticipantUpdate,
+    RaiseHand,
     TranscriptMessage,
 )
 
@@ -125,7 +129,8 @@ class HumanSessionHandler:
     async def _dispatch(self, data: dict[str, Any]) -> None:
         """Route an incoming message to the appropriate handler.
 
-        Humans can send: audio_data, leave_meeting.
+        Humans can send: audio_data, leave_meeting, raise_hand,
+        lower_hand, finished_speaking, get_queue.
         All other message types are silently ignored.
 
         Args:
@@ -140,6 +145,14 @@ class HumanSessionHandler:
                 await self._send_error("invalid_message", "Invalid audio_data message")
         elif msg_type == "leave_meeting":
             await self._handle_leave()
+        elif msg_type == "raise_hand":
+            await self._handle_raise_hand(RaiseHand.model_validate(data))
+        elif msg_type == "lower_hand":
+            await self._handle_lower_hand(LowerHand.model_validate(data))
+        elif msg_type == "finished_speaking":
+            await self._handle_finished_speaking(FinishedSpeaking.model_validate(data))
+        elif msg_type == "get_queue":
+            await self._handle_get_queue(GetQueue.model_validate(data))
 
     async def _handle_audio(self, msg: AudioData) -> None:
         """Forward PCM16 audio from the browser to the STT pipeline.
@@ -166,6 +179,67 @@ class HumanSessionHandler:
         """Handle a voluntary leave from the browser."""
         await self._leave_and_notify("voluntary")
         logger.info("Human %s left meeting %s", self.agent_name, self.meeting_id)
+
+    async def _handle_raise_hand(self, msg: RaiseHand) -> None:
+        """Handle a raise_hand request.
+
+        Args:
+            msg: The raise_hand message.
+        """
+        if self._manager.turn_bridge is None:
+            await self._send_error("turn_unavailable", "Turn management is not available")
+            return
+        participant_id = self._identity.agent_config_id
+        await self._manager.turn_bridge.handle_raise_hand(
+            self.meeting_id,
+            participant_id,
+            priority=msg.priority,
+            topic=msg.topic,
+        )
+
+    async def _handle_lower_hand(self, msg: LowerHand) -> None:
+        """Handle a lower_hand request.
+
+        Args:
+            msg: The lower_hand message.
+        """
+        if self._manager.turn_bridge is None:
+            return
+        from uuid import UUID as _UUID
+
+        participant_id = self._identity.agent_config_id
+        hand_raise_id = _UUID(msg.hand_raise_id) if msg.hand_raise_id else None
+        await self._manager.turn_bridge.handle_lower_hand(
+            self.meeting_id,
+            participant_id,
+            hand_raise_id=hand_raise_id,
+        )
+
+    async def _handle_finished_speaking(self, msg: FinishedSpeaking) -> None:
+        """Handle a finished_speaking request.
+
+        Args:
+            msg: The finished_speaking message.
+        """
+        if self._manager.turn_bridge is None:
+            return
+        participant_id = self._identity.agent_config_id
+        await self._manager.turn_bridge.handle_finished_speaking(
+            self.meeting_id,
+            participant_id,
+        )
+
+    async def _handle_get_queue(self, msg: GetQueue) -> None:
+        """Handle a get_queue request (responds to requester only).
+
+        Args:
+            msg: The get_queue message.
+        """
+        if self._manager.turn_bridge is None:
+            payload = {"meeting_id": str(self.meeting_id), "active_speaker_id": None, "queue": []}
+        else:
+            payload = await self._manager.turn_bridge.get_queue_payload(self.meeting_id)
+        await self.send_event("turn.queue.updated", payload)
 
     # ------------------------------------------------------------------
     # Outbound delivery — called by EventRelay (same interface as AgentSessionHandler)

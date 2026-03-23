@@ -9,6 +9,7 @@ from uuid import UUID
 if TYPE_CHECKING:
     from agent_gateway.agent_session import AgentSessionHandler
     from agent_gateway.human_session import HumanSessionHandler
+    from agent_gateway.turn_bridge import TurnBridge
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +67,7 @@ class ConnectionManager:
         self._meeting_sessions: dict[UUID, set[UUID]] = {}
         self._max_connections = max_connections
         self.redis: Any | None = None
+        self.turn_bridge: TurnBridge | None = None
 
     @property
     def active_count(self) -> int:
