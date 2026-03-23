@@ -2,15 +2,19 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install uv for fast dependency management
+# Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Copy only the mcp-server package (no workspace needed)
-COPY services/mcp-server/pyproject.toml ./pyproject.toml
-COPY services/mcp-server/src/ ./src/
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    PATH="/app/.venv/bin:$PATH"
 
-# Install dependencies
-RUN uv pip install --system --no-cache .
+# Copy entire monorepo (uv workspace requires all member pyproject.toml files)
+COPY . .
+
+# Install all workspace packages from lockfile (no dev deps)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --all-packages --no-dev --frozen
 
 EXPOSE 3001
 
