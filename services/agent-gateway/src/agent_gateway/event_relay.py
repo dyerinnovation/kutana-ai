@@ -137,7 +137,8 @@ class EventRelay:
         if meeting_id is not None:
             sessions = self._manager.get_meeting_sessions(meeting_id)
             for session in sessions:
-                if self._should_relay(event_type, session.capabilities):
+                subscribed = getattr(session, "subscribed_channels", None)
+                if self._should_relay(event_type, session.capabilities, subscribed_channels=subscribed):
                     try:
                         if event_type == "transcript.segment.final":
                             segment = payload.get("segment", {})

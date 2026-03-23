@@ -449,6 +449,56 @@ async def publish_to_channel(channel: str, payload: dict[str, Any]) -> str:
     return json.dumps({"status": "published", "channel": channel})
 
 
+@mcp.tool()
+async def get_channel_messages(channel: str, last_n: int = 50) -> str:
+    """Get buffered messages received on a data channel.
+
+    Returns messages that arrived on the channel since you subscribed.
+    Call subscribe_channel(channel) first to start receiving messages.
+
+    Args:
+        channel: Channel name to read from.
+        last_n: Maximum number of recent messages to return (default 50).
+
+    Returns:
+        JSON array of channel message payloads in order received.
+    """
+    if _gateway_client is None or _gateway_client.meeting_id is None:
+        return json.dumps({"error": "Not in a meeting. Call join_meeting() first."})
+
+    messages = _gateway_client.get_channel_messages(channel, last_n=last_n)
+    return json.dumps(messages, indent=2, default=str)
+
+
+@mcp.tool()
+async def get_meeting_events(last_n: int = 50, event_type: str | None = None) -> str:
+    """Get recent meeting events pushed by the gateway WebSocket connection.
+
+    Returns real-time events buffered since you joined: turn queue changes,
+    speaker transitions, participant joins/leaves, and chat messages.
+
+    These events are pushed by the gateway as they happen — this tool lets
+    you poll the buffer to see what has occurred since you last checked.
+
+    Args:
+        last_n: Maximum number of recent events to return (default 50).
+        event_type: Optional filter. One of:
+                    "turn_queue_updated" — speaker queue changed,
+                    "turn_speaker_changed" — active speaker changed,
+                    "turn_your_turn" — it is now your turn to speak,
+                    "participant_update" — someone joined or left,
+                    "chat_message" — a chat message was sent.
+
+    Returns:
+        JSON array of event objects in order received.
+    """
+    if _gateway_client is None or _gateway_client.meeting_id is None:
+        return json.dumps({"error": "Not in a meeting. Call join_meeting() first."})
+
+    events = _gateway_client.get_events(last_n=last_n, event_type=event_type)
+    return json.dumps(events, indent=2, default=str)
+
+
 # ---------------------------------------------------------------------------
 # Turn Management Tools
 # ---------------------------------------------------------------------------

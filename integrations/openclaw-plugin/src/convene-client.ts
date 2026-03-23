@@ -200,4 +200,47 @@ export class ConveneClient {
     }
     throw new Error("Failed to create meeting");
   }
+
+  private async callTool(name: string, args: Record<string, unknown>): Promise<string> {
+    const resp = await fetch(`${this.config.mcpUrl}`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "tools/call",
+        params: { name, arguments: args },
+        id: 1,
+      }),
+    });
+    const result = (await resp.json()) as { result?: { content: Array<{ text: string }> } };
+    return result.result?.content?.[0]?.text ?? JSON.stringify({ error: `Tool ${name} returned no result` });
+  }
+
+  // Turn Management
+
+  async raiseHand(meetingId: string, priority: string = "normal", topic?: string): Promise<string> {
+    return this.callTool("raise_hand", { meeting_id: meetingId, priority, ...(topic ? { topic } : {}) });
+  }
+
+  async getQueueStatus(meetingId: string): Promise<string> {
+    return this.callTool("get_queue_status", { meeting_id: meetingId });
+  }
+
+  async markFinishedSpeaking(meetingId: string): Promise<string> {
+    return this.callTool("mark_finished_speaking", { meeting_id: meetingId });
+  }
+
+  async cancelHandRaise(meetingId: string, handRaiseId?: string): Promise<string> {
+    return this.callTool("cancel_hand_raise", { meeting_id: meetingId, ...(handRaiseId ? { hand_raise_id: handRaiseId } : {}) });
+  }
+
+  // Chat
+
+  async sendChatMessage(meetingId: string, content: string, messageType: string = "text"): Promise<string> {
+    return this.callTool("send_chat_message", { meeting_id: meetingId, content, message_type: messageType });
+  }
+
+  async getChatMessages(meetingId: string, limit: number = 50, messageType?: string): Promise<string> {
+    return this.callTool("get_chat_messages", { meeting_id: meetingId, limit, ...(messageType ? { message_type: messageType } : {}) });
+  }
 }
