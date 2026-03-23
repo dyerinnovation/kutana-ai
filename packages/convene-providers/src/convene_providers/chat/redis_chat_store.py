@@ -4,11 +4,15 @@ Uses Redis Streams for durable ordered message storage and Redis Pub/Sub
 for real-time delivery notifications to connected participants.
 
 Key schema:
-    chat:{meeting_id}:messages   STREAM  per-message fields stored as hash
+    convene:{meeting_id}:chat:messages   STREAM  per-message fields stored as hash
         Fields: message_id, sender_id, sender_name, content, message_type, sent_at
 
 Pub/sub channel:
     convene:chat  — per-message notifications (JSON payload includes meeting_id)
+
+The ``convene:{meeting_id}:`` namespace prefix ensures that all meeting data
+is isolated by meeting ID at the Redis key level, preventing cross-meeting
+data access even if a caller has direct Redis access.
 """
 
 from __future__ import annotations
@@ -63,7 +67,7 @@ class RedisChatStore(ChatStore):
 
     @staticmethod
     def _stream_key(meeting_id: UUID) -> str:
-        return f"chat:{meeting_id}:messages"
+        return f"convene:{meeting_id}:chat:messages"
 
     # ------------------------------------------------------------------
     # ChatStore interface

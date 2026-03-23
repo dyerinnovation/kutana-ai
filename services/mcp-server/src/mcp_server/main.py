@@ -5,6 +5,20 @@ Default endpoint: http://localhost:3001/mcp
 
 Run locally: uv run python -m mcp_server.main
 Run via Docker: docker compose up mcp-server
+
+Security
+--------
+Every tool call goes through a three-layer security pipeline:
+
+1. **Scope enforcement** — the MCP JWT must carry the scope required
+   for the tool (see ``security/scopes.py`` for the mapping).
+2. **Input sanitization** — meeting_id validated as UUID, content/topic
+   stripped of HTML and control chars, priority restricted to known values.
+3. **Rate limiting** — per-agent, per-tool sliding-window counters in Redis.
+   Exceeding the limit returns a JSON ``rate_limit_exceeded`` response.
+
+All auth events, scope violations, and tool calls are emitted as structured
+JSON to the ``convene.audit`` logger (see ``security/audit.py``).
 """
 
 from __future__ import annotations
@@ -22,6 +36,20 @@ from convene_providers.turn_management.redis_turn_manager import RedisTurnManage
 from mcp_server.api_client import ApiClient
 from mcp_server.auth import MCPAuthError, MCPIdentity, validate_mcp_token
 from mcp_server.gateway_client import GatewayClient
+from mcp_server.security.audit import log_auth_event, log_rate_limit_exceeded, log_tool_call
+from mcp_server.security.rate_limit import RedisRateLimiter
+from mcp_server.security.sanitization import (
+    clamp_last_n,
+    clamp_limit,
+    sanitize_content,
+    sanitize_description,
+    sanitize_title,
+    sanitize_topic,
+    validate_channel,
+    validate_meeting_id,
+    validate_priority,
+)
+from mcp_server.security.scopes import require_scope
 from mcp_server.settings import MCPServerSettings
 
 logging.basicConfig(level=logging.INFO)
@@ -49,14 +77,14 @@ _gateway_client: GatewayClient | None = None
 _mcp_identity: MCPIdentity | None = None
 _turn_manager: RedisTurnManager | None = None
 _chat_store: RedisChatStore | None = None
+_rate_limiter: RedisRateLimiter | None = None
 
 
 def _get_turn_manager() -> RedisTurnManager:
     """Get or create the TurnManager singleton."""
     global _turn_manager
     if _turn_manager is None:
-        redis_client = aioredis.from_url(settings.redis_url)
-        _turn_manager = RedisTurnManager(redis_client)
+        _turn_manager = RedisTurnManager(settings.redis_url)
     return _turn_manager
 
 
@@ -80,6 +108,14 @@ def _get_api_client() -> ApiClient:
     return _api_client
 
 
+def _get_rate_limiter() -> RedisRateLimiter:
+    """Get or create the rate limiter singleton."""
+    global _rate_limiter
+    if _rate_limiter is None:
+        _rate_limiter = RedisRateLimiter(settings.redis_url)
+    return _rate_limiter
+
+
 def authenticate_bearer(bearer_token: str) -> MCPIdentity:
     """Validate a Bearer token and cache the identity.
 
@@ -95,6 +131,11 @@ def authenticate_bearer(bearer_token: str) -> MCPIdentity:
     global _mcp_identity
     identity = validate_mcp_token(bearer_token, settings.mcp_jwt_secret)
     _mcp_identity = identity
+    log_auth_event(
+        "token_validated",
+        agent_id=identity.agent_config_id,
+        scopes=identity.scopes,
+    )
     return identity
 
 
@@ -117,7 +158,63 @@ async def _ensure_authenticated() -> MCPIdentity:
         token = await client.exchange_for_mcp_token()
         return authenticate_bearer(token)
     except (RuntimeError, MCPAuthError) as e:
+        log_auth_event("token_exchange_failed", success=False, error=str(e))
         raise RuntimeError(f"MCP authentication failed: {e}") from e
+
+
+async def _security_check(
+    tool_name: str,
+    identity: MCPIdentity,
+    meeting_id: str | None = None,
+) -> str | None:
+    """Run scope check + rate limit for a tool call.
+
+    Logs auth and rate-limit events. Returns a JSON error string on
+    violation, or None if all checks pass.
+
+    Args:
+        tool_name: MCP tool being invoked.
+        identity: Authenticated MCPIdentity.
+        meeting_id: Optional meeting context for audit log.
+
+    Returns:
+        JSON error string if check fails, otherwise None.
+    """
+    # 1. Scope check
+    scope_error = require_scope(identity, tool_name)
+    if scope_error is not None:
+        log_auth_event(
+            "scope_check_failed",
+            agent_id=identity.agent_config_id,
+            success=False,
+            tool=tool_name,
+        )
+        log_tool_call(
+            tool_name,
+            agent_id=identity.agent_config_id,
+            meeting_id=meeting_id,
+            success=False,
+            error="insufficient_scope",
+        )
+        return scope_error
+
+    # 2. Rate limit check
+    limiter = _get_rate_limiter()
+    allowed, retry_after = await limiter.check(identity.agent_config_id, tool_name)
+    if not allowed:
+        log_rate_limit_exceeded(
+            tool_name, agent_id=identity.agent_config_id, retry_after=retry_after
+        )
+        log_tool_call(
+            tool_name,
+            agent_id=identity.agent_config_id,
+            meeting_id=meeting_id,
+            success=False,
+            error="rate_limit_exceeded",
+        )
+        return limiter.error_response(tool_name, retry_after)
+
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -132,9 +229,13 @@ async def list_meetings() -> str:
     Returns a JSON array of meetings with their IDs, titles, and status.
     Use this to find meetings to join.
     """
-    await _ensure_authenticated()
+    identity = await _ensure_authenticated()
+    if err := await _security_check("list_meetings", identity):
+        return err
+
     client = _get_api_client()
     meetings = await client.list_meetings()
+    log_tool_call("list_meetings", agent_id=identity.agent_config_id)
     return json.dumps(meetings, indent=2, default=str)
 
 
@@ -147,7 +248,7 @@ async def join_meeting(
 
     This exchanges the API key for a gateway token, connects via WebSocket,
     and joins the specified meeting. Transcript segments will be buffered
-    automatically.
+    automatically from the moment you join (session-scoped transcript).
 
     Args:
         meeting_id: UUID of the meeting to join.
@@ -159,7 +260,16 @@ async def join_meeting(
     """
     global _gateway_client
 
-    await _ensure_authenticated()
+    identity = await _ensure_authenticated()
+
+    # Input validation
+    try:
+        mid = validate_meeting_id(meeting_id)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
+    if err := await _security_check("join_meeting", identity, meeting_id=str(mid)):
+        return err
 
     if _gateway_client is not None and _gateway_client.meeting_id is not None:
         return json.dumps({
@@ -175,10 +285,11 @@ async def join_meeting(
     # Connect to gateway and join meeting
     _gateway_client = GatewayClient(settings.gateway_ws_url, token)
     result = await _gateway_client.connect_and_join(
-        meeting_id=meeting_id,
+        meeting_id=str(mid),
         capabilities=capabilities,
     )
 
+    log_tool_call("join_meeting", agent_id=identity.agent_config_id, meeting_id=str(mid))
     return json.dumps(result, indent=2, default=str)
 
 
@@ -194,10 +305,15 @@ async def leave_meeting() -> str:
     if _gateway_client is None or _gateway_client.meeting_id is None:
         return json.dumps({"status": "not_in_meeting"})
 
+    identity = await _ensure_authenticated()
+    if err := await _security_check("leave_meeting", identity):
+        return err
+
     meeting_id = _gateway_client.meeting_id
     await _gateway_client.leave()
     _gateway_client = None
 
+    log_tool_call("leave_meeting", agent_id=identity.agent_config_id, meeting_id=meeting_id)
     return json.dumps({"status": "left", "meeting_id": meeting_id})
 
 
@@ -205,11 +321,12 @@ async def leave_meeting() -> str:
 async def get_transcript(last_n: int = 50) -> str:
     """Get recent transcript segments from the current meeting.
 
-    Transcript segments are buffered automatically while connected
-    to a meeting. This returns the most recent segments.
+    Transcript is session-scoped — only segments received after you joined
+    are returned. This prevents agents from reading conversation history
+    that predates their participation.
 
     Args:
-        last_n: Maximum number of recent segments to return (default 50).
+        last_n: Maximum number of recent segments to return (default 50, max 500).
 
     Returns:
         JSON array of transcript segments with text, speaker, timestamps.
@@ -217,7 +334,19 @@ async def get_transcript(last_n: int = 50) -> str:
     if _gateway_client is None or _gateway_client.meeting_id is None:
         return json.dumps({"error": "Not in a meeting. Call join_meeting() first."})
 
-    segments = _gateway_client.get_transcript(last_n=last_n)
+    identity = await _ensure_authenticated()
+    if err := await _security_check(
+        "get_transcript", identity, meeting_id=_gateway_client.meeting_id
+    ):
+        return err
+
+    safe_last_n = clamp_last_n(last_n)
+    segments = _gateway_client.get_transcript(last_n=safe_last_n)
+    log_tool_call(
+        "get_transcript",
+        agent_id=identity.agent_config_id,
+        meeting_id=_gateway_client.meeting_id,
+    )
     return json.dumps(segments, indent=2, default=str)
 
 
@@ -231,9 +360,18 @@ async def get_tasks(meeting_id: str) -> str:
     Returns:
         JSON array of tasks.
     """
-    await _ensure_authenticated()
+    try:
+        mid = validate_meeting_id(meeting_id)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
+    identity = await _ensure_authenticated()
+    if err := await _security_check("get_tasks", identity, meeting_id=str(mid)):
+        return err
+
     client = _get_api_client()
-    tasks = await client.get_tasks(meeting_id)
+    tasks = await client.get_tasks(str(mid))
+    log_tool_call("get_tasks", agent_id=identity.agent_config_id, meeting_id=str(mid))
     return json.dumps(tasks, indent=2, default=str)
 
 
@@ -250,15 +388,25 @@ async def create_task(
 
     Args:
         meeting_id: UUID of the meeting this task relates to.
-        description: Clear description of what needs to be done.
+        description: Clear description of what needs to be done (max 200 chars).
         priority: Task priority — one of: low, medium, high, critical.
 
     Returns:
         JSON object of the created task.
     """
-    await _ensure_authenticated()
+    try:
+        mid = validate_meeting_id(meeting_id)
+        safe_description = sanitize_description(description)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
+    identity = await _ensure_authenticated()
+    if err := await _security_check("create_task", identity, meeting_id=str(mid)):
+        return err
+
     client = _get_api_client()
-    task = await client.create_task(meeting_id, description, priority)
+    task = await client.create_task(str(mid), safe_description, priority)
+    log_tool_call("create_task", agent_id=identity.agent_config_id, meeting_id=str(mid))
     return json.dumps(task, indent=2, default=str)
 
 
@@ -272,7 +420,18 @@ async def get_participants() -> str:
     if _gateway_client is None or _gateway_client.meeting_id is None:
         return json.dumps({"error": "Not in a meeting. Call join_meeting() first."})
 
+    identity = await _ensure_authenticated()
+    if err := await _security_check(
+        "get_participants", identity, meeting_id=_gateway_client.meeting_id
+    ):
+        return err
+
     participants = _gateway_client.get_participants()
+    log_tool_call(
+        "get_participants",
+        agent_id=identity.agent_config_id,
+        meeting_id=_gateway_client.meeting_id,
+    )
     return json.dumps(participants, indent=2, default=str)
 
 
@@ -283,16 +442,28 @@ async def create_new_meeting(
 ) -> str:
     """Create a new meeting.
 
+    New meetings are private by default — they are not discoverable
+    without the meeting ID.
+
     Args:
-        title: Human-readable meeting title.
+        title: Human-readable meeting title (max 200 chars).
         platform: Meeting platform (default: "convene").
 
     Returns:
         JSON object of the created meeting.
     """
-    await _ensure_authenticated()
+    try:
+        safe_title = sanitize_title(title)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
+    identity = await _ensure_authenticated()
+    if err := await _security_check("create_new_meeting", identity):
+        return err
+
     client = _get_api_client()
-    meeting = await client.create_meeting(title=title, platform=platform)
+    meeting = await client.create_meeting(title=safe_title, platform=platform)
+    log_tool_call("create_new_meeting", agent_id=identity.agent_config_id)
     return json.dumps(meeting, indent=2, default=str)
 
 
@@ -309,12 +480,32 @@ async def start_meeting_session(meeting_id: str) -> str:
     Returns:
         JSON object of the updated meeting.
     """
-    await _ensure_authenticated()
+    try:
+        mid = validate_meeting_id(meeting_id)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
+    identity = await _ensure_authenticated()
+    if err := await _security_check("start_meeting_session", identity, meeting_id=str(mid)):
+        return err
+
     client = _get_api_client()
     try:
-        meeting = await client.start_meeting(meeting_id)
+        meeting = await client.start_meeting(str(mid))
+        log_tool_call(
+            "start_meeting_session",
+            agent_id=identity.agent_config_id,
+            meeting_id=str(mid),
+        )
         return json.dumps(meeting, indent=2, default=str)
     except RuntimeError as e:
+        log_tool_call(
+            "start_meeting_session",
+            agent_id=identity.agent_config_id,
+            meeting_id=str(mid),
+            success=False,
+            error=str(e),
+        )
         return json.dumps({"error": str(e)})
 
 
@@ -331,12 +522,32 @@ async def end_meeting_session(meeting_id: str) -> str:
     Returns:
         JSON object of the updated meeting.
     """
-    await _ensure_authenticated()
+    try:
+        mid = validate_meeting_id(meeting_id)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
+    identity = await _ensure_authenticated()
+    if err := await _security_check("end_meeting_session", identity, meeting_id=str(mid)):
+        return err
+
     client = _get_api_client()
     try:
-        meeting = await client.end_meeting(meeting_id)
+        meeting = await client.end_meeting(str(mid))
+        log_tool_call(
+            "end_meeting_session",
+            agent_id=identity.agent_config_id,
+            meeting_id=str(mid),
+        )
         return json.dumps(meeting, indent=2, default=str)
     except RuntimeError as e:
+        log_tool_call(
+            "end_meeting_session",
+            agent_id=identity.agent_config_id,
+            meeting_id=str(mid),
+            success=False,
+            error=str(e),
+        )
         return json.dumps({"error": str(e)})
 
 
@@ -352,14 +563,24 @@ async def join_or_create_meeting(
     2. Looks for an active meeting with matching title
     3. If found, joins it; if not, creates a new meeting, starts it, and joins
 
+    New meetings are created as private by default.
+
     Args:
-        title: Meeting title to search for or create.
+        title: Meeting title to search for or create (max 200 chars).
         capabilities: Optional capabilities to request when joining.
 
     Returns:
         JSON object with meeting details and join status.
     """
-    await _ensure_authenticated()
+    try:
+        safe_title = sanitize_title(title)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
+    identity = await _ensure_authenticated()
+    if err := await _security_check("join_or_create_meeting", identity):
+        return err
+
     client = _get_api_client()
 
     # Search for existing active meeting with this title
@@ -367,13 +588,13 @@ async def join_or_create_meeting(
     created = False
     meeting_data: dict[str, Any] | None = None
     for m in meetings:
-        if m.get("title") == title and m.get("status") == "active":
+        if m.get("title") == safe_title and m.get("status") == "active":
             meeting_data = m
             break
 
     if meeting_data is None:
         # Create and start a new meeting
-        meeting_data = await client.create_meeting(title=title)
+        meeting_data = await client.create_meeting(title=safe_title)
         meeting_id = str(meeting_data["id"])
         meeting_data = await client.start_meeting(meeting_id)
         created = True
@@ -397,6 +618,11 @@ async def join_or_create_meeting(
         capabilities=capabilities,
     )
 
+    log_tool_call(
+        "join_or_create_meeting",
+        agent_id=identity.agent_config_id,
+        meeting_id=meeting_id,
+    )
     return json.dumps({
         "meeting": meeting_data,
         "join_result": join_result,
@@ -413,18 +639,35 @@ async def subscribe_channel(channel: str) -> str:
     via the gateway WebSocket connection.
 
     Args:
-        channel: Channel name to subscribe to (e.g., "tasks", "decisions", "summaries").
+        channel: Channel name to subscribe to (alphanumeric, hyphens, underscores;
+                 max 64 chars). Examples: "tasks", "decisions", "summaries".
 
     Returns:
         Confirmation of subscription.
     """
+    try:
+        safe_channel = validate_channel(channel)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
     if _gateway_client is None or _gateway_client.meeting_id is None:
         return json.dumps({"error": "Not in a meeting. Call join_meeting() first."})
 
-    _gateway_client.subscribe_channel(channel)
+    identity = await _ensure_authenticated()
+    if err := await _security_check(
+        "subscribe_channel", identity, meeting_id=_gateway_client.meeting_id
+    ):
+        return err
+
+    _gateway_client.subscribe_channel(safe_channel)
+    log_tool_call(
+        "subscribe_channel",
+        agent_id=identity.agent_config_id,
+        meeting_id=_gateway_client.meeting_id,
+    )
     return json.dumps({
         "status": "subscribed",
-        "channel": channel,
+        "channel": safe_channel,
         "subscribed_channels": list(_gateway_client.subscribed_channels),
     })
 
@@ -436,17 +679,34 @@ async def publish_to_channel(channel: str, payload: dict[str, Any]) -> str:
     Other agents subscribed to this channel will receive the message.
 
     Args:
-        channel: Channel name to publish to.
+        channel: Channel name to publish to (alphanumeric, hyphens, underscores;
+                 max 64 chars).
         payload: JSON-serializable data to publish.
 
     Returns:
         Confirmation of publication.
     """
+    try:
+        safe_channel = validate_channel(channel)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
     if _gateway_client is None or _gateway_client.meeting_id is None:
         return json.dumps({"error": "Not in a meeting. Call join_meeting() first."})
 
-    await _gateway_client.publish_to_channel(channel, payload)
-    return json.dumps({"status": "published", "channel": channel})
+    identity = await _ensure_authenticated()
+    if err := await _security_check(
+        "publish_to_channel", identity, meeting_id=_gateway_client.meeting_id
+    ):
+        return err
+
+    await _gateway_client.publish_to_channel(safe_channel, payload)
+    log_tool_call(
+        "publish_to_channel",
+        agent_id=identity.agent_config_id,
+        meeting_id=_gateway_client.meeting_id,
+    )
+    return json.dumps({"status": "published", "channel": safe_channel})
 
 
 @mcp.tool()
@@ -458,15 +718,32 @@ async def get_channel_messages(channel: str, last_n: int = 50) -> str:
 
     Args:
         channel: Channel name to read from.
-        last_n: Maximum number of recent messages to return (default 50).
+        last_n: Maximum number of recent messages to return (default 50, max 500).
 
     Returns:
         JSON array of channel message payloads in order received.
     """
+    try:
+        safe_channel = validate_channel(channel)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
     if _gateway_client is None or _gateway_client.meeting_id is None:
         return json.dumps({"error": "Not in a meeting. Call join_meeting() first."})
 
-    messages = _gateway_client.get_channel_messages(channel, last_n=last_n)
+    identity = await _ensure_authenticated()
+    if err := await _security_check(
+        "get_channel_messages", identity, meeting_id=_gateway_client.meeting_id
+    ):
+        return err
+
+    safe_last_n = clamp_last_n(last_n)
+    messages = _gateway_client.get_channel_messages(safe_channel, last_n=safe_last_n)
+    log_tool_call(
+        "get_channel_messages",
+        agent_id=identity.agent_config_id,
+        meeting_id=_gateway_client.meeting_id,
+    )
     return json.dumps(messages, indent=2, default=str)
 
 
@@ -481,7 +758,7 @@ async def get_meeting_events(last_n: int = 50, event_type: str | None = None) ->
     you poll the buffer to see what has occurred since you last checked.
 
     Args:
-        last_n: Maximum number of recent events to return (default 50).
+        last_n: Maximum number of recent events to return (default 50, max 500).
         event_type: Optional filter. One of:
                     "turn_queue_updated" — speaker queue changed,
                     "turn_speaker_changed" — active speaker changed,
@@ -495,7 +772,19 @@ async def get_meeting_events(last_n: int = 50, event_type: str | None = None) ->
     if _gateway_client is None or _gateway_client.meeting_id is None:
         return json.dumps({"error": "Not in a meeting. Call join_meeting() first."})
 
-    events = _gateway_client.get_events(last_n=last_n, event_type=event_type)
+    identity = await _ensure_authenticated()
+    if err := await _security_check(
+        "get_meeting_events", identity, meeting_id=_gateway_client.meeting_id
+    ):
+        return err
+
+    safe_last_n = clamp_last_n(last_n)
+    events = _gateway_client.get_events(last_n=safe_last_n, event_type=event_type)
+    log_tool_call(
+        "get_meeting_events",
+        agent_id=identity.agent_config_id,
+        meeting_id=_gateway_client.meeting_id,
+    )
     return json.dumps(events, indent=2, default=str)
 
 
@@ -518,20 +807,30 @@ async def raise_hand(
     Args:
         meeting_id: UUID of the meeting.
         priority: Queue priority — "normal" (FIFO) or "urgent" (front of queue).
-        topic: Optional short description of what you want to discuss.
+        topic: Optional short description of what you want to discuss (max 200 chars).
 
     Returns:
         JSON with queue_position, hand_raise_id, estimated_wait, current_speaker.
         queue_position=0 means you were immediately promoted to active speaker.
     """
+    try:
+        mid = validate_meeting_id(meeting_id)
+        safe_priority = validate_priority(priority)
+        safe_topic = sanitize_topic(topic)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
     identity = await _ensure_authenticated()
+    if err := await _security_check("raise_hand", identity, meeting_id=str(mid)):
+        return err
+
     tm = _get_turn_manager()
-    mid = UUID(meeting_id)
     pid = identity.agent_config_id
 
-    result = await tm.raise_hand(mid, pid, priority=priority, topic=topic)
+    result = await tm.raise_hand(mid, pid, priority=safe_priority, topic=safe_topic)
     current_speaker_id = await tm.get_active_speaker(mid)
 
+    log_tool_call("raise_hand", agent_id=identity.agent_config_id, meeting_id=str(mid))
     return json.dumps({
         "queue_position": result.queue_position,
         "hand_raise_id": str(result.hand_raise_id),
@@ -553,9 +852,16 @@ async def get_queue_status(meeting_id: str) -> str:
         JSON with current_speaker, ordered queue entries with positions,
         your_position (null if not in queue), and total_in_queue.
     """
+    try:
+        mid = validate_meeting_id(meeting_id)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
     identity = await _ensure_authenticated()
+    if err := await _security_check("get_queue_status", identity, meeting_id=str(mid)):
+        return err
+
     tm = _get_turn_manager()
-    mid = UUID(meeting_id)
     pid = identity.agent_config_id
 
     status = await tm.get_queue_status(mid)
@@ -566,6 +872,7 @@ async def get_queue_status(meeting_id: str) -> str:
             your_position = entry.position
             break
 
+    log_tool_call("get_queue_status", agent_id=identity.agent_config_id, meeting_id=str(mid))
     return json.dumps({
         "current_speaker": str(status.active_speaker_id) if status.active_speaker_id else None,
         "queue": [
@@ -598,14 +905,26 @@ async def mark_finished_speaking(meeting_id: str) -> str:
     Returns:
         JSON with status, next_speaker (UUID or null), and queue_remaining count.
     """
+    try:
+        mid = validate_meeting_id(meeting_id)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
     identity = await _ensure_authenticated()
+    if err := await _security_check("mark_finished_speaking", identity, meeting_id=str(mid)):
+        return err
+
     tm = _get_turn_manager()
-    mid = UUID(meeting_id)
     pid = identity.agent_config_id
 
     next_speaker_id = await tm.mark_finished_speaking(mid, pid)
     queue_status = await tm.get_queue_status(mid)
 
+    log_tool_call(
+        "mark_finished_speaking",
+        agent_id=identity.agent_config_id,
+        meeting_id=str(mid),
+    )
     return json.dumps({
         "status": "finished",
         "next_speaker": str(next_speaker_id) if next_speaker_id else None,
@@ -630,17 +949,27 @@ async def cancel_hand_raise(
     Returns:
         JSON with status ("cancelled" or "not_in_queue") and was_position.
     """
+    try:
+        mid = validate_meeting_id(meeting_id)
+        hrid: UUID | None = None
+        if hand_raise_id is not None:
+            hrid = validate_meeting_id(hand_raise_id)  # same UUID validation
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
     identity = await _ensure_authenticated()
+    if err := await _security_check("cancel_hand_raise", identity, meeting_id=str(mid)):
+        return err
+
     tm = _get_turn_manager()
-    mid = UUID(meeting_id)
     pid = identity.agent_config_id
 
     speaking_status = await tm.get_speaking_status(mid, pid)
     was_position = speaking_status.queue_position
 
-    hrid: UUID | None = UUID(hand_raise_id) if hand_raise_id else None
     removed = await tm.cancel_hand_raise(mid, pid, hrid)
 
+    log_tool_call("cancel_hand_raise", agent_id=identity.agent_config_id, meeting_id=str(mid))
     return json.dumps({
         "status": "cancelled" if removed else "not_in_queue",
         "was_position": was_position,
@@ -661,14 +990,26 @@ async def get_speaking_status(meeting_id: str) -> str:
         JSON with is_speaking, is_in_queue, queue_position, current_speaker,
         and meeting_phase.
     """
+    try:
+        mid = validate_meeting_id(meeting_id)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
     identity = await _ensure_authenticated()
+    if err := await _security_check("get_speaking_status", identity, meeting_id=str(mid)):
+        return err
+
     tm = _get_turn_manager()
-    mid = UUID(meeting_id)
     pid = identity.agent_config_id
 
     status = await tm.get_speaking_status(mid, pid)
     current_speaker_id = await tm.get_active_speaker(mid)
 
+    log_tool_call(
+        "get_speaking_status",
+        agent_id=identity.agent_config_id,
+        meeting_id=str(mid),
+    )
     return json.dumps({
         "is_speaking": status.is_speaking,
         "is_in_queue": status.in_queue,
@@ -696,7 +1037,7 @@ async def send_chat_message(
 
     Args:
         meeting_id: UUID of the meeting.
-        content: The message text to send.
+        content: The message text to send (max 2 000 chars; HTML tags stripped).
         message_type: Semantic type — one of: text, question, action_item, decision.
                       Use "question" when asking something, "action_item" for tasks
                       to track, "decision" for recorded decisions, "text" for general chat.
@@ -706,23 +1047,35 @@ async def send_chat_message(
     """
     from convene_core.models.chat import ChatMessageType
 
+    try:
+        mid = validate_meeting_id(meeting_id)
+        safe_content = sanitize_content(content)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
     identity = await _ensure_authenticated()
+    if err := await _security_check("send_chat_message", identity, meeting_id=str(mid)):
+        return err
+
     cs = _get_chat_store()
-    mid = UUID(meeting_id)
 
     try:
         msg_type = ChatMessageType(message_type)
     except ValueError:
-        return json.dumps({"error": f"Invalid message_type '{message_type}'. Must be one of: text, question, action_item, decision."})
+        return json.dumps({
+            "error": f"Invalid message_type '{message_type}'. "
+                     "Must be one of: text, question, action_item, decision."
+        })
 
     msg = await cs.send_message(
         meeting_id=mid,
         sender_id=identity.agent_config_id,
         sender_name=identity.name,
-        content=content,
+        content=safe_content,
         message_type=msg_type,
     )
 
+    log_tool_call("send_chat_message", agent_id=identity.agent_config_id, meeting_id=str(mid))
     return json.dumps({
         "message_id": str(msg.message_id),
         "meeting_id": str(msg.meeting_id),
@@ -761,12 +1114,17 @@ async def get_chat_messages(
     from datetime import datetime
     from convene_core.models.chat import ChatMessageType
 
-    await _ensure_authenticated()
-    cs = _get_chat_store()
-    mid = UUID(meeting_id)
+    try:
+        mid = validate_meeting_id(meeting_id)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
 
-    # Validate and clamp limit
-    limit = max(1, min(limit, 200))
+    identity = await _ensure_authenticated()
+    if err := await _security_check("get_chat_messages", identity, meeting_id=str(mid)):
+        return err
+
+    cs = _get_chat_store()
+    safe_limit = clamp_limit(limit)
 
     # Parse optional message_type filter
     type_filter: ChatMessageType | None = None
@@ -782,15 +1140,18 @@ async def get_chat_messages(
         try:
             since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
         except ValueError:
-            return json.dumps({"error": f"Invalid since timestamp '{since}'. Use ISO 8601 format."})
+            return json.dumps({
+                "error": f"Invalid since timestamp '{since}'. Use ISO 8601 format."
+            })
 
     messages = await cs.get_messages(
         meeting_id=mid,
-        limit=limit,
+        limit=safe_limit,
         message_type=type_filter,
         since=since_dt,
     )
 
+    log_tool_call("get_chat_messages", agent_id=identity.agent_config_id, meeting_id=str(mid))
     return json.dumps(
         [
             {
@@ -827,11 +1188,18 @@ async def get_meeting_status(meeting_id: str) -> str:
     Returns:
         JSON object with meeting, queue, participants, and recent_chat fields.
     """
-    await _ensure_authenticated()
+    try:
+        mid = validate_meeting_id(meeting_id)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
+    identity = await _ensure_authenticated()
+    if err := await _security_check("get_meeting_status", identity, meeting_id=str(mid)):
+        return err
+
     tm = _get_turn_manager()
     cs = _get_chat_store()
     client = _get_api_client()
-    mid = UUID(meeting_id)
 
     # Gather meeting info, queue status, and recent chat concurrently
     import asyncio as _asyncio
@@ -847,15 +1215,16 @@ async def get_meeting_status(meeting_id: str) -> str:
     # Find the specific meeting from the list
     meeting_data: dict[str, Any] | None = None
     for m in meetings:
-        if str(m.get("id", "")) == meeting_id:
+        if str(m.get("id", "")) == str(mid):
             meeting_data = m
             break
 
     # Participants from gateway client (if connected)
     participants: list[Any] = []
-    if _gateway_client is not None and _gateway_client.meeting_id == meeting_id:
+    if _gateway_client is not None and _gateway_client.meeting_id == str(mid):
         participants = _gateway_client.get_participants()
 
+    log_tool_call("get_meeting_status", agent_id=identity.agent_config_id, meeting_id=str(mid))
     return json.dumps(
         {
             "meeting": meeting_data,
@@ -915,13 +1284,15 @@ async def meeting_resource(meeting_id: str) -> str:
 
 @mcp.resource("meeting://{meeting_id}/transcript")
 async def meeting_transcript_resource(meeting_id: str) -> str:
-    """Get the full transcript for a meeting.
+    """Get the session-scoped transcript for a meeting.
+
+    Only segments received after you joined are included.
 
     Args:
         meeting_id: UUID of the meeting.
 
     Returns:
-        JSON string with all transcript segments.
+        JSON string with transcript segments.
     """
     if _gateway_client and _gateway_client.meeting_id == meeting_id:
         segments = _gateway_client.get_transcript(last_n=9999)
