@@ -105,6 +105,23 @@
   - [ ] Participant events on MessageBus (participant.joined, participant.left)
   - [ ] WebRTC/LiveKit integration for production human connections (Phase 5)
 
+- [ ] 🔗 BLOCK: Turn Management Infrastructure
+  - [ ] Define TurnManager ABC in convene-core (raise_turn, release_turn, get_queue, get_active_speaker)
+  - [ ] Implement RedisTurnManager provider (ordered queue, atomic operations, position tracking)
+  - [ ] Register TurnManager in provider registry
+  - [ ] WebSocket events for queue changes (speaker.queue.updated, speaker.changed)
+  - [ ] Broadcast turn state to all connected participants
+  - [ ] Auto-transition support (configurable timeout-based speaker advancement)
+  - [ ] Unit and integration tests for TurnManager
+
+- [ ] 🔗 BLOCK: Meeting Chat Infrastructure
+  - [ ] Define ChatStore ABC in convene-core (send_message, get_messages, subscribe)
+  - [ ] Implement RedisChatStore provider (message persistence + pub/sub delivery)
+  - [ ] Register ChatStore in provider registry
+  - [ ] WebSocket event delivery (chat.message.received)
+  - [ ] Chat history retrieval with pagination
+  - [ ] Unit and integration tests for ChatStore
+
 - [ ] 🔗 BLOCK: Agent Gateway Polish
   - [ ] Implement multi-agent per meeting support
   - [ ] Implement audio stream routing (meeting audio → connected agents)
@@ -122,6 +139,61 @@
   - [ ] Implement Text-only agent support (transcript feed, no audio)
 
 - [ ] Refactor AudioBridge cross-service import (known tech debt — extract to shared package)
+
+---
+
+## April Release Sprint — Target: April 6-10, 2026
+
+> P0 features enabling full multi-agent participation: turn management, meeting chat, 8 new MCP tools, and Claude Code channel integration.
+>
+> **Prerequisites (Phase 2 above):** participant registry + events, turn manager, chat store, multi-agent gateway.
+>
+> **Timeline:** Week 1 (Mar 22–28) backend infra · Week 2 (Mar 29–Apr 4) MCP tools + channel + frontend · Week 3 (Apr 5–11) E2E testing + launch
+
+- [ ] 🔗 BLOCK: Turn Management MCP Tools
+  - [ ] `raise_hand` — request to speak, returns queue position
+  - [ ] `get_queue_status` — check speaker queue and current position
+  - [ ] `mark_finished_speaking` — signal done, promotes next in queue
+  - [ ] `cancel_hand_raise` — withdraw from speaker queue
+  - [ ] `get_speaking_status` — check if current session is active speaker
+  - [ ] Wire TurnManager into MCP server tools
+  - [ ] Integration tests for all 5 turn management tools
+
+- [ ] 🔗 BLOCK: Chat & Status MCP Tools
+  - [ ] `send_chat_message` — post a message to meeting chat
+  - [ ] `get_chat_messages` — read chat history with optional filters
+  - [ ] `get_meeting_status` — comprehensive meeting state (participants, queue, active speaker, recent chat)
+  - [ ] Wire ChatStore into MCP server tools
+  - [ ] Integration tests for all 3 chat/status tools
+
+- [ ] 🔗 BLOCK: Claude Code Channel Integration
+  - [ ] Channel server endpoint for Claude Code session connections
+  - [ ] Full participant access: turn management, chat, transcript read, task access
+  - [ ] All 8 new MCP tools available through the channel connection
+  - [ ] Sender gating via agent API keys (same auth path as agent-gateway)
+  - [ ] Integration with agent-gateway session management
+  - [ ] Package as Claude Code plugin / skill
+  - [ ] Integration tests: Claude Code session joins, raises hand, sends chat
+
+- [ ] 🔗 BLOCK: Frontend — Turn Management & Chat UI
+  - [ ] Speaker queue panel (ordered list, current speaker highlighted, position indicators)
+  - [ ] Hand-raise button for human participants in the meeting room
+  - [ ] Meeting chat panel (send/receive messages, participant attribution, timestamps)
+  - [ ] Participant list updated to show agent status (in queue, speaking, idle)
+  - [ ] Real-time state updates via WebSocket events
+
+- [ ] 🔗 BLOCK: April Release Examples & Docs
+  - [ ] Update `examples/meeting-assistant-agent/` to use turn management + chat tools
+  - [ ] Update OpenClaw plugin with new MCP tool definitions
+  - [ ] Write Claude Code channel setup guide (`docs/integrations/CLAUDE_CODE_CHANNEL.md`)
+  - [ ] Write multi-agent meeting tutorial
+  - [ ] Finalize `docs/milestone-testing/M_APRIL_E2E_Test.md` scenario playbook
+
+- [ ] **🏁 Milestone M_APRIL: All 4 E2E scenarios pass** — see `docs/milestone-testing/M_APRIL_E2E_Test.md`
+  - [ ] Scenario A: 1 human + 1 agent (turn management + chat end-to-end)
+  - [ ] Scenario B: 2 humans + 1 agent (multi-human, single agent)
+  - [ ] Scenario C: 1 human + multiple agents (agent coordination, turn queue)
+  - [ ] Scenario D: multiple humans + multiple agents (full multi-party)
 
 ---
 
@@ -146,14 +218,7 @@
   - [ ] Configuration: batch window, confidence thresholds
   - [ ] Pipeline integration tests
 
-- [ ] 🔗 BLOCK: Claude Code Channel Integration
-  - [ ] Create TypeScript MCP server with claude/channel capability
-  - [ ] Implement Convene AI API connection (WebSocket/HTTP)
-  - [ ] Implement agent choice model (transcript mode, insight mode, both, selective)
-  - [ ] Implement reply/action tools (reply, accept_task, update_status, request_context)
-  - [ ] Implement sender gating via agent API keys
-  - [ ] Package as Claude Code plugin
-  - [ ] Integration tests
+- _(Claude Code Channel Integration moved to April Release Sprint — see above)_
 
 - [ ] 🔗 BLOCK: Custom Extractors & Cloud Providers
   - [ ] Document Extractor ABC, publish SDK/example
@@ -372,6 +437,15 @@
 
 - [ ] Implement calendar sync (Google Calendar, Outlook)
 - [ ] Implement Agent Marketplace (browse, install, rate agents)
+
+- [ ] 🔗 BLOCK: Existing Meeting Platform Integration (adoption accelerator — post-April)
+  - [ ] Design MeetingPlatformAdapter ABC (join, leave, receive_audio, send_audio, get_participants)
+  - [ ] Implement ZoomAdapter via Zoom Meeting SDK (transcription bot entry point)
+  - [ ] Implement GoogleMeetAdapter (via Meet bot or Google Meet API)
+  - [ ] Implement TeamsAdapter via Teams Bot Framework SDK
+  - [ ] Define adoption path: start as transcription bot → graduate users to native Convene meetings
+  - [ ] Dashboard prompt: "Join this meeting in Convene instead" UX flow
+
 - [ ] **🏁 Milestone M7+: Full product experience — integrations, marketplace, analytics**
 
 ---
@@ -398,6 +472,7 @@
 - **M1:** Audio → Transcript → Redis (Phase 1C/1D) ✅
 - **M2:** Redis → Task Extraction → PostgreSQL (Phase 1)
 - **M3:** Agent connects via Gateway, receives audio, sends transcript events (Phase 2) ✅
+- **M_APRIL:** All 4 multi-party E2E scenarios pass — turn management, chat, multi-agent, Claude Code channel (April Release Sprint)
 - **M4:** MCP client joins a meeting via MCP tools (Phase 4)
 - **M5:** User signs up, creates workspace, subscribes to paid plan (Phase 5)
 - **M6:** Browser-based meeting with agents and humans (Phase 6)

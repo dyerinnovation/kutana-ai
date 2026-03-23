@@ -24,6 +24,7 @@ The detailed logic lives here in the repo, not in the CoWork UI. This gives you:
 | Daily Build Sprint | `cowork-task-descriptions/daily-build.md` | Weekdays 7:00 AM | Sonnet | Implements one roadmap item |
 | Daily Review Brief | `cowork-task-descriptions/daily-review.md` | Weekdays 8:30 AM | Haiku | Summarizes build results |
 | Weekly Architecture Review | `cowork-task-descriptions/weekly-architecture-review.md` | Fridays 4:00 PM | Opus | Deep codebase analysis |
+| April Release E2E | `cowork-task-descriptions/april-release-e2e.md` | Manual (Apr 5-11) | Sonnet | Run M_APRIL multi-party scenarios |
 
 ## Coordination files
 
