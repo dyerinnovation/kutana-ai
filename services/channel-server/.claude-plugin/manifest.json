@@ -1,8 +1,8 @@
 {
   "name": "convene-ai",
   "displayName": "Convene AI Meeting Integration",
-  "version": "0.1.0",
-  "description": "Connect Claude Code to a Convene AI meeting as a first-class participant. Receive live transcript segments and extracted insights (tasks, decisions, questions) via the claude/channel protocol.",
+  "version": "0.2.0",
+  "description": "Connect Claude Code to a Convene AI meeting as a first-class participant. Raise your hand, chat, read the transcript, and receive live insights via the claude/channel protocol.",
   "author": "Convene AI",
   "type": "mcp-server",
   "server": {
@@ -13,15 +13,24 @@
       "CONVENE_HTTP_URL": "http://localhost:8000",
       "CONVENE_MEETING_ID": "",
       "CONVENE_AGENT_MODE": "both",
-      "CONVENE_ENTITY_FILTER": ""
+      "CONVENE_ENTITY_FILTER": "",
+      "CONVENE_AGENT_NAME": "Claude Code",
+      "CONVENE_BEARER_TOKEN": ""
     }
   },
   "requiredEnv": ["CONVENE_API_KEY", "CONVENE_MEETING_ID"],
   "capabilities": ["claude/channel", "tools", "resources"],
   "tools": [
     "reply",
+    "get_chat_messages",
     "accept_task",
     "update_status",
+    "raise_hand",
+    "get_queue_status",
+    "mark_finished_speaking",
+    "cancel_hand_raise",
+    "get_speaking_status",
+    "get_participants",
     "request_context",
     "get_meeting_recap",
     "get_entity_history"
@@ -31,5 +40,5 @@
     "convene://meeting/{meeting_id}/context"
   ],
   "readme": "See services/channel-server/README.md for setup and usage instructions.",
-  "keywords": ["meeting", "transcript", "ai-agent", "convene", "channel"]
+  "keywords": ["meeting", "transcript", "ai-agent", "convene", "channel", "turn-management", "chat"]
 }

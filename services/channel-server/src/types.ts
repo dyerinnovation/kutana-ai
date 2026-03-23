@@ -163,13 +163,68 @@ export type GatewayMessage =
   | JoinedMessage;
 
 // ---------------------------------------------------------------------------
+// Turn management
+// ---------------------------------------------------------------------------
+
+/** A single entry in the speaker queue. */
+export interface TurnQueueEntry {
+  position: number;
+  participant_id: string;
+  priority: string;
+  topic: string | null;
+  raised_at: string;
+  hand_raise_id?: string;
+}
+
+/** Snapshot of the speaker queue state. */
+export interface TurnQueueStatus {
+  meeting_id: string;
+  active_speaker_id: string | null;
+  queue: TurnQueueEntry[];
+}
+
+// ---------------------------------------------------------------------------
+// Chat
+// ---------------------------------------------------------------------------
+
+/** A chat message from the meeting. */
+export interface ChatMessage {
+  /** Channel server–assigned monotonic index. */
+  index: number;
+  sender_name: string;
+  sender_session_id: string;
+  text: string;
+  timestamp: string;
+}
+
+// ---------------------------------------------------------------------------
+// Participants
+// ---------------------------------------------------------------------------
+
+/** A participant currently connected to the meeting. */
+export interface ParticipantInfo {
+  participant_id: string;
+  name: string;
+  role: string;
+  connection_type: string | null;
+  source?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Channel notifications (MCP → Claude Code)
 // ---------------------------------------------------------------------------
 
 /** A structured message pushed to Claude Code via the channel protocol. */
 export interface ChannelMessage {
   /** Semantic topic — used as the MCP notification logger name. */
-  topic: "transcript" | "insight" | "recap" | "meeting_context" | "chat";
+  topic:
+    | "transcript"
+    | "insight"
+    | "recap"
+    | "meeting_context"
+    | "chat"
+    | "turn"
+    | "participant";
   /** Fine-grained type within the topic (e.g. entity_type for insights). */
   type: string;
   /** Human-readable content string sent as notification data. */

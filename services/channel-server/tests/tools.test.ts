@@ -14,7 +14,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { registerTools } from "../src/tools.js";
 import type { ConveneClient } from "../src/convene-client.js";
-import type { TaskEntity, DecisionEntity, QuestionEntity } from "../src/types.js";
+import type { TaskEntity, DecisionEntity, QuestionEntity, ChatMessage, ParticipantInfo, TurnQueueStatus } from "../src/types.js";
 
 // Helper to retrieve an internal request handler from the MCP Server.
 // The SDK stores handlers in the private `_requestHandlers` Map.
@@ -40,6 +40,14 @@ function makeMockClient(overrides: Partial<ConveneClient> = {}): ConveneClient {
     updateTaskStatus: vi.fn(),
     getRecentTranscript: vi.fn(() => []),
     getEntities: vi.fn(() => []),
+    getChatMessages: vi.fn(() => []),
+    getParticipants: vi.fn(() => []),
+    raiseHand: vi.fn(),
+    lowerHand: vi.fn(),
+    finishedSpeaking: vi.fn(),
+    requestQueueStatus: vi.fn(),
+    getLastQueueStatus: vi.fn(() => null),
+    getSpeakingStatus: vi.fn(() => ({ isSpeaking: false, isInQueue: false })),
     ...overrides,
   } as unknown as ConveneClient;
 }
@@ -58,7 +66,7 @@ function makeServer(client: ConveneClient): Server {
 // ---------------------------------------------------------------------------
 
 describe("list tools", () => {
-  it("returns all six tool names", async () => {
+  it("returns all thirteen tool names", async () => {
     const server = makeServer(makeMockClient());
     const handler = getHandler(server, ListToolsRequestSchema.shape.method.value);
     expect(handler).toBeDefined();
@@ -67,13 +75,25 @@ describe("list tools", () => {
     const tools = (result as { tools: Array<{ name: string }> }).tools;
     const names = tools.map((t) => t.name);
 
+    // Chat / messaging
     expect(names).toContain("reply");
+    expect(names).toContain("get_chat_messages");
+    // Task
     expect(names).toContain("accept_task");
     expect(names).toContain("update_status");
+    // Turn management
+    expect(names).toContain("raise_hand");
+    expect(names).toContain("get_queue_status");
+    expect(names).toContain("mark_finished_speaking");
+    expect(names).toContain("cancel_hand_raise");
+    expect(names).toContain("get_speaking_status");
+    // Participants
+    expect(names).toContain("get_participants");
+    // Transcript / entities
     expect(names).toContain("request_context");
     expect(names).toContain("get_meeting_recap");
     expect(names).toContain("get_entity_history");
-    expect(names).toHaveLength(6);
+    expect(names).toHaveLength(13);
   });
 
   it("reply tool has required text property in schema", async () => {
@@ -83,6 +103,16 @@ describe("list tools", () => {
     const tools = (result as { tools: Array<{ name: string; inputSchema: Record<string, unknown> }> }).tools;
     const reply = tools.find((t) => t.name === "reply");
     expect(reply?.inputSchema["required"]).toContain("text");
+  });
+
+  it("raise_hand tool has optional priority enum", async () => {
+    const server = makeServer(makeMockClient());
+    const handler = getHandler(server, ListToolsRequestSchema.shape.method.value);
+    const result = await handler!({ method: "tools/list", params: {} }, {});
+    const tools = (result as { tools: Array<{ name: string; inputSchema: { properties: Record<string, { enum?: string[] }> } }> }).tools;
+    const tool = tools.find((t) => t.name === "raise_hand");
+    expect(tool?.inputSchema.properties["priority"]?.enum).toContain("normal");
+    expect(tool?.inputSchema.properties["priority"]?.enum).toContain("urgent");
   });
 
   it("get_entity_history has entity_type enum with all 7 types", async () => {
@@ -100,7 +130,7 @@ describe("list tools", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tool handlers
+// reply tool
 // ---------------------------------------------------------------------------
 
 describe("reply tool", () => {
@@ -134,6 +164,49 @@ describe("reply tool", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// get_chat_messages tool
+// ---------------------------------------------------------------------------
+
+describe("get_chat_messages tool", () => {
+  it("returns chat messages from the buffer", async () => {
+    const msgs: ChatMessage[] = [
+      { index: 0, sender_name: "Alice", sender_session_id: "s1", text: "Hi there", timestamp: "2026-03-23T10:00:00Z" },
+      { index: 1, sender_name: "Bob", sender_session_id: "s2", text: "Hello!", timestamp: "2026-03-23T10:00:05Z" },
+    ];
+    const client = makeMockClient({ getChatMessages: vi.fn(() => msgs) });
+    const server = makeServer(client);
+    const handler = getHandler(server, CallToolRequestSchema.shape.method.value);
+
+    const result = await handler!(
+      { method: "tools/call", params: { name: "get_chat_messages", arguments: { limit: 10 } } },
+      {},
+    );
+
+    const res = result as { content: Array<{ text: string }> };
+    const parsed = JSON.parse(res.content[0]?.text ?? "[]") as ChatMessage[];
+    expect(parsed).toHaveLength(2);
+    expect(client.getChatMessages).toHaveBeenCalledWith(10);
+  });
+
+  it("uses default limit of 50 when not provided", async () => {
+    const client = makeMockClient({ getChatMessages: vi.fn(() => []) });
+    const server = makeServer(client);
+    const handler = getHandler(server, CallToolRequestSchema.shape.method.value);
+
+    await handler!(
+      { method: "tools/call", params: { name: "get_chat_messages", arguments: {} } },
+      {},
+    );
+
+    expect(client.getChatMessages).toHaveBeenCalledWith(50);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// accept_task tool
+// ---------------------------------------------------------------------------
+
 describe("accept_task tool", () => {
   it("calls acceptTask with the task_id", async () => {
     const client = makeMockClient();
@@ -166,6 +239,10 @@ describe("accept_task tool", () => {
     expect(client.acceptTask).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// update_status tool
+// ---------------------------------------------------------------------------
 
 describe("update_status tool", () => {
   it("calls updateTaskStatus with all three params", async () => {
@@ -213,6 +290,179 @@ describe("update_status tool", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Turn management tools
+// ---------------------------------------------------------------------------
+
+describe("raise_hand tool", () => {
+  it("calls raiseHand with default normal priority", async () => {
+    const client = makeMockClient();
+    const server = makeServer(client);
+    const handler = getHandler(server, CallToolRequestSchema.shape.method.value);
+
+    await handler!(
+      { method: "tools/call", params: { name: "raise_hand", arguments: {} } },
+      {},
+    );
+
+    expect(client.raiseHand).toHaveBeenCalledWith("normal", undefined);
+  });
+
+  it("calls raiseHand with urgent priority and topic", async () => {
+    const client = makeMockClient();
+    const server = makeServer(client);
+    const handler = getHandler(server, CallToolRequestSchema.shape.method.value);
+
+    await handler!(
+      {
+        method: "tools/call",
+        params: { name: "raise_hand", arguments: { priority: "urgent", topic: "blocking issue" } },
+      },
+      {},
+    );
+
+    expect(client.raiseHand).toHaveBeenCalledWith("urgent", "blocking issue");
+  });
+});
+
+describe("get_queue_status tool", () => {
+  it("calls requestQueueStatus and returns cached state", async () => {
+    const queueStatus: TurnQueueStatus = {
+      meeting_id: "m1",
+      active_speaker_id: "p1",
+      queue: [{ position: 1, participant_id: "p2", priority: "normal", topic: null, raised_at: "2026-03-23T10:00:00Z" }],
+    };
+    const client = makeMockClient({
+      getLastQueueStatus: vi.fn(() => queueStatus),
+    });
+    const server = makeServer(client);
+    const handler = getHandler(server, CallToolRequestSchema.shape.method.value);
+
+    const result = await handler!(
+      { method: "tools/call", params: { name: "get_queue_status", arguments: {} } },
+      {},
+    );
+
+    expect(client.requestQueueStatus).toHaveBeenCalled();
+    const res = result as { content: Array<{ text: string }> };
+    const parsed = JSON.parse(res.content[0]?.text ?? "{}") as TurnQueueStatus;
+    expect(parsed.active_speaker_id).toBe("p1");
+    expect(parsed.queue).toHaveLength(1);
+  });
+
+  it("returns note when no cached state", async () => {
+    const client = makeMockClient({ getLastQueueStatus: vi.fn(() => null) });
+    const server = makeServer(client);
+    const handler = getHandler(server, CallToolRequestSchema.shape.method.value);
+
+    const result = await handler!(
+      { method: "tools/call", params: { name: "get_queue_status", arguments: {} } },
+      {},
+    );
+
+    const res = result as { content: Array<{ text: string }> };
+    expect(res.content[0]?.text).toMatch(/no cached state/i);
+  });
+});
+
+describe("mark_finished_speaking tool", () => {
+  it("calls finishedSpeaking", async () => {
+    const client = makeMockClient();
+    const server = makeServer(client);
+    const handler = getHandler(server, CallToolRequestSchema.shape.method.value);
+
+    await handler!(
+      { method: "tools/call", params: { name: "mark_finished_speaking", arguments: {} } },
+      {},
+    );
+
+    expect(client.finishedSpeaking).toHaveBeenCalled();
+  });
+});
+
+describe("cancel_hand_raise tool", () => {
+  it("calls lowerHand with no hand_raise_id by default", async () => {
+    const client = makeMockClient();
+    const server = makeServer(client);
+    const handler = getHandler(server, CallToolRequestSchema.shape.method.value);
+
+    await handler!(
+      { method: "tools/call", params: { name: "cancel_hand_raise", arguments: {} } },
+      {},
+    );
+
+    expect(client.lowerHand).toHaveBeenCalledWith(undefined);
+  });
+
+  it("passes hand_raise_id to lowerHand when provided", async () => {
+    const client = makeMockClient();
+    const server = makeServer(client);
+    const handler = getHandler(server, CallToolRequestSchema.shape.method.value);
+
+    await handler!(
+      {
+        method: "tools/call",
+        params: { name: "cancel_hand_raise", arguments: { hand_raise_id: "hr-123" } },
+      },
+      {},
+    );
+
+    expect(client.lowerHand).toHaveBeenCalledWith("hr-123");
+  });
+});
+
+describe("get_speaking_status tool", () => {
+  it("returns is_speaking and is_in_queue from local tracking", async () => {
+    const client = makeMockClient({
+      getSpeakingStatus: vi.fn(() => ({ isSpeaking: true, isInQueue: false })),
+      getLastQueueStatus: vi.fn(() => null),
+    });
+    const server = makeServer(client);
+    const handler = getHandler(server, CallToolRequestSchema.shape.method.value);
+
+    const result = await handler!(
+      { method: "tools/call", params: { name: "get_speaking_status", arguments: {} } },
+      {},
+    );
+
+    const res = result as { content: Array<{ text: string }> };
+    const parsed = JSON.parse(res.content[0]?.text ?? "{}") as { is_speaking: boolean; is_in_queue: boolean };
+    expect(parsed.is_speaking).toBe(true);
+    expect(parsed.is_in_queue).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// get_participants tool
+// ---------------------------------------------------------------------------
+
+describe("get_participants tool", () => {
+  it("returns participant list including claude-code source", async () => {
+    const participants: ParticipantInfo[] = [
+      { participant_id: "p1", name: "Alice", role: "human", connection_type: "webrtc" },
+      { participant_id: "self", name: "Claude Code", role: "agent", connection_type: "claude-code", source: "claude-code" },
+    ];
+    const client = makeMockClient({ getParticipants: vi.fn(() => participants) });
+    const server = makeServer(client);
+    const handler = getHandler(server, CallToolRequestSchema.shape.method.value);
+
+    const result = await handler!(
+      { method: "tools/call", params: { name: "get_participants", arguments: {} } },
+      {},
+    );
+
+    const res = result as { content: Array<{ text: string }> };
+    const parsed = JSON.parse(res.content[0]?.text ?? "[]") as ParticipantInfo[];
+    expect(parsed).toHaveLength(2);
+    const self = parsed.find((p) => p.name === "Claude Code");
+    expect(self?.source).toBe("claude-code");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// request_context tool
+// ---------------------------------------------------------------------------
+
 describe("request_context tool", () => {
   it("filters transcript by query keyword", async () => {
     const segments = [
@@ -253,6 +503,10 @@ describe("request_context tool", () => {
     expect(res.isError).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// get_meeting_recap tool
+// ---------------------------------------------------------------------------
 
 describe("get_meeting_recap tool", () => {
   it("builds recap from entity buffer", async () => {
@@ -305,6 +559,10 @@ describe("get_meeting_recap tool", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// get_entity_history tool
+// ---------------------------------------------------------------------------
+
 describe("get_entity_history tool", () => {
   it("returns entities of the requested type", async () => {
     const task: TaskEntity = {
@@ -346,6 +604,10 @@ describe("get_entity_history tool", () => {
     expect(res.isError).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// unknown tool
+// ---------------------------------------------------------------------------
 
 describe("unknown tool", () => {
   it("returns isError for unknown tool name", async () => {

@@ -62,7 +62,9 @@ function makeConfig(
     conveneApiUrl: "ws://localhost:8003",
     conveneHttpUrl: "http://localhost:8000",
     conveneApiKey: "test-key",
+    conveneBearerToken: "",
     conveneMeetingId: "meeting-abc",
+    conveneAgentName: "Claude Code",
     agentMode: "both",
     entityFilter: [],
     ...overrides,
@@ -476,5 +478,301 @@ describe("channel message formatting", () => {
     const content = received[0]?.content ?? "";
     expect(content).toMatch(/<insight type="decision">/);
     expect(content).toContain("TypeScript");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Turn management events
+// ---------------------------------------------------------------------------
+
+describe("turn management events", () => {
+  it("forwards turn.queue.updated as a turn channel message", async () => {
+    const { client, mockWs } = await setupConnectedClient(makeConfig());
+
+    const received: ChannelMessage[] = [];
+    client.onChannelMessage((msg) => { received.push(msg); });
+
+    mockWs.simulateMessage({
+      type: "event",
+      event_type: "turn.queue.updated",
+      payload: {
+        meeting_id: "meeting-abc",
+        active_speaker_id: "p1",
+        queue: [
+          { position: 1, participant_id: "p2", priority: "normal", topic: "auth fix", raised_at: "2026-03-23T10:00:00Z" },
+        ],
+      },
+    });
+
+    expect(received).toHaveLength(1);
+    expect(received[0]?.topic).toBe("turn");
+    expect(received[0]?.type).toBe("queue_updated");
+    expect(received[0]?.content).toContain("p1");
+  });
+
+  it("buffers the last queue status from turn.queue.updated", async () => {
+    const { client, mockWs } = await setupConnectedClient(makeConfig());
+
+    mockWs.simulateMessage({
+      type: "event",
+      event_type: "turn.queue.updated",
+      payload: {
+        meeting_id: "meeting-abc",
+        active_speaker_id: "p-speaker",
+        queue: [],
+      },
+    });
+
+    const status = client.getLastQueueStatus();
+    expect(status).not.toBeNull();
+    expect(status?.active_speaker_id).toBe("p-speaker");
+  });
+
+  it("forwards turn.speaker.changed as a turn channel message", async () => {
+    const { client, mockWs } = await setupConnectedClient(makeConfig());
+
+    const received: ChannelMessage[] = [];
+    client.onChannelMessage((msg) => { received.push(msg); });
+
+    mockWs.simulateMessage({
+      type: "event",
+      event_type: "turn.speaker.changed",
+      payload: {
+        meeting_id: "meeting-abc",
+        previous_speaker_id: "p1",
+        new_speaker_id: "p2",
+      },
+    });
+
+    expect(received).toHaveLength(1);
+    expect(received[0]?.topic).toBe("turn");
+    expect(received[0]?.type).toBe("speaker_changed");
+    expect(received[0]?.content).toContain("p1");
+    expect(received[0]?.content).toContain("p2");
+  });
+
+  it("sets isSpeaking=true and isInQueue=false on turn.your_turn", async () => {
+    const { client, mockWs } = await setupConnectedClient(makeConfig());
+
+    const received: ChannelMessage[] = [];
+    client.onChannelMessage((msg) => { received.push(msg); });
+
+    mockWs.simulateMessage({
+      type: "event",
+      event_type: "turn.your_turn",
+      payload: { meeting_id: "meeting-abc" },
+    });
+
+    expect(received).toHaveLength(1);
+    expect(received[0]?.type).toBe("your_turn");
+
+    const { isSpeaking, isInQueue } = client.getSpeakingStatus();
+    expect(isSpeaking).toBe(true);
+    expect(isInQueue).toBe(false);
+  });
+
+  it("raiseHand sends raise_hand WebSocket message", async () => {
+    const { client, mockWs } = await setupConnectedClient(makeConfig());
+
+    await client.raiseHand("urgent", "blocking issue");
+
+    const raiseMsg = mockWs.sentMessages
+      .map((m) => JSON.parse(m) as Record<string, unknown>)
+      .find((m) => m["type"] === "raise_hand");
+
+    expect(raiseMsg).toBeDefined();
+    expect(raiseMsg?.["priority"]).toBe("urgent");
+    expect(raiseMsg?.["topic"]).toBe("blocking issue");
+  });
+
+  it("finishedSpeaking sends finished_speaking WebSocket message", async () => {
+    const { client, mockWs } = await setupConnectedClient(makeConfig());
+
+    await client.finishedSpeaking();
+
+    const msg = mockWs.sentMessages
+      .map((m) => JSON.parse(m) as Record<string, unknown>)
+      .find((m) => m["type"] === "finished_speaking");
+
+    expect(msg).toBeDefined();
+  });
+
+  it("lowerHand sends lower_hand WebSocket message", async () => {
+    const { client, mockWs } = await setupConnectedClient(makeConfig());
+    // Must be in queue first
+    client["isInQueue"] = true;
+
+    await client.lowerHand("hr-uuid");
+
+    const msg = mockWs.sentMessages
+      .map((m) => JSON.parse(m) as Record<string, unknown>)
+      .find((m) => m["type"] === "lower_hand");
+
+    expect(msg).toBeDefined();
+    expect(msg?.["hand_raise_id"]).toBe("hr-uuid");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Chat events
+// ---------------------------------------------------------------------------
+
+describe("chat events", () => {
+  it("buffers inbound chat messages from data.channel.chat events", async () => {
+    const { client, mockWs } = await setupConnectedClient(makeConfig());
+
+    mockWs.simulateMessage({
+      type: "event",
+      event_type: "data.channel.chat",
+      payload: {
+        meeting_id: "meeting-abc",
+        sender_name: "Alice",
+        sender_session_id: "s-alice",
+        payload: { text: "Hello from Alice" },
+      },
+    });
+
+    const messages = client.getChatMessages(10);
+    expect(messages).toHaveLength(1);
+    expect(messages[0]?.text).toBe("Hello from Alice");
+    expect(messages[0]?.sender_name).toBe("Alice");
+  });
+
+  it("forwards inbound chat as a 'chat' topic channel message", async () => {
+    const { client, mockWs } = await setupConnectedClient(makeConfig());
+
+    const received: ChannelMessage[] = [];
+    client.onChannelMessage((msg) => { received.push(msg); });
+
+    mockWs.simulateMessage({
+      type: "event",
+      event_type: "data.channel.chat",
+      payload: {
+        meeting_id: "meeting-abc",
+        sender_name: "Bob",
+        sender_session_id: "s-bob",
+        payload: { text: "Good morning" },
+      },
+    });
+
+    expect(received).toHaveLength(1);
+    expect(received[0]?.topic).toBe("chat");
+    expect(received[0]?.type).toBe("chat_message");
+    expect(received[0]?.content).toContain("Bob");
+    expect(received[0]?.content).toContain("Good morning");
+  });
+
+  it("assigns monotonically increasing indexes to chat messages", async () => {
+    const { client, mockWs } = await setupConnectedClient(makeConfig());
+
+    for (const text of ["First", "Second", "Third"]) {
+      mockWs.simulateMessage({
+        type: "event",
+        event_type: "data.channel.chat",
+        payload: { sender_name: "Alice", sender_session_id: "s1", payload: { text } },
+      });
+    }
+
+    const messages = client.getChatMessages(10);
+    expect(messages).toHaveLength(3);
+    expect(messages[0]?.index).toBe(0);
+    expect(messages[1]?.index).toBe(1);
+    expect(messages[2]?.index).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Participant tracking
+// ---------------------------------------------------------------------------
+
+describe("participant tracking", () => {
+  it("adds self as claude-code participant on join", async () => {
+    const { client } = await setupConnectedClient(makeConfig());
+
+    const participants = client.getParticipants();
+    const self = participants.find((p) => p.name === "Claude Code");
+    expect(self).toBeDefined();
+    expect(self?.source).toBe("claude-code");
+  });
+
+  it("forwards participant_update joined events", async () => {
+    const { client, mockWs } = await setupConnectedClient(makeConfig());
+
+    const received: ChannelMessage[] = [];
+    client.onChannelMessage((msg) => { received.push(msg); });
+
+    mockWs.simulateMessage({
+      type: "participant_update",
+      action: "joined",
+      participant_id: "p-new",
+      name: "Dave",
+      role: "human",
+      connection_type: "webrtc",
+    });
+
+    const turnAndParticipantMsgs = received.filter((m) => m.topic === "participant");
+    expect(turnAndParticipantMsgs).toHaveLength(1);
+    expect(turnAndParticipantMsgs[0]?.type).toBe("joined");
+    expect(turnAndParticipantMsgs[0]?.content).toContain("Dave");
+
+    // Also added to buffer
+    const participants = client.getParticipants();
+    expect(participants.find((p) => p.name === "Dave")).toBeDefined();
+  });
+
+  it("removes participant from buffer on participant_update left", async () => {
+    const { client, mockWs } = await setupConnectedClient(makeConfig());
+
+    // Add a participant first
+    mockWs.simulateMessage({
+      type: "participant_update",
+      action: "joined",
+      participant_id: "p-eve",
+      name: "Eve",
+      role: "human",
+      connection_type: "webrtc",
+    });
+
+    expect(client.getParticipants().find((p) => p.name === "Eve")).toBeDefined();
+
+    mockWs.simulateMessage({
+      type: "participant_update",
+      action: "left",
+      participant_id: "p-eve",
+      name: "Eve",
+      role: "human",
+    });
+
+    expect(client.getParticipants().find((p) => p.name === "Eve")).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Bearer token auth
+// ---------------------------------------------------------------------------
+
+describe("bearer token auth", () => {
+  it("skips API key exchange when CONVENE_BEARER_TOKEN is set", async () => {
+    const config = makeConfig({ conveneBearerToken: "pre-issued-jwt" });
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    const client = new ConveneClient(
+      config,
+      MockWebSocket as unknown as ConstructorParameters<typeof ConveneClient>[1],
+    );
+
+    const connectPromise = client.connect();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    const mockWs = lastMockWs!;
+    mockWs.emit("open");
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    mockWs.simulateMessage({ type: "joined", meeting_id: config.conveneMeetingId });
+    await connectPromise;
+
+    // fetch should NOT have been called (bearer token was used directly)
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 });

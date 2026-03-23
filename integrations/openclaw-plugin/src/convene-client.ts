@@ -39,6 +39,28 @@ export interface Participant {
   name: string;
   role: string;
   connection_type: string;
+  source?: string;
+}
+
+export interface TurnQueueStatus {
+  meeting_id: string | null;
+  active_speaker_id: string | null;
+  queue: Array<{
+    position: number;
+    participant_id: string;
+    priority: string;
+    topic: string | null;
+  }>;
+  your_position: number | null;
+  total_in_queue: number;
+}
+
+export interface ChatMessage {
+  id?: string;
+  sender_name?: string;
+  sender_id?: string;
+  text: string;
+  sent_at?: string;
 }
 
 export class ConveneClient {
@@ -76,128 +98,90 @@ export class ConveneClient {
     return headers;
   }
 
-  async listMeetings(): Promise<Meeting[]> {
+  private async callTool(name: string, args: Record<string, unknown>): Promise<string> {
     const resp = await fetch(`${this.config.mcpUrl}`, {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify({
         jsonrpc: "2.0",
         method: "tools/call",
-        params: { name: "list_meetings", arguments: {} },
+        params: { name, arguments: args },
         id: 1,
       }),
     });
 
     const result = (await resp.json()) as { result?: { content: Array<{ text: string }> } };
-    if (result.result?.content?.[0]?.text) {
-      return JSON.parse(result.result.content[0].text) as Meeting[];
-    }
-    return [];
+    return result.result?.content?.[0]?.text ?? "";
+  }
+
+  async listMeetings(): Promise<Meeting[]> {
+    const text = await this.callTool("list_meetings", {});
+    try { return JSON.parse(text) as Meeting[]; } catch { return []; }
   }
 
   async joinMeeting(meetingId: string): Promise<string> {
-    const resp = await fetch(`${this.config.mcpUrl}`, {
-      method: "POST",
-      headers: this.getHeaders(),
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "tools/call",
-        params: { name: "join_meeting", arguments: { meeting_id: meetingId } },
-        id: 1,
-      }),
-    });
-
-    const result = (await resp.json()) as { result?: { content: Array<{ text: string }> } };
-    return result.result?.content?.[0]?.text ?? "Failed to join meeting";
+    return this.callTool("join_meeting", { meeting_id: meetingId });
   }
 
   async getTranscript(lastN: number = 50): Promise<TranscriptSegment[]> {
-    const resp = await fetch(`${this.config.mcpUrl}`, {
-      method: "POST",
-      headers: this.getHeaders(),
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "tools/call",
-        params: { name: "get_transcript", arguments: { last_n: lastN } },
-        id: 1,
-      }),
-    });
-
-    const result = (await resp.json()) as { result?: { content: Array<{ text: string }> } };
-    if (result.result?.content?.[0]?.text) {
-      return JSON.parse(result.result.content[0].text) as TranscriptSegment[];
-    }
-    return [];
+    const text = await this.callTool("get_transcript", { last_n: lastN });
+    try { return JSON.parse(text) as TranscriptSegment[]; } catch { return []; }
   }
 
-  async createTask(
-    meetingId: string,
-    description: string,
-    priority: string = "medium"
-  ): Promise<Task> {
-    const resp = await fetch(`${this.config.mcpUrl}`, {
-      method: "POST",
-      headers: this.getHeaders(),
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "tools/call",
-        params: {
-          name: "create_task",
-          arguments: {
-            meeting_id: meetingId,
-            description,
-            priority,
-          },
-        },
-        id: 1,
-      }),
-    });
-
-    const result = (await resp.json()) as { result?: { content: Array<{ text: string }> } };
-    if (result.result?.content?.[0]?.text) {
-      return JSON.parse(result.result.content[0].text) as Task;
-    }
-    throw new Error("Failed to create task");
+  async createTask(meetingId: string, description: string, priority: string = "medium"): Promise<Task> {
+    const text = await this.callTool("create_task", { meeting_id: meetingId, description, priority });
+    return JSON.parse(text) as Task;
   }
 
   async getParticipants(): Promise<Participant[]> {
-    const resp = await fetch(`${this.config.mcpUrl}`, {
-      method: "POST",
-      headers: this.getHeaders(),
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "tools/call",
-        params: { name: "get_participants", arguments: {} },
-        id: 1,
-      }),
-    });
-
-    const result = (await resp.json()) as { result?: { content: Array<{ text: string }> } };
-    if (result.result?.content?.[0]?.text) {
-      return JSON.parse(result.result.content[0].text) as Participant[];
-    }
-    return [];
+    const text = await this.callTool("get_participants", {});
+    try { return JSON.parse(text) as Participant[]; } catch { return []; }
   }
 
   async createMeeting(title: string): Promise<Meeting> {
-    const resp = await fetch(`${this.config.mcpUrl}`, {
-      method: "POST",
-      headers: this.getHeaders(),
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "tools/call",
-        params: {
-          name: "create_meeting",
-          arguments: { title, platform: "convene" },
-        },
-        id: 1,
-      }),
-    });
+    const text = await this.callTool("create_new_meeting", { title, platform: "convene" });
+    return JSON.parse(text) as Meeting;
+  }
 
-    const result = (await resp.json()) as { result?: { content: Array<{ text: string }> } };
-    if (result.result?.content?.[0]?.text) {
-      return JSON.parse(result.result.content[0].text) as Meeting;
-    }
-    throw new Error("Failed to create meeting");
+  // ---------------------------------------------------------------------------
+  // Turn management
+  // ---------------------------------------------------------------------------
+
+  async raiseHand(priority: string = "normal", topic?: string): Promise<string> {
+    const args: Record<string, unknown> = { priority };
+    if (topic) args["topic"] = topic;
+    return this.callTool("raise_hand", args);
+  }
+
+  async getQueueStatus(meetingId: string): Promise<TurnQueueStatus> {
+    const text = await this.callTool("get_queue_status", { meeting_id: meetingId });
+    return JSON.parse(text) as TurnQueueStatus;
+  }
+
+  async markFinishedSpeaking(meetingId: string): Promise<string> {
+    return this.callTool("mark_finished_speaking", { meeting_id: meetingId });
+  }
+
+  async cancelHandRaise(meetingId: string, handRaiseId?: string): Promise<string> {
+    const args: Record<string, unknown> = { meeting_id: meetingId };
+    if (handRaiseId) args["hand_raise_id"] = handRaiseId;
+    return this.callTool("cancel_hand_raise", args);
+  }
+
+  async getSpeakingStatus(meetingId: string): Promise<string> {
+    return this.callTool("get_speaking_status", { meeting_id: meetingId });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Chat
+  // ---------------------------------------------------------------------------
+
+  async sendChatMessage(meetingId: string, text: string): Promise<string> {
+    return this.callTool("send_chat_message", { meeting_id: meetingId, text });
+  }
+
+  async getChatMessages(meetingId: string, limit: number = 50): Promise<ChatMessage[]> {
+    const result = await this.callTool("get_chat_messages", { meeting_id: meetingId, limit });
+    try { return JSON.parse(result) as ChatMessage[]; } catch { return []; }
   }
 }

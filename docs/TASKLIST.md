@@ -178,14 +178,16 @@
   - [ ] Wire ChatStore into MCP server tools
   - [ ] Integration tests for all 3 chat/status tools
 
-- [ ] 🔗 BLOCK: Claude Code Channel Integration
-  - [ ] Channel server endpoint for Claude Code session connections
-  - [ ] Full participant access: turn management, chat, transcript read, task access
-  - [ ] All 8 new MCP tools available through the channel connection
-  - [ ] Sender gating via agent API keys (same auth path as agent-gateway)
-  - [ ] Integration with agent-gateway session management
-  - [ ] Package as Claude Code plugin / skill
-  - [ ] Integration tests: Claude Code session joins, raises hand, sends chat
+- [x] 🔗 BLOCK: Claude Code Channel Integration
+  - [x] Channel server endpoint for Claude Code session connections (services/channel-server/ — STDIO MCP with claude/channel capability)
+  - [x] Full participant access: turn management (raise_hand, get_queue, mark_finished, cancel, get_status), chat (send/read), transcript, tasks
+  - [x] All 13 MCP tools wired into channel server (7 new tools added: turn management + get_chat_messages + get_participants)
+  - [x] Bearer token auth bypass (CONVENE_BEARER_TOKEN env var skips API-key exchange)
+  - [x] Participant registered with source: "claude-code" in meeting participant list
+  - [x] Real-time event forwarding: turn.queue.updated, turn.speaker.changed, turn.your_turn, data.channel.chat, participant_update
+  - [x] Integration with agent-gateway via native WebSocket protocol (raise_hand, lower_hand, finished_speaking, get_queue messages)
+  - [x] Packaged as Claude Code plugin (.claude-plugin/manifest.json) and .mcp.json for direct use
+  - [x] Integration tests: 78 tests pass covering all new tools and event forwarding
 
 - [ ] 🔗 BLOCK: Frontend — Turn Management & Chat UI
   - [ ] Speaker queue panel (ordered list, current speaker highlighted, position indicators)
@@ -196,7 +198,7 @@
 
 - [ ] 🔗 BLOCK: April Release Examples & Docs
   - [ ] Update `examples/meeting-assistant-agent/` to use turn management + chat tools
-  - [ ] Update OpenClaw plugin with new MCP tool definitions
+  - [x] Update OpenClaw plugin with new MCP tool definitions (8 new tools: turn management + chat)
   - [ ] Write Claude Code channel setup guide (`docs/integrations/CLAUDE_CODE_CHANNEL.md`)
   - [ ] Write multi-agent meeting tutorial
   - [ ] Finalize `docs/milestone-testing/M_APRIL_E2E_Test.md` scenario playbook
