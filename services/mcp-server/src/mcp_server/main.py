@@ -17,6 +17,7 @@ from uuid import UUID
 import redis.asyncio as aioredis
 from mcp.server.fastmcp import FastMCP
 
+from convene_providers.chat.redis_chat_store import RedisChatStore
 from convene_providers.turn_management.redis_turn_manager import RedisTurnManager
 from mcp_server.api_client import ApiClient
 from mcp_server.auth import MCPAuthError, MCPIdentity, validate_mcp_token
@@ -47,6 +48,7 @@ _api_client: ApiClient | None = None
 _gateway_client: GatewayClient | None = None
 _mcp_identity: MCPIdentity | None = None
 _turn_manager: RedisTurnManager | None = None
+_chat_store: RedisChatStore | None = None
 
 
 def _get_turn_manager() -> RedisTurnManager:
@@ -56,6 +58,14 @@ def _get_turn_manager() -> RedisTurnManager:
         redis_client = aioredis.from_url(settings.redis_url)
         _turn_manager = RedisTurnManager(redis_client)
     return _turn_manager
+
+
+def _get_chat_store() -> RedisChatStore:
+    """Get or create the ChatStore singleton."""
+    global _chat_store
+    if _chat_store is None:
+        _chat_store = RedisChatStore(redis_url=settings.redis_url)
+    return _chat_store
 
 
 def _get_api_client() -> ApiClient:
@@ -616,6 +626,216 @@ async def get_speaking_status(meeting_id: str) -> str:
         "current_speaker": str(current_speaker_id) if current_speaker_id else None,
         "meeting_phase": "active",
     })
+
+
+# ---------------------------------------------------------------------------
+# Chat & Status Tools
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+async def send_chat_message(
+    meeting_id: str,
+    content: str,
+    message_type: str = "text",
+) -> str:
+    """Send a chat message to a meeting.
+
+    Posts a message to the meeting's chat channel. All participants
+    connected to the meeting (via WebSocket or MCP) will receive it.
+
+    Args:
+        meeting_id: UUID of the meeting.
+        content: The message text to send.
+        message_type: Semantic type — one of: text, question, action_item, decision.
+                      Use "question" when asking something, "action_item" for tasks
+                      to track, "decision" for recorded decisions, "text" for general chat.
+
+    Returns:
+        JSON object with the stored message details including message_id and sent_at.
+    """
+    from convene_core.models.chat import ChatMessageType
+
+    identity = await _ensure_authenticated()
+    cs = _get_chat_store()
+    mid = UUID(meeting_id)
+
+    try:
+        msg_type = ChatMessageType(message_type)
+    except ValueError:
+        return json.dumps({"error": f"Invalid message_type '{message_type}'. Must be one of: text, question, action_item, decision."})
+
+    msg = await cs.send_message(
+        meeting_id=mid,
+        sender_id=identity.agent_config_id,
+        sender_name=identity.name,
+        content=content,
+        message_type=msg_type,
+    )
+
+    return json.dumps({
+        "message_id": str(msg.message_id),
+        "meeting_id": str(msg.meeting_id),
+        "sender_id": str(msg.sender_id),
+        "sender_name": msg.sender_name,
+        "content": msg.content,
+        "message_type": msg.message_type.value,
+        "sent_at": msg.sent_at.isoformat(),
+        "sequence": msg.sequence,
+    })
+
+
+@mcp.tool()
+async def get_chat_messages(
+    meeting_id: str,
+    limit: int = 50,
+    message_type: str | None = None,
+    since: str | None = None,
+) -> str:
+    """Get chat messages from a meeting.
+
+    Retrieves chat history in chronological order. Supports filtering
+    by message type and returning only messages after a given timestamp.
+
+    Args:
+        meeting_id: UUID of the meeting.
+        limit: Maximum number of messages to return (default 50, max 200).
+        message_type: Filter by type — one of: text, question, action_item, decision.
+                      Omit or pass null to return all types.
+        since: ISO 8601 datetime string — only return messages after this time.
+               Example: "2026-03-23T14:30:00Z"
+
+    Returns:
+        JSON array of chat messages in chronological order (oldest first).
+    """
+    from datetime import datetime
+    from convene_core.models.chat import ChatMessageType
+
+    await _ensure_authenticated()
+    cs = _get_chat_store()
+    mid = UUID(meeting_id)
+
+    # Validate and clamp limit
+    limit = max(1, min(limit, 200))
+
+    # Parse optional message_type filter
+    type_filter: ChatMessageType | None = None
+    if message_type is not None:
+        try:
+            type_filter = ChatMessageType(message_type)
+        except ValueError:
+            return json.dumps({"error": f"Invalid message_type '{message_type}'."})
+
+    # Parse optional since timestamp
+    since_dt: datetime | None = None
+    if since is not None:
+        try:
+            since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
+        except ValueError:
+            return json.dumps({"error": f"Invalid since timestamp '{since}'. Use ISO 8601 format."})
+
+    messages = await cs.get_messages(
+        meeting_id=mid,
+        limit=limit,
+        message_type=type_filter,
+        since=since_dt,
+    )
+
+    return json.dumps(
+        [
+            {
+                "message_id": str(m.message_id),
+                "sender_id": str(m.sender_id),
+                "sender_name": m.sender_name,
+                "content": m.content,
+                "message_type": m.message_type.value,
+                "sent_at": m.sent_at.isoformat(),
+                "sequence": m.sequence,
+            }
+            for m in messages
+        ],
+        indent=2,
+    )
+
+
+@mcp.tool()
+async def get_meeting_status(meeting_id: str) -> str:
+    """Get a comprehensive status snapshot for a meeting.
+
+    Returns the current state of the meeting including:
+    - Meeting metadata (title, status, start time)
+    - Active speaker and speaker queue
+    - Connected participants (if you are joined via WebSocket)
+    - Recent chat messages (last 10)
+
+    Use this to orient yourself when joining a meeting mid-session,
+    or to get a quick overview of the current meeting state.
+
+    Args:
+        meeting_id: UUID of the meeting.
+
+    Returns:
+        JSON object with meeting, queue, participants, and recent_chat fields.
+    """
+    await _ensure_authenticated()
+    tm = _get_turn_manager()
+    cs = _get_chat_store()
+    client = _get_api_client()
+    mid = UUID(meeting_id)
+
+    # Gather meeting info, queue status, and recent chat concurrently
+    import asyncio as _asyncio
+
+    meetings_task = _asyncio.create_task(client.list_meetings())
+    queue_task = _asyncio.create_task(tm.get_queue_status(mid))
+    chat_task = _asyncio.create_task(cs.get_messages(mid, limit=10))
+
+    meetings, queue_status, recent_messages = await _asyncio.gather(
+        meetings_task, queue_task, chat_task
+    )
+
+    # Find the specific meeting from the list
+    meeting_data: dict[str, Any] | None = None
+    for m in meetings:
+        if str(m.get("id", "")) == meeting_id:
+            meeting_data = m
+            break
+
+    # Participants from gateway client (if connected)
+    participants: list[Any] = []
+    if _gateway_client is not None and _gateway_client.meeting_id == meeting_id:
+        participants = _gateway_client.get_participants()
+
+    return json.dumps(
+        {
+            "meeting": meeting_data,
+            "queue": {
+                "active_speaker": str(queue_status.active_speaker_id) if queue_status.active_speaker_id else None,
+                "queue_length": len(queue_status.queue),
+                "entries": [
+                    {
+                        "position": e.position,
+                        "participant_id": str(e.participant_id),
+                        "priority": e.priority.value,
+                        "topic": e.topic,
+                    }
+                    for e in queue_status.queue
+                ],
+            },
+            "participants": participants,
+            "recent_chat": [
+                {
+                    "sender_name": m.sender_name,
+                    "content": m.content,
+                    "message_type": m.message_type.value,
+                    "sent_at": m.sent_at.isoformat(),
+                }
+                for m in recent_messages
+            ],
+        },
+        indent=2,
+        default=str,
+    )
 
 
 # ---------------------------------------------------------------------------

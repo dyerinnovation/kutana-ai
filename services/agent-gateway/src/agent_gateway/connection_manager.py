@@ -8,6 +8,7 @@ from uuid import UUID
 
 if TYPE_CHECKING:
     from agent_gateway.agent_session import AgentSessionHandler
+    from agent_gateway.chat_bridge import ChatBridge
     from agent_gateway.human_session import HumanSessionHandler
     from agent_gateway.turn_bridge import TurnBridge
 
@@ -68,6 +69,7 @@ class ConnectionManager:
         self._max_connections = max_connections
         self.redis: Any | None = None
         self.turn_bridge: TurnBridge | None = None
+        self.chat_bridge: ChatBridge | None = None
 
     @property
     def active_count(self) -> int:

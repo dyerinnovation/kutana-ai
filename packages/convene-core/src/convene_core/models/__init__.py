@@ -8,6 +8,7 @@ from convene_core.models.agent_session import (
     AgentSessionStatus,
     ConnectionType,
 )
+from convene_core.models.chat import ChatMessage, ChatMessageType
 from convene_core.models.decision import Decision
 from convene_core.models.meeting import Meeting, MeetingStatus
 from convene_core.models.participant import Participant, ParticipantRole
@@ -26,6 +27,8 @@ __all__ = [
     "AgentConfig",
     "AgentSession",
     "AgentSessionStatus",
+    "ChatMessage",
+    "ChatMessageType",
     "ConnectionType",
     "Decision",
     "Meeting",

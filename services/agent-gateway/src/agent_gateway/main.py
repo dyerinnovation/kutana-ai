@@ -19,6 +19,7 @@ import redis.asyncio as redis_async
 from agent_gateway.agent_session import AgentSessionHandler
 from agent_gateway.audio_bridge import AudioBridge
 from agent_gateway.auth import AuthError, validate_token
+from agent_gateway.chat_bridge import ChatBridge
 from agent_gateway.connection_manager import ConnectionManager
 from agent_gateway.event_relay import EventRelay
 from agent_gateway.human_session import HumanSessionHandler
@@ -40,6 +41,7 @@ _connection_manager: ConnectionManager | None = None
 _event_relay: EventRelay | None = None
 _audio_bridge: AudioBridge | None = None
 _turn_bridge: TurnBridge | None = None
+_chat_bridge: ChatBridge | None = None
 _db_session_factory: async_sessionmaker[AsyncSession] | None = None
 _redis_client: redis_async.Redis | None = None  # type: ignore[type-arg]
 
@@ -54,7 +56,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     Yields:
         Control back to the ASGI server while the app is running.
     """
-    global _settings, _connection_manager, _event_relay, _audio_bridge, _turn_bridge, _db_session_factory, _redis_client
+    global _settings, _connection_manager, _event_relay, _audio_bridge, _turn_bridge, _chat_bridge, _db_session_factory, _redis_client
 
     _settings = AgentGatewaySettings()
     logger.info(
@@ -103,12 +105,27 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     _connection_manager.turn_bridge = _turn_bridge
     _turn_bridge.start()
 
+    # Initialise ChatBridge (Redis Streams storage + Pub/Sub broadcast)
+    from convene_providers.chat.redis_chat_store import RedisChatStore
+
+    _chat_store = RedisChatStore(redis_url=_settings.redis_url)
+    _chat_bridge = ChatBridge(
+        chat_store=_chat_store,
+        manager=_connection_manager,
+        redis_url=_settings.redis_url,
+    )
+    _connection_manager.chat_bridge = _chat_bridge
+    _chat_bridge.start()
+
     await _event_relay.start()
     logger.info("agent-gateway starting up (max_connections=%d)", _settings.max_connections)
 
     yield
 
     logger.info("agent-gateway shutting down")
+    if _chat_bridge is not None:
+        await _chat_bridge.stop()
+        _chat_bridge = None
     if _turn_bridge is not None:
         await _turn_bridge.stop()
         _turn_bridge = None
