@@ -14,6 +14,8 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+import redis.asyncio as redis_async
+
 from agent_gateway.agent_session import AgentSessionHandler
 from agent_gateway.audio_bridge import AudioBridge
 from agent_gateway.auth import AuthError, validate_token
@@ -37,6 +39,7 @@ _connection_manager: ConnectionManager | None = None
 _event_relay: EventRelay | None = None
 _audio_bridge: AudioBridge | None = None
 _db_session_factory: async_sessionmaker[AsyncSession] | None = None
+_redis_client: redis_async.Redis | None = None  # type: ignore[type-arg]
 
 
 @asynccontextmanager
@@ -49,7 +52,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     Yields:
         Control back to the ASGI server while the app is running.
     """
-    global _settings, _connection_manager, _event_relay, _audio_bridge, _db_session_factory
+    global _settings, _connection_manager, _event_relay, _audio_bridge, _db_session_factory, _redis_client
 
     _settings = AgentGatewaySettings()
     logger.info(
@@ -69,6 +72,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
 
     _connection_manager = ConnectionManager(max_connections=_settings.max_connections)
+    _redis_client = redis_async.from_url(_settings.redis_url, decode_responses=True)
+    _connection_manager.redis = _redis_client
     _event_relay = EventRelay(
         redis_url=_settings.redis_url,
         connection_manager=_connection_manager,
@@ -93,6 +98,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if _event_relay is not None:
         await _event_relay.stop()
         _event_relay = None
+    if _redis_client is not None:
+        await _redis_client.aclose()
+        _redis_client = None
     _connection_manager = None
     _db_session_factory = None
     await engine.dispose()
