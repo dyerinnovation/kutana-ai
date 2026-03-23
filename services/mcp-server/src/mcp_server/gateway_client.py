@@ -11,6 +11,7 @@ import logging
 from typing import Any
 
 import websockets
+from websockets.exceptions import ConnectionClosed as _WsConnectionClosed
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +153,7 @@ class GatewayClient:
                         msg.get("code"),
                         msg.get("message"),
                     )
-        except websockets.exceptions.ConnectionClosed:
+        except _WsConnectionClosed:
             logger.info("Gateway connection closed")
         except Exception:
             logger.exception("Error in gateway listener")

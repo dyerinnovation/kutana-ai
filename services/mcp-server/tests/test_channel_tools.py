@@ -147,8 +147,6 @@ class TestGatewayClientEventBuffering:
 
     async def test_listen_buffers_turn_events(self) -> None:
         """_listen() buffers turn_queue_updated and turn_speaker_changed messages."""
-        import asyncio
-
         from mcp_server.gateway_client import GatewayClient
 
         meeting_id = str(uuid4())
@@ -165,15 +163,14 @@ class TestGatewayClientEventBuffering:
             }),
         ]
 
-        async def mock_ws_iter():
-            for m in messages:
-                yield m
-
-        mock_ws = AsyncMock()
-        mock_ws.__aiter__ = mock_ws_iter
+        # Use a real async generator — no mocking of __aiter__ needed
+        class MockWs:
+            async def __aiter__(self):
+                for m in messages:
+                    yield m
 
         client = GatewayClient("ws://localhost:8003", "test-token")
-        client._ws = mock_ws  # type: ignore[attr-defined]
+        client._ws = MockWs()  # type: ignore[attr-defined]
 
         await client._listen()  # type: ignore[attr-defined]
 

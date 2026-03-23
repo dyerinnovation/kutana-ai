@@ -137,7 +137,10 @@ class EventRelay:
         if meeting_id is not None:
             sessions = self._manager.get_meeting_sessions(meeting_id)
             for session in sessions:
-                subscribed = getattr(session, "subscribed_channels", None)
+                raw_subscribed = getattr(session, "subscribed_channels", None)
+                # Treat empty set as None (no filter) for backward compat:
+                # agents with no active subscriptions receive all channel events.
+                subscribed = raw_subscribed if raw_subscribed else None
                 if self._should_relay(event_type, session.capabilities, subscribed_channels=subscribed):
                     try:
                         if event_type == "transcript.segment.final":
