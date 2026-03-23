@@ -418,6 +418,31 @@ convene-ai/
 
 ---
 
+### F2.8 — Security & Trust
+**Status**: Planned (April Release — P0)
+
+**Context**: Security is a day-1 requirement for a platform where AI agents have access to meeting transcripts, tasks, and participant data. Agents must be strictly isolated to the meetings they've joined, all inputs must be sanitized to prevent prompt injection attacks, and auth tokens must follow least-privilege principles. This block must ship with the April release — it is not deferrable.
+
+**Acceptance Criteria**:
+- [ ] Prompt injection defense: sanitize all agent-submitted text (chat, task descriptions, meeting names) before it is passed to an LLM context. Strip or escape control sequences, system-prompt-like patterns, and role-injection attempts
+- [ ] Data isolation: agents can only read transcript, tasks, and participant data from meetings they have an active, authenticated session in. No cross-meeting data leakage via MCP tools or WebSocket events
+- [ ] Input sanitization: all MCP tool inputs and WebSocket messages validated against strict Pydantic schemas with max-length, allowed-character, and type constraints. Reject and log invalid payloads
+- [ ] Rate limiting: per-agent and per-participant rate limits on WebSocket messages, MCP tool calls, and REST API endpoints. Redis-backed sliding window counters
+- [ ] Auth hardening: API key scope enforcement (keys scoped to specific meeting_ids or agent_ids), automatic token expiry, refresh token rotation, full API key audit log (issuance, usage, revocation)
+- [ ] Secure meeting defaults: new meetings default to private with explicit invite required. Meeting IDs are non-guessable (UUID v4 + short token, not sequential)
+- [ ] Content filtering: chat messages and task descriptions filtered for prohibited content before storage and broadcast
+- [ ] Transcript access controls: MCP `get_transcript` tool enforces that the requesting agent has an active session in the requested meeting_id. Deny with 403 if not
+
+**Technical Notes**:
+- Prompt injection sanitization lives in a shared `convene-core/security/sanitizer.py` utility — all services import it, never roll their own
+- Data isolation is enforced at the query layer: all SQL queries for transcript/task data JOIN against `meeting_participants` and filter by `agent_id = current_session.agent_id`
+- Rate limiting middleware: FastAPI `Depends()` on all WebSocket connect handlers and MCP tool routes; Redis `INCR` + `EXPIRE` per `{agent_id}:{window}` key
+- API key audit log: append-only PostgreSQL table `api_key_events(key_id, event_type, actor_id, meeting_id, timestamp, metadata)`
+- Content filtering: lightweight keyword/pattern blocklist as first pass; flag for async LLM review if pattern matches
+- Meeting ID format: `{uuid4_hex[:8]}-{random_token_6}` — unpredictable, short enough for humans to read
+
+---
+
 ## Phase 3 — Meeting Platform (WebRTC + Browser UI)
 
 > Goal: Build the web-based meeting platform. Browser participants join via WebRTC, see live collaboration surfaces, receive real-time task updates.
@@ -930,36 +955,37 @@ convene-ai/
 For a solo founder or small team building with Claude Code, the recommended implementation order is:
 
 1. **F1.6** — Complete task extraction (in progress)
-2. **F2.5** — Turn Management System *(April Release — Week 1)*
-3. **F2.6** — Meeting Chat *(April Release — Week 1)*
-4. **F2.1** — Agent Gateway multi-agent refactor *(April Release — Week 1)*
-5. **F2.2** — MCP Server turn + chat tools *(April Release — Week 2)*
-6. **F2.7** — Claude Code Channel Integration *(April Release — Week 2)*
-7. **F1.7** — Memory system (scaffolded)
-8. **F2.3** — Agent SDK
-9. **F2.4** — Agent Auth
-10. **F4.1** — User Auth & Workspaces
-11. **F3.1** — LiveKit Integration
-12. **F3.2** — Meeting Web Client
-13. **F3.3** — Real-Time Collaboration Sidebar
-14. **F3.4** — Meeting Management
-15. **F4.2** — Billing & Subscriptions
-16. **F4.3** — Workspace Dashboard
-17. **F5.1** — TTS Integration
-18. **F5.2** — Standup Report Generation
-19. **F5.3** — Speaking Interaction Protocol
-20. **F5.4** — Real-Time Task Confirmation
-21. **F5.5** — Multi-Turn Dialogue Engine
-22. **F5.6** — Conflict & Dependency Detection
-23. **F5.7** — Meeting Facilitation
-24. **F6.1** — Agent Marketplace
-25. **F6.2** — Integrations (Linear, Jira, GitHub, Notion, Asana)
-26. **F6.3** — Analytics & Insights
-27. **F6.4** — Calendar Integration
-28. **F6.5** — Slack Integration
-29. **F6.6** — Existing Meeting Platform Integration (Zoom, Meet, Teams)
-30. **F7.1** — Security & Compliance
-31. **F7.2** — Infrastructure & Operations
+2. **F2.8** — Security & Trust *(April Release — P0, ship with release)*
+3. **F2.5** — Turn Management System *(April Release — Week 1)*
+4. **F2.6** — Meeting Chat *(April Release — Week 1)*
+5. **F2.1** — Agent Gateway multi-agent refactor *(April Release — Week 1)*
+6. **F2.2** — MCP Server turn + chat tools *(April Release — Week 2)*
+7. **F2.7** — Claude Code Channel Integration *(April Release — Week 2)*
+8. **F1.7** — Memory system (scaffolded)
+9. **F2.3** — Agent SDK
+10. **F2.4** — Agent Auth
+11. **F4.1** — User Auth & Workspaces
+12. **F3.1** — LiveKit Integration
+13. **F3.2** — Meeting Web Client
+14. **F3.3** — Real-Time Collaboration Sidebar
+15. **F3.4** — Meeting Management
+16. **F4.2** — Billing & Subscriptions
+17. **F4.3** — Workspace Dashboard
+18. **F5.1** — TTS Integration
+19. **F5.2** — Standup Report Generation
+20. **F5.3** — Speaking Interaction Protocol
+21. **F5.4** — Real-Time Task Confirmation
+22. **F5.5** — Multi-Turn Dialogue Engine
+23. **F5.6** — Conflict & Dependency Detection
+24. **F5.7** — Meeting Facilitation
+25. **F6.1** — Agent Marketplace
+26. **F6.2** — Integrations (Linear, Jira, GitHub, Notion, Asana)
+27. **F6.3** — Analytics & Insights
+28. **F6.4** — Calendar Integration
+29. **F6.5** — Slack Integration
+30. **F6.6** — Existing Meeting Platform Integration (Zoom, Meet, Teams)
+31. **F7.1** — Security & Compliance
+32. **F7.2** — Infrastructure & Operations
 
 **Phase 1 MVP (Core AI + Foundation)**: Items 1-2, ~2-3 weeks
 

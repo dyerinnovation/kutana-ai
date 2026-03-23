@@ -144,11 +144,23 @@
 
 ## April Release Sprint — Target: April 6-10, 2026
 
-> P0 features enabling full multi-agent participation: turn management, meeting chat, 8 new MCP tools, and Claude Code channel integration.
+> P0 features enabling full multi-agent participation: **security & trust infrastructure**, turn management, meeting chat, 8 new MCP tools, and Claude Code channel integration.
 >
 > **Prerequisites (Phase 2 above):** participant registry + events, turn manager, chat store, multi-agent gateway.
 >
 > **Timeline:** Week 1 (Mar 22–28) backend infra · Week 2 (Mar 29–Apr 4) MCP tools + channel + frontend · Week 3 (Apr 5–11) E2E testing + launch
+
+- [ ] 🔗 BLOCK: Security Infrastructure (P0 — ships with April Release)
+  - [ ] Prompt injection defense — `convene-core/security/sanitizer.py` utility; strip control sequences and role-injection patterns from all agent-submitted text before LLM context inclusion
+  - [ ] Data isolation enforcement — all transcript/task/participant queries JOIN against `meeting_participants` filtered by `agent_id`; no cross-meeting reads via MCP tools or WebSocket events
+  - [ ] Input sanitization — strict Pydantic schemas with max-length, allowed-character, and type constraints on all MCP tool inputs and WebSocket message payloads; reject + log invalid payloads
+  - [ ] Rate limiting — Redis sliding-window counters per `{agent_id}:{window}`; applied via FastAPI `Depends()` on WebSocket connect, MCP tool routes, and REST API endpoints
+  - [ ] Auth hardening — API key scope enforcement (keys scoped to `meeting_id` or `agent_id`), automatic expiry, refresh token rotation
+  - [ ] API key audit log — append-only PostgreSQL table `api_key_events(key_id, event_type, actor_id, meeting_id, timestamp, metadata)`
+  - [ ] Secure meeting defaults — new meetings default to private; meeting IDs use non-guessable format (`{uuid4_hex[:8]}-{random_token_6}`)
+  - [ ] Content filtering — keyword/pattern blocklist on chat messages and task descriptions before storage and broadcast
+  - [ ] Transcript access controls — `get_transcript` MCP tool enforces active session in requested `meeting_id`; 403 if not
+  - [ ] Integration tests for all security controls (injection attempts, cross-meeting access, rate limit enforcement, scope violations)
 
 - [ ] 🔗 BLOCK: Turn Management MCP Tools
   - [ ] `raise_hand` — request to speak, returns queue position
@@ -189,11 +201,12 @@
   - [ ] Write multi-agent meeting tutorial
   - [ ] Finalize `docs/milestone-testing/M_APRIL_E2E_Test.md` scenario playbook
 
-- [ ] **🏁 Milestone M_APRIL: All 4 E2E scenarios pass** — see `docs/milestone-testing/M_APRIL_E2E_Test.md`
+- [ ] **🏁 Milestone M_APRIL: All 4 E2E scenarios pass + security gate** — see `docs/milestone-testing/M_APRIL_E2E_Test.md`
   - [ ] Scenario A: 1 human + 1 agent (turn management + chat end-to-end)
   - [ ] Scenario B: 2 humans + 1 agent (multi-human, single agent)
   - [ ] Scenario C: 1 human + multiple agents (agent coordination, turn queue)
   - [ ] Scenario D: multiple humans + multiple agents (full multi-party)
+  - [ ] Security gate: prompt injection attempt rejected, cross-meeting access denied, rate limits enforced
 
 ---
 
