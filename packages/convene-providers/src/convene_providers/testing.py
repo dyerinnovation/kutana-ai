@@ -81,30 +81,51 @@ class MockTTS(TTSProvider):
     def __init__(
         self,
         audio_data: bytes = b"\x00" * 1600,
+        cost_per_char: float = 0.0,
     ) -> None:
         """Initialize the mock TTS provider.
 
         Args:
-            audio_data: Fixed audio bytes to return from
-                ``synthesize``. Defaults to 1600 zero bytes.
+            audio_data: Fixed audio bytes returned by all synthesis methods.
+                Defaults to 1600 zero bytes.
+            cost_per_char: Cost per character reported by ``get_cost_per_char``.
         """
         self._audio_data = audio_data
+        self._cost_per_char = cost_per_char
 
-    async def synthesize(
+    async def synthesize_stream(
         self,
         text: str,
+        voice: str | None = None,
     ) -> AsyncIterator[bytes]:
-        """Yield the fixed audio bytes regardless of input text.
+        """Yield the fixed audio bytes regardless of input text or voice.
 
         Args:
             text: The text to synthesize (ignored in mock).
+            voice: Voice ID (ignored in mock).
 
         Yields:
             The pre-configured audio bytes.
         """
         yield self._audio_data
 
-    async def get_voices(self) -> list[Voice]:
+    async def synthesize_batch(
+        self,
+        text: str,
+        voice: str | None = None,
+    ) -> bytes:
+        """Return the fixed audio bytes regardless of input text or voice.
+
+        Args:
+            text: The text to synthesize (ignored in mock).
+            voice: Voice ID (ignored in mock).
+
+        Returns:
+            The pre-configured audio bytes.
+        """
+        return self._audio_data
+
+    async def list_voices(self) -> list[Voice]:
         """Return a single mock voice.
 
         Returns:
@@ -117,6 +138,10 @@ class MockTTS(TTSProvider):
                 language="en-US",
             ),
         ]
+
+    def get_cost_per_char(self) -> float:
+        """Return the configured mock cost per character."""
+        return self._cost_per_char
 
     async def close(self) -> None:
         """No resources to release in mock provider."""

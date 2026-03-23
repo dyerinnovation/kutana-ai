@@ -116,19 +116,30 @@ class TestPiperTTS:
         provider = PiperTTS(voice_name="en_GB-alan-medium")
         assert provider._voice_name == "en_GB-alan-medium"
 
-    @pytest.mark.asyncio
-    async def test_get_voices_returns_list(self) -> None:
-        """get_voices returns a list of Voice objects."""
+    def test_is_available_without_piper(self) -> None:
+        """PiperTTS.is_available reflects whether piper is installed."""
         provider = PiperTTS()
-        voices = await provider.get_voices()
+        # Either True or False is valid; key is that the attribute exists
+        assert isinstance(provider.is_available, bool)
+
+    def test_zero_cost_per_char(self) -> None:
+        """PiperTTS reports zero cost per char (self-hosted)."""
+        provider = PiperTTS()
+        assert provider.get_cost_per_char() == 0.0
+
+    @pytest.mark.asyncio
+    async def test_list_voices_returns_list(self) -> None:
+        """list_voices returns a list of Voice objects."""
+        provider = PiperTTS()
+        voices = await provider.list_voices()
         assert len(voices) >= 1
         assert all(isinstance(v, Voice) for v in voices)
 
     @pytest.mark.asyncio
-    async def test_get_voices_includes_default(self) -> None:
-        """get_voices includes the default lessac voice."""
+    async def test_list_voices_includes_default(self) -> None:
+        """list_voices includes the default lessac voice."""
         provider = PiperTTS()
-        voices = await provider.get_voices()
+        voices = await provider.list_voices()
         voice_ids = [v.id for v in voices]
         assert "en_US-lessac-medium" in voice_ids
 
@@ -310,21 +321,39 @@ class TestMockTTS:
         assert isinstance(mock, TTSProvider)
 
     @pytest.mark.asyncio
-    async def test_synthesize_returns_audio(self) -> None:
-        """MockTTS yields pre-configured audio bytes."""
+    async def test_synthesize_stream_returns_audio(self) -> None:
+        """MockTTS yields pre-configured audio bytes from synthesize_stream."""
         audio = b"\xff" * 800
         mock = MockTTS(audio_data=audio)
-        chunks = [chunk async for chunk in mock.synthesize("hello")]
+        chunks = [chunk async for chunk in mock.synthesize_stream("hello")]
         assert len(chunks) == 1
         assert chunks[0] == audio
 
     @pytest.mark.asyncio
-    async def test_get_voices_returns_mock(self) -> None:
-        """MockTTS returns a single mock voice."""
+    async def test_synthesize_batch_returns_audio(self) -> None:
+        """MockTTS returns pre-configured audio bytes from synthesize_batch."""
+        audio = b"\xff" * 800
+        mock = MockTTS(audio_data=audio)
+        result = await mock.synthesize_batch("hello")
+        assert result == audio
+
+    @pytest.mark.asyncio
+    async def test_list_voices_returns_mock(self) -> None:
+        """MockTTS returns a single mock voice from list_voices."""
         mock = MockTTS()
-        voices = await mock.get_voices()
+        voices = await mock.list_voices()
         assert len(voices) == 1
         assert voices[0].id == "mock"
+
+    def test_get_cost_per_char_default_zero(self) -> None:
+        """MockTTS default cost per char is zero."""
+        mock = MockTTS()
+        assert mock.get_cost_per_char() == 0.0
+
+    def test_get_cost_per_char_custom(self) -> None:
+        """MockTTS respects custom cost_per_char."""
+        mock = MockTTS(cost_per_char=0.00001)
+        assert mock.get_cost_per_char() == 0.00001
 
 
 class TestMockLLM:

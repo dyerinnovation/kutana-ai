@@ -23,7 +23,9 @@ from agent_gateway.protocol import (
     LowerHand,
     ParticipantUpdate,
     RaiseHand,
+    SpokenText,
     StartSpeaking,
+    StopSpeaking,
     SubscribeChannel,
     TranscriptMessage,
     parse_client_message,
@@ -36,6 +38,7 @@ if TYPE_CHECKING:
     from agent_gateway.audio_bridge import AudioBridge
     from agent_gateway.auth import AgentIdentity
     from agent_gateway.connection_manager import ConnectionManager
+    from agent_gateway.tts_bridge import TTSBridge
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +64,7 @@ class AgentSessionHandler:
         connection_manager: ConnectionManager,
         audio_bridge: AudioBridge | None = None,
         db_session_factory: async_sessionmaker[AsyncSession] | None = None,
+        tts_bridge: TTSBridge | None = None,
         jwt_secret: str = "",
         gateway_url: str = "",
     ) -> None:
@@ -72,6 +76,7 @@ class AgentSessionHandler:
             connection_manager: The global connection manager.
             audio_bridge: Optional AudioBridge for STT processing.
             db_session_factory: Optional async session factory for DB persistence.
+            tts_bridge: Optional TTSBridge for text-to-speech synthesis.
             jwt_secret: Gateway JWT secret used to mint audio tokens.
             gateway_url: Base WebSocket URL of this gateway, used to construct
                 the audio_ws_url returned to voice-capable agents.
@@ -81,6 +86,7 @@ class AgentSessionHandler:
         self._manager = connection_manager
         self._audio_bridge = audio_bridge
         self._db_factory = db_session_factory
+        self._tts_bridge = tts_bridge
         self._jwt_secret = jwt_secret
         self._gateway_url = gateway_url
         self.session_id: UUID = uuid4()
@@ -89,6 +95,9 @@ class AgentSessionHandler:
         self.meeting_id: UUID | None = None
         self.capabilities: list[str] = []
         self.subscribed_channels: set[str] = set()
+        self.tts_enabled: bool = False
+        self.tts_voice: str | None = None
+        self._tts_active: bool = False  # True while agent is mid-utterance
         self._connected_at: datetime = datetime.now(tz=UTC)
 
     async def handle(self) -> None:
@@ -143,6 +152,12 @@ class AgentSessionHandler:
             await self._handle_get_queue(msg)
         elif isinstance(msg, SubscribeChannel):
             await self._handle_subscribe_channel(msg)
+        elif isinstance(msg, StartSpeaking):
+            await self._handle_start_speaking(msg)
+        elif isinstance(msg, SpokenText):
+            await self._handle_spoken_text(msg)
+        elif isinstance(msg, StopSpeaking):
+            await self._handle_stop_speaking(msg)
 
     async def _handle_join(self, msg: JoinMeeting) -> None:
         """Handle a join_meeting request.
@@ -171,6 +186,18 @@ class AgentSessionHandler:
 
         if self._audio_bridge is not None:
             await self._audio_bridge.ensure_pipeline(msg.meeting_id)
+
+        # TTS voice assignment
+        if msg.tts_enabled and self._tts_bridge is not None:
+            self.tts_enabled = True
+            self.tts_voice = self._tts_bridge.assign_voice(
+                self.session_id, msg.tts_voice
+            )
+            logger.info(
+                "TTS enabled for agent %s (voice=%s)",
+                self.agent_name,
+                self.tts_voice,
+            )
 
         # Persist agent session record
         await self._persist_join(msg.meeting_id)
@@ -509,6 +536,89 @@ class AgentSessionHandler:
         err = ErrorMessage(code=code, message=message)
         await self._send(err.model_dump(mode="json"))
 
+    async def _handle_start_speaking(self, msg: StartSpeaking) -> None:
+        """Activate TTS mode for this agent.
+
+        Args:
+            msg: The start_speaking message.
+        """
+        if self.meeting_id is None:
+            await self._send_error("not_in_meeting", "Join a meeting first")
+            return
+        if not self.tts_enabled or self._tts_bridge is None:
+            await self._send_error(
+                "tts_not_enabled",
+                "TTS is not enabled for this session. Set tts_enabled=true at join.",
+            )
+            return
+        self._tts_active = True
+        await self.send_event(
+            "tts.speaking_started",
+            {
+                "meeting_id": str(self.meeting_id),
+                "speaker_session_id": str(self.session_id),
+                "speaker_name": self.agent_name,
+                "voice": self.tts_voice,
+            },
+        )
+        logger.debug("TTS speaking started for agent %s", self.agent_name)
+
+    async def _handle_spoken_text(self, msg: SpokenText) -> None:
+        """Synthesize spoken text and broadcast audio to meeting participants.
+
+        Args:
+            msg: The spoken_text message containing the text to synthesize.
+        """
+        if self.meeting_id is None:
+            await self._send_error("not_in_meeting", "Join a meeting first")
+            return
+        if not self.tts_enabled or self._tts_bridge is None:
+            await self._send_error(
+                "tts_not_enabled",
+                "TTS is not enabled for this session.",
+            )
+            return
+        if not self._tts_active:
+            await self._send_error(
+                "not_speaking",
+                "Call start_speaking before sending spoken_text.",
+            )
+            return
+
+        success = await self._tts_bridge.synthesize_and_broadcast(
+            session_id=self.session_id,
+            meeting_id=self.meeting_id,
+            text=msg.text,
+            speaker_name=self.agent_name,
+            voice=self.tts_voice,
+        )
+
+        if not success:
+            budget = self._tts_bridge.get_budget_info(self.session_id)
+            await self._send_error(
+                "tts_budget_exceeded",
+                f"Character budget exceeded. Used {budget['used']}/{budget['limit']} chars.",
+            )
+
+    async def _handle_stop_speaking(self, msg: StopSpeaking) -> None:
+        """Deactivate TTS mode for this agent.
+
+        Args:
+            msg: The stop_speaking message.
+        """
+        if self.meeting_id is None:
+            return
+        self._tts_active = False
+        await self.send_event(
+            "tts.speaking_stopped",
+            {
+                "meeting_id": str(self.meeting_id),
+                "speaker_session_id": str(self.session_id),
+                "speaker_name": self.agent_name,
+            },
+        )
+        logger.debug("TTS speaking stopped for agent %s", self.agent_name)
+
     async def _cleanup(self) -> None:
         """Clean up session state on disconnect."""
         if self.meeting_id is not None:
@@ -516,6 +626,8 @@ class AgentSessionHandler:
                 await self._audio_bridge.close_pipeline(self.meeting_id)
             self._manager.leave_meeting(self.session_id, self.meeting_id)
             await self._persist_leave()
+        if self._tts_bridge is not None and self.tts_enabled:
+            self._tts_bridge.release_session(self.session_id)
         self._manager.unregister(self.session_id)
 
     # ------------------------------------------------------------------
