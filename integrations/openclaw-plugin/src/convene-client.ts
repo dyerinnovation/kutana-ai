@@ -95,14 +95,18 @@ export class ConveneClient {
     return [];
   }
 
-  async joinMeeting(meetingId: string): Promise<string> {
+  async joinMeeting(meetingId: string, capabilities?: string[]): Promise<string> {
+    const args: Record<string, unknown> = { meeting_id: meetingId };
+    if (capabilities && capabilities.length > 0) {
+      args["capabilities"] = capabilities;
+    }
     const resp = await fetch(`${this.config.mcpUrl}`, {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify({
         jsonrpc: "2.0",
         method: "tools/call",
-        params: { name: "join_meeting", arguments: { meeting_id: meetingId } },
+        params: { name: "join_meeting", arguments: args },
         id: 1,
       }),
     });
@@ -217,6 +221,10 @@ export class ConveneClient {
   }
 
   // Turn Management
+
+  async startSpeaking(meetingId: string): Promise<string> {
+    return this.callTool("start_speaking", { meeting_id: meetingId });
+  }
 
   async raiseHand(meetingId: string, priority: string = "normal", topic?: string): Promise<string> {
     return this.callTool("raise_hand", { meeting_id: meetingId, priority, ...(topic ? { topic } : {}) });

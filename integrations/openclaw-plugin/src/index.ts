@@ -56,7 +56,8 @@ export default function register(ctx: PluginContext): void {
     await ensureAuth();
     const meetingId = params.meeting_id as string;
     if (!meetingId) return "Error: meeting_id is required";
-    return await client.joinMeeting(meetingId);
+    const capabilities = params.capabilities as string[] | undefined;
+    return await client.joinMeeting(meetingId, capabilities);
   });
 
   ctx.registerTool("convene_get_transcript", async (params) => {
@@ -93,6 +94,13 @@ export default function register(ctx: PluginContext): void {
   });
 
   // Turn Management Tools
+  ctx.registerTool("convene_start_speaking", async (params) => {
+    await ensureAuth();
+    const meetingId = params.meeting_id as string;
+    if (!meetingId) return "Error: meeting_id is required";
+    return await client.startSpeaking(meetingId);
+  });
+
   ctx.registerTool("convene_raise_hand", async (params) => {
     await ensureAuth();
     const meetingId = params.meeting_id as string;
@@ -145,5 +153,5 @@ export default function register(ctx: PluginContext): void {
     return await client.getChatMessages(meetingId, limit, messageType);
   });
 
-  ctx.logger.info("Convene AI plugin registered with 12 tools");
+  ctx.logger.info("Convene AI plugin registered with 13 tools");
 }

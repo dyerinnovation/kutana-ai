@@ -1,0 +1,150 @@
+# Convene Meeting — Claude Code Skill
+
+Connect Claude Code to live Convene AI meetings. Read transcripts, manage turns, chat, and create tasks — all from within a coding session.
+
+## Prerequisites
+
+- A Convene account with an agent API key (`cvn_...`)
+- Get your key from the [Convene dashboard](https://convene.spark-b0f2.local) → Settings → API Keys
+
+## Installation
+
+### Option A — Copy skill to Claude Code (recommended)
+
+```bash
+mkdir -p ~/.claude/skills/convene-meeting
+cp skills/convene-meeting/SKILL.md ~/.claude/skills/convene-meeting/
+```
+
+The skill activates automatically when you mention meetings, standups, calls, or ask about transcripts.
+
+### Option B — Add MCP server to Claude Code settings
+
+In your `~/.claude/settings.json` (or project `.claude/settings.json`):
+
+```json
+{
+  "mcpServers": {
+    "convene": {
+      "type": "streamableHttp",
+      "url": "https://convene.spark-b0f2.local/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+Replace `YOUR_API_KEY` with your Convene API key. Or use an environment variable:
+
+```json
+{
+  "mcpServers": {
+    "convene": {
+      "type": "streamableHttp",
+      "url": "https://convene.spark-b0f2.local/mcp",
+      "headers": {
+        "Authorization": "Bearer ${CONVENE_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Then set `CONVENE_API_KEY=cvn_...` in your environment.
+
+### Option C — Use the connect script
+
+For quick one-off joins without configuring MCP in settings:
+
+```bash
+export CONVENE_API_KEY=cvn_...
+export CONVENE_URL=https://convene.spark-b0f2.local
+
+./scripts/connect.sh "Daily Standup"        # join by title
+./scripts/connect.sh --id <meeting-uuid>    # join by ID
+```
+
+## Usage Examples
+
+Once connected, speak naturally in Claude Code:
+
+```
+"Join the standup meeting"
+→ Calls join_or_create_meeting("Daily Standup")
+
+"What's being discussed right now?"
+→ Calls get_transcript(last_n=20)
+
+"Who's in the meeting?"
+→ Calls get_participants()
+
+"Raise my hand to ask about the API change"
+→ Calls raise_hand(meeting_id, topic="API change question")
+
+"Send a chat: 'I'll look into the auth bug'"
+→ Calls send_chat_message(meeting_id, "I'll look into the auth bug")
+
+"Create an action item: Review PR #42 before Friday"
+→ Calls create_task(meeting_id, "Review PR #42 before Friday", priority="high")
+
+"Leave the meeting"
+→ Calls leave_meeting()
+```
+
+## Turn Management Workflow
+
+```
+raise_hand(meeting_id, topic="...")
+  → if queue_position == 0: you have the floor immediately
+  → if queue_position > 0: poll get_meeting_events(event_type="turn_your_turn")
+
+start_speaking(meeting_id)          → confirm you have the floor
+[say your piece via send_chat_message or voice]
+mark_finished_speaking(meeting_id)  → release the floor
+
+cancel_hand_raise(meeting_id)       → withdraw from queue
+```
+
+## Capability Configuration
+
+Pass `capabilities` to `join_meeting()` to control what the agent can do:
+
+| Capability | Description |
+|---|---|
+| `listen` | Receive transcript in real time (default) |
+| `transcribe` | Buffer transcript segments (default) |
+| `text_only` | No audio — text channels only |
+| `voice` | Full audio input/output (requires TTS/STT setup) |
+| `tts_enabled` | Text-to-speech output for agent responses |
+
+Example:
+```
+join_meeting(meeting_id, capabilities=["listen", "transcribe", "text_only"])
+```
+
+## Local Development
+
+For local development, point at `localhost:3001`:
+
+```json
+{
+  "mcpServers": {
+    "convene": {
+      "type": "streamableHttp",
+      "url": "http://localhost:3001/mcp",
+      "headers": {
+        "Authorization": "Bearer ${CONVENE_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+Start the MCP server locally:
+
+```bash
+cd services/mcp-server
+MCP_API_KEY=cvn_... uv run python -m mcp_server.main
+```

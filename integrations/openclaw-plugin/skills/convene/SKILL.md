@@ -15,6 +15,7 @@ Use these tools to interact with Convene AI meetings.
 - User asks to join, check, or monitor a meeting
 - User asks about meeting transcripts, notes, or discussions
 - User wants to create tasks or action items from a meeting
+- User wants to raise their hand or speak in a meeting
 - User wants to create or schedule a new meeting
 
 ## Tools
@@ -25,6 +26,7 @@ List all available meetings. Use this first to find relevant meetings.
 ### convene_join_meeting
 Join a specific meeting by ID. The agent will start receiving transcript updates.
 - Requires: `meeting_id` (from list_meetings)
+- Optional: `capabilities` — array of strings: `["listen","transcribe"]` (default), `["text_only"]`, `["voice"]`, `["tts_enabled"]`
 
 ### convene_get_transcript
 Get recent transcript segments from the current meeting.
@@ -42,13 +44,57 @@ List who is currently in the meeting.
 Create a new meeting.
 - Requires: `title`
 
-## Example Workflow
+## Turn Management Tools
 
-1. `convene_list_meetings` → find the active meeting
-2. `convene_join_meeting` with the meeting ID
-3. `convene_get_transcript` periodically to monitor discussion
-4. `convene_create_task` when you identify action items
-5. Summarize key points when the user asks
+### convene_raise_hand
+Request a turn to speak. Enter the speaker queue.
+- Requires: `meeting_id`
+- Optional: `priority` (normal | urgent), `topic`
+- Returns: `queue_position` (0 = immediate floor), `hand_raise_id`
+
+### convene_start_speaking
+Confirm you have the floor and are actively speaking.
+- Requires: `meeting_id`
+- Call after `raise_hand` returns `queue_position=0` or after `turn_your_turn` event
+
+### convene_mark_finished_speaking
+Signal you are done speaking. Advances the queue to the next speaker.
+- Requires: `meeting_id`
+
+### convene_get_queue_status
+See who is speaking and who is waiting.
+- Requires: `meeting_id`
+
+### convene_cancel_hand_raise
+Withdraw from the speaker queue.
+- Requires: `meeting_id`
+- Optional: `hand_raise_id`
+
+## Chat Tools
+
+### convene_send_chat_message
+Send a message to the meeting chat.
+- Requires: `meeting_id`, `content`
+- Optional: `message_type` (text | question | action_item | decision)
+
+### convene_get_chat_messages
+Get chat history.
+- Requires: `meeting_id`
+- Optional: `limit` (default 50), `message_type`
+
+## Turn Workflow
+
+```
+1. convene_raise_hand(meeting_id, topic="...")
+   → queue_position=0: floor is yours immediately
+   → queue_position>0: wait for your turn
+
+2. convene_start_speaking(meeting_id)    → confirm you have the floor
+
+3. [speak — send chat messages or voice]
+
+4. convene_mark_finished_speaking(meeting_id)  → release floor
+```
 
 ## Guidelines
 
@@ -56,3 +102,4 @@ Create a new meeting.
 - Check transcript regularly (every 30-60 seconds in active monitoring)
 - Use appropriate priority levels for tasks
 - Be concise in task descriptions — use action verbs
+- Always call mark_finished_speaking when done — never leave the floor open
