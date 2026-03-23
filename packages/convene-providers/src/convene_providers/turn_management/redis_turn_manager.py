@@ -5,11 +5,14 @@ and Redis strings/hashes for active speaker state. Critical operations
 (raise_hand, mark_finished_speaking) use Lua scripts for atomicity.
 
 Key schema:
-    turn:{meeting_id}:queue          ZSET  score=priority_ts, member="pid:hrid"
-    turn:{meeting_id}:speaker        STRING  participant_id
-    turn:{meeting_id}:speaker_since  STRING  float timestamp
-    turn:{meeting_id}:hand:{pid}     STRING  hand_raise_id (presence key)
-    turn:{meeting_id}:meta:{hrid}    HASH    participant_id, priority, topic, raised_at
+    convene:{meeting_id}:turns:queue          ZSET  score=priority_ts, member="pid:hrid"
+    convene:{meeting_id}:turns:speaker        STRING  participant_id
+    convene:{meeting_id}:turns:speaker_since  STRING  float timestamp
+    convene:{meeting_id}:turns:hand:{pid}     STRING  hand_raise_id (presence key)
+    convene:{meeting_id}:turns:meta:{hrid}    HASH    participant_id, priority, topic, raised_at
+
+The ``convene:{meeting_id}:turns:`` namespace prefix ensures that all turn
+management data is isolated by meeting ID at the Redis key level.
 
 Priority scoring:
     URGENT: score = timestamp
@@ -195,28 +198,28 @@ class RedisTurnManager(TurnManager):
 
     @staticmethod
     def _queue_key(meeting_id: UUID) -> str:
-        return f"turn:{meeting_id}:queue"
+        return f"convene:{meeting_id}:turns:queue"
 
     @staticmethod
     def _speaker_key(meeting_id: UUID) -> str:
-        return f"turn:{meeting_id}:speaker"
+        return f"convene:{meeting_id}:turns:speaker"
 
     @staticmethod
     def _since_key(meeting_id: UUID) -> str:
-        return f"turn:{meeting_id}:speaker_since"
+        return f"convene:{meeting_id}:turns:speaker_since"
 
     @staticmethod
     def _hand_key(meeting_id: UUID, participant_id: UUID) -> str:
-        return f"turn:{meeting_id}:hand:{participant_id}"
+        return f"convene:{meeting_id}:turns:hand:{participant_id}"
 
     @staticmethod
     def _hand_prefix(meeting_id: UUID) -> str:
         """Prefix for all hand keys in a meeting (used in Lua)."""
-        return f"turn:{meeting_id}:hand:"
+        return f"convene:{meeting_id}:turns:hand:"
 
     @staticmethod
     def _meta_key(meeting_id: UUID, hand_raise_id: UUID) -> str:
-        return f"turn:{meeting_id}:meta:{hand_raise_id}"
+        return f"convene:{meeting_id}:turns:meta:{hand_raise_id}"
 
     @staticmethod
     def _speaking_started_key(meeting_id: UUID, participant_id: UUID) -> str:
@@ -614,7 +617,7 @@ class RedisTurnManager(TurnManager):
             meeting_id: The meeting to clear.
         """
         r = await self._get_redis()
-        pattern = f"turn:{meeting_id}:*"
+        pattern = f"convene:{meeting_id}:turns:*"
         keys = await r.keys(pattern)
         if keys:
             await r.delete(*keys)
