@@ -5,12 +5,16 @@ Default endpoint: http://localhost:3001/mcp
 
 Run locally: uv run python -m mcp_server.main
 Run via Docker: docker compose up mcp-server
+
+All tools use the ``convene_`` prefix for namespace safety when mixed with
+tools from other MCP servers in multi-server configurations.
 """
 
 from __future__ import annotations
 
 import json
 import logging
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -49,6 +53,48 @@ _gateway_client: GatewayClient | None = None
 _mcp_identity: MCPIdentity | None = None
 _turn_manager: RedisTurnManager | None = None
 _chat_store: RedisChatStore | None = None
+
+# ---------------------------------------------------------------------------
+# Capability mapping
+# ---------------------------------------------------------------------------
+
+# Map MCP-level capability names to gateway-level capability strings.
+_MCP_CAPABILITY_MAP: dict[str, list[str]] = {
+    "text_only": ["listen", "transcribe"],
+    "voice_in": ["listen", "transcribe", "speak"],
+    "voice_out": ["listen", "transcribe"],
+    "voice_bidirectional": ["listen", "transcribe", "speak"],
+    "tts_enabled": ["listen", "transcribe"],
+}
+
+# Capabilities that require audio connection details in the join response.
+_VOICE_CAPABILITIES: frozenset[str] = frozenset({"voice_in", "voice_bidirectional"})
+
+
+def _map_capabilities(mcp_caps: list[str]) -> list[str]:
+    """Map MCP-level capability names to gateway capability strings.
+
+    Known MCP names are expanded; unrecognised values are passed through
+    unchanged so gateway-level names (listen, speak, …) still work.
+
+    Args:
+        mcp_caps: Capability names supplied by the caller.
+
+    Returns:
+        De-duplicated list of gateway capability strings.
+    """
+    gateway_caps: set[str] = set()
+    for cap in mcp_caps:
+        if cap in _MCP_CAPABILITY_MAP:
+            gateway_caps.update(_MCP_CAPABILITY_MAP[cap])
+        else:
+            gateway_caps.add(cap)
+    return list(gateway_caps)
+
+
+# ---------------------------------------------------------------------------
+# Singletons
+# ---------------------------------------------------------------------------
 
 
 def _get_turn_manager() -> RedisTurnManager:
@@ -121,12 +167,12 @@ async def _ensure_authenticated() -> MCPIdentity:
 
 
 # ---------------------------------------------------------------------------
-# MCP Tools
+# MCP Tools — Meeting lifecycle
 # ---------------------------------------------------------------------------
 
 
 @mcp.tool()
-async def list_meetings() -> str:
+async def convene_list_meetings() -> str:
     """List available meetings.
 
     Returns a JSON array of meetings with their IDs, titles, and status.
@@ -139,7 +185,7 @@ async def list_meetings() -> str:
 
 
 @mcp.tool()
-async def join_meeting(
+async def convene_join_meeting(
     meeting_id: str,
     capabilities: list[str] | None = None,
 ) -> str:
@@ -151,11 +197,15 @@ async def join_meeting(
 
     Args:
         meeting_id: UUID of the meeting to join.
-        capabilities: Optional list of capabilities to request
-                      (default: ["listen", "transcribe"]).
+        capabilities: Optional list of agent capabilities to request.
+                      Valid values: "text_only" (default), "voice_in",
+                      "voice_out", "voice_bidirectional", "tts_enabled".
+                      For voice_in / voice_bidirectional the response includes
+                      audio_ws_url and audio_token for sending audio frames.
 
     Returns:
-        JSON string with join confirmation details.
+        JSON string with join confirmation details and granted_capabilities.
+        Voice-capable agents also receive audio_ws_url and audio_token.
     """
     global _gateway_client
 
@@ -163,11 +213,15 @@ async def join_meeting(
 
     if _gateway_client is not None and _gateway_client.meeting_id is not None:
         return json.dumps({
-            "error": "Already in a meeting. Call leave_meeting() first.",
+            "error": "Already in a meeting. Call convene_leave_meeting() first.",
             "current_meeting_id": _gateway_client.meeting_id,
         })
 
     client = _get_api_client()
+
+    # Default to text_only if no capabilities supplied
+    requested_caps: list[str] = capabilities if capabilities is not None else ["text_only"]
+    gateway_caps = _map_capabilities(requested_caps)
 
     # Exchange API key for gateway JWT
     token = await client.exchange_for_gateway_token()
@@ -176,14 +230,21 @@ async def join_meeting(
     _gateway_client = GatewayClient(settings.gateway_ws_url, token)
     result = await _gateway_client.connect_and_join(
         meeting_id=meeting_id,
-        capabilities=capabilities,
+        capabilities=gateway_caps,
     )
 
-    return json.dumps(result, indent=2, default=str)
+    # Augment response with audio connection details for voice agents
+    response: dict[str, Any] = dict(result) if isinstance(result, dict) else {"raw": result}
+    response["requested_capabilities"] = requested_caps
+    if set(requested_caps) & _VOICE_CAPABILITIES:
+        response["audio_ws_url"] = settings.gateway_ws_url.rstrip("/") + "/agent/connect"
+        response["audio_token"] = token
+
+    return json.dumps(response, indent=2, default=str)
 
 
 @mcp.tool()
-async def leave_meeting() -> str:
+async def convene_leave_meeting() -> str:
     """Leave the current meeting and disconnect from the gateway.
 
     Returns:
@@ -202,7 +263,7 @@ async def leave_meeting() -> str:
 
 
 @mcp.tool()
-async def get_transcript(last_n: int = 50) -> str:
+async def convene_get_transcript(last_n: int = 50) -> str:
     """Get recent transcript segments from the current meeting.
 
     Transcript segments are buffered automatically while connected
@@ -215,14 +276,14 @@ async def get_transcript(last_n: int = 50) -> str:
         JSON array of transcript segments with text, speaker, timestamps.
     """
     if _gateway_client is None or _gateway_client.meeting_id is None:
-        return json.dumps({"error": "Not in a meeting. Call join_meeting() first."})
+        return json.dumps({"error": "Not in a meeting. Call convene_join_meeting() first."})
 
     segments = _gateway_client.get_transcript(last_n=last_n)
     return json.dumps(segments, indent=2, default=str)
 
 
 @mcp.tool()
-async def get_tasks(meeting_id: str) -> str:
+async def convene_get_tasks(meeting_id: str) -> str:
     """Get tasks for a specific meeting.
 
     Args:
@@ -238,7 +299,7 @@ async def get_tasks(meeting_id: str) -> str:
 
 
 @mcp.tool()
-async def create_task(
+async def convene_create_task(
     meeting_id: str,
     description: str,
     priority: str = "medium",
@@ -263,21 +324,21 @@ async def create_task(
 
 
 @mcp.tool()
-async def get_participants() -> str:
+async def convene_get_participants() -> str:
     """Get the list of participants in the current meeting.
 
     Returns:
         JSON array of participant information.
     """
     if _gateway_client is None or _gateway_client.meeting_id is None:
-        return json.dumps({"error": "Not in a meeting. Call join_meeting() first."})
+        return json.dumps({"error": "Not in a meeting. Call convene_join_meeting() first."})
 
     participants = _gateway_client.get_participants()
     return json.dumps(participants, indent=2, default=str)
 
 
 @mcp.tool()
-async def create_new_meeting(
+async def convene_create_meeting(
     title: str,
     platform: str = "convene",
 ) -> str:
@@ -297,7 +358,7 @@ async def create_new_meeting(
 
 
 @mcp.tool()
-async def start_meeting_session(meeting_id: str) -> str:
+async def convene_start_meeting(meeting_id: str) -> str:
     """Start a meeting (transition from scheduled to active).
 
     The meeting must be in 'scheduled' status. This sets the status to 'active'
@@ -319,7 +380,7 @@ async def start_meeting_session(meeting_id: str) -> str:
 
 
 @mcp.tool()
-async def end_meeting_session(meeting_id: str) -> str:
+async def convene_end_meeting(meeting_id: str) -> str:
     """End a meeting (transition from active to completed).
 
     The meeting must be in 'active' status. This sets the status to 'completed'
@@ -341,7 +402,7 @@ async def end_meeting_session(meeting_id: str) -> str:
 
 
 @mcp.tool()
-async def join_or_create_meeting(
+async def convene_join_or_create_meeting(
     title: str,
     capabilities: list[str] | None = None,
 ) -> str:
@@ -355,6 +416,7 @@ async def join_or_create_meeting(
     Args:
         title: Meeting title to search for or create.
         capabilities: Optional capabilities to request when joining.
+                      See convene_join_meeting for valid values.
 
     Returns:
         JSON object with meeting details and join status.
@@ -390,22 +452,36 @@ async def join_or_create_meeting(
             "created": created,
         }, indent=2, default=str)
 
+    requested_caps: list[str] = capabilities if capabilities is not None else ["text_only"]
+    gateway_caps = _map_capabilities(requested_caps)
+
     token = await client.exchange_for_gateway_token()
     _gateway_client = GatewayClient(settings.gateway_ws_url, token)
     join_result = await _gateway_client.connect_and_join(
         meeting_id=meeting_id,
-        capabilities=capabilities,
+        capabilities=gateway_caps,
     )
+
+    response: dict[str, Any] = dict(join_result) if isinstance(join_result, dict) else {"raw": join_result}
+    response["requested_capabilities"] = requested_caps
+    if set(requested_caps) & _VOICE_CAPABILITIES:
+        response["audio_ws_url"] = settings.gateway_ws_url.rstrip("/") + "/agent/connect"
+        response["audio_token"] = token
 
     return json.dumps({
         "meeting": meeting_data,
-        "join_result": join_result,
+        "join_result": response,
         "created": created,
     }, indent=2, default=str)
 
 
+# ---------------------------------------------------------------------------
+# MCP Tools — Data channels
+# ---------------------------------------------------------------------------
+
+
 @mcp.tool()
-async def subscribe_channel(channel: str) -> str:
+async def convene_subscribe_channel(channel: str) -> str:
     """Subscribe to a data channel in the current meeting.
 
     Data channels allow agents to exchange structured messages.
@@ -419,7 +495,7 @@ async def subscribe_channel(channel: str) -> str:
         Confirmation of subscription.
     """
     if _gateway_client is None or _gateway_client.meeting_id is None:
-        return json.dumps({"error": "Not in a meeting. Call join_meeting() first."})
+        return json.dumps({"error": "Not in a meeting. Call convene_join_meeting() first."})
 
     _gateway_client.subscribe_channel(channel)
     return json.dumps({
@@ -430,7 +506,7 @@ async def subscribe_channel(channel: str) -> str:
 
 
 @mcp.tool()
-async def publish_to_channel(channel: str, payload: dict[str, Any]) -> str:
+async def convene_publish_to_channel(channel: str, payload: dict[str, Any]) -> str:
     """Publish a message to a data channel in the current meeting.
 
     Other agents subscribed to this channel will receive the message.
@@ -443,18 +519,18 @@ async def publish_to_channel(channel: str, payload: dict[str, Any]) -> str:
         Confirmation of publication.
     """
     if _gateway_client is None or _gateway_client.meeting_id is None:
-        return json.dumps({"error": "Not in a meeting. Call join_meeting() first."})
+        return json.dumps({"error": "Not in a meeting. Call convene_join_meeting() first."})
 
     await _gateway_client.publish_to_channel(channel, payload)
     return json.dumps({"status": "published", "channel": channel})
 
 
 @mcp.tool()
-async def get_channel_messages(channel: str, last_n: int = 50) -> str:
+async def convene_get_channel_messages(channel: str, last_n: int = 50) -> str:
     """Get buffered messages received on a data channel.
 
     Returns messages that arrived on the channel since you subscribed.
-    Call subscribe_channel(channel) first to start receiving messages.
+    Call convene_subscribe_channel(channel) first to start receiving messages.
 
     Args:
         channel: Channel name to read from.
@@ -464,14 +540,14 @@ async def get_channel_messages(channel: str, last_n: int = 50) -> str:
         JSON array of channel message payloads in order received.
     """
     if _gateway_client is None or _gateway_client.meeting_id is None:
-        return json.dumps({"error": "Not in a meeting. Call join_meeting() first."})
+        return json.dumps({"error": "Not in a meeting. Call convene_join_meeting() first."})
 
     messages = _gateway_client.get_channel_messages(channel, last_n=last_n)
     return json.dumps(messages, indent=2, default=str)
 
 
 @mcp.tool()
-async def get_meeting_events(last_n: int = 50, event_type: str | None = None) -> str:
+async def convene_get_meeting_events(last_n: int = 50, event_type: str | None = None) -> str:
     """Get recent meeting events pushed by the gateway WebSocket connection.
 
     Returns real-time events buffered since you joined: turn queue changes,
@@ -493,19 +569,19 @@ async def get_meeting_events(last_n: int = 50, event_type: str | None = None) ->
         JSON array of event objects in order received.
     """
     if _gateway_client is None or _gateway_client.meeting_id is None:
-        return json.dumps({"error": "Not in a meeting. Call join_meeting() first."})
+        return json.dumps({"error": "Not in a meeting. Call convene_join_meeting() first."})
 
     events = _gateway_client.get_events(last_n=last_n, event_type=event_type)
     return json.dumps(events, indent=2, default=str)
 
 
 # ---------------------------------------------------------------------------
-# Turn Management Tools
+# MCP Tools — Turn management
 # ---------------------------------------------------------------------------
 
 
 @mcp.tool()
-async def raise_hand(
+async def convene_raise_hand(
     meeting_id: str,
     priority: str = "normal",
     topic: str | None = None,
@@ -541,7 +617,7 @@ async def raise_hand(
 
 
 @mcp.tool()
-async def get_queue_status(meeting_id: str) -> str:
+async def convene_get_queue_status(meeting_id: str) -> str:
     """Get the current speaker queue status for a meeting.
 
     Shows who is currently speaking, who is waiting, and your position.
@@ -584,7 +660,47 @@ async def get_queue_status(meeting_id: str) -> str:
 
 
 @mcp.tool()
-async def mark_finished_speaking(meeting_id: str) -> str:
+async def convene_start_speaking(meeting_id: str) -> str:
+    """Signal that you have started actively speaking.
+
+    Call this after receiving turn_your_turn to indicate you have begun
+    speaking content. This transitions your turn state from "your_turn"
+    (promoted, floor is yours) to "actively_speaking" (speech has started).
+
+    Behaviour by agent type:
+    - Voice agents: triggers audio routing into the "actively_speaking" state.
+    - TTS agents: activates TTS output mode.
+    - Text agents: marks your participant state as actively speaking.
+
+    This is a no-op if you are not the current active speaker.
+
+    Args:
+        meeting_id: UUID of the meeting.
+
+    Returns:
+        JSON with status ("speaking" or "not_your_turn") and started_at timestamp.
+    """
+    identity = await _ensure_authenticated()
+    tm = _get_turn_manager()
+    mid = UUID(meeting_id)
+    pid = identity.agent_config_id
+
+    started_at = await tm.start_speaking(mid, pid)  # type: ignore[attr-defined]
+
+    if started_at is None:
+        return json.dumps({
+            "status": "not_your_turn",
+            "started_at": None,
+        })
+
+    return json.dumps({
+        "status": "speaking",
+        "started_at": started_at.isoformat(),
+    })
+
+
+@mcp.tool()
+async def convene_mark_finished_speaking(meeting_id: str) -> str:
     """Signal that you have finished speaking, advancing the queue.
 
     Removes you as the active speaker and promotes the next participant
@@ -614,7 +730,7 @@ async def mark_finished_speaking(meeting_id: str) -> str:
 
 
 @mcp.tool()
-async def cancel_hand_raise(
+async def convene_cancel_hand_raise(
     meeting_id: str,
     hand_raise_id: str | None = None,
 ) -> str:
@@ -648,7 +764,7 @@ async def cancel_hand_raise(
 
 
 @mcp.tool()
-async def get_speaking_status(meeting_id: str) -> str:
+async def convene_get_speaking_status(meeting_id: str) -> str:
     """Check your current speaking status in a meeting.
 
     Returns whether you are the active speaker, in the queue,
@@ -679,12 +795,12 @@ async def get_speaking_status(meeting_id: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Chat & Status Tools
+# MCP Tools — Chat & status
 # ---------------------------------------------------------------------------
 
 
 @mcp.tool()
-async def send_chat_message(
+async def convene_send_chat_message(
     meeting_id: str,
     content: str,
     message_type: str = "text",
@@ -736,7 +852,7 @@ async def send_chat_message(
 
 
 @mcp.tool()
-async def get_chat_messages(
+async def convene_get_chat_messages(
     meeting_id: str,
     limit: int = 50,
     message_type: str | None = None,
@@ -758,7 +874,7 @@ async def get_chat_messages(
     Returns:
         JSON array of chat messages in chronological order (oldest first).
     """
-    from datetime import datetime
+    from datetime import datetime as _datetime
     from convene_core.models.chat import ChatMessageType
 
     await _ensure_authenticated()
@@ -777,10 +893,10 @@ async def get_chat_messages(
             return json.dumps({"error": f"Invalid message_type '{message_type}'."})
 
     # Parse optional since timestamp
-    since_dt: datetime | None = None
+    since_dt: _datetime | None = None
     if since is not None:
         try:
-            since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
+            since_dt = _datetime.fromisoformat(since.replace("Z", "+00:00"))
         except ValueError:
             return json.dumps({"error": f"Invalid since timestamp '{since}'. Use ISO 8601 format."})
 
@@ -809,7 +925,7 @@ async def get_chat_messages(
 
 
 @mcp.tool()
-async def get_meeting_status(meeting_id: str) -> str:
+async def convene_get_meeting_status(meeting_id: str) -> str:
     """Get a comprehensive status snapshot for a meeting.
 
     Returns the current state of the meeting including:
