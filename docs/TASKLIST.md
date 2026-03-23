@@ -163,13 +163,24 @@
   - [ ] Integration tests for all security controls (injection attempts, cross-meeting access, rate limit enforcement, scope violations)
 
 - [x] 🔗 BLOCK: Turn Management MCP Tools
-  - [x] `raise_hand` — request to speak, returns queue position
-  - [x] `get_queue_status` — check speaker queue and current position
-  - [x] `mark_finished_speaking` — signal done, promotes next in queue
-  - [x] `cancel_hand_raise` — withdraw from speaker queue
-  - [x] `get_speaking_status` — check if current session is active speaker
+  - [x] `convene_raise_hand` — request to speak, returns queue position
+  - [x] `convene_get_queue_status` — check speaker queue and current position
+  - [x] `convene_mark_finished_speaking` — signal done, promotes next in queue
+  - [x] `convene_cancel_hand_raise` — withdraw from speaker queue
+  - [x] `convene_get_speaking_status` — check if current session is active speaker
   - [x] Wire TurnManager into MCP server tools
   - [x] Integration tests for all 5 turn management tools
+
+- [x] 🔗 BLOCK: start_speaking + MCP namespace + join capabilities
+  - [x] `convene_start_speaking` MCP tool — raise_hand → your_turn → start_speaking → finish_speaking state machine
+  - [x] `start_speaking` method on TurnManager ABC + RedisTurnManager (records started_at, clears on finish)
+  - [x] `StartSpeaking` client protocol message + `TurnSpeakingStarted` server event in agent-gateway
+  - [x] `handle_start_speaking` in TurnBridge + dispatch in AgentSessionHandler
+  - [x] `convene_` prefix on all MCP tools (namespace safety for multi-server configs)
+  - [x] `join_meeting` capabilities vocabulary: text_only, voice_in, voice_out, voice_bidirectional, tts_enabled
+  - [x] voice_in/voice_bidirectional join response includes audio_ws_url + audio_token
+  - [x] Unit tests for convene_start_speaking (active speaker, not_your_turn, started_at ISO)
+  - [x] Unit tests for convene_join_meeting capability mapping (text_only, voice_in, voice_bidirectional)
 
 - [x] 🔗 BLOCK: Chat & Status MCP Tools
   - [x] `send_chat_message` — post a message to meeting chat

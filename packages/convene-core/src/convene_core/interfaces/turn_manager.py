@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -114,6 +115,29 @@ class TurnManager(ABC):
 
         Returns:
             True if an entry was removed, False if the participant was not in queue.
+        """
+        ...
+
+    @abstractmethod
+    async def start_speaking(
+        self,
+        meeting_id: UUID,
+        participant_id: UUID,
+    ) -> datetime | None:
+        """Mark that the active speaker has started actively speaking.
+
+        Transitions the turn state from "your_turn" (promoted, not yet active)
+        to "actively_speaking" (speaking has begun). Records the started_at
+        timestamp so downstream systems can measure duration and enforce limits.
+
+        This is a no-op if participant_id is not the current active speaker.
+
+        Args:
+            meeting_id: The meeting.
+            participant_id: The participant who has started speaking.
+
+        Returns:
+            UTC datetime when speaking started, or None if not the active speaker.
         """
         ...
 

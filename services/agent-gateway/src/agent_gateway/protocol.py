@@ -85,6 +85,16 @@ class LowerHand(BaseModel):
     hand_raise_id: str | None = None
 
 
+class StartSpeaking(BaseModel):
+    """Signal that the active speaker has started actively speaking.
+
+    Sent after receiving turn_your_turn to indicate the agent has begun
+    speaking content (as opposed to just being promoted to the active slot).
+    """
+
+    type: Literal["start_speaking"] = "start_speaking"
+
+
 class FinishedSpeaking(BaseModel):
     """Signal that the active speaker has finished their turn."""
 
@@ -198,6 +208,15 @@ class TurnYourTurn(BaseModel):
     meeting_id: UUID
 
 
+class TurnSpeakingStarted(BaseModel):
+    """Broadcast when the active speaker begins actively speaking."""
+
+    type: Literal["turn_speaking_started"] = "turn_speaking_started"
+    meeting_id: UUID
+    participant_id: UUID
+    started_at: str  # ISO 8601 UTC timestamp
+
+
 # ---------------------------------------------------------------------------
 # Message type unions for parsing
 # ---------------------------------------------------------------------------
@@ -209,6 +228,7 @@ CLIENT_MESSAGE_TYPES = {
     "leave_meeting": LeaveMeeting,
     "raise_hand": RaiseHand,
     "lower_hand": LowerHand,
+    "start_speaking": StartSpeaking,
     "finished_speaking": FinishedSpeaking,
     "get_queue": GetQueue,
     "subscribe_channel": SubscribeChannel,
@@ -224,6 +244,7 @@ SERVER_MESSAGE_TYPES = {
     "turn_queue_updated": TurnQueueUpdated,
     "turn_speaker_changed": TurnSpeakerChanged,
     "turn_your_turn": TurnYourTurn,
+    "turn_speaking_started": TurnSpeakingStarted,
 }
 
 

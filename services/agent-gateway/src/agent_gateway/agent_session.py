@@ -22,6 +22,7 @@ from agent_gateway.protocol import (
     LowerHand,
     ParticipantUpdate,
     RaiseHand,
+    StartSpeaking,
     SubscribeChannel,
     TranscriptMessage,
     parse_client_message,
@@ -126,6 +127,8 @@ class AgentSessionHandler:
             await self._handle_raise_hand(msg)
         elif isinstance(msg, LowerHand):
             await self._handle_lower_hand(msg)
+        elif isinstance(msg, StartSpeaking):
+            await self._handle_start_speaking(msg)
         elif isinstance(msg, FinishedSpeaking):
             await self._handle_finished_speaking(msg)
         elif isinstance(msg, GetQueue):
@@ -312,6 +315,24 @@ class AgentSessionHandler:
             self.meeting_id,
             participant_id,
             hand_raise_id=hand_raise_id,
+        )
+
+    async def _handle_start_speaking(self, msg: StartSpeaking) -> None:
+        """Handle a start_speaking signal from the agent.
+
+        Transitions the agent from "your_turn" to "actively_speaking" state.
+
+        Args:
+            msg: The start_speaking message.
+        """
+        if self.meeting_id is None:
+            return
+        if self._manager.turn_bridge is None:
+            return
+        participant_id = self._identity.agent_config_id
+        await self._manager.turn_bridge.handle_start_speaking(
+            self.meeting_id,
+            participant_id,
         )
 
     async def _handle_finished_speaking(self, msg: FinishedSpeaking) -> None:
