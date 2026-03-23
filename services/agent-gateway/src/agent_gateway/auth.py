@@ -132,3 +132,42 @@ def create_agent_token(
         "exp": now + expire_seconds,
     }
     return jwt.encode(payload, secret, algorithm=algorithm)
+
+
+def create_audio_token(
+    agent_config_id: UUID,
+    meeting_id: UUID,
+    secret: str,
+    algorithm: str = "HS256",
+    expire_seconds: int = 300,
+    control_session_id: UUID | None = None,
+) -> str:
+    """Create a short-lived JWT for the /audio/connect sidecar endpoint.
+
+    The audio token is intentionally narrow in scope: it identifies the agent,
+    binds to a specific meeting, and expires quickly so it cannot be reused.
+
+    Args:
+        agent_config_id: UUID of the agent configuration (becomes ``sub``).
+        meeting_id: UUID of the meeting the audio session is for.
+        secret: Secret key for signing (same as the gateway JWT secret).
+        algorithm: JWT algorithm (default HS256).
+        expire_seconds: Token lifetime in seconds (default 5 minutes).
+        control_session_id: Optional UUID of the linked control-plane session.
+
+    Returns:
+        Signed JWT token string for use with /audio/connect.
+    """
+    import time
+
+    now = int(time.time())
+    payload: dict[str, object] = {
+        "sub": str(agent_config_id),
+        "meeting_id": str(meeting_id),
+        "token_type": "audio",
+        "iat": now,
+        "exp": now + expire_seconds,
+    }
+    if control_session_id is not None:
+        payload["control_session_id"] = str(control_session_id)
+    return jwt.encode(payload, secret, algorithm=algorithm)

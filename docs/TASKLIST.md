@@ -133,8 +133,15 @@
   - [ ] Implement per-agent rate limiting and usage tracking
   - [ ] Implement credential store (secure key storage, rotation)
 
-- [ ] 🔗 BLOCK: Agent Modality Support
-  - [ ] Implement Voice-to-Voice agent support (bidirectional audio streaming)
+- [x] 🔗 BLOCK: Agent Modality Support
+  - [x] Implement Voice-to-Voice agent support (bidirectional audio streaming)
+    - [x] `/audio/connect` WebSocket sidecar endpoint on agent-gateway
+    - [x] `AudioRouter` — per-meeting mixed-minus distribution + 10 s VAD monitor
+    - [x] `AudioSessionHandler` — start_speaking / stop_speaking / audio_data / speaker_changed
+    - [x] `create_audio_token()` — short-lived JWT (5 min) for sidecar auth
+    - [x] `voice_in` / `voice_out` capabilities added to Capability enum
+    - [x] `join_meeting` response includes `audio_ws_url` + `audio_token` when voice caps granted
+    - [x] 37 unit tests (test_audio_router.py, test_audio_session.py) — all passing
   - [ ] Implement Speech-to-Text agent support (listen + receive transcript feed)
   - [ ] Implement Text-only agent support (transcript feed, no audio)
 

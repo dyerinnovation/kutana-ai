@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
+from agent_gateway.auth import create_audio_token
 from agent_gateway.protocol import (
     AudioData,
     DataMessage,
@@ -59,6 +60,8 @@ class AgentSessionHandler:
         connection_manager: ConnectionManager,
         audio_bridge: AudioBridge | None = None,
         db_session_factory: async_sessionmaker[AsyncSession] | None = None,
+        jwt_secret: str = "",
+        gateway_url: str = "",
     ) -> None:
         """Initialise the session handler.
 
@@ -68,12 +71,17 @@ class AgentSessionHandler:
             connection_manager: The global connection manager.
             audio_bridge: Optional AudioBridge for STT processing.
             db_session_factory: Optional async session factory for DB persistence.
+            jwt_secret: Gateway JWT secret used to mint audio tokens.
+            gateway_url: Base WebSocket URL of this gateway, used to construct
+                the audio_ws_url returned to voice-capable agents.
         """
         self._ws = websocket
         self._identity = identity
         self._manager = connection_manager
         self._audio_bridge = audio_bridge
         self._db_factory = db_session_factory
+        self._jwt_secret = jwt_secret
+        self._gateway_url = gateway_url
         self.session_id: UUID = uuid4()
         self.agent_name: str = identity.name
         self.source: str = identity.source
@@ -164,9 +172,29 @@ class AgentSessionHandler:
         # Persist agent session record
         await self._persist_join(msg.meeting_id)
 
+        # Build audio sidecar URL + token for voice-capable agents
+        audio_ws_url: str | None = None
+        audio_token: str | None = None
+        if self._jwt_secret and (
+            "voice_in" in self.capabilities or "voice_out" in self.capabilities
+        ):
+            audio_token = create_audio_token(
+                agent_config_id=self._identity.agent_config_id,
+                meeting_id=msg.meeting_id,
+                secret=self._jwt_secret,
+                control_session_id=self.session_id,
+            )
+            if self._gateway_url:
+                audio_ws_url = (
+                    f"{self._gateway_url}/audio/connect"
+                    f"?token={audio_token}&meeting_id={msg.meeting_id}"
+                )
+
         response = Joined(
             meeting_id=msg.meeting_id,
             granted_capabilities=self.capabilities,
+            audio_ws_url=audio_ws_url,
+            audio_token=audio_token,
         )
         await self._send(response.model_dump(mode="json"))
         logger.info(
