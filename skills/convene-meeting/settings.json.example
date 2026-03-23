@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "convene": {
+      "type": "streamableHttp",
+      "url": "https://convene.spark-b0f2.local/mcp",
+      "headers": {
+        "Authorization": "Bearer ${CONVENE_API_KEY}"
+      }
+    }
+  }
+}
