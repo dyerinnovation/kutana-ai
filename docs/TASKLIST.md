@@ -114,13 +114,13 @@
   - [x] Auto-transition support (configurable timeout-based speaker advancement)
   - [x] Unit and integration tests for TurnManager
 
-- [ ] 🔗 BLOCK: Meeting Chat Infrastructure
-  - [ ] Define ChatStore ABC in convene-core (send_message, get_messages, subscribe)
-  - [ ] Implement RedisChatStore provider (message persistence + pub/sub delivery)
-  - [ ] Register ChatStore in provider registry
-  - [ ] WebSocket event delivery (chat.message.received)
-  - [ ] Chat history retrieval with pagination
-  - [ ] Unit and integration tests for ChatStore
+- [x] 🔗 BLOCK: Meeting Chat Infrastructure
+  - [x] Define ChatStore ABC in convene-core (send_message, get_messages, subscribe)
+  - [x] Implement RedisChatStore provider (message persistence + pub/sub delivery)
+  - [x] Register ChatStore in provider registry
+  - [x] WebSocket event delivery (chat.message.received)
+  - [x] Chat history retrieval with pagination
+  - [x] Unit and integration tests for ChatStore
 
 - [ ] 🔗 BLOCK: Agent Gateway Polish
   - [ ] Implement multi-agent per meeting support
@@ -171,11 +171,11 @@
   - [x] Wire TurnManager into MCP server tools
   - [x] Integration tests for all 5 turn management tools
 
-- [ ] 🔗 BLOCK: Chat & Status MCP Tools
-  - [ ] `send_chat_message` — post a message to meeting chat
-  - [ ] `get_chat_messages` — read chat history with optional filters
-  - [ ] `get_meeting_status` — comprehensive meeting state (participants, queue, active speaker, recent chat)
-  - [ ] Wire ChatStore into MCP server tools
+- [x] 🔗 BLOCK: Chat & Status MCP Tools
+  - [x] `send_chat_message` — post a message to meeting chat
+  - [x] `get_chat_messages` — read chat history with optional filters
+  - [x] `get_meeting_status` — comprehensive meeting state (participants, queue, active speaker, recent chat)
+  - [x] Wire ChatStore into MCP server tools
   - [ ] Integration tests for all 3 chat/status tools
 
 - [ ] 🔗 BLOCK: Claude Code Channel Integration

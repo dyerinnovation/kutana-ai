@@ -18,6 +18,7 @@ class ProviderType(enum.StrEnum):
     MESSAGE_BUS = "message_bus"
     EXTRACTOR = "extractor"
     TURN_MANAGER = "turn_manager"
+    CHAT_STORE = "chat_store"
 
 
 class ProviderRegistry:
@@ -126,6 +127,7 @@ def _build_default_registry() -> ProviderRegistry:
     Returns:
         A ProviderRegistry instance with default providers registered.
     """
+    from convene_providers.chat.redis_chat_store import RedisChatStore
     from convene_providers.extraction.llm_extractor import LLMExtractor
     from convene_providers.turn_management.redis_turn_manager import RedisTurnManager
     from convene_providers.llm.anthropic_llm import AnthropicLLM
@@ -172,6 +174,9 @@ def _build_default_registry() -> ProviderRegistry:
 
     # Turn manager providers
     registry.register(ProviderType.TURN_MANAGER, "redis", RedisTurnManager)
+
+    # Chat store providers
+    registry.register(ProviderType.CHAT_STORE, "redis", RedisChatStore)
 
     return registry
 
