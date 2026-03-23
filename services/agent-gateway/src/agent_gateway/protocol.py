@@ -2,7 +2,8 @@
 
 Client -> Server messages:
     JoinMeeting, AudioData, DataMessage, LeaveMeeting,
-    RaiseHand, LowerHand, FinishedSpeaking, GetQueue
+    RaiseHand, LowerHand, FinishedSpeaking, GetQueue,
+    StartSpeaking, SpokenText, StopSpeaking
 
 Server -> Client messages:
     Joined, TranscriptMessage, AudioMessage, EventMessage,
@@ -48,6 +49,8 @@ class JoinMeeting(BaseModel):
     meeting_id: UUID
     capabilities: list[str] = Field(default_factory=lambda: ["listen", "transcribe"])
     source: str = "agent"  # e.g. "agent", "claude-code", "human", "openclaw"
+    tts_enabled: bool = False  # Agent will send spoken_text messages for TTS synthesis
+    tts_voice: str | None = None  # Preferred voice ID; assigned from pool if None
 
 
 class AudioData(BaseModel):
@@ -119,6 +122,38 @@ class SubscribeChannel(BaseModel):
 
     type: Literal["subscribe_channel"] = "subscribe_channel"
     channels: list[str]
+
+
+class StartSpeaking(BaseModel):
+    """Signal that a TTS-enabled agent is about to speak.
+
+    Activates TTS mode for the session. Subsequent SpokenText messages
+    are synthesized and broadcast as audio to all meeting participants.
+    """
+
+    type: Literal["start_speaking"] = "start_speaking"
+
+
+class SpokenText(BaseModel):
+    """Text to be synthesized via TTS and broadcast as audio.
+
+    Only processed when the agent has TTS enabled and has called
+    start_speaking. The gateway synthesizes the text, respects the
+    per-agent character budget, and broadcasts the resulting audio
+    to all participants in the meeting with ``listen`` capability.
+    """
+
+    type: Literal["spoken_text"] = "spoken_text"
+    text: str
+
+
+class StopSpeaking(BaseModel):
+    """Signal that a TTS-enabled agent has finished speaking.
+
+    Deactivates TTS mode for the session.
+    """
+
+    type: Literal["stop_speaking"] = "stop_speaking"
 
 
 # ---------------------------------------------------------------------------
@@ -238,6 +273,9 @@ CLIENT_MESSAGE_TYPES = {
     "finished_speaking": FinishedSpeaking,
     "get_queue": GetQueue,
     "subscribe_channel": SubscribeChannel,
+    "start_speaking": StartSpeaking,
+    "spoken_text": SpokenText,
+    "stop_speaking": StopSpeaking,
 }
 
 SERVER_MESSAGE_TYPES = {

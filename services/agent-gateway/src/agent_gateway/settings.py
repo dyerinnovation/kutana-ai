@@ -25,6 +25,11 @@ class AgentGatewaySettings(BaseSettings):
         gateway_url: Base WebSocket URL of this gateway, used to build the audio_ws_url
             returned in join responses (e.g. ``ws://localhost:8003`` or
             ``wss://gateway.example.com``).
+        tts_provider: TTS provider to use (piper, cartesia, elevenlabs).
+        tts_cartesia_api_key: Cartesia API key (required when tts_provider=cartesia).
+        tts_elevenlabs_api_key: ElevenLabs API key (required when tts_provider=elevenlabs).
+        tts_char_limit: Per-agent character budget per session (default 100 K).
+        tts_default_voice: Default voice ID when the pool is exhausted or provider-specific.
     """
 
     database_url: str = "postgresql+asyncpg://convene:convene@localhost:5432/convene"
@@ -44,6 +49,12 @@ class AgentGatewaySettings(BaseSettings):
     # Base WebSocket URL of this gateway, used to build audio_ws_url in join responses.
     # Override with AGENT_GATEWAY_GATEWAY_URL in production (e.g. wss://gateway.example.com).
     gateway_url: str = "ws://localhost:8003"
+    # TTS settings
+    tts_provider: str = "piper"  # piper | cartesia | elevenlabs
+    tts_cartesia_api_key: str = ""
+    tts_elevenlabs_api_key: str = ""
+    tts_char_limit: int = 100_000
+    tts_default_voice: str = "en_US-lessac-medium"
 
     model_config = {
         "env_prefix": "AGENT_GATEWAY_",
