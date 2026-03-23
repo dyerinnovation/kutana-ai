@@ -1,6 +1,6 @@
 """Unit tests for Turn Management MCP tools.
 
-Tests each of the 5 turn management tools by mocking the RedisTurnManager
+Tests each of the turn management tools by mocking the RedisTurnManager
 and MCPIdentity globals in mcp_server.main.
 """
 from __future__ import annotations
@@ -15,11 +15,12 @@ import pytest
 import mcp_server.main as main_module
 from mcp_server.auth import MCPIdentity
 from mcp_server.main import (
-    cancel_hand_raise,
-    get_queue_status,
-    get_speaking_status,
-    mark_finished_speaking,
-    raise_hand,
+    convene_cancel_hand_raise,
+    convene_get_queue_status,
+    convene_get_speaking_status,
+    convene_mark_finished_speaking,
+    convene_raise_hand,
+    convene_start_speaking,
 )
 
 # ---------------------------------------------------------------------------
@@ -40,6 +41,7 @@ TEST_IDENTITY = MCPIdentity(
 )
 
 _RAISED_AT = datetime(2026, 3, 23, 12, 0, 0, tzinfo=UTC)
+_STARTED_AT = datetime(2026, 3, 23, 12, 5, 0, tzinfo=UTC)
 
 
 def _make_raise_hand_result(
@@ -103,11 +105,12 @@ def _make_turn_manager() -> MagicMock:
     tm.mark_finished_speaking = AsyncMock()
     tm.cancel_hand_raise = AsyncMock()
     tm.get_active_speaker = AsyncMock()
+    tm.start_speaking = AsyncMock()
     return tm
 
 
 # ---------------------------------------------------------------------------
-# raise_hand
+# convene_raise_hand
 # ---------------------------------------------------------------------------
 
 
@@ -122,7 +125,7 @@ async def test_raise_hand_queued() -> None:
         patch.object(main_module, "_turn_manager", tm),
         patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
     ):
-        result = json.loads(await raise_hand(str(TEST_MEETING_ID)))
+        result = json.loads(await convene_raise_hand(str(TEST_MEETING_ID)))
 
     assert result["queue_position"] == 1
     assert result["hand_raise_id"] == str(TEST_HAND_RAISE_ID)
@@ -145,7 +148,7 @@ async def test_raise_hand_promoted_immediately() -> None:
         patch.object(main_module, "_turn_manager", tm),
         patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
     ):
-        result = json.loads(await raise_hand(str(TEST_MEETING_ID)))
+        result = json.loads(await convene_raise_hand(str(TEST_MEETING_ID)))
 
     assert result["queue_position"] == 0
     assert result["current_speaker"] == str(TEST_AGENT_CONFIG_ID)
@@ -153,7 +156,7 @@ async def test_raise_hand_promoted_immediately() -> None:
 
 @pytest.mark.asyncio
 async def test_raise_hand_urgent_with_topic() -> None:
-    """raise_hand passes priority and topic through to TurnManager."""
+    """convene_raise_hand passes priority and topic through to TurnManager."""
     tm = _make_turn_manager()
     tm.raise_hand.return_value = _make_raise_hand_result(queue_position=1)
     tm.get_active_speaker.return_value = None
@@ -162,7 +165,7 @@ async def test_raise_hand_urgent_with_topic() -> None:
         patch.object(main_module, "_turn_manager", tm),
         patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
     ):
-        await raise_hand(str(TEST_MEETING_ID), priority="urgent", topic="Budget update")
+        await convene_raise_hand(str(TEST_MEETING_ID), priority="urgent", topic="Budget update")
 
     tm.raise_hand.assert_awaited_once_with(
         TEST_MEETING_ID, TEST_AGENT_CONFIG_ID, priority="urgent", topic="Budget update"
@@ -170,13 +173,13 @@ async def test_raise_hand_urgent_with_topic() -> None:
 
 
 # ---------------------------------------------------------------------------
-# get_queue_status
+# convene_get_queue_status
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_get_queue_status_with_entries() -> None:
-    """get_queue_status returns ordered queue and your_position."""
+    """convene_get_queue_status returns ordered queue and your_position."""
     tm = _make_turn_manager()
     entry_a = _make_queue_entry(TEST_PARTICIPANT_A, position=1, topic="Agenda")
     entry_me = _make_queue_entry(TEST_AGENT_CONFIG_ID, position=2)
@@ -189,7 +192,7 @@ async def test_get_queue_status_with_entries() -> None:
         patch.object(main_module, "_turn_manager", tm),
         patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
     ):
-        result = json.loads(await get_queue_status(str(TEST_MEETING_ID)))
+        result = json.loads(await convene_get_queue_status(str(TEST_MEETING_ID)))
 
     assert result["current_speaker"] == str(TEST_PARTICIPANT_B)
     assert result["total_in_queue"] == 2
@@ -202,7 +205,7 @@ async def test_get_queue_status_with_entries() -> None:
 
 @pytest.mark.asyncio
 async def test_get_queue_status_empty() -> None:
-    """get_queue_status with empty queue returns nulls."""
+    """convene_get_queue_status with empty queue returns nulls."""
     tm = _make_turn_manager()
     tm.get_queue_status.return_value = _make_queue_status()
 
@@ -210,7 +213,7 @@ async def test_get_queue_status_empty() -> None:
         patch.object(main_module, "_turn_manager", tm),
         patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
     ):
-        result = json.loads(await get_queue_status(str(TEST_MEETING_ID)))
+        result = json.loads(await convene_get_queue_status(str(TEST_MEETING_ID)))
 
     assert result["current_speaker"] is None
     assert result["total_in_queue"] == 0
@@ -229,20 +232,20 @@ async def test_get_queue_status_not_in_queue() -> None:
         patch.object(main_module, "_turn_manager", tm),
         patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
     ):
-        result = json.loads(await get_queue_status(str(TEST_MEETING_ID)))
+        result = json.loads(await convene_get_queue_status(str(TEST_MEETING_ID)))
 
     assert result["your_position"] is None
     assert result["total_in_queue"] == 1
 
 
 # ---------------------------------------------------------------------------
-# mark_finished_speaking
+# convene_mark_finished_speaking
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_mark_finished_speaking_with_next() -> None:
-    """mark_finished_speaking returns next_speaker when queue has entries."""
+    """convene_mark_finished_speaking returns next_speaker when queue has entries."""
     tm = _make_turn_manager()
     tm.mark_finished_speaking.return_value = TEST_PARTICIPANT_A
     entry = _make_queue_entry(TEST_PARTICIPANT_A, position=1)
@@ -254,7 +257,7 @@ async def test_mark_finished_speaking_with_next() -> None:
         patch.object(main_module, "_turn_manager", tm),
         patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
     ):
-        result = json.loads(await mark_finished_speaking(str(TEST_MEETING_ID)))
+        result = json.loads(await convene_mark_finished_speaking(str(TEST_MEETING_ID)))
 
     assert result["status"] == "finished"
     assert result["next_speaker"] == str(TEST_PARTICIPANT_A)
@@ -265,7 +268,7 @@ async def test_mark_finished_speaking_with_next() -> None:
 
 @pytest.mark.asyncio
 async def test_mark_finished_speaking_empty_queue() -> None:
-    """mark_finished_speaking returns null next_speaker when queue empties."""
+    """convene_mark_finished_speaking returns null next_speaker when queue empties."""
     tm = _make_turn_manager()
     tm.mark_finished_speaking.return_value = None
     tm.get_queue_status.return_value = _make_queue_status()
@@ -274,7 +277,7 @@ async def test_mark_finished_speaking_empty_queue() -> None:
         patch.object(main_module, "_turn_manager", tm),
         patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
     ):
-        result = json.loads(await mark_finished_speaking(str(TEST_MEETING_ID)))
+        result = json.loads(await convene_mark_finished_speaking(str(TEST_MEETING_ID)))
 
     assert result["status"] == "finished"
     assert result["next_speaker"] is None
@@ -282,13 +285,13 @@ async def test_mark_finished_speaking_empty_queue() -> None:
 
 
 # ---------------------------------------------------------------------------
-# cancel_hand_raise
+# convene_cancel_hand_raise
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_cancel_hand_raise_success() -> None:
-    """cancel_hand_raise returns 'cancelled' when removed from queue."""
+    """convene_cancel_hand_raise returns 'cancelled' when removed from queue."""
     tm = _make_turn_manager()
     tm.get_speaking_status.return_value = _make_speaking_status(in_queue=True, queue_position=2)
     tm.cancel_hand_raise.return_value = True
@@ -297,7 +300,7 @@ async def test_cancel_hand_raise_success() -> None:
         patch.object(main_module, "_turn_manager", tm),
         patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
     ):
-        result = json.loads(await cancel_hand_raise(str(TEST_MEETING_ID)))
+        result = json.loads(await convene_cancel_hand_raise(str(TEST_MEETING_ID)))
 
     assert result["status"] == "cancelled"
     assert result["was_position"] == 2
@@ -307,7 +310,7 @@ async def test_cancel_hand_raise_success() -> None:
 
 @pytest.mark.asyncio
 async def test_cancel_hand_raise_not_in_queue() -> None:
-    """cancel_hand_raise returns 'not_in_queue' when not in queue."""
+    """convene_cancel_hand_raise returns 'not_in_queue' when not in queue."""
     tm = _make_turn_manager()
     tm.get_speaking_status.return_value = _make_speaking_status(in_queue=False)
     tm.cancel_hand_raise.return_value = False
@@ -316,7 +319,7 @@ async def test_cancel_hand_raise_not_in_queue() -> None:
         patch.object(main_module, "_turn_manager", tm),
         patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
     ):
-        result = json.loads(await cancel_hand_raise(str(TEST_MEETING_ID)))
+        result = json.loads(await convene_cancel_hand_raise(str(TEST_MEETING_ID)))
 
     assert result["status"] == "not_in_queue"
     assert result["was_position"] is None
@@ -324,7 +327,7 @@ async def test_cancel_hand_raise_not_in_queue() -> None:
 
 @pytest.mark.asyncio
 async def test_cancel_hand_raise_with_specific_id() -> None:
-    """cancel_hand_raise passes hand_raise_id to TurnManager when provided."""
+    """convene_cancel_hand_raise passes hand_raise_id to TurnManager when provided."""
     tm = _make_turn_manager()
     tm.get_speaking_status.return_value = _make_speaking_status(in_queue=True, queue_position=1)
     tm.cancel_hand_raise.return_value = True
@@ -333,7 +336,7 @@ async def test_cancel_hand_raise_with_specific_id() -> None:
         patch.object(main_module, "_turn_manager", tm),
         patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
     ):
-        await cancel_hand_raise(str(TEST_MEETING_ID), hand_raise_id=str(TEST_HAND_RAISE_ID))
+        await convene_cancel_hand_raise(str(TEST_MEETING_ID), hand_raise_id=str(TEST_HAND_RAISE_ID))
 
     tm.cancel_hand_raise.assert_awaited_once_with(
         TEST_MEETING_ID, TEST_AGENT_CONFIG_ID, TEST_HAND_RAISE_ID
@@ -341,13 +344,13 @@ async def test_cancel_hand_raise_with_specific_id() -> None:
 
 
 # ---------------------------------------------------------------------------
-# get_speaking_status
+# convene_get_speaking_status
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_get_speaking_status_is_speaking() -> None:
-    """get_speaking_status returns is_speaking=True for active speaker."""
+    """convene_get_speaking_status returns is_speaking=True for active speaker."""
     tm = _make_turn_manager()
     tm.get_speaking_status.return_value = _make_speaking_status(is_speaking=True)
     tm.get_active_speaker.return_value = TEST_AGENT_CONFIG_ID
@@ -356,7 +359,7 @@ async def test_get_speaking_status_is_speaking() -> None:
         patch.object(main_module, "_turn_manager", tm),
         patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
     ):
-        result = json.loads(await get_speaking_status(str(TEST_MEETING_ID)))
+        result = json.loads(await convene_get_speaking_status(str(TEST_MEETING_ID)))
 
     assert result["is_speaking"] is True
     assert result["is_in_queue"] is False
@@ -366,7 +369,7 @@ async def test_get_speaking_status_is_speaking() -> None:
 
 @pytest.mark.asyncio
 async def test_get_speaking_status_in_queue() -> None:
-    """get_speaking_status returns correct queue position when waiting."""
+    """convene_get_speaking_status returns correct queue position when waiting."""
     tm = _make_turn_manager()
     tm.get_speaking_status.return_value = _make_speaking_status(
         is_speaking=False, in_queue=True, queue_position=3
@@ -377,7 +380,7 @@ async def test_get_speaking_status_in_queue() -> None:
         patch.object(main_module, "_turn_manager", tm),
         patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
     ):
-        result = json.loads(await get_speaking_status(str(TEST_MEETING_ID)))
+        result = json.loads(await convene_get_speaking_status(str(TEST_MEETING_ID)))
 
     assert result["is_speaking"] is False
     assert result["is_in_queue"] is True
@@ -387,7 +390,7 @@ async def test_get_speaking_status_in_queue() -> None:
 
 @pytest.mark.asyncio
 async def test_get_speaking_status_idle() -> None:
-    """get_speaking_status returns idle state when not speaking or in queue."""
+    """convene_get_speaking_status returns idle state when not speaking or in queue."""
     tm = _make_turn_manager()
     tm.get_speaking_status.return_value = _make_speaking_status()
     tm.get_active_speaker.return_value = None
@@ -396,9 +399,221 @@ async def test_get_speaking_status_idle() -> None:
         patch.object(main_module, "_turn_manager", tm),
         patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
     ):
-        result = json.loads(await get_speaking_status(str(TEST_MEETING_ID)))
+        result = json.loads(await convene_get_speaking_status(str(TEST_MEETING_ID)))
 
     assert result["is_speaking"] is False
     assert result["is_in_queue"] is False
     assert result["queue_position"] is None
     assert result["current_speaker"] is None
+
+
+# ---------------------------------------------------------------------------
+# convene_start_speaking
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_start_speaking_as_active_speaker() -> None:
+    """convene_start_speaking returns status=speaking with started_at when agent is active speaker."""
+    tm = _make_turn_manager()
+    tm.start_speaking.return_value = _STARTED_AT
+
+    with (
+        patch.object(main_module, "_turn_manager", tm),
+        patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
+    ):
+        result = json.loads(await convene_start_speaking(str(TEST_MEETING_ID)))
+
+    assert result["status"] == "speaking"
+    assert result["started_at"] == _STARTED_AT.isoformat()
+
+    tm.start_speaking.assert_awaited_once_with(TEST_MEETING_ID, TEST_AGENT_CONFIG_ID)
+
+
+@pytest.mark.asyncio
+async def test_start_speaking_not_active_speaker() -> None:
+    """convene_start_speaking returns status=not_your_turn when not the active speaker."""
+    tm = _make_turn_manager()
+    tm.start_speaking.return_value = None
+
+    with (
+        patch.object(main_module, "_turn_manager", tm),
+        patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
+    ):
+        result = json.loads(await convene_start_speaking(str(TEST_MEETING_ID)))
+
+    assert result["status"] == "not_your_turn"
+    assert result["started_at"] is None
+
+    tm.start_speaking.assert_awaited_once_with(TEST_MEETING_ID, TEST_AGENT_CONFIG_ID)
+
+
+@pytest.mark.asyncio
+async def test_start_speaking_started_at_is_iso_string() -> None:
+    """convene_start_speaking started_at is a valid ISO 8601 string."""
+    from datetime import datetime, UTC
+
+    tm = _make_turn_manager()
+    expected_dt = datetime(2026, 3, 23, 15, 30, 0, tzinfo=UTC)
+    tm.start_speaking.return_value = expected_dt
+
+    with (
+        patch.object(main_module, "_turn_manager", tm),
+        patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
+    ):
+        result = json.loads(await convene_start_speaking(str(TEST_MEETING_ID)))
+
+    assert result["status"] == "speaking"
+    # Should be parseable as ISO 8601
+    parsed = datetime.fromisoformat(result["started_at"])
+    assert parsed == expected_dt
+
+
+# ---------------------------------------------------------------------------
+# convene_join_meeting — capabilities mapping
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_join_meeting_text_only_default_capabilities() -> None:
+    """convene_join_meeting maps text_only to listen+transcribe gateway caps."""
+    mapped_caps: list[str] = []
+
+    async def fake_connect_and_join(
+        meeting_id: str,
+        capabilities: list[str] | None = None,
+        source: str = "claude-code",
+    ) -> dict:
+        nonlocal mapped_caps
+        mapped_caps = capabilities or []
+        return {
+            "type": "joined",
+            "meeting_id": meeting_id,
+            "granted_capabilities": capabilities or [],
+        }
+
+    mock_gw = MagicMock()
+    mock_gw.meeting_id = None
+    mock_gw.connect_and_join = AsyncMock(side_effect=fake_connect_and_join)
+
+    mock_client = MagicMock()
+    mock_client.exchange_for_gateway_token = AsyncMock(return_value="gw-token")
+
+    with (
+        patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
+        patch.object(main_module, "_api_client", mock_client),
+        patch.object(main_module, "_gateway_client", None),
+        patch("mcp_server.main.GatewayClient", return_value=mock_gw),
+    ):
+        from mcp_server.main import convene_join_meeting
+        await convene_join_meeting(str(TEST_MEETING_ID), capabilities=["text_only"])
+
+    assert set(mapped_caps) == {"listen", "transcribe"}
+
+
+@pytest.mark.asyncio
+async def test_join_meeting_voice_in_returns_audio_fields() -> None:
+    """convene_join_meeting returns audio_ws_url and audio_token for voice_in."""
+    async def fake_connect_and_join(
+        meeting_id: str,
+        capabilities: list[str] | None = None,
+        source: str = "claude-code",
+    ) -> dict:
+        return {
+            "type": "joined",
+            "meeting_id": meeting_id,
+            "granted_capabilities": capabilities or [],
+        }
+
+    mock_gw = MagicMock()
+    mock_gw.meeting_id = None
+    mock_gw.connect_and_join = AsyncMock(side_effect=fake_connect_and_join)
+
+    mock_client = MagicMock()
+    mock_client.exchange_for_gateway_token = AsyncMock(return_value="gw-token-voice")
+
+    with (
+        patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
+        patch.object(main_module, "_api_client", mock_client),
+        patch.object(main_module, "_gateway_client", None),
+        patch("mcp_server.main.GatewayClient", return_value=mock_gw),
+    ):
+        from mcp_server.main import convene_join_meeting
+        result = json.loads(
+            await convene_join_meeting(str(TEST_MEETING_ID), capabilities=["voice_in"])
+        )
+
+    assert "audio_ws_url" in result
+    assert "audio_token" in result
+    assert result["audio_token"] == "gw-token-voice"
+
+
+@pytest.mark.asyncio
+async def test_join_meeting_text_only_no_audio_fields() -> None:
+    """convene_join_meeting does not include audio fields for text_only."""
+    async def fake_connect_and_join(
+        meeting_id: str,
+        capabilities: list[str] | None = None,
+        source: str = "claude-code",
+    ) -> dict:
+        return {
+            "type": "joined",
+            "meeting_id": meeting_id,
+            "granted_capabilities": capabilities or [],
+        }
+
+    mock_gw = MagicMock()
+    mock_gw.meeting_id = None
+    mock_gw.connect_and_join = AsyncMock(side_effect=fake_connect_and_join)
+
+    mock_client = MagicMock()
+    mock_client.exchange_for_gateway_token = AsyncMock(return_value="gw-token")
+
+    with (
+        patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
+        patch.object(main_module, "_api_client", mock_client),
+        patch.object(main_module, "_gateway_client", None),
+        patch("mcp_server.main.GatewayClient", return_value=mock_gw),
+    ):
+        from mcp_server.main import convene_join_meeting
+        result = json.loads(
+            await convene_join_meeting(str(TEST_MEETING_ID), capabilities=["text_only"])
+        )
+
+    assert "audio_ws_url" not in result
+    assert "audio_token" not in result
+
+
+@pytest.mark.asyncio
+async def test_join_meeting_voice_bidirectional_includes_speak_cap() -> None:
+    """convene_join_meeting maps voice_bidirectional to include speak capability."""
+    mapped_caps: list[str] = []
+
+    async def fake_connect_and_join(
+        meeting_id: str,
+        capabilities: list[str] | None = None,
+        source: str = "claude-code",
+    ) -> dict:
+        nonlocal mapped_caps
+        mapped_caps = capabilities or []
+        return {"type": "joined", "meeting_id": meeting_id, "granted_capabilities": []}
+
+    mock_gw = MagicMock()
+    mock_gw.meeting_id = None
+    mock_gw.connect_and_join = AsyncMock(side_effect=fake_connect_and_join)
+
+    mock_client = MagicMock()
+    mock_client.exchange_for_gateway_token = AsyncMock(return_value="token")
+
+    with (
+        patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
+        patch.object(main_module, "_api_client", mock_client),
+        patch.object(main_module, "_gateway_client", None),
+        patch("mcp_server.main.GatewayClient", return_value=mock_gw),
+    ):
+        from mcp_server.main import convene_join_meeting
+        await convene_join_meeting(str(TEST_MEETING_ID), capabilities=["voice_bidirectional"])
+
+    assert "speak" in mapped_caps
+    assert "listen" in mapped_caps
+    assert "transcribe" in mapped_caps

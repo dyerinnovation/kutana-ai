@@ -15,9 +15,9 @@ import pytest
 import mcp_server.main as main_module
 from mcp_server.auth import MCPIdentity
 from mcp_server.main import (
-    get_chat_messages,
-    get_meeting_status,
-    send_chat_message,
+    convene_get_chat_messages as get_chat_messages,
+    convene_get_meeting_status as get_meeting_status,
+    convene_send_chat_message as send_chat_message,
 )
 from convene_core.models.chat import ChatMessage, ChatMessageType
 

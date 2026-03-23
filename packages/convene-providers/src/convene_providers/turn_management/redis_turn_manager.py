@@ -219,6 +219,10 @@ class RedisTurnManager(TurnManager):
         return f"turn:{meeting_id}:meta:{hand_raise_id}"
 
     @staticmethod
+    def _speaking_started_key(meeting_id: UUID, participant_id: UUID) -> str:
+        return f"turn:{meeting_id}:speaking_started:{participant_id}"
+
+    @staticmethod
     def _priority_score(priority: str) -> float:
         """Compute the sorted-set score for a priority level.
 
@@ -452,6 +456,10 @@ class RedisTurnManager(TurnManager):
             )
             return None
 
+        # Clear any speaking_started_at for the finished speaker
+        r = await self._get_redis()
+        await r.delete(self._speaking_started_key(meeting_id, participant_id))
+
         if status == "done":
             logger.info("Queue empty after speaker %s finished in meeting %s", participant_id, meeting_id)
             return None
@@ -510,6 +518,44 @@ class RedisTurnManager(TurnManager):
                 meeting_id,
             )
         return removed
+
+    async def start_speaking(
+        self,
+        meeting_id: UUID,
+        participant_id: UUID,
+    ) -> datetime | None:
+        """Mark that the active speaker has started actively speaking.
+
+        Records a speaking_started_at timestamp distinct from speaker_since
+        (when they were promoted). This is the explicit "I am now speaking" signal.
+
+        Args:
+            meeting_id: The meeting.
+            participant_id: The participant who has started speaking.
+
+        Returns:
+            UTC datetime when speaking started, or None if not the active speaker.
+        """
+        r = await self._get_redis()
+        speaker_str = await r.get(self._speaker_key(meeting_id))
+        if speaker_str != str(participant_id):
+            logger.debug(
+                "start_speaking: %s is not the active speaker in meeting %s",
+                participant_id,
+                meeting_id,
+            )
+            return None
+        started_at = datetime.now(tz=UTC)
+        await r.set(
+            self._speaking_started_key(meeting_id, participant_id),
+            started_at.isoformat(),
+        )
+        logger.info(
+            "Participant %s started actively speaking in meeting %s",
+            participant_id,
+            meeting_id,
+        )
+        return started_at
 
     async def set_active_speaker(
         self,
