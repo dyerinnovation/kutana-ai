@@ -215,6 +215,7 @@ async def exchange_for_mcp_token(
     payload = {
         "sub": str(api_key.user_id),
         "agent_config_id": str(agent.id),
+        "name": agent.name,
         "type": "mcp",
         "scopes": scopes,
         "iat": now,

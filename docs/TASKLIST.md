@@ -176,7 +176,7 @@
   - [x] `get_chat_messages` — read chat history with optional filters
   - [x] `get_meeting_status` — comprehensive meeting state (participants, queue, active speaker, recent chat)
   - [x] Wire ChatStore into MCP server tools
-  - [ ] Integration tests for all 3 chat/status tools
+  - [x] Integration tests for all 3 chat/status tools
 
 - [ ] 🔗 BLOCK: Claude Code Channel Integration
   - [ ] Channel server endpoint for Claude Code session connections
