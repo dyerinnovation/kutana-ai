@@ -78,6 +78,7 @@ class HumanSessionHandler:
         self.meeting_id: UUID = meeting_id
         self.capabilities: list[str] = list(HUMAN_CAPABILITIES)
         self._connected_at: datetime = datetime.now(tz=UTC)
+        self._left_announced: bool = False
 
     async def handle(self) -> None:
         """Auto-join the meeting and enter the message loop.
@@ -102,6 +103,10 @@ class HumanSessionHandler:
             self.agent_name,
             self.meeting_id,
         )
+
+        # Notify others and publish event after sending Joined to self
+        await self._broadcast_participant_update("joined")
+        await self._publish_participant_event("joined")
 
         try:
             while True:
@@ -159,7 +164,7 @@ class HumanSessionHandler:
 
     async def _handle_leave(self) -> None:
         """Handle a voluntary leave from the browser."""
-        self._manager.leave_meeting(self.session_id, self.meeting_id)
+        await self._leave_and_notify("voluntary")
         logger.info("Human %s left meeting %s", self.agent_name, self.meeting_id)
 
     # ------------------------------------------------------------------
@@ -255,7 +260,88 @@ class HumanSessionHandler:
         err = ErrorMessage(code=code, message=message)
         await self._send(err.model_dump(mode="json"))
 
+    async def _broadcast_participant_update(self, action: str) -> None:
+        """Broadcast a participant join/leave to all other sessions in this meeting.
+
+        Args:
+            action: "joined" or "left".
+        """
+        sessions = self._manager.get_meeting_sessions(self.meeting_id)
+        for session in sessions:
+            if session.session_id == self.session_id:
+                continue
+            try:
+                await session.send_participant_update(
+                    action=action,
+                    participant_id=self._identity.agent_config_id,
+                    name=self.agent_name,
+                    role="human",
+                    connection_type="websocket",
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to send participant_update (%s) to session %s",
+                    action,
+                    session.session_id,
+                )
+
+    async def _publish_participant_event(self, action: str, reason: str = "normal") -> None:
+        """Publish a participant.joined or participant.left event to Redis Streams.
+
+        Args:
+            action: "joined" or "left".
+            reason: Reason for leaving (only used for "left" action).
+        """
+        if self._manager.redis is None:
+            return
+
+        from convene_core.events.definitions import ParticipantJoined, ParticipantLeft
+
+        if action == "joined":
+            event: ParticipantJoined | ParticipantLeft = ParticipantJoined(
+                participant_id=self._identity.agent_config_id,
+                meeting_id=self.meeting_id,
+                name=self.agent_name,
+                role="human",
+                connection_type="websocket",
+            )
+        else:
+            event = ParticipantLeft(
+                participant_id=self._identity.agent_config_id,
+                meeting_id=self.meeting_id,
+                reason=reason,
+            )
+
+        payload = json.dumps(event.to_dict(), default=str)
+        try:
+            await self._manager.redis.xadd(
+                "convene:events",
+                {"event_type": event.event_type, "payload": payload},
+                maxlen=10_000,
+                approximate=True,
+            )
+        except Exception:
+            logger.warning(
+                "Failed to publish %s event for human %s",
+                event.event_type,
+                self.agent_name,
+            )
+
+    async def _leave_and_notify(self, reason: str = "normal") -> None:
+        """Broadcast leave, publish event, and remove from meeting (idempotent).
+
+        Args:
+            reason: Reason for leaving (e.g. "voluntary", "disconnected").
+        """
+        if self._left_announced:
+            return
+        self._left_announced = True
+
+        await self._broadcast_participant_update("left")
+        await self._publish_participant_event("left", reason=reason)
+        self._manager.leave_meeting(self.session_id, self.meeting_id)
+
     async def _cleanup(self) -> None:
         """Clean up session state on disconnect."""
-        self._manager.leave_meeting(self.session_id, self.meeting_id)
+        await self._leave_and_notify("disconnected")
         self._manager.unregister(self.session_id)
