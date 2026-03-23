@@ -44,6 +44,7 @@ class JoinMeeting(BaseModel):
     type: Literal["join_meeting"] = "join_meeting"
     meeting_id: UUID
     capabilities: list[str] = Field(default_factory=lambda: ["listen", "transcribe"])
+    source: str = "agent"  # e.g. "agent", "claude-code", "human", "openclaw"
 
 
 class AudioData(BaseModel):
@@ -94,6 +95,17 @@ class GetQueue(BaseModel):
     """Request the current queue status."""
 
     type: Literal["get_queue"] = "get_queue"
+
+
+class SubscribeChannel(BaseModel):
+    """Subscribe to one or more data channels in the current meeting.
+
+    The gateway will route data.channel.* events matching these channel names
+    to this session going forward.
+    """
+
+    type: Literal["subscribe_channel"] = "subscribe_channel"
+    channels: list[str]
 
 
 # ---------------------------------------------------------------------------
@@ -149,6 +161,7 @@ class ParticipantUpdate(BaseModel):
     name: str
     role: str
     connection_type: str | None = None
+    source: str | None = None  # "agent", "claude-code", "human", "openclaw", etc.
 
 
 class ErrorMessage(BaseModel):
@@ -198,6 +211,7 @@ CLIENT_MESSAGE_TYPES = {
     "lower_hand": LowerHand,
     "finished_speaking": FinishedSpeaking,
     "get_queue": GetQueue,
+    "subscribe_channel": SubscribeChannel,
 }
 
 SERVER_MESSAGE_TYPES = {

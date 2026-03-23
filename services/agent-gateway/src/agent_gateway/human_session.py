@@ -79,8 +79,10 @@ class HumanSessionHandler:
         self._audio_bridge = audio_bridge
         self.session_id: UUID = uuid4()
         self.agent_name: str = identity.name  # field name kept for ConnectionManager compat
+        self.source: str = "human"
         self.meeting_id: UUID = meeting_id
         self.capabilities: list[str] = list(HUMAN_CAPABILITIES)
+        self.subscribed_channels: set[str] = {"*"}  # humans receive all channel events
         self._connected_at: datetime = datetime.now(tz=UTC)
         self._left_announced: bool = False
 

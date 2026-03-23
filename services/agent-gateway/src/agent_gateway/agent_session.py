@@ -22,6 +22,7 @@ from agent_gateway.protocol import (
     LowerHand,
     ParticipantUpdate,
     RaiseHand,
+    SubscribeChannel,
     TranscriptMessage,
     parse_client_message,
 )
@@ -75,6 +76,7 @@ class AgentSessionHandler:
         self._db_factory = db_session_factory
         self.session_id: UUID = uuid4()
         self.agent_name: str = identity.name
+        self.source: str = identity.source
         self.meeting_id: UUID | None = None
         self.capabilities: list[str] = []
         self.subscribed_channels: set[str] = set()
@@ -128,6 +130,8 @@ class AgentSessionHandler:
             await self._handle_finished_speaking(msg)
         elif isinstance(msg, GetQueue):
             await self._handle_get_queue(msg)
+        elif isinstance(msg, SubscribeChannel):
+            await self._handle_subscribe_channel(msg)
 
     async def _handle_join(self, msg: JoinMeeting) -> None:
         """Handle a join_meeting request.
@@ -146,6 +150,10 @@ class AgentSessionHandler:
         allowed = set(self._identity.capabilities)
         requested = set(msg.capabilities)
         self.capabilities = list(allowed & requested) or list(allowed)
+
+        # Allow client to declare its source (e.g. "claude-code") at join time
+        if msg.source != "agent":
+            self.source = msg.source
 
         self.meeting_id = msg.meeting_id
         self._manager.join_meeting(self.session_id, msg.meeting_id)
@@ -340,6 +348,23 @@ class AgentSessionHandler:
             payload = await self._manager.turn_bridge.get_queue_payload(self.meeting_id)
         await self.send_event("turn.queue.updated", payload)
 
+    async def _handle_subscribe_channel(self, msg: SubscribeChannel) -> None:
+        """Handle a subscribe_channel request.
+
+        Adds the specified channels to the session's subscription set so that
+        data.channel.* events are routed to this session by the EventRelay.
+
+        Args:
+            msg: The subscribe_channel message with a list of channel names.
+        """
+        self.subscribed_channels.update(msg.channels)
+        logger.debug(
+            "Agent %s subscribed to channels: %s (total: %s)",
+            self.agent_name,
+            msg.channels,
+            self.subscribed_channels,
+        )
+
     async def send_transcript(
         self,
         meeting_id: UUID,
@@ -389,6 +414,7 @@ class AgentSessionHandler:
         name: str,
         role: str,
         connection_type: str | None = None,
+        source: str | None = None,
     ) -> None:
         """Send a participant update to the agent.
 
@@ -398,6 +424,7 @@ class AgentSessionHandler:
             name: Display name.
             role: Participant role.
             connection_type: How they're connected.
+            source: Connection source (e.g. "agent", "claude-code", "human").
         """
         msg = ParticipantUpdate(
             action=action,
@@ -405,6 +432,7 @@ class AgentSessionHandler:
             name=name,
             role=role,
             connection_type=connection_type,
+            source=source,
         )
         await self._send(msg.model_dump(mode="json"))
 
