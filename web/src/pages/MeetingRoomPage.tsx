@@ -25,6 +25,8 @@ export function MeetingRoomPage() {
   const [isMuted, setIsMuted] = useState(false);
   const [transcripts, setTranscripts] = useState<TranscriptSegment[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
+  // Maps gateway participant_id → display name for transcript resolution
+  const [participantNames, setParticipantNames] = useState<Record<string, string>>({});
 
   const wsRef = useRef<WebSocket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -95,14 +97,13 @@ export function MeetingRoomPage() {
       }
       case "participant_update":
         // Server sends one participant per update (join/leave notification)
-        setParticipants((prev) => {
-          if (msg.action === "joined") {
-            const p: Participant = { id: msg.participant_id, name: msg.name, role: msg.role, is_muted: false };
-            return prev.some((x) => x.id === p.id) ? prev : [...prev, p];
-          } else {
-            return prev.filter((x) => x.id !== msg.participant_id);
-          }
-        });
+        if (msg.action === "joined") {
+          const p: Participant = { id: msg.participant_id, name: msg.name, role: msg.role, is_muted: false };
+          setParticipantNames((prev) => ({ ...prev, [p.id]: p.name }));
+          setParticipants((prev) => prev.some((x) => x.id === p.id) ? prev : [...prev, p]);
+        } else {
+          setParticipants((prev) => prev.filter((x) => x.id !== msg.participant_id));
+        }
         break;
       case "joined":
         setStatus("connected");
@@ -292,20 +293,31 @@ export function MeetingRoomPage() {
               Connecting to meeting...
             </p>
           )}
-          {transcripts.map((seg, i) => (
-            <div
-              key={`${seg.speaker_id}-${seg.start_time}-${i}`}
-              className={`text-sm ${seg.is_final ? "text-gray-200" : "text-gray-400 italic"}`}
-            >
-              <span className="font-medium text-blue-400">
-                {seg.speaker_id}
-              </span>
-              <span className="text-gray-600 mx-2">
-                {formatTimestamp(seg.start_time)}
-              </span>
-              <span>{seg.text}</span>
-            </div>
-          ))}
+          {transcripts.map((seg, i) => {
+            // Resolve speaker_id to a display name:
+            // 1. Look up in participant map (populated from participant_update events)
+            // 2. Fall back to current user name if speaker is "unknown" (single-human case)
+            // 3. Fall back to raw speaker_id
+            const speakerName =
+              participantNames[seg.speaker_id] ??
+              (!seg.speaker_id || seg.speaker_id === "unknown"
+                ? (user?.name ?? "You")
+                : seg.speaker_id);
+            return (
+              <div
+                key={`${seg.speaker_id}-${seg.start_time}-${i}`}
+                className={`text-sm ${seg.is_final ? "text-gray-200" : "text-gray-400 italic"}`}
+              >
+                <span className="font-medium text-blue-400">
+                  {speakerName}
+                </span>
+                <span className="text-gray-600 mx-2">
+                  {formatTimestamp(seg.start_time)}
+                </span>
+                <span>{seg.text}</span>
+              </div>
+            );
+          })}
           <div ref={transcriptEndRef} />
         </div>
 
