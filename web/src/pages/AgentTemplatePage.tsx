@@ -52,11 +52,12 @@ export function AgentTemplatePage() {
     setError(null);
     try {
       const data = await listTemplates(categoryFilter || undefined);
-      setTemplates(data);
+      setTemplates(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to load templates"
       );
+      setTemplates([]);
     } finally {
       setIsLoading(false);
     }
@@ -127,8 +128,9 @@ export function AgentTemplatePage() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-400">
-          {error}
+        <div className="rounded-lg border border-yellow-800 bg-yellow-950/50 px-4 py-3">
+          <p className="text-sm font-medium text-yellow-300">Templates temporarily unavailable</p>
+          <p className="text-xs text-yellow-600 mt-0.5">{error}</p>
         </div>
       )}
 
