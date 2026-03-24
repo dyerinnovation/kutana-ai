@@ -54,5 +54,11 @@ dyerinnovation-key.pub
 # Node
 node_modules/
 
-# Claude Code
-.claude/
+# Claude Code local files
+.claude/*
+!.claude/rules/
+!.claude/rules/**
+!.claude/skills/
+!.claude/skills/**
+!.claude/agents/
+!.claude/agents/**
