@@ -42,6 +42,5 @@ Deploys the latest code to the DGX Spark K3s cluster using git + Helm.
 
 ## Flags
 
-- `--service <name>` — deploy only one service (e.g. `--service api-server`)
-- `--skip-build` — use existing images (faster, for config-only changes)
-- `--dry-run` — show what would be deployed without making changes
+- Pass a service name as the first argument to deploy only that service (e.g. `bash deploy.sh api-server`)
+- Set `SKIP_BUILD=1` env var to skip image builds (faster, for config-only changes)

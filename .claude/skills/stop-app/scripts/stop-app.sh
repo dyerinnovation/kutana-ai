@@ -6,8 +6,9 @@ NAMESPACE=convene
 DGX=dgx
 FULL=${1:-}
 
+DEPLOYMENTS="api-server agent-gateway audio-service task-engine mcp-server web"
 echo "==> Scaling down Convene service deployments..."
-ssh "$DGX" "echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl -n $NAMESPACE scale deployment --all --replicas=0"
+ssh "$DGX" "echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl -n $NAMESPACE scale deployment $DEPLOYMENTS --replicas=0"
 
 echo ""
 echo "==> Waiting for pods to terminate..."
