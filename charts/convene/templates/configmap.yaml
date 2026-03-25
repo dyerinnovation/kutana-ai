@@ -12,6 +12,9 @@ data:
   CONVENE_MESSAGE_BUS: "redis"
   STT_PROVIDER: "deepgram"
   LOG_LEVEL: "info"
+  # Task engine uses extraction windows
+  EXTRACTION_WINDOW_SECONDS: "30"
+  EXTRACTION_OVERLAP_SECONDS: "5"
   # Agent Gateway uses AGENT_GATEWAY_ prefix (pydantic-settings)
   AGENT_GATEWAY_DATABASE_URL: {{ include "convene.databaseUrl" . | quote }}
   AGENT_GATEWAY_REDIS_URL: {{ include "convene.redisUrl" . | quote }}
