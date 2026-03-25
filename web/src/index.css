@@ -1,65 +1,67 @@
 @import "tailwindcss";
 
 @theme {
-  /* ─── Gray scale → violet-tinted dark surfaces ────────────────────
-     Overrides Tailwind's neutral gray so every existing gray-* class
-     picks up the new cool-dark palette automatically.
-  ───────────────────────────────────────────────────────────────── */
-  --color-gray-50:  #eeedf6;
-  --color-gray-100: #cac8e0;
-  --color-gray-200: #a4a2c4;
-  --color-gray-300: #7e7ca0;
-  --color-gray-400: #5a5880;
-  --color-gray-500: #3d3b68;
-  --color-gray-600: #282650;
-  --color-gray-700: #1c1b38;
-  --color-gray-800: #12112a;
-  --color-gray-900: #0c0c1a;
-  --color-gray-950: #07070e;
+  /* ─── Gray scale → zinc/charcoal (pure, no violet tint) ───────────────
+     Dark mode: gray-950 = darkest bg, gray-50 = lightest text.
+     Light mode flips the scale via html[data-theme="light"].
+  ─────────────────────────────────────────────────────────────────────── */
+  --color-gray-50:  #fafafa;
+  --color-gray-100: #f4f4f5;
+  --color-gray-200: #e4e4e7;
+  --color-gray-300: #d4d4d8;
+  --color-gray-400: #a1a1aa;
+  --color-gray-500: #71717a;
+  --color-gray-600: #52525b;
+  --color-gray-700: #3f3f46;
+  --color-gray-800: #27272a;
+  --color-gray-900: #18181b;
+  --color-gray-950: #09090b;
 
-  /* ─── Blue scale → brand violet ──────────────────────────────────
-     Overrides Tailwind's blue so every existing blue-* class picks
-     up the brand violet automatically (buttons, focus rings, links).
-  ───────────────────────────────────────────────────────────────── */
-  --color-blue-50:  #f3f0ff;
-  --color-blue-100: #ebe5ff;
-  --color-blue-200: #d9ceff;
-  --color-blue-300: #bea8ff;
-  --color-blue-400: #9e7aff;
-  --color-blue-500: #8457f6;
-  --color-blue-600: #6d32ed;
-  --color-blue-700: #5d1dd4;
-  --color-blue-800: #4e18b0;
-  --color-blue-900: #42168e;
-  --color-blue-950: #280a66;
+  /* ─── Blue scale → signal green / emerald (#10B981) ──────────────────
+     Overrides Tailwind's blue so every existing blue-* class picks up
+     the brand green automatically (buttons, focus rings, links, badges).
+  ─────────────────────────────────────────────────────────────────────── */
+  --color-blue-50:  #ecfdf5;
+  --color-blue-100: #d1fae5;
+  --color-blue-200: #a7f3d0;
+  --color-blue-300: #6ee7b7;
+  --color-blue-400: #34d399;
+  --color-blue-500: #10b981;
+  --color-blue-600: #059669;
+  --color-blue-700: #047857;
+  --color-blue-800: #065f46;
+  --color-blue-900: #064e3b;
+  --color-blue-950: #022c22;
 
-  /* ─── Brand aliases (for new code) ───────────────────────────────  */
-  --color-brand-50:  #f3f0ff;
-  --color-brand-100: #ebe5ff;
-  --color-brand-200: #d9ceff;
-  --color-brand-300: #bea8ff;
-  --color-brand-400: #9e7aff;
-  --color-brand-500: #8457f6;
-  --color-brand-600: #6d32ed;
-  --color-brand-700: #5d1dd4;
-  --color-brand-800: #4e18b0;
-  --color-brand-900: #42168e;
-  --color-brand-950: #280a66;
+  /* ─── Brand aliases — use these in new code ──────────────────────────  */
+  --color-brand-50:  #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-300: #6ee7b7;
+  --color-brand-400: #34d399;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
+  --color-brand-950: #022c22;
 
-  /* ─── Ink aliases (for new code) ─────────────────────────────────  */
-  --color-ink-50:  #eeedf6;
-  --color-ink-100: #cac8e0;
-  --color-ink-200: #a4a2c4;
-  --color-ink-300: #7e7ca0;
-  --color-ink-400: #5a5880;
-  --color-ink-500: #3d3b68;
-  --color-ink-600: #282650;
-  --color-ink-700: #1c1b38;
-  --color-ink-800: #12112a;
-  --color-ink-900: #0c0c1a;
-  --color-ink-950: #07070e;
+  /* ─── Ink aliases — surface/text tokens, mirrors gray scale ──────────  */
+  --color-ink-50:  #fafafa;
+  --color-ink-100: #f4f4f5;
+  --color-ink-200: #e4e4e7;
+  --color-ink-300: #d4d4d8;
+  --color-ink-400: #a1a1aa;
+  --color-ink-500: #71717a;
+  --color-ink-600: #52525b;
+  --color-ink-700: #3f3f46;
+  --color-ink-800: #27272a;
+  --color-ink-900: #18181b;
+  --color-ink-950: #09090b;
 
-  /* ─── Semantic: success, danger, warning ─────────────────────────  */
+  /* ─── Semantic: success, danger, warning, info ────────────────────────
+     Success intentionally reuses the brand emerald palette.
+  ─────────────────────────────────────────────────────────────────────── */
   --color-success-400: #34d399;
   --color-success-500: #10b981;
   --color-success-600: #059669;
@@ -76,15 +78,49 @@
   --color-warning-500: #f59e0b;
   --color-warning-600: #d97706;
 
-  /* ─── Typography ─────────────────────────────────────────────────  */
+  --color-info-400: #22d3ee;
+  --color-info-500: #06b6d4;
+  --color-info-600: #0891b2;
+
+  /* ─── Typography ──────────────────────────────────────────────────────  */
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, 'Cascadia Code', 'Courier New', monospace;
 }
 
-/* ─── Base layer ──────────────────────────────────────────────────── */
+/* ─── Light mode: flip the gray / ink scale ────────────────────────────────
+   Applied to <html data-theme="light">. An unlayered rule beats Tailwind's
+   @layer theme regardless of specificity, so this always takes effect.
+─────────────────────────────────────────────────────────────────────────── */
+html[data-theme="light"] {
+  --color-gray-50:  #09090b;
+  --color-gray-100: #18181b;
+  --color-gray-200: #27272a;
+  --color-gray-300: #3f3f46;
+  --color-gray-400: #52525b;
+  --color-gray-500: #71717a;
+  --color-gray-600: #a1a1aa;
+  --color-gray-700: #d4d4d8;
+  --color-gray-800: #e4e4e7;
+  --color-gray-900: #f4f4f5;
+  --color-gray-950: #fafafa;
+
+  --color-ink-50:  #09090b;
+  --color-ink-100: #18181b;
+  --color-ink-200: #27272a;
+  --color-ink-300: #3f3f46;
+  --color-ink-400: #52525b;
+  --color-ink-500: #71717a;
+  --color-ink-600: #a1a1aa;
+  --color-ink-700: #d4d4d8;
+  --color-ink-800: #e4e4e7;
+  --color-ink-900: #f4f4f5;
+  --color-ink-950: #fafafa;
+}
+
+/* ─── Base layer ──────────────────────────────────────────────────────────── */
 @layer base {
   *, *::before, *::after {
-    border-color: #1c1b38;
+    border-color: var(--color-gray-800);
   }
 
   html {
@@ -95,14 +131,15 @@
   }
 
   body {
-    background-color: #07070e;
-    color: #cac8e0;
+    background-color: var(--color-gray-950);
+    color: var(--color-gray-200);
     font-family: var(--font-sans);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   ::selection {
-    background-color: rgb(109 50 237 / 0.3);
+    background-color: rgb(16 185 129 / 0.3);
     color: #fff;
   }
 
@@ -115,30 +152,30 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #282650;
+    background: var(--color-gray-700);
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #3d3b68;
+    background: var(--color-gray-600);
   }
 }
 
-/* ─── Design system custom utilities ─────────────────────────────── */
+/* ─── Design system custom utilities ─────────────────────────────────────── */
 
 /* Gradient fills */
 .bg-gradient-brand {
-  background: linear-gradient(135deg, #8457f6 0%, #4e18b0 100%);
+  background: linear-gradient(135deg, #34d399 0%, #059669 100%);
 }
 
 .bg-gradient-brand-subtle {
-  background: linear-gradient(135deg, rgb(132 87 246 / 0.1) 0%, rgb(78 24 176 / 0.05) 100%);
+  background: linear-gradient(135deg, rgb(16 185 129 / 0.12) 0%, rgb(5 150 105 / 0.06) 100%);
 }
 
 /* Ambient radial glow — applied to page backgrounds */
 .bg-ambient-brand {
   background-image: radial-gradient(
     ellipse at 50% -10%,
-    rgb(109 50 237 / 0.1) 0%,
+    rgb(16 185 129 / 0.07) 0%,
     transparent 55%
   );
 }
@@ -146,33 +183,33 @@
 /* Glow shadows */
 .shadow-glow-brand {
   box-shadow:
-    0 0 0 1px rgb(109 50 237 / 0.25),
-    0 4px 24px rgb(109 50 237 / 0.12),
-    0 1px 3px rgb(0 0 0 / 0.4);
+    0 0 0 1px rgb(16 185 129 / 0.2),
+    0 4px 24px rgb(16 185 129 / 0.1),
+    0 1px 3px rgb(0 0 0 / 0.3);
 }
 
 .shadow-glow-brand-sm {
   box-shadow:
-    0 0 0 1px rgb(109 50 237 / 0.35),
-    0 2px 12px rgb(109 50 237 / 0.2);
+    0 0 0 1px rgb(16 185 129 / 0.25),
+    0 2px 12px rgb(16 185 129 / 0.12);
 }
 
-/* Card hover — applies a violet tint to border + subtle lift */
+/* Card hover — green tint on border + subtle lift */
 .card-interactive {
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
 .card-interactive:hover {
-  border-color: rgb(109 50 237 / 0.35);
+  border-color: rgb(16 185 129 / 0.3);
   box-shadow:
-    0 0 0 1px rgb(109 50 237 / 0.1),
-    0 8px 32px rgb(0 0 0 / 0.35);
+    0 0 0 1px rgb(16 185 129 / 0.08),
+    0 8px 32px rgb(0 0 0 / 0.2);
   transform: translateY(-1px);
 }
 
 /* Text gradient */
 .text-gradient-brand {
-  background: linear-gradient(135deg, #bea8ff 0%, #8457f6 100%);
+  background: linear-gradient(135deg, #6ee7b7 0%, #10b981 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -180,12 +217,12 @@
 
 /* Code / monospace block */
 .code-block {
-  background: #07070e;
-  border: 1px solid #1c1b38;
+  background: var(--color-gray-950);
+  border: 1px solid var(--color-gray-800);
   border-radius: 0.5rem;
   padding: 1rem;
   font-family: var(--font-mono);
   font-size: 0.8125rem;
-  color: #cac8e0;
+  color: var(--color-gray-200);
   overflow-x: auto;
 }

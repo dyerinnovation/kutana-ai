@@ -276,7 +276,7 @@ export function MeetingRoomPage() {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-800 pb-4">
           <div>
-            <h1 className="text-xl font-bold text-white">Meeting Room</h1>
+            <h1 className="text-xl font-bold text-gray-50">Meeting Room</h1>
             <p className="text-xs text-gray-500 font-mono mt-0.5">
               {meetingId}
             </p>
@@ -356,7 +356,7 @@ export function MeetingRoomPage() {
               {user?.name?.charAt(0).toUpperCase() ?? "?"}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="truncate text-white text-sm">
+              <p className="truncate text-gray-50 text-sm">
                 {user?.name ?? "You"}
               </p>
               <p className="text-xs text-gray-500">
