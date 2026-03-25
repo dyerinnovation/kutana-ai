@@ -5,13 +5,11 @@
 import readmeContent from "../../../external-docs/README.md?raw";
 import agentPlatformOverview from "../../../external-docs/agent-platform/overview.md?raw";
 import connectingMcpAuth from "../../../external-docs/agent-platform/connecting/mcp-auth.md?raw";
-import connectingClaudeAgentSdk from "../../../external-docs/agent-platform/connecting/claude-agent-sdk.md?raw";
+import connectingMcpQuickstart from "../../../external-docs/agent-platform/connecting/mcp-quickstart.md?raw";
 import connectingClaudeCodeChannel from "../../../external-docs/agent-platform/connecting/claude-code-channel.md?raw";
 import connectingCli from "../../../external-docs/agent-platform/connecting/cli.md?raw";
 import openclawPluginGuide from "../../../external-docs/openclaw/plugin-guide.md?raw";
 import openclawConveneSkill from "../../../external-docs/openclaw/convene-skill.md?raw";
-import examplesDemoAgent from "../../../external-docs/examples/demo-agent.md?raw";
-import examplesMeetingAssistant from "../../../external-docs/examples/meeting-assistant-agent.md?raw";
 import providersReadme from "../../../external-docs/providers/README.md?raw";
 import providersLlmAnthropic from "../../../external-docs/providers/llm/anthropic.md?raw";
 import providersLlmGroq from "../../../external-docs/providers/llm/groq.md?raw";
@@ -43,9 +41,9 @@ export const docPages: Record<string, { title: string; content: string }> = {
     title: "MCP Authentication",
     content: connectingMcpAuth,
   },
-  "agent-platform/connecting/claude-agent-sdk": {
-    title: "Claude Agent SDK",
-    content: connectingClaudeAgentSdk,
+  "agent-platform/connecting/mcp-quickstart": {
+    title: "Connecting via MCP",
+    content: connectingMcpQuickstart,
   },
   "agent-platform/connecting/claude-code-channel": {
     title: "Claude Code Channel",
@@ -63,15 +61,6 @@ export const docPages: Record<string, { title: string; content: string }> = {
   "openclaw/convene-skill": {
     title: "Convene Skill",
     content: openclawConveneSkill,
-  },
-
-  "examples/demo-agent": {
-    title: "Demo Agent",
-    content: examplesDemoAgent,
-  },
-  "examples/meeting-assistant": {
-    title: "Meeting Assistant Agent",
-    content: examplesMeetingAssistant,
   },
 
   "providers/overview": {
@@ -144,9 +133,9 @@ export const docsTree: DocNode[] = [
           },
           {
             kind: "page",
-            id: "agent-platform/connecting/claude-agent-sdk",
-            title: "Claude Agent SDK",
-            content: connectingClaudeAgentSdk,
+            id: "agent-platform/connecting/mcp-quickstart",
+            title: "Connecting via MCP",
+            content: connectingMcpQuickstart,
           },
           {
             kind: "page",
@@ -181,26 +170,6 @@ export const docsTree: DocNode[] = [
         id: "openclaw/convene-skill",
         title: "Convene Skill",
         content: openclawConveneSkill,
-      },
-    ],
-  },
-
-  {
-    kind: "section",
-    id: "examples",
-    title: "Examples",
-    children: [
-      {
-        kind: "page",
-        id: "examples/demo-agent",
-        title: "Demo Agent",
-        content: examplesDemoAgent,
-      },
-      {
-        kind: "page",
-        id: "examples/meeting-assistant",
-        title: "Meeting Assistant Agent",
-        content: examplesMeetingAssistant,
       },
     ],
   },

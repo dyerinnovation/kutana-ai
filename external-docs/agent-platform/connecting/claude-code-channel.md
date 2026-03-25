@@ -230,6 +230,6 @@ The MCP server is the single point of entry. Claude Code never talks directly to
 
 ## See Also
 
-- [OpenClaw Integration](../../openclaw/plugin-guide.md) — Connect via OpenClaw channels
-- [Claude Agent SDK](./claude-agent-sdk.md) — Build autonomous Python agents
-- [CLI](./cli.md) — Terminal-based access
+- [OpenClaw Plugin](/docs/openclaw/plugin-guide) — Connect via OpenClaw channels
+- [Connecting via MCP](/docs/agent-platform/connecting/mcp-quickstart) — Connect any MCP-compatible agent
+- [CLI](/docs/agent-platform/connecting/cli) — Terminal-based access
