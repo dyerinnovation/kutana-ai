@@ -30,4 +30,4 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   name: {{ include "convene.fullname" . }}-config
-                  key: DATABASE_URL_SYNC
+                  key: DATABASE_URL
