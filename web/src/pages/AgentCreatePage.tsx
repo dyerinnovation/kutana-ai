@@ -79,7 +79,7 @@ export function AgentCreatePage() {
                 System Prompt
               </label>
               <textarea
-                className="flex min-h-[120px] w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="flex min-h-[120px] w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-50 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 placeholder="You are a meeting assistant that tracks action items and commitments..."
                 value={systemPrompt}
                 onChange={(e) => setSystemPrompt(e.target.value)}

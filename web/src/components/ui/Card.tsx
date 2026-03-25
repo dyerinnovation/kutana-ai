@@ -26,7 +26,7 @@ function CardTitle({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) 
   return (
     <h3
       className={cn(
-        "text-base font-semibold leading-tight tracking-tight text-white",
+        "text-base font-semibold leading-tight tracking-tight text-gray-50",
         className
       )}
       {...props}

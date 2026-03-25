@@ -40,7 +40,7 @@ export function RegisterPage() {
       >
         <div
           className="absolute left-1/2 top-0 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
-          style={{ background: "radial-gradient(circle, rgb(109 50 237 / 0.18) 0%, transparent 70%)" }}
+          style={{ background: "radial-gradient(circle, rgb(16 185 129 / 0.15) 0%, transparent 70%)" }}
         />
       </div>
 
@@ -52,7 +52,7 @@ export function RegisterPage() {
             <ConveneLogoMark size={48} />
           </div>
           <div className="text-center">
-            <h1 className="text-lg font-semibold tracking-tight text-white">
+            <h1 className="text-lg font-semibold tracking-tight text-gray-50">
               Convene <span className="text-blue-400">AI</span>
             </h1>
             <p className="mt-0.5 text-sm text-gray-400">

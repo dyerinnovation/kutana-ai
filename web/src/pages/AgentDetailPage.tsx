@@ -270,7 +270,7 @@ export function AgentDetailPage() {
                   className="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-800/30 px-4 py-3"
                 >
                   <div>
-                    <p className="text-sm font-medium text-white">
+                    <p className="text-sm font-medium text-gray-50">
                       {key.name}
                     </p>
                     <p className="text-xs text-gray-500 font-mono">

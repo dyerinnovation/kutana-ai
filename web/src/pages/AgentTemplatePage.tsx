@@ -21,7 +21,7 @@ const CATEGORIES = [
 
 const CATEGORY_COLORS: Record<string, string> = {
   productivity:
-    "bg-purple-600/20 text-purple-400 border border-purple-500/30",
+    "bg-blue-600/20 text-blue-400 border border-blue-500/30",
   engineering:
     "bg-cyan-600/20 text-cyan-400 border border-cyan-500/30",
   general:
@@ -103,7 +103,7 @@ export function AgentTemplatePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Agent Templates</h1>
+        <h1 className="text-2xl font-bold text-gray-50">Agent Templates</h1>
         <p className="text-sm text-gray-400 mt-1">
           Browse and activate prebuilt AI agents for your meetings
         </p>
@@ -118,7 +118,7 @@ export function AgentTemplatePage() {
             className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
               categoryFilter === cat.value
                 ? "bg-blue-600 text-white"
-                : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white"
+                : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-50"
             }`}
           >
             {cat.label}
@@ -221,7 +221,7 @@ export function AgentTemplatePage() {
                 </p>
               ) : (
                 <select
-                  className="flex h-10 w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="flex h-10 w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-50 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   value={selectedMeetingId}
                   onChange={(e) => setSelectedMeetingId(e.target.value)}
                   required

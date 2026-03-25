@@ -4,7 +4,7 @@
  * Concept: the arc represents meeting participants arranged in a circle
  * (with a gap); the dot in the gap is the AI agent connecting to the meeting.
  *
- * The gradient background variant (default) uses a violet-indigo fill.
+ * The gradient background variant (default) uses a signal-green emerald fill.
  * The bare variant (bare=true) renders just the mark on a transparent bg,
  * useful for embedding inside an already-colored container.
  */
@@ -43,8 +43,8 @@ export function ConveneLogoMark({ size = 28, bare = false, className }: LogoMark
           y2="28"
           gradientUnits="userSpaceOnUse"
         >
-          <stop stopColor="#9F7AEA" />
-          <stop offset="1" stopColor="#5B21B6" />
+          <stop stopColor="#6ee7b7" />
+          <stop offset="1" stopColor="#059669" />
         </linearGradient>
       </defs>
 
