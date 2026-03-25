@@ -28,17 +28,42 @@ class DeepgramSTT(STTProvider):
 
     Connects via WebSocket to Deepgram's live transcription API
     using the Nova-2 model with punctuation and diarization.
+
+    Phantom word prevention:
+        ``endpointing_ms`` (default 400) tells Deepgram to wait for
+        400 ms of silence before finalizing an utterance.  Without this
+        Deepgram uses its own default (~10–50 ms) which is too aggressive
+        for meeting contexts and can commit results from brief background
+        noise bursts.
+
+        ``min_confidence`` (default 0.65) drops any final result whose
+        confidence score is below the threshold.  Deepgram's confidence
+        is well-calibrated: legitimate speech is typically ≥ 0.8;
+        hallucinations from ambient noise tend to fall below 0.65.
     """
 
-    def __init__(self, api_key: str, meeting_id: UUID | None = None) -> None:
+    def __init__(
+        self,
+        api_key: str,
+        meeting_id: UUID | None = None,
+        endpointing_ms: int = 400,
+        min_confidence: float = 0.65,
+    ) -> None:
         """Initialize the Deepgram STT provider.
 
         Args:
             api_key: Deepgram API key for authentication.
             meeting_id: Optional meeting ID to tag transcript segments.
+            endpointing_ms: Milliseconds of silence Deepgram waits before
+                finalizing an utterance.  Higher values reduce false finals
+                from brief pauses; 300–500 ms is typical for meetings.
+            min_confidence: Drop final results with confidence below this
+                value.  Range [0.0, 1.0]; default 0.65.
         """
         self._api_key = api_key
         self._meeting_id = meeting_id or uuid4()
+        self._endpointing_ms = endpointing_ms
+        self._min_confidence = min_confidence
         self._ws: ClientConnection | None = None
 
     async def start_stream(self) -> None:
@@ -55,6 +80,12 @@ class DeepgramSTT(STTProvider):
                 "encoding": "linear16",
                 "sample_rate": "16000",
                 "channels": "1",
+                # endpointing: ms of silence before Deepgram commits a final result.
+                # The default is very short (~10 ms) which causes false finals from
+                # brief background noise bursts in meeting environments.
+                "endpointing": str(self._endpointing_ms),
+                # smart_format: improves number/date/punctuation formatting.
+                "smart_format": "true",
             }
         )
         url = f"{_DEEPGRAM_WS_URL}?{params}"
@@ -113,6 +144,17 @@ class DeepgramSTT(STTProvider):
                 continue
 
             confidence: float = best.get("confidence", 1.0)
+
+            # Drop low-confidence results — these are typically background noise
+            # or brief ambient sounds being misidentified as speech.
+            if confidence < self._min_confidence:
+                logger.debug(
+                    "Dropping low-confidence result (%.2f < %.2f): %r",
+                    confidence,
+                    self._min_confidence,
+                    transcript_text[:60],
+                )
+                continue
 
             # Extract timing from the first and last word
             words: list[dict[str, object]] = best.get("words", [])

@@ -31,6 +31,22 @@ class WhisperRemoteSTT(STTProvider):
 
     Uses ``aiohttp`` instead of ``httpx`` because httpx hangs on
     IPv6 link-local addresses (no Happy Eyeballs support).
+
+    Hallucination filtering:
+        Whisper is known to hallucinate common phrases ("Thank you.",
+        "Thanks for watching.", etc.) when given audio containing mostly
+        silence or background noise.  Two safeguards are applied:
+
+        1. ``no_speech_threshold`` — Whisper's ``verbose_json`` response
+           includes a ``no_speech_prob`` per segment.  Segments where
+           ``no_speech_prob >= no_speech_threshold`` are dropped before
+           yielding; this is Whisper's own estimate that the segment has
+           no real speech.  Default of 0.5 eliminates most hallucinations.
+
+        2. ``min_confidence`` — derived from ``avg_logprob`` via
+           ``exp(avg_logprob)``.  Segments below this floor are dropped.
+           Defaults to 0.0 (disabled) since logprob confidence is less
+           well-calibrated than ``no_speech_prob`` for Whisper.
     """
 
     def __init__(
@@ -38,6 +54,8 @@ class WhisperRemoteSTT(STTProvider):
         api_url: str,
         meeting_id: UUID | None = None,
         request_timeout_s: float = 60.0,
+        no_speech_threshold: float = 0.5,
+        min_confidence: float = 0.0,
     ) -> None:
         """Initialize the remote Whisper STT provider.
 
@@ -47,10 +65,19 @@ class WhisperRemoteSTT(STTProvider):
             meeting_id: Optional meeting ID to tag transcript segments.
             request_timeout_s: Per-request timeout in seconds for the
                 Whisper HTTP POST call.
+            no_speech_threshold: Drop segments where Whisper's own
+                ``no_speech_prob`` is at or above this value.  Range
+                [0.0, 1.0]; default 0.5 eliminates most hallucinations
+                on silence without rejecting quiet but real speech.
+            min_confidence: Drop segments with confidence (derived from
+                ``avg_logprob``) below this value.  Default 0.0 disables
+                the filter; raise to ~0.3 for stricter filtering.
         """
         self._api_url = api_url.rstrip("/")
         self._meeting_id = meeting_id or uuid4()
         self._request_timeout_s = request_timeout_s
+        self._no_speech_threshold = no_speech_threshold
+        self._min_confidence = min_confidence
         self._buffer = b""
         self._running = False
         self._session: aiohttp.ClientSession | None = None
@@ -173,6 +200,7 @@ class WhisperRemoteSTT(STTProvider):
                 return
 
             seg_count = 0
+            dropped_count = 0
             for seg in segments:
                 end_time = seg.get("end", 0.0)
                 start_time = seg.get("start", 0.0)
@@ -186,16 +214,49 @@ class WhisperRemoteSTT(STTProvider):
                 else:
                     confidence = 1.0
 
+                # Drop segments that Whisper itself flags as likely non-speech.
+                # no_speech_prob >= threshold means Whisper heard silence/noise
+                # and is hallucinating — the most reliable filter available.
+                no_speech_prob: float = seg.get("no_speech_prob", 0.0)
+                if no_speech_prob >= self._no_speech_threshold:
+                    logger.debug(
+                        "Dropping segment (no_speech_prob=%.2f >= %.2f): %r",
+                        no_speech_prob,
+                        self._no_speech_threshold,
+                        seg.get("text", "")[:60],
+                    )
+                    dropped_count += 1
+                    continue
+
+                # Optional secondary confidence floor
+                if confidence < self._min_confidence:
+                    logger.debug(
+                        "Dropping segment (confidence=%.2f < %.2f): %r",
+                        confidence,
+                        self._min_confidence,
+                        seg.get("text", "")[:60],
+                    )
+                    dropped_count += 1
+                    continue
+
+                text = seg.get("text", "").strip()
+                if not text:
+                    continue
+
                 yield TranscriptSegment(
                     meeting_id=self._meeting_id,
                     speaker_id=None,
-                    text=seg.get("text", "").strip(),
+                    text=text,
                     start_time=start_time,
                     end_time=end_time,
                     confidence=confidence,
                 )
                 seg_count += 1
-            logger.info("Whisper yielded %d segments", seg_count)
+            logger.info(
+                "Whisper yielded %d segments, dropped %d (no_speech/confidence)",
+                seg_count,
+                dropped_count,
+            )
         finally:
             import os
 

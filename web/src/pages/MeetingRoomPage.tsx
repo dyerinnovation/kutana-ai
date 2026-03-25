@@ -13,6 +13,12 @@ const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
 const HUMAN_WS_BASE = `${wsProto}//${window.location.host}/human/connect`;
 const SAMPLE_RATE = 16000;
 
+// Energy gate: drop audio frames where the RMS level is below this threshold.
+// This prevents streaming pure silence / ambient noise to the STT backend,
+// which is the primary cause of Whisper hallucinations ("Thank you." etc.).
+// ~0.01 ≈ -40 dBFS — consistent with what major meeting platforms use.
+const RMS_SILENCE_THRESHOLD = 0.01;
+
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 
 export function MeetingRoomPage() {
@@ -186,6 +192,13 @@ export function MeetingRoomPage() {
             return;
 
           const input = e.inputBuffer.getChannelData(0);
+
+          // Energy gate: skip silent frames to avoid sending ambient noise to
+          // the STT backend (primary cause of Whisper hallucinations).
+          let sumSq = 0;
+          for (let i = 0; i < input.length; i++) sumSq += input[i] * input[i];
+          const rms = Math.sqrt(sumSq / input.length);
+          if (rms < RMS_SILENCE_THRESHOLD) return;
           // Convert Float32 [-1,1] to Int16
           const pcm16 = new Int16Array(input.length);
           for (let i = 0; i < input.length; i++) {
