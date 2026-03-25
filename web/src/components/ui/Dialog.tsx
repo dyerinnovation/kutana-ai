@@ -40,7 +40,7 @@ function Dialog({ open, onClose, children, className }: DialogProps) {
     >
       <div
         className={cn(
-          "rounded-xl border border-gray-700 bg-gray-900 p-6 text-white",
+          "rounded-xl border border-gray-700 bg-gray-900 p-6 text-gray-50",
           "shadow-glow-brand"
         )}
       >

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "google-stitch": {
+      "command": "npx",
+      "args": ["-y", "@google/stitch-sdk@latest", "mcp"],
+      "description": "Google Stitch AI design tool — generate UI screens, extract design tokens, sync DESIGN.md. Requires one-time login at stitch.withgoogle.com. See internal-docs/design/setup.md."
+    }
+  }
+}
