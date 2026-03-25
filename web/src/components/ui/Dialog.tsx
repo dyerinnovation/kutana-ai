@@ -33,12 +33,17 @@ function Dialog({ open, onClose, children, className }: DialogProps) {
         }
       }}
       className={cn(
-        "backdrop:bg-black/60 bg-transparent p-0",
+        "backdrop:bg-gray-950/80 bg-transparent p-0",
         "max-w-lg w-full",
         className
       )}
     >
-      <div className="rounded-xl border border-gray-800 bg-gray-900 p-6 text-white shadow-xl">
+      <div
+        className={cn(
+          "rounded-xl border border-gray-700 bg-gray-900 p-6 text-white",
+          "shadow-glow-brand"
+        )}
+      >
         {children}
       </div>
     </dialog>
@@ -51,7 +56,10 @@ function DialogTitle({
 }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h2
-      className={cn("text-lg font-semibold text-white mb-4", className)}
+      className={cn(
+        "mb-4 text-base font-semibold leading-tight tracking-tight text-white",
+        className
+      )}
       {...props}
     />
   );
@@ -63,7 +71,7 @@ function DialogFooter({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("flex justify-end gap-3 mt-6", className)}
+      className={cn("mt-6 flex justify-end gap-3", className)}
       {...props}
     />
   );

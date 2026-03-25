@@ -1,1 +1,191 @@
 @import "tailwindcss";
+
+@theme {
+  /* ─── Gray scale → violet-tinted dark surfaces ────────────────────
+     Overrides Tailwind's neutral gray so every existing gray-* class
+     picks up the new cool-dark palette automatically.
+  ───────────────────────────────────────────────────────────────── */
+  --color-gray-50:  #eeedf6;
+  --color-gray-100: #cac8e0;
+  --color-gray-200: #a4a2c4;
+  --color-gray-300: #7e7ca0;
+  --color-gray-400: #5a5880;
+  --color-gray-500: #3d3b68;
+  --color-gray-600: #282650;
+  --color-gray-700: #1c1b38;
+  --color-gray-800: #12112a;
+  --color-gray-900: #0c0c1a;
+  --color-gray-950: #07070e;
+
+  /* ─── Blue scale → brand violet ──────────────────────────────────
+     Overrides Tailwind's blue so every existing blue-* class picks
+     up the brand violet automatically (buttons, focus rings, links).
+  ───────────────────────────────────────────────────────────────── */
+  --color-blue-50:  #f3f0ff;
+  --color-blue-100: #ebe5ff;
+  --color-blue-200: #d9ceff;
+  --color-blue-300: #bea8ff;
+  --color-blue-400: #9e7aff;
+  --color-blue-500: #8457f6;
+  --color-blue-600: #6d32ed;
+  --color-blue-700: #5d1dd4;
+  --color-blue-800: #4e18b0;
+  --color-blue-900: #42168e;
+  --color-blue-950: #280a66;
+
+  /* ─── Brand aliases (for new code) ───────────────────────────────  */
+  --color-brand-50:  #f3f0ff;
+  --color-brand-100: #ebe5ff;
+  --color-brand-200: #d9ceff;
+  --color-brand-300: #bea8ff;
+  --color-brand-400: #9e7aff;
+  --color-brand-500: #8457f6;
+  --color-brand-600: #6d32ed;
+  --color-brand-700: #5d1dd4;
+  --color-brand-800: #4e18b0;
+  --color-brand-900: #42168e;
+  --color-brand-950: #280a66;
+
+  /* ─── Ink aliases (for new code) ─────────────────────────────────  */
+  --color-ink-50:  #eeedf6;
+  --color-ink-100: #cac8e0;
+  --color-ink-200: #a4a2c4;
+  --color-ink-300: #7e7ca0;
+  --color-ink-400: #5a5880;
+  --color-ink-500: #3d3b68;
+  --color-ink-600: #282650;
+  --color-ink-700: #1c1b38;
+  --color-ink-800: #12112a;
+  --color-ink-900: #0c0c1a;
+  --color-ink-950: #07070e;
+
+  /* ─── Semantic: success, danger, warning ─────────────────────────  */
+  --color-success-400: #34d399;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-900: #064e3b;
+  --color-success-950: #022c22;
+
+  --color-danger-400:  #f87171;
+  --color-danger-500:  #ef4444;
+  --color-danger-600:  #dc2626;
+  --color-danger-900:  #7f1d1d;
+  --color-danger-950:  #450a0a;
+
+  --color-warning-400: #fbbf24;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+
+  /* ─── Typography ─────────────────────────────────────────────────  */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, 'Cascadia Code', 'Courier New', monospace;
+}
+
+/* ─── Base layer ──────────────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after {
+    border-color: #1c1b38;
+  }
+
+  html {
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: #07070e;
+    color: #cac8e0;
+    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  ::selection {
+    background-color: rgb(109 50 237 / 0.3);
+    color: #fff;
+  }
+
+  /* Premium thin scrollbar */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #282650;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3d3b68;
+  }
+}
+
+/* ─── Design system custom utilities ─────────────────────────────── */
+
+/* Gradient fills */
+.bg-gradient-brand {
+  background: linear-gradient(135deg, #8457f6 0%, #4e18b0 100%);
+}
+
+.bg-gradient-brand-subtle {
+  background: linear-gradient(135deg, rgb(132 87 246 / 0.1) 0%, rgb(78 24 176 / 0.05) 100%);
+}
+
+/* Ambient radial glow — applied to page backgrounds */
+.bg-ambient-brand {
+  background-image: radial-gradient(
+    ellipse at 50% -10%,
+    rgb(109 50 237 / 0.1) 0%,
+    transparent 55%
+  );
+}
+
+/* Glow shadows */
+.shadow-glow-brand {
+  box-shadow:
+    0 0 0 1px rgb(109 50 237 / 0.25),
+    0 4px 24px rgb(109 50 237 / 0.12),
+    0 1px 3px rgb(0 0 0 / 0.4);
+}
+
+.shadow-glow-brand-sm {
+  box-shadow:
+    0 0 0 1px rgb(109 50 237 / 0.35),
+    0 2px 12px rgb(109 50 237 / 0.2);
+}
+
+/* Card hover — applies a violet tint to border + subtle lift */
+.card-interactive {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.card-interactive:hover {
+  border-color: rgb(109 50 237 / 0.35);
+  box-shadow:
+    0 0 0 1px rgb(109 50 237 / 0.1),
+    0 8px 32px rgb(0 0 0 / 0.35);
+  transform: translateY(-1px);
+}
+
+/* Text gradient */
+.text-gradient-brand {
+  background: linear-gradient(135deg, #bea8ff 0%, #8457f6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Code / monospace block */
+.code-block {
+  background: #07070e;
+  border: 1px solid #1c1b38;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: #cac8e0;
+  overflow-x: auto;
+}
