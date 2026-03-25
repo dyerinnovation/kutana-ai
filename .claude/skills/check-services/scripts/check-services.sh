@@ -46,10 +46,10 @@ check_http "Frontend"     "$BASE/"            200
 echo ""
 echo "==> Checking infrastructure..."
 check_exec "Postgres" \
-  "kubectl -n convene exec -i deployment/postgres -- pg_isready -U convene" \
+  "kubectl -n convene exec -i statefulset/postgres -- pg_isready -U convene" \
   "accepting connections"
 check_exec "Redis" \
-  "kubectl -n convene exec -i deployment/redis -- redis-cli ping" \
+  "kubectl -n convene exec -i statefulset/redis -- redis-cli ping" \
   "PONG"
 
 echo ""

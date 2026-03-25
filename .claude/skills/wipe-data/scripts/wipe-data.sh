@@ -15,7 +15,7 @@ fi
 # Helper: run kubectl exec on postgres pod
 PG_CMD() {
   ssh "$DGX" "echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml \
-    kubectl -n convene exec -i deployment/postgres -- $*"
+    kubectl -n convene exec -i statefulset/postgres -- $*"
 }
 
 if [[ "$MODE" != "--redis-only" ]]; then
@@ -30,7 +30,7 @@ fi
 if [[ "$MODE" != "--db-only" ]]; then
   echo "==> Flushing Redis..."
   ssh "$DGX" "echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml \
-    kubectl -n convene exec -i deployment/redis -- redis-cli FLUSHALL"
+    kubectl -n convene exec -i statefulset/redis -- redis-cli FLUSHALL"
   echo "    Redis flushed."
 fi
 
