@@ -75,9 +75,7 @@ class AudioPipeline:
             self._started = True
             if self._event_publisher is not None and self._meeting_id is not None:
                 try:
-                    await self._event_publisher.publish(
-                        MeetingStarted(meeting_id=self._meeting_id)
-                    )
+                    await self._event_publisher.publish(MeetingStarted(meeting_id=self._meeting_id))
                 except Exception:
                     logger.exception("Failed to publish MeetingStarted event")
 
@@ -177,6 +175,20 @@ class AudioPipeline:
                 except Exception:
                     logger.exception("Failed to publish TranscriptSegmentFinal event")
 
+    def reset_provider(self, new_stt: STTProvider) -> None:
+        """Swap the STT provider and reset stream state.
+
+        This allows the AudioBridge to inject a fresh provider after
+        a connection failure without recreating the entire pipeline.
+
+        Args:
+            new_stt: A fresh STT provider instance to replace the current one.
+        """
+        self._stt = new_stt
+        self._started = False
+        self._audio_buffer.clear()
+        logger.info("STT provider reset on pipeline (meeting_id=%s)", self._meeting_id)
+
     async def close(self) -> None:
         """Close the STT stream and publish MeetingEnded event."""
         if self._started:
@@ -184,8 +196,6 @@ class AudioPipeline:
             self._started = False
             if self._event_publisher is not None and self._meeting_id is not None:
                 try:
-                    await self._event_publisher.publish(
-                        MeetingEnded(meeting_id=self._meeting_id)
-                    )
+                    await self._event_publisher.publish(MeetingEnded(meeting_id=self._meeting_id))
                 except Exception:
                     logger.exception("Failed to publish MeetingEnded event")

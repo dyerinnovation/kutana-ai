@@ -10,11 +10,8 @@ ENV UV_COMPILE_BYTECODE=1 \
 COPY . .
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --package mcp-server --no-dev --frozen
+    uv sync --package task-engine --no-dev --frozen
 
-EXPOSE 3001
+EXPOSE 8002
 
-ENV MCP_HOST=0.0.0.0 \
-    MCP_PORT=3001
-
-CMD ["python", "-m", "mcp_server.main"]
+CMD ["uvicorn", "task_engine.main:app", "--host", "0.0.0.0", "--port", "8002"]

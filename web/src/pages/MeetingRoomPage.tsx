@@ -270,120 +270,163 @@ export function MeetingRoomPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] gap-4">
-      {/* Main transcript area */}
-      <div className="flex flex-1 flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-800 pb-4">
-          <div>
-            <h1 className="text-xl font-bold text-gray-50">Meeting Room</h1>
-            <p className="text-xs text-gray-500 font-mono mt-0.5">
-              {meetingId}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <StatusBadge status={status} />
-          </div>
+    <div className="flex h-[calc(100vh-8rem)] flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-gray-800 pb-4 mb-4">
+        <div>
+          <h1 className="text-xl font-bold text-gray-50">Meeting Room</h1>
+          <p className="text-xs text-gray-500 font-mono mt-0.5">
+            {meetingId}
+          </p>
         </div>
-
-        {/* Error */}
-        {error && (
-          <div className="mt-4 rounded-lg border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-400">
-            {error}
-          </div>
-        )}
-
-        {/* Transcript panel */}
-        <div className="mt-4 flex-1 overflow-y-auto rounded-lg border border-gray-800 bg-gray-900/50 p-4 space-y-3">
-          {transcripts.length === 0 && status === "connected" && (
-            <p className="text-sm text-gray-500 text-center py-8">
-              Waiting for speech...
-            </p>
-          )}
-          {transcripts.length === 0 && status === "connecting" && (
-            <p className="text-sm text-gray-500 text-center py-8">
-              Connecting to meeting...
-            </p>
-          )}
-          {transcripts.map((seg, i) => (
-            <div
-              key={`${seg.speaker_id}-${seg.start_time}-${i}`}
-              className={`text-sm ${seg.is_final ? "text-gray-200" : "text-gray-400 italic"}`}
-            >
-              <span className="font-medium text-blue-400">
-                {seg.speaker_id}
-              </span>
-              <span className="text-gray-600 mx-2">
-                {formatTimestamp(seg.start_time)}
-              </span>
-              <span>{seg.text}</span>
-            </div>
-          ))}
-          <div ref={transcriptEndRef} />
-        </div>
-
-        {/* Controls */}
-        <div className="mt-4 flex items-center justify-center gap-3">
-          <Button
-            variant={isMuted ? "destructive" : "outline"}
-            onClick={toggleMute}
-          >
-            {isMuted ? (
-              <>
-                <MicOffIcon /> Unmute
-              </>
-            ) : (
-              <>
-                <MicIcon /> Mute
-              </>
-            )}
-          </Button>
-          <Button variant="destructive" onClick={handleLeave}>
-            Leave Meeting
-          </Button>
+        <div className="flex items-center gap-2">
+          <StatusBadge status={status} />
         </div>
       </div>
 
-      {/* Sidebar: Participants */}
-      <div className="w-64 flex-shrink-0 rounded-lg border border-gray-800 bg-gray-900/50 p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">
-          Participants ({participants.length || 1})
-        </h2>
-        <div className="space-y-2">
-          {/* Current user always shown */}
-          <div className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm">
-            <div className="h-7 w-7 rounded-full bg-blue-600 flex items-center justify-center text-xs font-medium text-white">
-              {user?.name?.charAt(0).toUpperCase() ?? "?"}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="truncate text-gray-50 text-sm">
+      {/* Error */}
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-400">
+          {error}
+        </div>
+      )}
+
+      {/* Main content: participants (main) + transcript (sidebar) */}
+      <div className="flex flex-col md:flex-row flex-1 gap-4 min-h-0">
+        {/* Participants grid — main panel */}
+        <div className="flex-1 overflow-y-auto rounded-lg border border-gray-800 bg-gray-900/50 p-4">
+          <h2 className="text-sm font-semibold text-gray-300 mb-4">
+            Participants ({participants.length + 1})
+          </h2>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Current user card */}
+            <div className="relative flex flex-col items-center justify-center h-48 w-full rounded-xl border border-emerald-700/50 bg-gray-900/50 p-4">
+              {/* Avatar */}
+              <div className="relative mb-3">
+                <div className="h-24 w-24 rounded-full bg-emerald-600 flex items-center justify-center text-3xl font-semibold text-white">
+                  {user?.name?.charAt(0).toUpperCase() ?? "?"}
+                </div>
+                {!isMuted && (
+                  <div className="absolute inset-0 h-24 w-24 rounded-full border-2 border-green-400 animate-pulse" />
+                )}
+              </div>
+              <p className="text-lg font-medium text-gray-50 truncate max-w-full">
                 {user?.name ?? "You"}
               </p>
-              <p className="text-xs text-gray-500">
-                {isMuted ? "Muted" : "Speaking"}
-              </p>
+              <p className="text-sm text-gray-400">You</p>
+              {/* Muted indicator */}
+              {isMuted && (
+                <div className="absolute top-3 right-3 text-red-400" title="Muted">
+                  <MicOffIconSmall />
+                </div>
+              )}
+              {/* Video placeholder */}
+              <div className="absolute bottom-2 right-2 flex items-center gap-1 text-[10px] text-gray-600">
+                <CameraIcon />
+                <span>Video soon</span>
+              </div>
             </div>
-          </div>
 
-          {participants
-            .filter((p) => p.id !== user?.id)
-            .map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm"
-              >
-                <div className="h-7 w-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-medium text-gray-300">
-                  {p.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="truncate text-gray-200 text-sm">{p.name}</p>
-                  <p className="text-xs text-gray-500">
-                    {p.role} {p.is_muted ? "- Muted" : ""}
+            {/* Other participants */}
+            {participants
+              .filter((p) => p.id !== user?.id)
+              .map((p) => (
+                <div
+                  key={p.id}
+                  className="relative flex flex-col items-center justify-center h-48 w-full rounded-xl border border-gray-800 bg-gray-900/50 p-4"
+                >
+                  {/* Avatar */}
+                  <div className="relative mb-3">
+                    {p.avatar_url ? (
+                      <img
+                        src={p.avatar_url}
+                        alt={p.name}
+                        className="h-24 w-24 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-24 w-24 rounded-full bg-gray-700 flex items-center justify-center text-3xl font-semibold text-gray-300">
+                        {p.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    {p.is_speaking && (
+                      <div className="absolute inset-0 h-24 w-24 rounded-full border-2 border-green-400 animate-pulse" />
+                    )}
+                  </div>
+                  <p className="text-lg font-medium text-gray-200 truncate max-w-full">
+                    {p.name}
                   </p>
+                  <p className="text-sm text-gray-400">{p.role}</p>
+                  {/* Muted indicator */}
+                  {p.is_muted && (
+                    <div className="absolute top-3 right-3 text-red-400" title="Muted">
+                      <MicOffIconSmall />
+                    </div>
+                  )}
+                  {/* Video placeholder */}
+                  <div className="absolute bottom-2 right-2 flex items-center gap-1 text-[10px] text-gray-600">
+                    <CameraIcon />
+                    <span>Video soon</span>
+                  </div>
                 </div>
+              ))}
+          </div>
+        </div>
+
+        {/* Transcript sidebar — right */}
+        <div className="w-full md:w-80 md:flex-shrink-0 flex flex-col rounded-lg border border-gray-800 bg-gray-900/50 overflow-hidden">
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-800">
+            <TranscriptIcon />
+            <h2 className="text-xs font-semibold text-gray-300">Transcript</h2>
+          </div>
+          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+            {transcripts.length === 0 && status === "connected" && (
+              <p className="text-xs text-gray-500 text-center py-6">
+                Waiting for speech...
+              </p>
+            )}
+            {transcripts.length === 0 && status === "connecting" && (
+              <p className="text-xs text-gray-500 text-center py-6">
+                Connecting to meeting...
+              </p>
+            )}
+            {transcripts.map((seg, i) => (
+              <div
+                key={`${seg.speaker_id}-${seg.start_time}-${i}`}
+                className={`text-xs leading-snug ${seg.is_final ? "text-gray-300" : "text-gray-500 italic"}`}
+              >
+                <span className="font-medium text-blue-400">
+                  {seg.speaker_id}
+                </span>
+                <span className="text-gray-600 mx-1 text-[10px]">
+                  {formatTimestamp(seg.start_time)}
+                </span>
+                <span>{seg.text}</span>
               </div>
             ))}
+            <div ref={transcriptEndRef} />
+          </div>
         </div>
+      </div>
+
+      {/* Sticky bottom controls bar */}
+      <div className="mt-4 flex items-center justify-center gap-4 border-t border-gray-800 pt-4">
+        <Button
+          variant={isMuted ? "destructive" : "outline"}
+          onClick={toggleMute}
+        >
+          {isMuted ? (
+            <>
+              <MicOffIcon /> Unmute
+            </>
+          ) : (
+            <>
+              <MicIcon /> Mute
+            </>
+          )}
+        </Button>
+        <Button variant="destructive" onClick={handleLeave}>
+          <LeaveIcon /> Leave
+        </Button>
       </div>
     </div>
   );
@@ -448,6 +491,82 @@ function MicOffIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="m2.25 2.25 19.5 19.5M12 18.75a6 6 0 0 0 5.933-5.138M15.75 9V4.5a3.75 3.75 0 1 0-7.5 0v4.875M9 12.75a3 3 0 0 0 3 3m0 0v3.75m-3.75 0h7.5"
+      />
+    </svg>
+  );
+}
+
+/** Small mic-off icon for participant card overlays */
+function MicOffIconSmall() {
+  return (
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="m2.25 2.25 19.5 19.5M12 18.75a6 6 0 0 0 5.933-5.138M15.75 9V4.5a3.75 3.75 0 1 0-7.5 0v4.875M9 12.75a3 3 0 0 0 3 3m0 0v3.75m-3.75 0h7.5"
+      />
+    </svg>
+  );
+}
+
+/** Camera icon for video placeholder */
+function CameraIcon() {
+  return (
+    <svg
+      className="h-3 w-3"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z"
+      />
+    </svg>
+  );
+}
+
+/** Transcript/document icon for sidebar header */
+function TranscriptIcon() {
+  return (
+    <svg
+      className="h-3.5 w-3.5 text-gray-400"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
+      />
+    </svg>
+  );
+}
+
+/** Leave/exit door icon */
+function LeaveIcon() {
+  return (
+    <svg
+      className="h-4 w-4 mr-1.5"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"
       />
     </svg>
   );

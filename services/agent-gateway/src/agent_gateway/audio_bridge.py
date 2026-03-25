@@ -1,4 +1,4 @@
-"""AudioBridge — manages per-meeting AudioPipeline instances."""
+"""AudioBridge -- manages per-meeting AudioPipeline instances."""
 
 from __future__ import annotations
 
@@ -6,6 +6,8 @@ import asyncio
 import contextlib
 import logging
 from typing import TYPE_CHECKING
+
+from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
 from audio_service.audio_pipeline import AudioPipeline
 from audio_service.event_publisher import EventPublisher
@@ -62,9 +64,24 @@ class AudioBridge:
         self._transcription_interval_s = transcription_interval_s
         self._pipelines: dict[UUID, AudioPipeline] = {}
         self._segment_tasks: dict[UUID, asyncio.Task[None]] = {}
-        logger.info("AudioBridge initialized (stt_provider=%s, whisper_api_url=%s)", stt_provider, whisper_api_url)
+        logger.info(
+            "AudioBridge initialized (stt_provider=%s, whisper_api_url=%s)",
+            stt_provider,
+            whisper_api_url,
+        )
         if stt_provider == "whisper-remote" and not whisper_api_url:
             logger.warning("whisper-remote selected but whisper_api_url is empty!")
+
+    def _recreate_stt_provider(self, meeting_id: UUID) -> object:
+        """Create a fresh STT provider instance from settings.
+
+        Args:
+            meeting_id: The meeting ID for the new provider.
+
+        Returns:
+            A new STT provider instance.
+        """
+        return _create_stt_provider(self._stt_settings, meeting_id)
 
     async def ensure_pipeline(self, meeting_id: UUID) -> None:
         """Create an STT pipeline for a meeting if one doesn't exist.
@@ -146,6 +163,10 @@ class AudioBridge:
         On cancellation, one final pass captures any remaining audio.
         Retries up to 5 times with exponential backoff on unexpected errors.
 
+        On WebSocket connection errors (ConnectionClosedError), creates
+        a fresh STT provider, resets the pipeline, and resumes the loop
+        without counting toward the retry budget.
+
         Args:
             meeting_id: The meeting this pipeline belongs to.
             pipeline: The AudioPipeline to consume segments from.
@@ -171,6 +192,9 @@ class AudioBridge:
                             segment_count,
                             meeting_id,
                         )
+                        # Reset retry counter on successful transcription
+                        retry = 0
+                        delay = 2.0
                     await asyncio.sleep(self._transcription_interval_s)
             except asyncio.CancelledError:
                 # Final pass to capture any remaining buffered audio
@@ -186,6 +210,36 @@ class AudioBridge:
                     meeting_id,
                 )
                 return
+            except (ConnectionClosedError, ConnectionClosedOK, ConnectionError):
+                # STT WebSocket died — create a fresh provider and reset
+                logger.warning(
+                    "STT connection lost for meeting %s, creating fresh provider",
+                    meeting_id,
+                )
+                try:
+                    new_provider = self._recreate_stt_provider(meeting_id)
+                    pipeline.reset_provider(new_provider)
+                    logger.info(
+                        "STT provider reset for meeting %s, resuming segment consumer",
+                        meeting_id,
+                    )
+                    # Don't count connection errors toward retry budget
+                    continue
+                except Exception:
+                    logger.exception(
+                        "Failed to recreate STT provider for meeting %s",
+                        meeting_id,
+                    )
+                    retry += 1
+                    if retry >= max_retries:
+                        logger.error(
+                            "Segment consumer exhausted %d retries for meeting %s",
+                            max_retries,
+                            meeting_id,
+                        )
+                        return
+                    await asyncio.sleep(delay)
+                    delay *= 2
             except Exception:
                 retry += 1
                 logger.exception(

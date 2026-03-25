@@ -1,0 +1,116 @@
+global:
+  domain: spark-b0f2.local
+  registryPrefix: localhost:30500/convene
+
+# ---------------------------------------------------------------------------
+# PostgreSQL
+# ---------------------------------------------------------------------------
+postgres:
+  image:
+    repository: pgvector/pgvector
+    tag: pg16
+  persistence:
+    size: 10Gi
+  credentials:
+    database: convene
+    username: convene
+    password: convene
+
+# ---------------------------------------------------------------------------
+# Redis
+# ---------------------------------------------------------------------------
+redis:
+  image:
+    repository: redis
+    tag: 7-alpine
+  persistence:
+    size: 5Gi
+
+# ---------------------------------------------------------------------------
+# Services
+# ---------------------------------------------------------------------------
+apiServer:
+  enabled: true
+  replicas: 1
+  image:
+    tag: latest
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env: {}
+
+agentGateway:
+  enabled: true
+  replicas: 1
+  image:
+    tag: latest
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env: {}
+
+audioService:
+  enabled: true
+  replicas: 1
+  image:
+    tag: latest
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env: {}
+
+taskEngine:
+  enabled: true
+  replicas: 1
+  image:
+    tag: latest
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env: {}
+
+mcpServer:
+  enabled: true
+  replicas: 1
+  image:
+    tag: latest
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env: {}
+
+# ---------------------------------------------------------------------------
+# Secrets (base64-encoded values — override at install time)
+# ---------------------------------------------------------------------------
+secrets:
+  jwtSecret: Y2hhbmdlLW1lLWluLXByb2R1Y3Rpb24=
+  deepgramApiKey: ""
+  anthropicApiKey: ""
+
+# ---------------------------------------------------------------------------
+# Ingress
+# ---------------------------------------------------------------------------
+ingress:
+  enabled: true
+  className: nginx
+  host: convene.spark-b0f2.local

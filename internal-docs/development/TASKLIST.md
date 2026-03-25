@@ -390,6 +390,10 @@
   - [ ] Admin dashboard: revenue metrics, subscriber counts, churn tracking
   - [ ] Tests for billing flows and plan enforcement
 
+- [ ] F3.4: Participant video tiles (LiveKit media tracks → `<video>` elements) — blocked on F3.1 (LiveKit integration)
+- [ ] F3.5: Screen sharing support (LiveKit screen track) — blocked on F3.1
+- [ ] F3.6: Video layout modes (gallery, speaker, presentation) — blocked on F3.4
+
 - Plan only (no implementation): Dynamic entity discovery based on conversation content
 
 ---

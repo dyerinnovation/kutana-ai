@@ -33,6 +33,8 @@ Python monorepo managed with `uv` workspaces.
 
 **Phase 2** — Agent Platform (complete as of 2026-03-07). MCP OAuth 2.1 auth, meeting lifecycle, browser meeting room, prebuilt agent templates, CLI, OpenClaw plugin, Claude Code skill, channel routing, API key security.
 
+**Phase 3** — Meeting Platform. LiveKit WebRTC integration, browser meeting room with video tiles, screen sharing, video layout modes (gallery/speaker/presentation), and real-time collaboration sidebar.
+
 **Agent connection pattern:** Claude Agent SDK → MCP Server (Bearer token) → Agent Gateway (WebSocket).
 
 See `internal-docs/development/TASKLIST.md` for the full task queue and `internal-docs/strategy/roadmap.md` for feature details.

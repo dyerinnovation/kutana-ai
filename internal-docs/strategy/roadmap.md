@@ -656,6 +656,78 @@ See `docs/research/scheduled-agent-participation.md` for full use-case research,
 
 ---
 
+### F3.5 — Participant Video Tiles
+**Status**: Pending
+
+**Context**: LiveKit media tracks rendered as `<video>` elements in the participant grid. Each participant card in the meeting room UI becomes a video tile when camera is active, with fallback to avatar.
+
+**Acceptance Criteria**:
+- [ ] Subscribe to LiveKit video tracks per participant
+- [ ] Render `<video>` elements in participant grid layout
+- [ ] Camera on/off toggle with smooth transition to avatar fallback
+- [ ] Participant name overlay on video tile
+- [ ] Audio level indicator on each tile (speaking animation)
+- [ ] Adaptive video quality based on tile size and network conditions
+- [ ] Handle participant join/leave with tile add/remove animations
+
+**Technical Notes**:
+- Use `@livekit/react` `VideoTrack` and `useParticipants` hooks
+- Tiles should be React components that accept a `Participant` object from LiveKit SDK
+- Avatar fallback uses user profile image or initials — same component as participant list
+- Video quality: request lower resolution for small tiles (LiveKit adaptive simulcast)
+- Blocked on F3.1 (LiveKit Integration)
+
+---
+
+### F3.6 — Screen Sharing
+**Status**: Pending
+
+**Context**: LiveKit screen track support. Participants can share their screen, rendered as a large tile that can be pinned or focused.
+
+**Acceptance Criteria**:
+- [ ] Screen share button in meeting controls
+- [ ] Capture screen via `getDisplayMedia` and publish as LiveKit screen track
+- [ ] Render shared screen as a large tile in the meeting room
+- [ ] Pin/unpin shared screen (manual override of layout)
+- [ ] Multiple screen shares: queue or allow switching between presenters
+- [ ] Screen share indicator in participant list
+- [ ] Stop sharing control (both presenter and host)
+- [ ] Audio sharing support (system audio via screen share)
+
+**Technical Notes**:
+- LiveKit SDK handles `getDisplayMedia` negotiation — use `room.localParticipant.setScreenShareEnabled(true)`
+- Shared screen track has `source: Track.Source.ScreenShare`
+- When screen share is active, auto-switch to Presentation layout (F3.7)
+- Host can stop any participant's screen share via LiveKit room admin API
+- Blocked on F3.1 (LiveKit Integration)
+
+---
+
+### F3.7 — Video Layout Modes
+**Status**: Pending
+
+**Context**: Configurable layout modes for the meeting room video grid.
+
+**Acceptance Criteria**:
+- [ ] Gallery view — grid of equal-sized tiles, responsive columns based on participant count
+- [ ] Speaker view — active speaker displayed large, other participants in small strip
+- [ ] Presentation view — shared screen displayed large, participants in small strip
+- [ ] Layout mode switcher in meeting controls toolbar
+- [ ] Auto-switch to Presentation view when screen share starts
+- [ ] Active speaker detection via LiveKit audio level events
+- [ ] Smooth transitions between layout modes
+- [ ] Persist user's preferred layout mode in local storage
+
+**Technical Notes**:
+- Use LiveKit `useActiveSpeaker` hook for speaker detection
+- Gallery grid: CSS Grid with `auto-fill` / `minmax` for responsive columns
+- Speaker view: flexbox with main area (70%) + sidebar strip (30%)
+- Presentation view: same as speaker view but pinned to screen share track
+- Layout state managed via React Context, not global state library
+- Blocked on F3.5 (Participant Video Tiles)
+
+---
+
 ## Phase 4 — User Platform (Auth, Billing, Dashboard)
 
 > Goal: Multi-tenant platform with user accounts, workspaces, subscriptions, and full dashboard UI.
