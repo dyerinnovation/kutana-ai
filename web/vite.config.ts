@@ -11,6 +11,9 @@ export default defineConfig({
     },
   },
   server: {
+    fs: {
+      allow: [".."],
+    },
     allowedHosts: ["convene.spark-b0f2.local", "spark-b0f2.local"],
     proxy: {
       "/api": {
