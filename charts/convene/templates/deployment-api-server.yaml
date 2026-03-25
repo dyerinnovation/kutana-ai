@@ -1,0 +1,56 @@
+{{- if .Values.apiServer.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-server
+  labels:
+    {{- include "convene.labels" . | nindent 4 }}
+    app.kubernetes.io/name: api-server
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.apiServer.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: api-server
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: api-server
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: api-server
+          image: {{ include "convene.image" (dict "root" . "svc" "api-server" "tag" .Values.apiServer.image.tag) }}
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "convene.fullname" . }}-config
+            - secretRef:
+                name: {{ include "convene.fullname" . }}-secret
+          {{- range $key, $value := .Values.apiServer.env }}
+          env:
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+          {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.apiServer.resources | nindent 12 }}
+{{- end }}

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "convene.fullname" . }}-config
+  labels:
+    {{- include "convene.labels" . | nindent 4 }}
+data:
+  DATABASE_URL: {{ include "convene.databaseUrl" . | quote }}
+  DATABASE_URL_SYNC: {{ include "convene.databaseUrlSync" . | quote }}
+  REDIS_URL: {{ include "convene.redisUrl" . | quote }}
+  CONVENE_DOMAIN: {{ .Values.global.domain | quote }}
+  CONVENE_MESSAGE_BUS: "redis"
+  STT_PROVIDER: "deepgram"
+  LOG_LEVEL: "info"

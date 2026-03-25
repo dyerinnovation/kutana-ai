@@ -82,6 +82,8 @@ export interface Participant {
   name: string;
   role: string;
   is_muted: boolean;
+  avatar_url?: string;
+  is_speaking?: boolean;
 }
 
 export interface AgentTemplate {

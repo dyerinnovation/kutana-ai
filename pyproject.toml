@@ -2,7 +2,7 @@
 name = "convene-ai"
 version = "0.1.0"
 description = "Agent-first meeting platform — AI agents connect via native API, humans join via WebRTC"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 
 [tool.uv.workspace]
 members = [
