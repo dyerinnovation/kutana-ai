@@ -1,7 +1,7 @@
 # STT/TTS Deep Dive: Phantom Word Detection
 
-**Date:** 2026-03-25
-**Issue:** User reports "thank you" appearing in the transcript before they say anything when they unmute/take their speaking turn. The only word they actually say is "testing," which is eventually captured correctly.
+**Date:** 2026-03-25 (updated 2026-03-25 round 2)
+**Issue:** User sees "I'm sorry - I'm sorry - I'm sorry" (and previously "Thank you") repeated dozens of times in the transcript when they haven't spoken anything.
 
 ---
 
@@ -13,6 +13,7 @@
 Browser mic (getUserMedia)
   ↓ Float32 → Int16 PCM16 @ 16 kHz
 ScriptProcessorNode (4096 samples = ~256ms chunks)
+  ↓ Energy gate: RMS < 0.01 → drop frame
   ↓ base64-encoded JSON
 WebSocket → /human/connect
   ↓
@@ -22,7 +23,11 @@ AudioBridge.process_audio(meeting_id, audio_bytes)
   ↓
 AudioPipeline.process_audio(chunk)  [retry + 5 MB buffer]
   ↓
-STTProvider.send_audio(chunk)
+WhisperRemoteSTT.send_audio(chunk)  [buffer accumulates for 5s]
+  ↓ every 5s
+WhisperRemoteSTT.get_transcript()   [POST WAV to vLLM, apply filters]
+  ↓
+TranscriptSegmentFinal → Redis Streams → EventRelay → browser
 ```
 
 **Two STT providers are in use:**
@@ -32,39 +37,57 @@ STTProvider.send_audio(chunk)
 | `WhisperRemoteSTT` | Batch (default in prod) | Buffers all PCM16 in memory; POST to vLLM Whisper every 5s |
 | `DeepgramSTT` | Streaming | Streams raw PCM16 over WebSocket to Deepgram; returns per-utterance finals |
 
-Transcript segments flow out via Redis Streams → EventRelay → browser `transcript` messages.
-
-### Key files
-
-| File | Role |
-|---|---|
-| `packages/convene-providers/src/convene_providers/stt/whisper_remote_stt.py` | WhisperRemoteSTT |
-| `packages/convene-providers/src/convene_providers/stt/deepgram_stt.py` | DeepgramSTT |
-| `services/audio-service/src/audio_service/audio_pipeline.py` | Buffering + retry |
-| `services/agent-gateway/src/agent_gateway/human_session.py` | Browser audio intake |
-| `web/src/pages/MeetingRoomPage.tsx` | Frontend audio capture |
-
 ---
 
-## 2. How STT Works in Meeting Contexts (General Background)
+## 2. Root Cause: Whisper Fallback Temperature Sampling
 
-### Real-time streaming STT
-Streaming STT (Deepgram, AssemblyAI) works by accepting a continuous raw PCM byte stream and returning:
-- **Interim results** — rolling hypothesis, updated as more audio arrives; not yet final
-- **Final results** — committed once an endpoint (silence/pause) is detected
+### What is fallback temperature sampling?
 
-The key parameter controlling this is **endpointing**: how much silence (in ms) triggers the end of an utterance and commits a final result. A too-short endpointing value means Deepgram finalizes results based on very small pauses, potentially committing before the speaker has finished. A too-long value adds latency.
+Whisper uses a beam-search decoding strategy with `temperature=0.0` by default. When the model is **not confident** in its output (the log-probability or compression ratio exceeds internal thresholds), it automatically retries with increasing temperature values: 0.0 → 0.2 → 0.4 → 0.6 → 0.8 → 1.0.
 
-### Batch/file STT
-Whisper was designed for audio file transcription, not streaming. When used in a meeting context, the common pattern is a **sliding window**: buffer N seconds of audio, transcribe it, clear the buffer, repeat. The challenge is that this creates:
-1. **Silence windows**: windows containing mostly silence
-2. **Hallucination risk**: Whisper is trained to always produce output; it "fills in" phrases even for silence
+At higher temperatures, the output becomes more "creative" — meaning it hallucinates phrases that are common in training data. The most common hallucinations on ambient noise / HVAC hiss / microphone hiss are:
 
-### VAD in meeting contexts
-Leading platforms (Zoom, Teams, Google Meet) use multiple layers of VAD:
-1. **Client-side VAD** (WebRTC VAD or ML-based): suppress transmission of silent frames entirely
-2. **Server-side acoustic VAD**: gate transcription to only begin when energy level indicates speech
-3. **STT model's own confidence**: Deepgram returns `confidence`; Whisper verbose JSON returns `no_speech_prob`
+- "Thank you."
+- "I'm sorry."
+- "- I'm sorry. - I'm sorry." (doubled, with dashes)
+- "Thanks for watching."
+
+This is a well-documented, inherent behavior of Whisper models. See: OpenAI/whisper GitHub issues #29, #560.
+
+### Observed log evidence
+
+From the DGX agent-gateway logs during the user's session (2026-03-25):
+
+```
+Whisper POST: buffer_size=155648 audio_duration=4.86s → elapsed=0.15s → yielded 1 segments
+Whisper POST: buffer_size=147456 audio_duration=4.61s → elapsed=4.76s → yielded 53 segments
+Whisper POST: buffer_size=106496 audio_duration=3.33s → elapsed=4.76s → yielded 36 segments
+Whisper POST: buffer_size=40960  audio_duration=1.28s → elapsed=4.82s → yielded 27 segments
+Whisper POST: buffer_size=65536  audio_duration=2.05s → elapsed=4.80s → yielded 29 segments
+```
+
+Two distinct response patterns:
+1. **Fast responses (~0.15s)**: 1 clean segment — real speech, Whisper is confident, decodes immediately
+2. **Slow responses (~4.8s)**: 27–53 hallucinated segments — ambient noise, Whisper loops through all fallback temperatures (taking ~4.8s total) and outputs a flood of "- I'm sorry. - I'm sorry." segments
+
+The segment content from the slow responses:
+```
+Segment: "- I'm sorry. - I'm sorry."   (× 28 consecutive)
+Segment: "- I'm sorry. - I'm sorry. - I'm sorry."
+Segment: "you"
+```
+
+At 36 segments in 3.33 seconds, each segment is ~0.092 seconds long — **impossible for real speech**.
+
+### Why the energy gate alone is insufficient
+
+The RMS energy gate (threshold 0.01 ≈ -40 dBFS) prevents pure silence from being sent. However, ambient room noise (HVAC, fan, microphone hiss) is typically at -35 to -25 dBFS — well above the threshold. The gate correctly lets this through because it *might* be quiet speech. The issue is what Whisper does with it on the backend.
+
+### Why the previous fix (first round) didn't work
+
+The `no_speech_prob` filter was added to `whisper_remote_stt.py` in round 1, but **it was never deployed to the DGX**. The containers continued running old code. Evidence: the log message format on DGX was `"Whisper yielded X segments"` (old format) rather than `"Whisper yielded X segments, dropped Y"` (new format from round 1 commit).
+
+Additionally, even if it had been deployed, `no_speech_prob` alone is unreliable for the fallback-temperature hallucinations: Whisper is so confused by the ambient noise that it sometimes assigns `no_speech_prob < 0.35` even for "I'm sorry" hallucinations (it partially "believes" it heard something).
 
 ---
 
@@ -86,61 +109,67 @@ This is acceptable for Phase 1 but will need improvement when multi-participant 
 
 ---
 
-## 4. Common Causes of Phantom Word Detection
+## 4. Complete Hallucination Cause Analysis
 
-### A. Whisper hallucination on silence (PRIMARY cause in our system)
+### A. Whisper fallback temperature sampling (PRIMARY cause)
 
-**This is the most likely cause of the "thank you" phantom word.**
+**Pattern:** 27–53 segments per 5s window, each ~0.09s, all containing "I'm sorry." or "Thank you."
 
-Whisper-large-v3 is trained to transcribe audio files. When given an audio file that contains silence, background noise, or ambient sound, it doesn't output an empty string — it outputs a hallucinated phrase. The most common Whisper hallucinations on silence are:
+**Why:** Whisper retries with increasing temperature on low-confidence audio. At high temperatures on ambient noise, it outputs the most statistically common phrases from training data.
 
-- " Thank you."
-- " Thank you for watching."
-- " Thanks for watching."
-- " you"
-- " Okay."
-- Various foreign language filler phrases
+**Fix:** Segment duration gate — any segment < 0.15s is impossible real speech.
 
-This is a documented, well-known behavior of Whisper models and has been extensively reported in open-source Whisper implementations (OpenAI/whisper GitHub issues #29, #560, etc.).
+### B. `no_speech_prob` insufficient as sole filter
 
-**Why it happens in our case:**
-1. User unmutes at T=0
-2. Audio starts flowing immediately (ScriptProcessorNode always runs)
-3. First 5 seconds of audio = ambient room noise (HVAC, fan, microphone hiss)
-4. At T=5s, `_consume_segments` calls `whisper.get_transcript()`
-5. Whisper processes ~5s of ambient noise and returns " Thank you."
-6. That transcript is published to Redis and displayed in the browser
-7. User says "testing" at T=7s, captured correctly in the next 5s window
+**Pattern:** "I'm sorry" hallucinations with `no_speech_prob` below the 0.5 threshold.
 
-**Why `no_speech_prob` is the right filter:**
-Whisper's `verbose_json` response includes `no_speech_prob` per segment — Whisper's own estimate of the probability that the segment contains no real speech. On silence/ambient-noise segments, this is typically 0.6–0.99. We were not using it at all.
+**Why:** Whisper partially "believes" it detected something in the noise.
 
-### B. Audio stream startup artifacts
+**Fix:** Lower threshold to 0.35 + add independent gates.
 
-When `ScriptProcessorNode` first connects and the OS audio subsystem initializes, there can be a brief burst of non-representative audio:
-- Initial click/pop from mic activation
-- AGC (Automatic Gain Control) ramping up
-- Browser audio graph initialization noise
+### C. Missing compression ratio check
 
-These transients are very short but can confuse STT models.
+**Pattern:** Repetitive text like "I'm sorry. I'm sorry. I'm sorry." compresses extremely well.
 
-### C. Missing endpointing configuration (Deepgram)
+**Why:** Whisper's own `compression_ratio` field in verbose_json flags this, but we weren't checking it.
 
-Our Deepgram params omit `endpointing`, so Deepgram uses its server-side default (very aggressive silence detection, ~10ms). This means:
-- Small natural pauses within a sentence may be treated as utterance boundaries
-- Background noise during a pause may trigger a final result
-- Ambient noise before the user speaks can be committed as a final utterance
+**Fix:** Drop segments with `compression_ratio > 2.4` (Whisper's own internal default).
 
-### D. No client-side energy gate
+### D. Known phrase blocklist missing
 
-The frontend sends audio frames at ~256ms intervals regardless of whether there is actual speech energy. Every frame — including pure silence — is base64-encoded and sent over WebSocket. This:
-- Sends more ambient noise to STT providers than necessary
-- For Whisper: increases the amount of silence in each 5s buffer
-- For Deepgram: streams silence that may trigger low-confidence false finals
+**Pattern:** "thank you", "i'm sorry", etc. are known training-data artifacts.
 
-### E. TTS echo (not currently an issue, but worth monitoring)
+**Fix:** Exact-match blocklist (case-insensitive, punctuation-stripped).
 
-If TTS audio from an AI agent were to loop back through the microphone (acoustic echo), that AI speech would be re-transcribed. Our current architecture sends TTS via a separate `tts.audio` WebSocket event (not through the audio pipeline), so this is not happening. However, if a user is not using headphones, TTS speaker output can be picked up by their microphone.
+### E. Intra-segment repetition
+
+**Pattern:** Single segment text = "- I'm sorry. - I'm sorry." (phrase repeated within the segment).
+
+**Fix:** Regex repetition detector.
+
+### F. Plain text fallback bypassed all filtering (BUG)
+
+**Pattern:** When vLLM returns `{"text": "I'm sorry.", "segments": []}`, the code was yielding the text unconditionally with confidence=1.0.
+
+**Fix:** Apply hallucination blocklist to the fallback path.
+
+### G. Cross-call deduplication missing
+
+**Pattern:** Same hallucinated phrase appearing in two consecutive 5s windows.
+
+**Fix:** Track `_last_text`; skip if identical to previous emission.
+
+### H. No client-side energy gate (fixed in round 1)
+
+**Pattern:** Every 256ms audio frame sent to backend regardless of content.
+
+**Fix:** RMS energy gate, threshold 0.01 (~-40 dBFS). Already deployed.
+
+### I. No Deepgram endpointing config (fixed in round 1)
+
+**Pattern:** Deepgram defaults to aggressive silence detection.
+
+**Fix:** `endpointing=400ms`, `min_confidence=0.65`. Already deployed.
 
 ---
 
@@ -154,12 +183,14 @@ If TTS audio from an AI agent were to loop back through the microphone (acoustic
 
 ### Whisper for live meeting audio
 - Do **not** feed Whisper silence. Use an acoustic VAD (e.g., Silero VAD, py-webrtcvad) to gate what you send.
-- Check `no_speech_prob` on every segment — Whisper itself tells you when it's hallucinating. Threshold of 0.5 eliminates most hallucinations.
-- The `compression_ratio_threshold` parameter (default 2.4) can help: very high compression ratios indicate hallucinated repetitive text.
-- `temperature=0` (default) reduces hallucination vs higher temperatures.
+- Check `no_speech_prob` on every segment — threshold 0.35 is a safe balance.
+- Check `compression_ratio` — > 2.4 means repetitive/hallucinated text.
+- Check segment duration — < 0.15s is not real speech.
+- Blocklist known hallucination phrases.
+- The `temperature=0` (default) is good; the problem is the automatic fallback to higher temperatures on ambient noise.
 
 ### Client-side energy VAD
-WebRTC's built-in `noiseSuppression` and `echoCancellation` (which we already use) help significantly. Adding an explicit RMS energy gate before transmitting audio chunks is standard practice in meeting apps:
+WebRTC's built-in `noiseSuppression` and `echoCancellation` (which we already use) help significantly. Adding an explicit RMS energy gate before transmitting audio chunks is standard practice:
 - Google Meet uses a ~-40 dBFS threshold before sending audio to the backend
 - Zoom applies VAD at the audio capture layer before WebRTC encoding
 - Common threshold: RMS of 0.01 (Float32 normalized) ≈ -40 dBFS
@@ -170,32 +201,44 @@ WebRTC's built-in `noiseSuppression` and `echoCancellation` (which we already us
 
 | Cause | Provider affected | Severity | Fixed? |
 |---|---|---|---|
-| Whisper hallucination on silence — `no_speech_prob` not filtered | Whisper-remote | **Critical** | ✅ Fixed |
-| No `endpointing` param — too-aggressive silence detection | Deepgram | High | ✅ Fixed |
-| No confidence threshold — low-confidence results accepted | Both | Medium | ✅ Fixed |
-| No client-side energy VAD — silence sent to backend | Both | Medium | ✅ Fixed |
+| Whisper fallback temperature → tiny segments flood | Whisper-remote | **Critical** | ✅ Round 2 — duration gate |
+| `no_speech_prob` threshold too high (0.5) | Whisper-remote | High | ✅ Round 2 — lowered to 0.35 |
+| Missing compression ratio check | Whisper-remote | High | ✅ Round 2 |
+| No known-phrase blocklist | Whisper-remote | High | ✅ Round 2 |
+| Plain text fallback bypassed all filtering | Whisper-remote | High | ✅ Round 2 |
+| Missing intra-segment repetition detection | Whisper-remote | Medium | ✅ Round 2 |
+| Missing cross-call deduplication | Whisper-remote | Medium | ✅ Round 2 |
+| No client-side energy VAD | Both | Medium | ✅ Round 1 |
+| No Deepgram endpointing config | Deepgram | High | ✅ Round 1 |
+| Round 1 fix never deployed to DGX | Whisper-remote | **Critical** | ✅ Round 2 — deployed |
 | TTS echo (acoustic feedback through mic) | Both | Low (not active) | N/A |
 
 ---
 
-## 7. Fixes Implemented
+## 7. Fixes Implemented (Round 2)
 
-### Fix 1: Whisper `no_speech_prob` filtering (`whisper_remote_stt.py`)
+### Fix 1: 5-layer hallucination filter (`whisper_remote_stt.py`)
 
-Added a `no_speech_threshold` parameter (default `0.5`). Any segment where Whisper's own `no_speech_prob ≥ 0.5` is dropped before yielding. This is Whisper's self-reported confidence that a segment contains no real speech — it is the most reliable single filter for hallucinations.
+Applied in sequence per segment:
 
-Also added a `min_confidence` parameter (default `0.0`, i.e. no floor by default for Whisper since logprob-derived confidence is less reliable) so callers can tune further.
+1. **Duration gate** (`min_segment_duration_s=0.15`): Drop segments shorter than 150ms. This single gate eliminates the entire "I'm sorry × 53" flood — each segment is ~0.087s, all caught.
 
-### Fix 2: Deepgram endpointing + confidence floor (`deepgram_stt.py`)
+2. **`no_speech_prob` gate** (`no_speech_threshold=0.35`): Lowered from 0.5. Whisper hallucinations at the fallback temperature stage often have `no_speech_prob` in the 0.35–0.50 range.
 
-Added `endpointing=400` (400ms of silence triggers a final utterance), `smart_format=true`, and a `min_confidence=0.65` threshold. Deepgram's confidence scores are well-calibrated — scores below 0.65 are almost always noise or background audio.
+3. **Compression ratio gate** (`compression_ratio_threshold=2.4`): Drop if `compression_ratio > 2.4`. Repetitive hallucinated text has a very high compression ratio. This is Whisper's own internal threshold.
 
-### Fix 3: Client-side energy VAD (`MeetingRoomPage.tsx`)
+4. **Known phrase blocklist**: Exact match (case-insensitive, strip trailing punctuation) against "i'm sorry", "thank you", "thanks for watching", dash-prefixed variants, etc.
 
-Added an RMS energy check before sending each 4096-sample frame to the backend. Frames with RMS < 0.01 (~-40 dBFS) are silently dropped. This is the same threshold used by major meeting platforms. The effect:
-- Dramatically reduces the amount of silence that reaches Whisper's buffer
-- Prevents Deepgram from seeing sustained silence as a speaking event
-- Reduces WebSocket bandwidth by 60–90% in typical meetings
+5. **Intra-segment repetition**: Regex detects "PHRASE... PHRASE" patterns within a single segment's text.
+
+Additionally:
+- **Cross-call deduplication**: `_last_text` tracks the previous emission; identical text is dropped
+- **Fallback path filtering**: The plain-text fallback (no segments returned) now applies the blocklist before yielding
+- **Deployed**: `git pull` + `docker compose build agent-gateway` + `docker compose up -d agent-gateway` executed on DGX 2026-03-25
+
+### Fix 2: Round 1 deployment (completed with Round 2)
+
+The Round 1 changes (energy gate, Deepgram endpointing, `no_speech_prob` filter) were in the codebase but not deployed. The Round 2 deployment pulled all of these to DGX simultaneously.
 
 ---
 
@@ -207,7 +250,27 @@ To verify the phantom words are resolved:
 3. Say "testing" clearly once
 4. Transcript should show "testing" (or similar) with no phantom words before it
 
-To confirm the energy VAD is working:
+To confirm the filters are working, check DGX logs:
+```bash
+ssh dgx 'docker compose -f ~/convene-ai/docker-compose.yml logs agent-gateway | grep "dropped"'
+```
+Should show lines like: `"Whisper yielded 0 segments, dropped 36 — reasons: {'too_short': 36}"`
+
+To confirm the energy gate is working:
 - Open browser devtools → Network → WS tab
 - While silent, the WebSocket should send very few messages (only those above the energy threshold)
 - While speaking, messages should flow freely
+
+---
+
+## 9. Future Improvements (if problems persist)
+
+If hallucinations still appear after these fixes:
+
+1. **Server-side VAD before Whisper**: Add Silero VAD or py-webrtcvad to gate the audio buffer before sending to Whisper. Only transmit audio where VAD has confirmed speech activity. This prevents Whisper from ever seeing silent/noise-only windows.
+
+2. **Raise energy gate threshold**: Increase RMS threshold from 0.01 to 0.02 or 0.03 to reject more ambient noise. Risk: may clip quiet speakers.
+
+3. **Increase transcription interval**: Increase from 5s to 8s. Longer windows give Whisper more context, reducing hallucinations. Tradeoff: higher latency.
+
+4. **Switch to Deepgram for all tiers**: Deepgram's streaming model doesn't have this fallback temperature issue. It's purpose-built for real-time transcription and uses its own VAD internally.
