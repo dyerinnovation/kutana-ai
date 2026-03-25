@@ -1,141 +1,63 @@
-# Convene AI — The Agent-First Meeting Platform
+# Convene AI
 
-## What is Convene AI?
+Convene AI is an agent-first meeting platform. Humans join via browser. AI agents connect natively — not as bots bolted onto existing platforms, but as first-class participants with live transcripts, structured meeting data, and the ability to speak, listen, and take action.
 
-Convene is a meeting platform built from the ground up for AI agents. Humans join via browser (WebRTC), AI agents connect via a native Agent Gateway API or MCP server, and every meeting automatically extracts tasks, builds persistent memory, and drives accountability across meetings.
+Every meeting automatically extracts action items, tracks decisions, and builds persistent memory across sessions.
 
-Convene serves two audiences: **teams** who want meetings that actually produce results, and **developers** who need a way for their AI agents to participate in meetings without hacking into platforms that resist them.
+## What Convene does
 
-## Repository Structure
+**For teams:** Meetings that produce results. Convene transcribes in real time, extracts action items as they're spoken, and tracks them across sessions so nothing falls through the cracks.
 
-This is a Python monorepo managed with `uv` workspaces.
+**For AI agents:** A meeting environment built for AI participation. Agents join as first-class participants — they can listen, speak via TTS, raise their hand, post to chat, and coordinate with other agents — all through a standard MCP interface.
 
-```
-convene-ai/
-├── external-docs/                 # User-facing documentation (this directory)
-├── internal-docs/                 # Contributor/maintainer documentation
-├── packages/                      # Shared libraries
-│   ├── convene-core/              # Domain models, events, interfaces (ABCs)
-│   ├── convene-providers/         # STT, TTS, LLM provider implementations
-│   └── convene-memory/            # Four-layer persistent memory system
-├── services/                      # Independently runnable services
-│   ├── api-server/                # FastAPI REST + WebSocket API
-│   ├── audio-service/             # Audio pipeline (WebRTC → STT)
-│   ├── task-engine/               # LLM-powered task extraction workers
-│   ├── agent-gateway/             # Agent connection & routing (WebSocket/MCP)
-│   ├── mcp-server/                # Model Context Protocol server
-│   └── worker/                    # Background jobs (Slack, calendar, notifications)
-├── web/                           # Meeting client (React + LiveKit SDK)
-├── integrations/openclaw-plugin/  # OpenClaw plugin source
-├── examples/                      # Agent examples
-├── deploy/                        # Deployment scripts
-└── docker-compose.yml             # Local dev environment (PostgreSQL, Redis)
-```
+## Key features
 
-## Architecture
+- **Live transcription** — Real-time speech-to-text with speaker identification
+- **Automatic task extraction** — LLM-powered detection of action items and commitments as they're spoken
+- **Agent participation** — AI agents join meetings natively via MCP: listen, speak, raise hand, post chat
+- **Turn management** — Structured speaker queue so agents and humans share the floor naturally
+- **Meeting memory** — Context from past meetings informs every new session
+- **Multi-agent coordination** — Multiple agents collaborate in the same meeting via named data channels
 
-```
-Human (Browser)                    AI Agent (any framework)
-      │                                    │
-      │ WebRTC                             │ WebSocket/gRPC/MCP
-      ▼                                    ▼
-┌─────────────┐                   ┌─────────────────┐
-│  LiveKit     │◄─── audio ───────►│  Agent Gateway   │
-│  WebRTC SFU  │    routing        │  (auth, streams,  │
-│              │                   │   data channels)  │
-└──────┬──────┘                   └────────┬──────────┘
-       │                                   │
-       │         audio streams             │
-       ▼                                   ▼
-┌──────────────────────────────────────────────┐
-│              Audio Service                    │
-│  (STT streaming, transcoding, buffering)      │
-└──────────────────┬───────────────────────────┘
-                   │ Redis Streams events
-                   ▼
-┌──────────────────────────────────────────────┐
-│              Task Engine                      │
-│  (extraction, dedup, persistence)             │
-└──────────────────┬───────────────────────────┘
-                   │
-                   ▼
-┌──────────────────────────────────────────────┐
-│     API Server + Memory System                │
-│  (meeting state, tasks, decisions, history)    │
-└──────────────────────────────────────────────┘
-```
+## Get started
 
-**MCP Server** wraps the Agent Gateway, allowing Claude Desktop, Claude Code, and any MCP-compatible client to join meetings via standard MCP tool calls (`join_meeting`, `get_transcript`, `create_task`, etc.).
+### As a human
 
-## Documents
+Join a meeting from your browser — no installation required.
 
-### For Users
-- **[Agent Platform](agent-platform/overview.md)** — Three-tier agent architecture, prebuilt templates, and how to connect
-- **[MCP Auth](agent-platform/connecting/mcp-auth.md)** — OAuth 2.1 authorization flow for agent connections
-- **[Providers](providers/README.md)** — Configure STT, TTS, and LLM providers
-- **[Self-Hosting](self-hosting/deployment.md)** — Deploy Convene AI yourself
+1. Sign in to your Convene instance
+2. Create or join a meeting from the dashboard
+3. Your audio is transcribed in real time; action items are extracted automatically
 
-### For Contributors (Internal)
-- **[TASKLIST](../internal-docs/development/TASKLIST.md)** — Ordered task queue
-- **[PROGRESS](../internal-docs/development/PROGRESS.md)** — Append-only log of completed work
-- **[ROADMAP](../internal-docs/strategy/roadmap.md)** — Feature roadmap
-- **[Internal Docs Index](../internal-docs/README.md)** — All internal documentation
+### As an AI agent
 
-## Architecture Decision: Agent-First Platform
+Connect any MCP-compatible agent to a meeting in minutes.
 
-Convene's core architectural bet is **owning the meeting environment** rather than bolting onto existing platforms. Instead of hacking bots into Zoom, Teams, or Google Meet (via phone dial-in, browser automation, or Recall.ai), Convene is the meeting platform itself.
+1. Generate an API key in **Settings → API Keys**
+2. Configure your MCP client with the Convene server URL and your Bearer token
+3. Call `convene_join_meeting` — then listen, speak, and act
 
-This means:
-- **AI agents connect natively** via the Agent Gateway API — clean audio streams, structured data, no workarounds
-- **MCP support** — any MCP-compatible AI assistant joins meetings through standard tool calls
-- **No platform lock-in** — no risk of Zoom/Teams blocking bots or changing APIs
-- **Better AI experience** — the platform is designed for AI participants, with real-time collaboration surfaces, agent status indicators, and structured meeting context
-- **Two-sided network effects** — more agents make the platform more valuable for teams, more teams attract more agent developers
+See [Connecting via MCP](/docs/agent-platform/connecting/mcp-quickstart) to get started.
 
-The original phone dial-in architecture (Twilio) remains functional as a fallback for joining external meetings that have dial-in numbers.
+## Documentation
 
-## Current Phase
+### Agent Platform
 
-**Phase 1** — Core AI Pipeline (nearly complete). STT wired, Redis Streams consumer, segment windowing, task persistence, and event emission all done. One item remaining: wire LLM provider into the extraction pipeline.
+- [Agent Platform Overview](/docs/agent-platform/overview) — Three-tier architecture and connection options
+- [Connecting via MCP](/docs/agent-platform/connecting/mcp-quickstart) — Connect any MCP-compatible agent
+- [MCP Authentication](/docs/agent-platform/connecting/mcp-auth) — OAuth 2.1 Bearer token flow
+- [Claude Code Channel](/docs/agent-platform/connecting/claude-code-channel) — Use a Claude Code session as a meeting participant
+- [Convene CLI](/docs/agent-platform/connecting/cli) — Terminal-based access
 
-**Phase 2 / April Release Sprint** — The active sprint through April 10, 2026. Building full multi-agent participation: turn management, meeting chat, 8 new MCP tools, and Claude Code channel integration. Target: all 4 multi-party E2E scenarios passing at launch.
+### Integrations
 
-| Week | Dates | Focus |
-|------|-------|-------|
-| Week 1 | Mar 22–28 | Backend infra — participant registry, turn manager (ABC + Redis), chat store (ABC + Redis), multi-agent gateway |
-| Week 2 | Mar 29–Apr 4 | MCP tools, Claude Code channel, frontend turn/chat UI, example agents |
-| Week 3 | Apr 5–11 | E2E scenario testing, polish, docs, launch |
+- [OpenClaw Plugin](/docs/openclaw/plugin-guide) — Connect via OpenClaw channels
+- [Convene OpenClaw Skill](/docs/openclaw/convene-skill) — Pre-built skill for OpenClaw agents
 
-**Agent connection pattern:** Claude Agent SDK → MCP Server (Bearer token) → Agent Gateway (WebSocket). Claude Code sessions also connect via channel server.
+### Providers
 
-**Next task (CoWork):** Complete LLM-powered task extraction pipeline (Phase 1), then Participant registry → Turn Management Infrastructure → Meeting Chat Infrastructure.
+- [Provider Overview](/docs/providers/overview) — Configure STT, TTS, and LLM providers
 
-## Getting Started with Development
+### Self-Hosting
 
-1. Read `CLAUDE.md` at the repository root — this is the bootstrap prompt for Claude Code
-2. Read `docs/TASKLIST.md` — find the next unchecked, unlocked item
-3. Read the relevant `claude_docs/` reference for the package/service you're working on
-4. Follow the quality gate before marking any task complete
-
-## Running Locally
-
-```bash
-# Start infrastructure
-docker compose up -d postgres redis
-
-# Install dependencies
-uv sync
-
-# Run migrations
-uv run alembic upgrade head
-
-# Start services (each in a separate terminal)
-uv run uvicorn services.api_server.main:app --reload --port 8000
-uv run python -m services.audio_service.main
-uv run python -m services.task_engine.main
-uv run python -m services.worker.main
-
-# Agent Gateway (requires PYTHONPATH for cross-package imports)
-PYTHONPATH=services/agent-gateway/src:services/audio-service/src:packages/convene-core/src:packages/convene-providers/src:packages/convene-memory/src \
-  .venv/bin/uvicorn agent_gateway.main:app --reload --port 8003
-```
+- [Deployment](/docs/self-hosting/deployment) — Deploy Convene AI on your own infrastructure
