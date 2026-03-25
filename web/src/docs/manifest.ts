@@ -2,27 +2,27 @@
 // Imports all external-docs markdown files as raw strings at build time.
 // Vite resolves these at build time — no runtime fetching needed.
 
-import readmeContent from "../../external-docs/README.md?raw";
-import agentPlatformOverview from "../../external-docs/agent-platform/overview.md?raw";
-import connectingMcpAuth from "../../external-docs/agent-platform/connecting/mcp-auth.md?raw";
-import connectingClaudeAgentSdk from "../../external-docs/agent-platform/connecting/claude-agent-sdk.md?raw";
-import connectingClaudeCodeChannel from "../../external-docs/agent-platform/connecting/claude-code-channel.md?raw";
-import connectingCli from "../../external-docs/agent-platform/connecting/cli.md?raw";
-import openclawPluginGuide from "../../external-docs/openclaw/plugin-guide.md?raw";
-import openclawConveneSkill from "../../external-docs/openclaw/convene-skill.md?raw";
-import examplesDemoAgent from "../../external-docs/examples/demo-agent.md?raw";
-import examplesMeetingAssistant from "../../external-docs/examples/meeting-assistant-agent.md?raw";
-import providersReadme from "../../external-docs/providers/README.md?raw";
-import providersLlmAnthropic from "../../external-docs/providers/llm/anthropic.md?raw";
-import providersLlmGroq from "../../external-docs/providers/llm/groq.md?raw";
-import providersLlmOllama from "../../external-docs/providers/llm/ollama.md?raw";
-import providersSttAssemblyai from "../../external-docs/providers/stt/assemblyai.md?raw";
-import providersSttDeepgram from "../../external-docs/providers/stt/deepgram.md?raw";
-import providersSttWhisper from "../../external-docs/providers/stt/whisper.md?raw";
-import providersTtsCartesia from "../../external-docs/providers/tts/cartesia.md?raw";
-import providersTtsElevenlabs from "../../external-docs/providers/tts/elevenlabs.md?raw";
-import providersTtsPiper from "../../external-docs/providers/tts/piper.md?raw";
-import selfHostingDeployment from "../../external-docs/self-hosting/deployment.md?raw";
+import readmeContent from "../../../external-docs/README.md?raw";
+import agentPlatformOverview from "../../../external-docs/agent-platform/overview.md?raw";
+import connectingMcpAuth from "../../../external-docs/agent-platform/connecting/mcp-auth.md?raw";
+import connectingClaudeAgentSdk from "../../../external-docs/agent-platform/connecting/claude-agent-sdk.md?raw";
+import connectingClaudeCodeChannel from "../../../external-docs/agent-platform/connecting/claude-code-channel.md?raw";
+import connectingCli from "../../../external-docs/agent-platform/connecting/cli.md?raw";
+import openclawPluginGuide from "../../../external-docs/openclaw/plugin-guide.md?raw";
+import openclawConveneSkill from "../../../external-docs/openclaw/convene-skill.md?raw";
+import examplesDemoAgent from "../../../external-docs/examples/demo-agent.md?raw";
+import examplesMeetingAssistant from "../../../external-docs/examples/meeting-assistant-agent.md?raw";
+import providersReadme from "../../../external-docs/providers/README.md?raw";
+import providersLlmAnthropic from "../../../external-docs/providers/llm/anthropic.md?raw";
+import providersLlmGroq from "../../../external-docs/providers/llm/groq.md?raw";
+import providersLlmOllama from "../../../external-docs/providers/llm/ollama.md?raw";
+import providersSttAssemblyai from "../../../external-docs/providers/stt/assemblyai.md?raw";
+import providersSttDeepgram from "../../../external-docs/providers/stt/deepgram.md?raw";
+import providersSttWhisper from "../../../external-docs/providers/stt/whisper.md?raw";
+import providersTtsCartesia from "../../../external-docs/providers/tts/cartesia.md?raw";
+import providersTtsElevenlabs from "../../../external-docs/providers/tts/elevenlabs.md?raw";
+import providersTtsPiper from "../../../external-docs/providers/tts/piper.md?raw";
+import selfHostingDeployment from "../../../external-docs/self-hosting/deployment.md?raw";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
