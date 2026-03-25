@@ -1,11 +1,11 @@
 """Convene AI Meeting Agent — Claude Agent SDK example.
 
-Connects to Convene AI meetings via MCP server with OAuth 2.1 Bearer token auth.
+Connects to the remote Convene MCP server using a Convene API key.
 Multiple agent templates available: assistant, summarizer, action-tracker, decision-logger.
 
 Usage:
     export ANTHROPIC_API_KEY=sk-ant-...
-    export MCP_BEARER_TOKEN=<mcp-jwt-token>
+    export CONVENE_API_KEY=cvn_...
     python agent.py
     python agent.py --template summarizer
     python agent.py --system-prompt "Custom prompt here..."
@@ -151,25 +151,26 @@ async def main() -> None:
         )
         sys.exit(1)
 
-    mcp_server_url = os.environ.get("MCP_SERVER_URL", "http://localhost:3001")
-    bearer_token = os.environ.get("MCP_BEARER_TOKEN", "")
+    mcp_url = os.environ.get(
+        "CONVENE_MCP_URL", "http://convene.spark-b0f2.local/mcp"
+    )
+    api_key = os.environ.get("CONVENE_API_KEY", "")
 
-    if not bearer_token:
+    if not api_key:
         print(
-            "MCP_BEARER_TOKEN not set.\n\n"
-            "Get a token by exchanging your API key:\n"
-            "  curl -s http://localhost:8000/api/v1/token/mcp \\\n"
-            "    -H 'X-API-Key: cvn_...' | jq -r '.token'\n\n"
+            "CONVENE_API_KEY not set.\n\n"
+            "Get a key from your Convene instance:\n"
+            "  Settings → API Keys → Generate Key (scope: Agent)\n\n"
             "Then:\n"
-            "  export MCP_BEARER_TOKEN=<token>"
+            "  export CONVENE_API_KEY=cvn_..."
         )
         sys.exit(1)
 
-    # Configure the Convene MCP server with Bearer token auth
+    # Configure the remote Convene MCP server with Bearer token auth
     convene_mcp = MCPServerConfig(
         name="convene",
-        url=f"{mcp_server_url}/mcp",
-        headers={"Authorization": f"Bearer {bearer_token}"},
+        url=mcp_url,
+        headers={"Authorization": f"Bearer {api_key}"},
     )
 
     # Select system prompt
@@ -187,7 +188,7 @@ async def main() -> None:
     template_name = "custom" if args.system_prompt else args.template
     print(f"Starting Convene Meeting Agent (template: {template_name})...")
     print(f"Model: {args.model}")
-    print(f"MCP Server: {mcp_server_url}")
+    print(f"MCP Server: {mcp_url}")
     print("Press Ctrl+C to stop.\n")
 
     result = await agent.run(
