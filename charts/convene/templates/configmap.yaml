@@ -12,3 +12,9 @@ data:
   CONVENE_MESSAGE_BUS: "redis"
   STT_PROVIDER: "deepgram"
   LOG_LEVEL: "info"
+  # Agent Gateway uses AGENT_GATEWAY_ prefix (pydantic-settings)
+  AGENT_GATEWAY_DATABASE_URL: {{ include "convene.databaseUrl" . | quote }}
+  AGENT_GATEWAY_REDIS_URL: {{ include "convene.redisUrl" . | quote }}
+  AGENT_GATEWAY_STT_PROVIDER: "deepgram"
+  AGENT_GATEWAY_JWT_SECRET: "convene-dev-secret-2026"
+  AGENT_GATEWAY_WHISPER_API_URL: ""
