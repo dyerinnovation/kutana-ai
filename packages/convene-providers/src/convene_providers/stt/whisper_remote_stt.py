@@ -217,7 +217,9 @@ class WhisperRemoteSTT(STTProvider):
             post_url = f"{self._api_url}/audio/transcriptions"
             logger.info(
                 "Whisper POST: url=%s buffer_size=%d audio_duration=%.2fs",
-                post_url, len(self._buffer), audio_duration_s,
+                post_url,
+                len(self._buffer),
+                audio_duration_s,
             )
             t0 = time.monotonic()
 
@@ -239,12 +241,14 @@ class WhisperRemoteSTT(STTProvider):
                     result = await response.json()
                     logger.info(
                         "Whisper POST response: status=%d elapsed=%.2fs",
-                        response.status, elapsed,
+                        response.status,
+                        elapsed,
                     )
             except asyncio.TimeoutError:
                 logger.error(
                     "Whisper POST timed out after %.1fs (url=%s)",
-                    self._request_timeout_s, post_url,
+                    self._request_timeout_s,
+                    post_url,
                 )
                 self._buffer = b""
                 return
@@ -252,7 +256,8 @@ class WhisperRemoteSTT(STTProvider):
                 elapsed = time.monotonic() - t0
                 logger.exception(
                     "Whisper POST failed after %.2fs (url=%s)",
-                    elapsed, post_url,
+                    elapsed,
+                    post_url,
                 )
                 self._buffer = b""
                 return
@@ -323,7 +328,9 @@ class WhisperRemoteSTT(STTProvider):
                 # ------------------------------------------------------------------
                 # Gate 2: no_speech_prob
                 # ------------------------------------------------------------------
-                no_speech_prob: float = seg.get("no_speech_prob", 0.0)
+                no_speech_prob = seg.get("no_speech_prob")
+                if no_speech_prob is None:
+                    no_speech_prob = 0.0
                 if no_speech_prob >= self._no_speech_threshold:
                     key = "no_speech_prob"
                     drop_reasons[key] = drop_reasons.get(key, 0) + 1
@@ -334,7 +341,9 @@ class WhisperRemoteSTT(STTProvider):
                 # Gate 3: Compression ratio
                 # High compression = repetitive text = hallucination.
                 # ------------------------------------------------------------------
-                compression_ratio: float = seg.get("compression_ratio", 0.0)
+                compression_ratio = seg.get("compression_ratio")
+                if compression_ratio is None:
+                    compression_ratio = 0.0
                 if (
                     compression_ratio > 0.0
                     and compression_ratio > self._compression_ratio_threshold
