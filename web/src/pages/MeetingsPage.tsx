@@ -102,7 +102,7 @@ export function MeetingsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Meetings</h1>
+          <h1 className="text-2xl font-bold text-gray-50">Meetings</h1>
           <p className="text-sm text-gray-400 mt-1">
             Schedule and manage your meetings
           </p>
@@ -223,7 +223,7 @@ export function MeetingsPage() {
                 Platform
               </label>
               <select
-                className="flex h-10 w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="flex h-10 w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-50 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 value={platform}
                 onChange={(e) => setPlatform(e.target.value)}
               >

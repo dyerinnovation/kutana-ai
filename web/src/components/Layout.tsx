@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import { ConveneLogoMark } from "@/components/Logo";
 
@@ -12,6 +13,7 @@ const navItems = [
 
 export function Layout() {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <div className="flex h-screen bg-gray-950">
@@ -21,7 +23,7 @@ export function Layout() {
         {/* Logo / wordmark */}
         <div className="flex h-14 items-center gap-3 border-b border-gray-800 px-4">
           <ConveneLogoMark size={26} />
-          <span className="text-sm font-semibold tracking-tight text-white">
+          <span className="text-sm font-semibold tracking-tight text-gray-50">
             Convene{" "}
             <span className="text-blue-400">AI</span>
           </span>
@@ -39,7 +41,7 @@ export function Layout() {
                   "group flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-medium",
                   "transition-all duration-150",
                   isActive
-                    ? "border-blue-600/25 bg-blue-600/12 text-white"
+                    ? "border-blue-600/25 bg-blue-600/12 text-gray-50"
                     : "border-transparent text-gray-400 hover:bg-gray-800 hover:text-gray-100"
                 )
               }
@@ -50,8 +52,19 @@ export function Layout() {
           ))}
         </nav>
 
-        {/* User / sign-out */}
-        <div className="border-t border-gray-800 p-3">
+        {/* User / sign-out / theme toggle */}
+        <div className="border-t border-gray-800 p-3 space-y-1">
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-sm text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-200"
+          >
+            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+            <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+          </button>
+
+          {/* User row */}
           <div className="flex items-center gap-3 rounded-lg px-2 py-2">
             {/* Avatar with brand gradient */}
             <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-gradient-brand text-[11px] font-semibold text-white">
@@ -173,6 +186,22 @@ function DocsIcon() {
         strokeLinejoin="round"
         d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"
       />
+    </svg>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
     </svg>
   );
 }

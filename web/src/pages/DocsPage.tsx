@@ -86,7 +86,7 @@ function DocNavTree({
                 "w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors",
                 depth > 0 && "pl-4",
                 currentSlug === node.id
-                  ? "bg-blue-600/15 font-medium text-blue-300"
+                  ? "bg-blue-600/15 font-medium text-blue-400"
                   : "text-gray-400 hover:bg-gray-800 hover:text-gray-200"
               )}
             >
@@ -182,7 +182,7 @@ const markdownComponents: React.ComponentProps<
   typeof ReactMarkdown
 >["components"] = {
   h1: ({ children }) => (
-    <h1 className="mb-4 mt-0 text-3xl font-bold tracking-tight text-white">
+    <h1 className="mb-4 mt-0 text-3xl font-bold tracking-tight text-gray-50">
       {children}
     </h1>
   ),
@@ -226,7 +226,7 @@ const markdownComponents: React.ComponentProps<
   ),
   li: ({ children }) => <li className="leading-7">{children}</li>,
   blockquote: ({ children }) => (
-    <blockquote className="my-4 border-l-2 border-blue-600/50 pl-4 text-sm italic text-gray-400">
+    <blockquote className="my-4 border-l-2 border-blue-500/40 pl-4 text-sm italic text-gray-400">
       {children}
     </blockquote>
   ),
@@ -237,8 +237,8 @@ const markdownComponents: React.ComponentProps<
     return (
       <code
         className={cn(
-          "rounded px-1.5 py-0.5 font-mono text-[0.8125rem] text-blue-300",
-          "bg-blue-950/40 ring-1 ring-blue-600/20",
+          "rounded px-1.5 py-0.5 font-mono text-[0.8125rem] text-blue-400",
+          "bg-blue-950/30 ring-1 ring-blue-600/20",
           className
         )}
       >

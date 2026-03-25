@@ -25,7 +25,7 @@ export function DashboardPage() {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-white">
+          <h1 className="text-xl font-semibold tracking-tight text-gray-50">
             Agents
           </h1>
           <p className="mt-0.5 text-sm text-gray-400">
@@ -78,7 +78,7 @@ export function DashboardPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {agents.map((agent) => (
             <Link key={agent.id} to={`/agents/${agent.id}`}>
-              <Card className="card-interactive h-full cursor-pointer border-gray-800 hover:border-blue-600/30">
+              <Card className="card-interactive h-full cursor-pointer border-gray-800">
                 <CardHeader>
                   <div className="flex items-start gap-3">
                     {/* Agent avatar */}
