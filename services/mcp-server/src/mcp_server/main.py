@@ -1461,6 +1461,14 @@ async def meeting_transcript_resource(meeting_id: str) -> str:
 # Entry point — Streamable HTTP transport
 # ---------------------------------------------------------------------------
 
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request: object) -> object:
+    """Health check endpoint for K8s probes."""
+    from starlette.responses import JSONResponse
+
+    return JSONResponse({"status": "healthy", "service": "mcp-server"})
+
+
 if __name__ == "__main__":
     logger.info(
         "Starting Convene MCP Server (Streamable HTTP) on %s:%d",

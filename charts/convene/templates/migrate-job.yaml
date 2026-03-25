@@ -27,4 +27,7 @@ spec:
             - head
           env:
             - name: DATABASE_URL
-              value: {{ include "convene.databaseUrlSync" . }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "convene.fullname" . }}-config
+                  key: DATABASE_URL_SYNC
