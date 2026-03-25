@@ -1,7 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/Button";
+import { ConveneLogoMark } from "@/components/Logo";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: GridIcon },
@@ -14,27 +14,32 @@ export function Layout() {
 
   return (
     <div className="flex h-screen bg-gray-950">
-      {/* Sidebar */}
-      <aside className="flex w-64 flex-col border-r border-gray-800 bg-gray-950">
-        <div className="flex h-16 items-center gap-2 border-b border-gray-800 px-6">
-          <div className="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center text-sm font-bold">
-            C
-          </div>
-          <span className="text-lg font-semibold text-white">Convene AI</span>
+      {/* ── Sidebar ──────────────────────────────────────────────── */}
+      <aside className="flex w-60 flex-col border-r border-gray-800 bg-gray-950">
+
+        {/* Logo / wordmark */}
+        <div className="flex h-14 items-center gap-3 border-b border-gray-800 px-4">
+          <ConveneLogoMark size={26} />
+          <span className="text-sm font-semibold tracking-tight text-white">
+            Convene{" "}
+            <span className="text-blue-400">AI</span>
+          </span>
         </div>
 
-        <nav className="flex-1 space-y-1 p-4">
+        {/* Navigation */}
+        <nav className="flex-1 space-y-0.5 p-2 pt-3">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.to === "/"}
-              className={({ isActive }) =>
+              className={({ isActive }: { isActive: boolean }) =>
                 cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  "group flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-medium",
+                  "transition-all duration-150",
                   isActive
-                    ? "bg-gray-800 text-white"
-                    : "text-gray-400 hover:bg-gray-900 hover:text-white"
+                    ? "border-blue-600/25 bg-blue-600/12 text-white"
+                    : "border-transparent text-gray-400 hover:bg-gray-800 hover:text-gray-100"
                 )
               }
             >
@@ -44,43 +49,47 @@ export function Layout() {
           ))}
         </nav>
 
-        <div className="border-t border-gray-800 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-800 text-sm font-medium text-gray-300">
+        {/* User / sign-out */}
+        <div className="border-t border-gray-800 p-3">
+          <div className="flex items-center gap-3 rounded-lg px-2 py-2">
+            {/* Avatar with brand gradient */}
+            <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-gradient-brand text-[11px] font-semibold text-white">
               {user?.name?.charAt(0).toUpperCase() ?? "?"}
             </div>
+
             <div className="flex-1 min-w-0">
-              <p className="truncate text-sm font-medium text-white">
+              <p className="truncate text-xs font-medium text-gray-200">
                 {user?.name}
               </p>
-              <p className="truncate text-xs text-gray-500">{user?.email}</p>
+              <p className="truncate text-[11px] text-gray-500">{user?.email}</p>
             </div>
+
+            {/* Sign out — icon button */}
+            <button
+              onClick={logout}
+              title="Sign out"
+              className="flex-shrink-0 rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-800 hover:text-gray-200"
+            >
+              <SignOutIcon />
+            </button>
           </div>
         </div>
       </aside>
 
-      {/* Main content */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Header */}
-        <header className="flex h-16 items-center justify-end border-b border-gray-800 px-6">
-          <Button variant="ghost" size="sm" onClick={logout}>
-            Sign out
-          </Button>
-        </header>
-
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-6">
-          <Outlet />
-        </main>
-      </div>
+      {/* ── Main content ─────────────────────────────────────────── */}
+      <main className="flex-1 overflow-y-auto bg-ambient-brand p-6">
+        <Outlet />
+      </main>
     </div>
   );
 }
 
+/* ── Icons ──────────────────────────────────────────────────────── */
+
 function GridIcon() {
   return (
     <svg
-      className="h-5 w-5"
+      className="h-4 w-4 flex-shrink-0"
       fill="none"
       viewBox="0 0 24 24"
       strokeWidth={1.5}
@@ -98,7 +107,7 @@ function GridIcon() {
 function CalendarIcon() {
   return (
     <svg
-      className="h-5 w-5"
+      className="h-4 w-4 flex-shrink-0"
       fill="none"
       viewBox="0 0 24 24"
       strokeWidth={1.5}
@@ -116,7 +125,7 @@ function CalendarIcon() {
 function TemplateIcon() {
   return (
     <svg
-      className="h-5 w-5"
+      className="h-4 w-4 flex-shrink-0"
       fill="none"
       viewBox="0 0 24 24"
       strokeWidth={1.5}
@@ -125,7 +134,25 @@ function TemplateIcon() {
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
-        d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6Zm0 9.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25Zm9.75-9.75A2.25 2.25 0 0 1 15.75 3.75H18A2.25 2.25 0 0 1 20.25 6v12A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18V6Z"
+        d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25Zm0 9.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18Zm9.75-9.75A2.25 2.25 0 0 1 15.75 3.75H18A2.25 2.25 0 0 1 20.25 6v12A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18V6Z"
+      />
+    </svg>
+  );
+}
+
+function SignOutIcon() {
+  return (
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"
       />
     </svg>
   );
