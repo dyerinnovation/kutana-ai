@@ -158,6 +158,6 @@ Convene MCP Server  (http://convene.spark-b0f2.local/mcp)
 
 ## See Also
 
-- [Claude Code Channel](./CLAUDE_CODE_CHANNEL.md) — Connect a Claude Code session to a meeting
-- [Claude Agent SDK](./CLAUDE_AGENT_SDK.md) — Build autonomous agents with the Claude Agent SDK
-- [CLI](./CLI.md) — Terminal-based API access
+- [Claude Code Channel](../agent-platform/connecting/claude-code-channel.md) — Connect a Claude Code session to a meeting
+- [Claude Agent SDK](../agent-platform/connecting/claude-agent-sdk.md) — Build autonomous agents with the Claude Agent SDK
+- [CLI](../agent-platform/connecting/cli.md) — Terminal-based API access

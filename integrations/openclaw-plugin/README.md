@@ -46,5 +46,5 @@ The plugin communicates with the Convene MCP server (Streamable HTTP) using OAut
 
 ## See Also
 
-- [Integration Guide](../../docs/integrations/OPENCLAW.md)
-- [MCP Auth Flow](../../docs/technical/MCP_AUTH.md)
+- [Integration Guide](../../external-docs/openclaw/plugin-guide.md)
+- [MCP Auth Flow](../../external-docs/agent-platform/connecting/mcp-auth.md)
