@@ -35,48 +35,49 @@ Python monorepo managed with `uv` workspaces.
 
 **Agent connection pattern:** Claude Agent SDK → MCP Server (Bearer token) → Agent Gateway (WebSocket).
 
-See `docs/TASKLIST.md` for the full task queue and `docs/technical/ROADMAP.md` for feature details.
+See `internal-docs/development/TASKLIST.md` for the full task queue and `internal-docs/strategy/roadmap.md` for feature details.
 
 ## Strategy
-- **LLM:** Anthropic Claude only. Haiku for extraction, Sonnet for recaps/dialogue, Opus for premium. See `docs/technical/cost-architecture.md`.
-- **STT:** Deepgram Nova-2 (primary, all tiers). Self-hosted faster-whisper is Enterprise-only. See `docs/technical/cost-architecture.md`.
-- **Billing:** Stripe. Free / Pro ($29) / Business ($79) / Enterprise (custom). See `docs/technical/cost-architecture.md`.
+- **LLM:** Anthropic Claude only. Haiku for extraction, Sonnet for recaps/dialogue, Opus for premium. See `internal-docs/strategy/cost-architecture.md`.
+- **STT:** Deepgram Nova-2 (primary, all tiers). Self-hosted faster-whisper is Enterprise-only. See `internal-docs/strategy/cost-architecture.md`.
+- **Billing:** Stripe. Free / Pro ($29) / Business ($79) / Enterprise (custom). See `internal-docs/strategy/cost-architecture.md`.
 
 ## Package Implementation Details
-- `claude_docs/Convene_Core_Patterns.md` — models, events, interfaces, database
-- `claude_docs/Provider_Patterns.md` — ABC signatures, library conventions, registry
-- `claude_docs/MessageBus_Patterns.md` — MessageBus ABC, Redis Streams, MockMessageBus
-- `claude_docs/Memory_Architecture.md` — four-layer memory system, ORM-to-domain patterns
-- `claude_docs/Service_Patterns.md` — health endpoints, lifespan, settings, DI, route organization
-- `claude_docs/Auth_And_API_Keys.md` — JWT auth, API key system, token exchange
-- `claude_docs/MCP_Server_Architecture.md` — MCP tools, Streamable HTTP transport, Docker setup
-- `claude_docs/UV_Best_Practices.md` — uv workspace patterns, testing commands, pitfalls
-- `claude_docs/PYTHONPATH_Workaround.md` — macOS UF_HIDDEN / .pth file workaround
+- `internal-docs/architecture/patterns/convene-core.md` — models, events, interfaces, database
+- `internal-docs/architecture/patterns/provider-patterns.md` — ABC signatures, library conventions, registry
+- `internal-docs/architecture/patterns/message-bus.md` — MessageBus ABC, Redis Streams, MockMessageBus
+- `internal-docs/architecture/patterns/memory-architecture.md` — four-layer memory system, ORM-to-domain patterns
+- `internal-docs/architecture/patterns/service-patterns.md` — health endpoints, lifespan, settings, DI, route organization
+- `internal-docs/architecture/patterns/auth-and-api-keys.md` — JWT auth, API key system, token exchange
+- `internal-docs/architecture/patterns/mcp-server.md` — MCP tools, Streamable HTTP transport, Docker setup
+- `internal-docs/architecture/patterns/uv-best-practices.md` — uv workspace patterns, testing commands, pitfalls
+- `internal-docs/architecture/patterns/pythonpath-workaround.md` — macOS UF_HIDDEN / .pth file workaround
 
 ## Agent Platform & Integrations
-- `docs/technical/AGENT_PLATFORM.md` — three-tier agent architecture and access matrix
-- `docs/technical/MCP_AUTH.md` — MCP OAuth 2.1 authorization flow
-- `docs/technical/agent-context-seeding.md` — platform/meeting/recap context layers
-- `docs/integrations/OPENCLAW.md` — OpenClaw plugin integration
-- `docs/integrations/CLAUDE_AGENT_SDK.md` — Claude Agent SDK setup
-- `docs/integrations/CLI.md` — Convene CLI reference
+- `external-docs/agent-platform/overview.md` — three-tier agent architecture
+- `external-docs/agent-platform/connecting/mcp-auth.md` — MCP OAuth 2.1 authorization flow
+- `internal-docs/infrastructure/agent-context-seeding.md` — platform/meeting/recap context layers
+- `external-docs/openclaw/plugin-guide.md` — OpenClaw plugin integration
+- `external-docs/agent-platform/connecting/claude-agent-sdk.md` — Claude Agent SDK setup
+- `external-docs/agent-platform/connecting/claude-code-channel.md` — Claude Code channel connection
+- `external-docs/agent-platform/connecting/cli.md` — Convene CLI reference
 - `examples/meeting-assistant-agent/` — Claude Agent SDK example with 4 templates
 
 ## Infrastructure & Tooling
-- `claude_docs/DGX_Spark_Reference.md` — DGX hardware, K8s patterns, deployment gotchas
-- `claude_docs/DGX_Spark_SSH_Connection.md` — SSH patterns, sudo, PATH, containerd
+- `internal-docs/architecture/patterns/dgx-spark-reference.md` — DGX hardware, K8s patterns, deployment gotchas
+- `internal-docs/architecture/patterns/dgx-spark-ssh.md` — SSH patterns, sudo, PATH, containerd
 - `charts/stt/` — Whisper STT Helm chart on DGX Spark
 
 ## Test Data & QA
 - `data/input/` — sample audio files (`librispeech_sample.flac`, `test-speech.wav`)
-- `docs/milestone-testing/` — per-feature QA playbooks (00-SETUP through 10-full-e2e-demo)
-- `docs/manual-testing/E2E_Gateway_Test.md` — gateway + STT integration walkthrough
+- `internal-docs/testing/milestone-playbooks/` — per-feature QA playbooks (00-SETUP through 10-full-e2e-demo)
+- `internal-docs/testing/manual/e2e-gateway-test.md` — gateway + STT integration walkthrough
 
 ## CoWork Coordination
-- `docs/TASKLIST.md` — ordered task queue (supports `🔗 BLOCK:` multi-task items)
-- `docs/cowork-tasks/` — scheduled task instructions
-- `docs/SETUP_GUIDE.md` — full CoWork setup documentation
-- **Phase change rule:** update all three: `docs/TASKLIST.md`, `CLAUDE.md`, `docs/README.md`
+- `internal-docs/development/TASKLIST.md` — ordered task queue (supports `🔗 BLOCK:` multi-task items)
+- `internal-docs/development/cowork-tasks/` — scheduled task instructions
+- `internal-docs/development/cowork-setup.md` — full CoWork setup documentation
+- **Phase change rule:** update all three: `internal-docs/development/TASKLIST.md`, `CLAUDE.md`, `external-docs/README.md`
 
 ## TASKLIST Lock Protocol
 - **Starting work:** Add 🔒 to the item to prevent other sessions from picking it up

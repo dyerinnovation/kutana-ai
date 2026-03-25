@@ -12,37 +12,23 @@ This is a Python monorepo managed with `uv` workspaces.
 
 ```
 convene-ai/
-├── CLAUDE.md                      # Bootstrap prompt for Claude Code development
-├── docs/                          # Product & strategy documentation
-│   ├── README.md                  # This file
-│   ├── TASKLIST.md                # Ordered development task queue
-│   ├── PROGRESS.md                # Append-only log of completed work
-│   ├── HANDOFF.md                 # Shift-change notes for CoWork
-│   ├── PIVOT_RECOMMENDATIONS.md   # Analysis of pivot changes needed
-│   ├── technical/
-│   │   ├── VISION.md              # Product vision & business case
-│   │   ├── ROADMAP.md             # Feature roadmap (Claude Code-ready)
-│   │   ├── COMPETITIVE_ANALYSIS.md # Market sizing & competitive landscape
-│   │   └── GO_TO_MARKET.md        # Go-to-market strategy
-│   ├── prompts/                   # Claude Code planning prompts
-│   ├── providers/                 # Provider setup guides
-│   └── milestone-testing/         # Milestone test plans
-├── cowork-tasks/                  # Scheduled CoWork task descriptions and output
-├── claude_docs/                   # Claude Code development reference docs
+├── external-docs/                 # User-facing documentation (this directory)
+├── internal-docs/                 # Contributor/maintainer documentation
 ├── packages/                      # Shared libraries
 │   ├── convene-core/              # Domain models, events, interfaces (ABCs)
 │   ├── convene-providers/         # STT, TTS, LLM provider implementations
 │   └── convene-memory/            # Four-layer persistent memory system
 ├── services/                      # Independently runnable services
 │   ├── api-server/                # FastAPI REST + WebSocket API
-│   ├── audio-service/             # Audio pipeline (Twilio + WebRTC → STT)
+│   ├── audio-service/             # Audio pipeline (WebRTC → STT)
 │   ├── task-engine/               # LLM-powered task extraction workers
-│   ├── agent-gateway/             # Agent connection & routing (WebSocket/gRPC)
+│   ├── agent-gateway/             # Agent connection & routing (WebSocket/MCP)
 │   ├── mcp-server/                # Model Context Protocol server
 │   └── worker/                    # Background jobs (Slack, calendar, notifications)
 ├── web/                           # Meeting client (React + LiveKit SDK)
-├── charts/                        # Helm charts (Whisper STT on DGX Spark)
-├── pyproject.toml                 # Root workspace config (uv)
+├── integrations/openclaw-plugin/  # OpenClaw plugin source
+├── examples/                      # Agent examples
+├── deploy/                        # Deployment scripts
 └── docker-compose.yml             # Local dev environment (PostgreSQL, Redis)
 ```
 
@@ -83,17 +69,17 @@ Human (Browser)                    AI Agent (any framework)
 
 ## Documents
 
-### Strategy
-- **[VISION.md](./technical/VISION.md)** — Product vision, business case, market opportunity, revenue model, and competitive moat. Covers the dual-audience thesis (developers + teams) and the agent-first platform positioning.
-- **[ROADMAP.md](./technical/ROADMAP.md)** — Feature-by-feature development roadmap structured for Claude Code. Each feature has context, acceptance criteria, and technical notes. Organized into 7 phases from Foundation through Platform Hardening.
-- **[COMPETITIVE_ANALYSIS.md](./technical/COMPETITIVE_ANALYSIS.md)** — Market sizing and competitive landscape. Covers transcription tools (Otter, Fireflies), platform AI (Zoom, Teams), and agent infrastructure (Recall.ai).
-- **[GO_TO_MARKET.md](./technical/GO_TO_MARKET.md)** — Go-to-market strategy for the two-sided market. Developer track (API, SDK, MCP) and team track (meetings, task extraction, memory).
+### For Users
+- **[Agent Platform](agent-platform/overview.md)** — Three-tier agent architecture, prebuilt templates, and how to connect
+- **[MCP Auth](agent-platform/connecting/mcp-auth.md)** — OAuth 2.1 authorization flow for agent connections
+- **[Providers](providers/README.md)** — Configure STT, TTS, and LLM providers
+- **[Self-Hosting](self-hosting/deployment.md)** — Deploy Convene AI yourself
 
-### Development
-- **[TASKLIST.md](./TASKLIST.md)** — Ordered task queue for manual and scheduled development sessions. Foundation (1A–1C) complete. Phase 1 (Core AI Pipeline) and Phase 2 (Agent Platform) in progress. Phases 3–10 cover MCP/SDK, auth/billing, meeting platform, memory, cloud deployment, voice, integrations, and hardening. Supports `🔗 BLOCK:` multi-task items for CoWork.
-- **[PROGRESS.md](./PROGRESS.md)** — Append-only log of completed work.
-- **[HANDOFF.md](./HANDOFF.md)** — Shift-change notes for CoWork sessions.
-- **[E2E Gateway Test](./manual-testing/E2E_Gateway_Test.md)** — Step-by-step E2E test walkthrough for the agent gateway pipeline.
+### For Contributors (Internal)
+- **[TASKLIST](../internal-docs/development/TASKLIST.md)** — Ordered task queue
+- **[PROGRESS](../internal-docs/development/PROGRESS.md)** — Append-only log of completed work
+- **[ROADMAP](../internal-docs/strategy/roadmap.md)** — Feature roadmap
+- **[Internal Docs Index](../internal-docs/README.md)** — All internal documentation
 
 ## Architecture Decision: Agent-First Platform
 
