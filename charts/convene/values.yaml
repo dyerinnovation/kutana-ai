@@ -120,7 +120,7 @@ web:
 # ---------------------------------------------------------------------------
 secrets:
   jwtSecret: Y2hhbmdlLW1lLWluLXByb2R1Y3Rpb24=
-  deepgramApiKey: ""
+  deepgramApiKey: "MmU5YmVlYzRhY2EzY2ZlMmVmMDA0Nzc2OTQzY2UzMTExZjg4NjE4Mg=="
   anthropicApiKey: ""
 
 # ---------------------------------------------------------------------------
