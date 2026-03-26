@@ -16,7 +16,6 @@ data/
 claude_projects/
 claude_docs/
 internal-docs/
-external-docs/
 .claude/
 charts/
 docker-compose.yml
