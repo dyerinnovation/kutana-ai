@@ -21,6 +21,28 @@ const RMS_SILENCE_THRESHOLD = 0.01;
 
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 
+function getGridClasses(count: number): string {
+  if (count === 1) return "grid-cols-1 max-w-lg mx-auto";
+  if (count === 2) return "grid-cols-2";
+  if (count <= 4) return "grid-cols-2";
+  if (count <= 6) return "grid-cols-3";
+  return "grid-cols-3 xl:grid-cols-4";
+}
+
+function getTileHeight(count: number): string {
+  if (count === 1) return "h-full min-h-[400px]";
+  if (count === 2) return "h-72";
+  if (count <= 4) return "h-60";
+  if (count <= 6) return "h-48";
+  return "h-40";
+}
+
+function getAvatarSize(count: number): string {
+  if (count <= 2) return "h-28 w-28 text-4xl";
+  if (count <= 4) return "h-24 w-24 text-3xl";
+  return "h-20 w-20 text-2xl";
+}
+
 export function MeetingRoomPage() {
   const { id: meetingId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -256,6 +278,8 @@ export function MeetingRoomPage() {
     navigate("/meetings");
   }
 
+  const otherParticipants = participants.filter((p) => p.id !== user?.id);
+
   function toggleMute() {
     setIsMuted((prev) => {
       const next = !prev;
@@ -298,75 +322,59 @@ export function MeetingRoomPage() {
           <h2 className="text-sm font-semibold text-gray-300 mb-4">
             Participants ({participants.length + 1})
           </h2>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className={`grid ${getGridClasses(otherParticipants.length + 1)} gap-4`}>
             {/* Current user card */}
-            <div className="relative flex flex-col items-center justify-center h-48 w-full rounded-xl border border-emerald-700/50 bg-gray-900/50 p-4">
-              {/* Avatar */}
+            <div className={`relative flex flex-col items-center justify-center ${getTileHeight(otherParticipants.length + 1)} w-full rounded-xl border border-emerald-700/50 bg-gray-900/50 p-4`}>
               <div className="relative mb-3">
-                <div className="h-24 w-24 rounded-full bg-emerald-600 flex items-center justify-center text-3xl font-semibold text-white">
+                <div className={`${getAvatarSize(otherParticipants.length + 1)} rounded-full bg-emerald-600 flex items-center justify-center font-semibold text-white`}>
                   {user?.name?.charAt(0).toUpperCase() ?? "?"}
                 </div>
                 {!isMuted && (
-                  <div className="absolute inset-0 h-24 w-24 rounded-full border-2 border-green-400 animate-pulse" />
+                  <div className={`absolute inset-0 ${getAvatarSize(otherParticipants.length + 1)} rounded-full border-2 border-green-400 animate-pulse`} />
                 )}
               </div>
               <p className="text-lg font-medium text-gray-50 truncate max-w-full">
                 {user?.name ?? "You"}
               </p>
               <p className="text-sm text-gray-400">You</p>
-              {/* Muted indicator */}
               {isMuted && (
                 <div className="absolute top-3 right-3 text-red-400" title="Muted">
                   <MicOffIconSmall />
                 </div>
               )}
-              {/* Video placeholder */}
-              <div className="absolute bottom-2 right-2 flex items-center gap-1 text-[10px] text-gray-600">
-                <CameraIcon />
-                <span>Video soon</span>
-              </div>
             </div>
 
             {/* Other participants */}
-            {participants
-              .filter((p) => p.id !== user?.id)
-              .map((p) => (
+            {otherParticipants.map((p) => (
                 <div
                   key={p.id}
-                  className="relative flex flex-col items-center justify-center h-48 w-full rounded-xl border border-gray-800 bg-gray-900/50 p-4"
+                  className={`relative flex flex-col items-center justify-center ${getTileHeight(otherParticipants.length + 1)} w-full rounded-xl border border-gray-800 bg-gray-900/50 p-4`}
                 >
-                  {/* Avatar */}
                   <div className="relative mb-3">
                     {p.avatar_url ? (
                       <img
                         src={p.avatar_url}
                         alt={p.name}
-                        className="h-24 w-24 rounded-full object-cover"
+                        className={`${getAvatarSize(otherParticipants.length + 1)} rounded-full object-cover`}
                       />
                     ) : (
-                      <div className="h-24 w-24 rounded-full bg-gray-700 flex items-center justify-center text-3xl font-semibold text-gray-300">
+                      <div className={`${getAvatarSize(otherParticipants.length + 1)} rounded-full bg-gray-700 flex items-center justify-center font-semibold text-gray-300`}>
                         {p.name.charAt(0).toUpperCase()}
                       </div>
                     )}
                     {p.is_speaking && (
-                      <div className="absolute inset-0 h-24 w-24 rounded-full border-2 border-green-400 animate-pulse" />
+                      <div className={`absolute inset-0 ${getAvatarSize(otherParticipants.length + 1)} rounded-full border-2 border-green-400 animate-pulse`} />
                     )}
                   </div>
                   <p className="text-lg font-medium text-gray-200 truncate max-w-full">
                     {p.name}
                   </p>
                   <p className="text-sm text-gray-400">{p.role}</p>
-                  {/* Muted indicator */}
                   {p.is_muted && (
                     <div className="absolute top-3 right-3 text-red-400" title="Muted">
                       <MicOffIconSmall />
                     </div>
                   )}
-                  {/* Video placeholder */}
-                  <div className="absolute bottom-2 right-2 flex items-center gap-1 text-[10px] text-gray-600">
-                    <CameraIcon />
-                    <span>Video soon</span>
-                  </div>
                 </div>
               ))}
           </div>
@@ -510,25 +518,6 @@ function MicOffIconSmall() {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="m2.25 2.25 19.5 19.5M12 18.75a6 6 0 0 0 5.933-5.138M15.75 9V4.5a3.75 3.75 0 1 0-7.5 0v4.875M9 12.75a3 3 0 0 0 3 3m0 0v3.75m-3.75 0h7.5"
-      />
-    </svg>
-  );
-}
-
-/** Camera icon for video placeholder */
-function CameraIcon() {
-  return (
-    <svg
-      className="h-3 w-3"
-      fill="none"
-      viewBox="0 0 24 24"
-      strokeWidth={1.5}
-      stroke="currentColor"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z"
       />
     </svg>
   );
