@@ -20,8 +20,10 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-# Copy the virtual environment with all installed packages
+# Copy venv + workspace source (workspace .pth files reference /app/packages/ etc.)
 COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/packages /app/packages
+COPY --from=builder /app/services /app/services
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy alembic config for migration hook
