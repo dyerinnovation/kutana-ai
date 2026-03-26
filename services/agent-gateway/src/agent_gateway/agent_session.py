@@ -449,6 +449,7 @@ class AgentSessionHandler:
         start_time: float,
         end_time: float,
         confidence: float,
+        speaker_name: str | None = None,
     ) -> None:
         """Send a transcript segment to the agent.
 
@@ -459,6 +460,7 @@ class AgentSessionHandler:
             start_time: Segment start time.
             end_time: Segment end time.
             confidence: STT confidence score.
+            speaker_name: Human-readable display name of the speaker.
         """
         if "listen" not in self.capabilities and "transcribe" not in self.capabilities:
             return
@@ -466,6 +468,7 @@ class AgentSessionHandler:
         msg = TranscriptMessage(
             meeting_id=meeting_id,
             speaker_id=speaker_id,
+            speaker_name=speaker_name,
             text=text,
             start_time=start_time,
             end_time=end_time,

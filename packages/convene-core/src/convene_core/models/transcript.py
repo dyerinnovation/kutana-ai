@@ -20,6 +20,7 @@ class TranscriptSegment(BaseModel):
         id: Unique segment identifier.
         meeting_id: ID of the meeting this segment belongs to.
         speaker_id: Speaker identifier from diarization.
+        speaker_name: Human-readable display name from session identity.
         text: Transcribed text content.
         start_time: Start time in seconds from meeting start.
         end_time: End time in seconds from meeting start.
@@ -30,6 +31,7 @@ class TranscriptSegment(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     meeting_id: UUID
     speaker_id: str | None = None
+    speaker_name: str | None = None
     text: str
     start_time: float
     end_time: float

@@ -12,7 +12,14 @@ web/dist
 *.egg-info
 dist/
 build/
-data/output/
+data/
 claude_projects/
+claude_docs/
+internal-docs/
+external-docs/
+.claude/
+charts/
+docker-compose.yml
 dyerinnovation-key
 dyerinnovation-key.pub
+z-api-keys-and-tokens/

@@ -180,6 +180,7 @@ class TranscriptMessage(BaseModel):
     type: Literal["transcript"] = "transcript"
     meeting_id: UUID
     speaker_id: str | None = None
+    speaker_name: str | None = None
     text: str
     start_time: float
     end_time: float

@@ -51,6 +51,7 @@ class AudioPipeline:
         stt_provider: STTProvider,
         event_publisher: EventPublisher | None = None,
         meeting_id: UUID | None = None,
+        speaker_name: str | None = None,
     ) -> None:
         """Initialise the audio pipeline.
 
@@ -58,11 +59,13 @@ class AudioPipeline:
             stt_provider: An STT provider implementing the STTProvider ABC.
             event_publisher: Optional EventPublisher for domain events.
             meeting_id: Meeting ID for event attribution.
+            speaker_name: Display name of the speaker for this pipeline.
         """
         self._stt = stt_provider
         self._started = False
         self._event_publisher = event_publisher
         self._meeting_id = meeting_id
+        self._speaker_name = speaker_name
         self._audio_buffer: bytearray = bytearray()
 
     async def _ensure_started(self) -> None:
@@ -163,6 +166,8 @@ class AudioPipeline:
         if not self._started:
             return
         async for segment in self._stt.get_transcript():
+            if self._speaker_name and not segment.speaker_name:
+                segment.speaker_name = self._speaker_name
             yield segment
             if self._event_publisher is not None and self._meeting_id is not None:
                 try:

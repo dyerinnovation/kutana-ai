@@ -99,6 +99,7 @@ export function MeetingRoomPage() {
       case "transcript": {
         const seg: TranscriptSegment = {
           speaker_id: msg.speaker_id ?? "unknown",
+          speaker_name: msg.speaker_name ?? null,
           text: msg.text,
           start_time: msg.start_time,
           end_time: msg.end_time,
@@ -403,7 +404,7 @@ export function MeetingRoomPage() {
                 className={`text-xs leading-snug ${seg.is_final ? "text-gray-300" : "text-gray-500 italic"}`}
               >
                 <span className="font-medium text-blue-400">
-                  {seg.speaker_id}
+                  {seg.speaker_name ?? seg.speaker_id}
                 </span>
                 <span className="text-gray-600 mx-1 text-[10px]">
                   {formatTimestamp(seg.start_time)}

@@ -152,6 +152,7 @@ class EventRelay:
                                 start_time=segment.get("start_time", 0.0),
                                 end_time=segment.get("end_time", 0.0),
                                 confidence=segment.get("confidence", 1.0),
+                                speaker_name=segment.get("speaker_name"),
                             )
                         else:
                             await session.send_event(event_type, payload)

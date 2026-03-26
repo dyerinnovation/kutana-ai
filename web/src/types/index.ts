@@ -54,6 +54,7 @@ export interface AuthResponse {
 
 export interface TranscriptSegment {
   speaker_id: string;
+  speaker_name: string | null;
   text: string;
   start_time: number;
   end_time: number;
@@ -71,7 +72,7 @@ export type GatewayMessage =
   | { type: "join_meeting"; meeting_id: string }
   | { type: "leave_meeting" }
   | { type: "audio_data"; data: string; sample_rate: number }
-  | { type: "transcript"; meeting_id: string; speaker_id: string | null; text: string; start_time: number; end_time: number; confidence: number; is_final: boolean }
+  | { type: "transcript"; meeting_id: string; speaker_id: string | null; speaker_name: string | null; text: string; start_time: number; end_time: number; confidence: number; is_final: boolean }
   | { type: "participant_update"; action: string; participant_id: string; name: string; role: string }
   | { type: "error"; code: string; message: string }
   | { type: "joined"; meeting_id: string; granted_capabilities: string[] }
