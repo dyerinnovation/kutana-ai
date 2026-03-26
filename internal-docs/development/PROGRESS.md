@@ -64,6 +64,8 @@
 - `HumanSessionHandler.send_participant_update` needs `source: str | None = None` parameter (see Notes above)
 - `AudioRouter.route_audio` silently drops frames for non-sidecar senders (no `_active_speakers` entry) — audio routing to sidecar agents from control-plane sessions requires a future `distribute_unconditional` method
 
+**Merge status:** ❌ FAILED — FUSE filesystem HEAD.lock held by concurrent CoWork session; merge blocked. To merge on Mac: `git push origin scheduled/2026-03-26-agent-gateway-polish && git checkout main && git merge --no-ff scheduled/2026-03-26-agent-gateway-polish && git push origin main`
+
 ### Next Up
 🔗 BLOCK: Agent Registration & Credentials
 
