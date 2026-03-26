@@ -83,11 +83,14 @@ class AudioBridge:
         """
         return _create_stt_provider(self._stt_settings, meeting_id)
 
-    async def ensure_pipeline(self, meeting_id: UUID) -> None:
+    async def ensure_pipeline(
+        self, meeting_id: UUID, speaker_name: str | None = None
+    ) -> None:
         """Create an STT pipeline for a meeting if one doesn't exist.
 
         Args:
             meeting_id: The meeting to create a pipeline for.
+            speaker_name: Display name of the speaker for this pipeline.
         """
         if meeting_id in self._pipelines:
             return
@@ -97,6 +100,7 @@ class AudioBridge:
             stt_provider=stt_provider,
             event_publisher=self._event_publisher,
             meeting_id=meeting_id,
+            speaker_name=speaker_name,
         )
         self._pipelines[meeting_id] = pipeline
 

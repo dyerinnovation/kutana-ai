@@ -78,6 +78,7 @@ class TestTranscriptEventHandling:
             start_time=1.5,
             end_time=3.2,
             confidence=0.95,
+            speaker_name=None,
         )
         session.send_event.assert_not_awaited()
 
@@ -109,6 +110,7 @@ class TestTranscriptEventHandling:
             start_time=0.0,
             end_time=0.0,
             confidence=1.0,
+            speaker_name=None,
         )
 
     async def test_transcript_event_missing_segment_key(
@@ -136,6 +138,7 @@ class TestTranscriptEventHandling:
             start_time=0.0,
             end_time=0.0,
             confidence=1.0,
+            speaker_name=None,
         )
 
 

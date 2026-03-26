@@ -96,7 +96,9 @@ class HumanSessionHandler:
         self._manager.join_meeting(self.session_id, self.meeting_id)
 
         if self._audio_bridge is not None:
-            await self._audio_bridge.ensure_pipeline(self.meeting_id)
+            await self._audio_bridge.ensure_pipeline(
+                self.meeting_id, speaker_name=self.agent_name
+            )
 
         # Send joined confirmation so the frontend can transition to "connected"
         response = Joined(
@@ -264,6 +266,7 @@ class HumanSessionHandler:
         start_time: float,
         end_time: float,
         confidence: float,
+        speaker_name: str | None = None,
     ) -> None:
         """Send a transcript segment to the browser.
 
@@ -274,10 +277,12 @@ class HumanSessionHandler:
             start_time: Segment start time.
             end_time: Segment end time.
             confidence: STT confidence score.
+            speaker_name: Human-readable display name of the speaker.
         """
         msg = TranscriptMessage(
             meeting_id=meeting_id,
             speaker_id=speaker_id,
+            speaker_name=speaker_name,
             text=text,
             start_time=start_time,
             end_time=end_time,

@@ -136,6 +136,7 @@ class TestE2EAudioToTranscript:
             start_time=1.0,
             end_time=2.5,
             confidence=0.88,
+            speaker_name=None,
         )
 
     async def test_full_loop_audio_to_session_transcript(self) -> None:

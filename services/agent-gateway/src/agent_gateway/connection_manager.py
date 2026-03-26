@@ -38,6 +38,7 @@ class SessionHandler(Protocol):
         start_time: float,
         end_time: float,
         confidence: float,
+        speaker_name: str | None = None,
     ) -> None: ...
 
     async def send_event(self, event_type: str, payload: dict[str, Any]) -> None: ...
