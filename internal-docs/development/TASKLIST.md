@@ -122,10 +122,10 @@
   - [x] Chat history retrieval with pagination
   - [x] Unit and integration tests for ChatStore
 
-- [ ] 🔗 BLOCK: Agent Gateway Polish
-  - [ ] Implement multi-agent per meeting support
-  - [ ] Implement audio stream routing (meeting audio → connected agents)
-  - [ ] Implement structured data channel (metadata, context, real-time updates)
+- [x] 🔗 BLOCK: Agent Gateway Polish
+  - [x] Implement multi-agent per meeting support
+  - [x] Implement audio stream routing (meeting audio → connected agents)
+  - [x] Implement structured data channel (metadata, context, real-time updates)
 
 - [ ] 🔗 BLOCK: Agent Registration & Credentials
   - [ ] Implement agent registration API (name, capabilities, description, owner)

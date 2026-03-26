@@ -224,6 +224,22 @@ class ConnectionManager:
             )
         return self._audio_routers[meeting_id]
 
+    def get_audio_router(self, meeting_id: UUID) -> AudioRouter | None:
+        """Return the AudioRouter for a meeting if one already exists.
+
+        Unlike get_or_create_audio_router, this method never creates a router.
+        It is used by control-plane session handlers to route audio to sidecar
+        participants without prematurely allocating resources.
+
+        Args:
+            meeting_id: The meeting to look up.
+
+        Returns:
+            The existing AudioRouter, or None if no sidecar sessions have
+            connected to this meeting yet.
+        """
+        return self._audio_routers.get(meeting_id)
+
     async def cleanup_audio_router(self, meeting_id: UUID) -> None:
         """Stop and remove the AudioRouter for a meeting if it is empty.
 
