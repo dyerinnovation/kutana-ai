@@ -99,7 +99,6 @@ class AgentSessionHandler:
         self.tts_voice: str | None = None
         self._tts_active: bool = False  # True while agent is mid-utterance
         self._connected_at: datetime = datetime.now(tz=UTC)
-        self._left_announced: bool = False  # Guards against double leave-notify
 
     async def handle(self) -> None:
         """Main message loop for the agent session.
@@ -183,11 +182,6 @@ class AgentSessionHandler:
             self.source = msg.source
 
         self.meeting_id = msg.meeting_id
-
-        # Snapshot existing participants BEFORE registering so the join
-        # notification and participant list are consistent.
-        existing_participants = self._snapshot_participants(msg.meeting_id)
-
         self._manager.join_meeting(self.session_id, msg.meeting_id)
 
         if self._audio_bridge is not None:
@@ -229,29 +223,21 @@ class AgentSessionHandler:
         response = Joined(
             meeting_id=msg.meeting_id,
             granted_capabilities=self.capabilities,
-            participants=existing_participants,
             audio_ws_url=audio_ws_url,
             audio_token=audio_token,
         )
         await self._send(response.model_dump(mode="json"))
         logger.info(
-            "Agent %s joined meeting %s with capabilities %s (existing_participants=%d)",
+            "Agent %s joined meeting %s with capabilities %s",
             self.agent_name,
             msg.meeting_id,
             self.capabilities,
-            len(existing_participants),
         )
-
-        # Notify existing participants that this agent has joined.
-        # Must happen AFTER sending Joined to self so the joiner's state is set.
-        await self._broadcast_participant_update("joined")
-        await self._publish_participant_event("joined")
 
     async def _handle_audio(self, msg: AudioData) -> None:
         """Handle incoming audio data from the agent.
 
-        Decodes base64 PCM16, forwards to the STT pipeline via AudioBridge,
-        and distributes to voice-capable sidecar sessions via AudioRouter.
+        Decodes base64 PCM16 and could forward to AudioPipeline.
 
         Args:
             msg: The audio data message.
@@ -273,22 +259,8 @@ class AgentSessionHandler:
             await self._send_error("invalid_audio", "Invalid base64 audio data")
             return
 
-        # Forward to STT pipeline.
         if self._audio_bridge is not None:
             await self._audio_bridge.process_audio(self.meeting_id, audio_bytes)
-
-        # Also distribute to voice-capable sidecar sessions (if any exist).
-        # Uses the existing AudioRouter — never creates one here to avoid
-        # prematurely allocating resources.
-        audio_router = self._manager.get_audio_router(self.meeting_id)
-        if audio_router is not None:
-            try:
-                await audio_router.route_audio(self.session_id, audio_bytes)
-            except Exception:
-                logger.debug(
-                    "AudioRouter route_audio skipped for non-sidecar agent %s",
-                    self.agent_name,
-                )
 
         logger.debug(
             "Received %d bytes of audio from agent %s",
@@ -349,7 +321,7 @@ class AgentSessionHandler:
         if self.meeting_id is not None:
             if self._audio_bridge is not None:
                 await self._audio_bridge.close_pipeline(self.meeting_id)
-            await self._leave_and_notify(msg.reason)
+            self._manager.leave_meeting(self.session_id, self.meeting_id)
             await self._persist_leave()
             logger.info(
                 "Agent %s left meeting %s: %s",
@@ -652,7 +624,7 @@ class AgentSessionHandler:
         if self.meeting_id is not None:
             if self._audio_bridge is not None:
                 await self._audio_bridge.close_pipeline(self.meeting_id)
-            await self._leave_and_notify("disconnected")
+            self._manager.leave_meeting(self.session_id, self.meeting_id)
             await self._persist_leave()
         if self._tts_bridge is not None and self.tts_enabled:
             self._tts_bridge.release_session(self.session_id)
@@ -721,124 +693,3 @@ class AgentSessionHandler:
             logger.exception(
                 "Failed to persist agent session leave for %s", self.session_id
             )
-
-    # ------------------------------------------------------------------
-    # Multi-agent participant notifications
-    # ------------------------------------------------------------------
-
-    def _snapshot_participants(self, meeting_id: UUID) -> list[dict[str, Any]]:
-        """Snapshot current participant list for a meeting.
-
-        Called before this session joins so the returned list represents the
-        participants that were already in the room.
-
-        Args:
-            meeting_id: The meeting to snapshot.
-
-        Returns:
-            List of participant dicts suitable for the Joined.participants field.
-        """
-        result: list[dict[str, Any]] = []
-        for session in self._manager.get_meeting_sessions(meeting_id):
-            if session.session_id == self.session_id:
-                continue
-            result.append({
-                "participant_id": str(session.session_id),
-                "name": session.agent_name,
-                "role": getattr(session, "source", "unknown"),
-                "connection_type": "websocket",
-                "capabilities": list(session.capabilities),
-            })
-        return result
-
-    async def _broadcast_participant_update(self, action: str) -> None:
-        """Broadcast a participant join/leave to all other sessions in the meeting.
-
-        Args:
-            action: "joined" or "left".
-        """
-        if self.meeting_id is None:
-            return
-
-        sessions = self._manager.get_meeting_sessions(self.meeting_id)
-        for session in sessions:
-            if session.session_id == self.session_id:
-                continue
-            try:
-                await session.send_participant_update(
-                    action=action,
-                    participant_id=self._identity.agent_config_id,
-                    name=self.agent_name,
-                    role="agent",
-                    connection_type="agent_gateway",
-                    source=self.source,
-                )
-            except Exception:
-                logger.warning(
-                    "Failed to send participant_update (%s) to session %s",
-                    action,
-                    session.session_id,
-                )
-
-    async def _publish_participant_event(
-        self,
-        action: str,
-        reason: str = "normal",
-    ) -> None:
-        """Publish a participant.joined or participant.left event to Redis Streams.
-
-        Args:
-            action: "joined" or "left".
-            reason: Reason for leaving (only used for "left" action).
-        """
-        if self._manager.redis is None or self.meeting_id is None:
-            return
-
-        import json as _json
-
-        from convene_core.events.definitions import ParticipantJoined, ParticipantLeft
-
-        event: ParticipantJoined | ParticipantLeft
-        if action == "joined":
-            event = ParticipantJoined(
-                participant_id=self._identity.agent_config_id,
-                meeting_id=self.meeting_id,
-                name=self.agent_name,
-                role="agent",
-                connection_type="agent_gateway",
-            )
-        else:
-            event = ParticipantLeft(
-                participant_id=self._identity.agent_config_id,
-                meeting_id=self.meeting_id,
-                reason=reason,
-            )
-
-        payload = _json.dumps(event.to_dict(), default=str)
-        try:
-            await self._manager.redis.xadd(
-                "convene:events",
-                {"event_type": event.event_type, "payload": payload},
-                maxlen=10_000,
-                approximate=True,
-            )
-        except Exception:
-            logger.warning(
-                "Failed to publish %s event for agent %s",
-                event.event_type,
-                self.agent_name,
-            )
-
-    async def _leave_and_notify(self, reason: str = "normal") -> None:
-        """Broadcast leave, publish event, and remove from meeting (idempotent).
-
-        Args:
-            reason: Reason for leaving (e.g. "normal", "disconnected").
-        """
-        if self._left_announced or self.meeting_id is None:
-            return
-        self._left_announced = True
-
-        await self._broadcast_participant_update("left")
-        await self._publish_participant_event("left", reason=reason)
-        self._manager.leave_meeting(self.session_id, self.meeting_id)

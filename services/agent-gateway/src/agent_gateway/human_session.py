@@ -168,9 +168,6 @@ class HumanSessionHandler:
     async def _handle_audio(self, msg: AudioData) -> None:
         """Forward PCM16 audio from the browser to the STT pipeline.
 
-        Also distributes audio to voice-capable sidecar sessions via the
-        meeting's AudioRouter, if any sidecar agents are connected.
-
         Args:
             msg: The audio data message with base64-encoded PCM16.
         """
@@ -180,20 +177,8 @@ class HumanSessionHandler:
             await self._send_error("invalid_audio", "Invalid base64 audio data")
             return
 
-        # Forward to STT pipeline.
         if self._audio_bridge is not None:
             await self._audio_bridge.process_audio(self.meeting_id, audio_bytes)
-
-        # Distribute to voice-capable sidecar sessions if any exist.
-        audio_router = self._manager.get_audio_router(self.meeting_id)
-        if audio_router is not None:
-            try:
-                await audio_router.route_audio(self.session_id, audio_bytes)
-            except Exception:
-                logger.debug(
-                    "AudioRouter route_audio skipped for human session %s",
-                    self.session_id,
-                )
 
         logger.debug(
             "Received %d bytes of audio from human %s",

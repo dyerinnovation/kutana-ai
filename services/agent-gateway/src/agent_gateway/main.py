@@ -309,7 +309,7 @@ async def agent_connect(
 # ---------------------------------------------------------------------------
 
 
-@app.websocket("/human/connect")
+@app.websocket("/connect")
 async def human_connect(
     websocket: WebSocket,
     token: str = Query(..., description="JWT authentication token"),
