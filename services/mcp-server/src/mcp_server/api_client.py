@@ -58,7 +58,7 @@ class ApiClient:
         """
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/api/v1/token/gateway",
+                f"{self.base_url}/v1/token/gateway",
                 headers={"X-API-Key": self.api_key},
             ) as resp:
                 if resp.status != 200:
@@ -79,7 +79,7 @@ class ApiClient:
         """
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/api/v1/token/mcp",
+                f"{self.base_url}/v1/token/mcp",
                 headers={"X-API-Key": self.api_key},
             ) as resp:
                 if resp.status != 200:
@@ -105,7 +105,7 @@ class ApiClient:
         """
         async with aiohttp.ClientSession() as session:
             async with session.get(
-                f"{self.base_url}/api/v1/meetings",
+                f"{self.base_url}/v1/meetings",
                 headers=self._auth_headers,
             ) as resp:
                 data = await resp.json()
@@ -122,7 +122,7 @@ class ApiClient:
         """
         async with aiohttp.ClientSession() as session:
             async with session.get(
-                f"{self.base_url}/api/v1/tasks",
+                f"{self.base_url}/v1/tasks",
                 params={"meeting_id": meeting_id},
                 headers=self._auth_headers,
             ) as resp:
@@ -147,7 +147,7 @@ class ApiClient:
         """
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/api/v1/tasks",
+                f"{self.base_url}/v1/tasks",
                 json={
                     "meeting_id": meeting_id,
                     "description": description,
@@ -184,7 +184,7 @@ class ApiClient:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/api/v1/meetings",
+                f"{self.base_url}/v1/meetings",
                 json=body,
                 headers=self._auth_headers,
             ) as resp:
@@ -206,7 +206,7 @@ class ApiClient:
         """
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/api/v1/meetings/{meeting_id}/start",
+                f"{self.base_url}/v1/meetings/{meeting_id}/start",
                 headers=self._auth_headers,
             ) as resp:
                 if resp.status != 200:
@@ -227,7 +227,7 @@ class ApiClient:
         """
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/api/v1/meetings/{meeting_id}/end",
+                f"{self.base_url}/v1/meetings/{meeting_id}/end",
                 headers=self._auth_headers,
             ) as resp:
                 if resp.status != 200:
