@@ -20,7 +20,10 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
+# Copy venv + workspace source (workspace .pth files reference /app/packages/ etc.)
 COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/packages /app/packages
+COPY --from=builder /app/services /app/services
 ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 8002
