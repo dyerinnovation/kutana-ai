@@ -234,6 +234,10 @@ class AgentSessionHandler:
             self.capabilities,
         )
 
+        # Notify other sessions that this agent has joined
+        await self._broadcast_participant_update("joined")
+        await self._publish_participant_event("joined")
+
     async def _handle_audio(self, msg: AudioData) -> None:
         """Handle incoming audio data from the agent.
 
@@ -319,6 +323,8 @@ class AgentSessionHandler:
             msg: The leave meeting message.
         """
         if self.meeting_id is not None:
+            await self._broadcast_participant_update("left")
+            await self._publish_participant_event("left")
             if self._audio_bridge is not None:
                 await self._audio_bridge.close_pipeline(self.meeting_id)
             self._manager.leave_meeting(self.session_id, self.meeting_id)
@@ -515,6 +521,74 @@ class AgentSessionHandler:
         )
         await self._send(msg.model_dump(mode="json"))
 
+    async def _broadcast_participant_update(self, action: str) -> None:
+        """Broadcast a participant join/leave to all other sessions in this meeting.
+
+        Args:
+            action: "joined" or "left".
+        """
+        if self.meeting_id is None:
+            return
+        sessions = self._manager.get_meeting_sessions(self.meeting_id)
+        for session in sessions:
+            if session.session_id == self.session_id:
+                continue
+            try:
+                await session.send_participant_update(
+                    action=action,
+                    participant_id=self._identity.agent_config_id,
+                    name=self.agent_name,
+                    role="agent",
+                    connection_type="agent_gateway",
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to send participant_update (%s) to session %s",
+                    action,
+                    session.session_id,
+                )
+
+    async def _publish_participant_event(self, action: str) -> None:
+        """Publish a participant.joined or participant.left event to Redis Streams.
+
+        Args:
+            action: "joined" or "left".
+        """
+        if self.meeting_id is None or self._manager.redis is None:
+            return
+
+        from convene_core.events.definitions import ParticipantJoined, ParticipantLeft
+
+        if action == "joined":
+            event: ParticipantJoined | ParticipantLeft = ParticipantJoined(
+                participant_id=self._identity.agent_config_id,
+                meeting_id=self.meeting_id,
+                name=self.agent_name,
+                role="agent",
+                connection_type="agent_gateway",
+            )
+        else:
+            event = ParticipantLeft(
+                participant_id=self._identity.agent_config_id,
+                meeting_id=self.meeting_id,
+                reason="normal",
+            )
+
+        payload = json.dumps(event.to_dict(), default=str)
+        try:
+            await self._manager.redis.xadd(
+                "convene:events",
+                {"event_type": event.event_type, "payload": payload},
+                maxlen=10_000,
+                approximate=True,
+            )
+        except Exception:
+            logger.warning(
+                "Failed to publish %s event for agent %s",
+                event.event_type,
+                self.agent_name,
+            )
+
     async def _send(self, data: dict[str, Any]) -> None:
         """Send a JSON message to the agent.
 
@@ -625,6 +699,8 @@ class AgentSessionHandler:
     async def _cleanup(self) -> None:
         """Clean up session state on disconnect."""
         if self.meeting_id is not None:
+            await self._broadcast_participant_update("left")
+            await self._publish_participant_event("left")
             if self._audio_bridge is not None:
                 await self._audio_bridge.close_pipeline(self.meeting_id)
             self._manager.leave_meeting(self.session_id, self.meeting_id)
