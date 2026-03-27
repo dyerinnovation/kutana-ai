@@ -4,15 +4,21 @@
 
 The `convene` CLI tool wraps the Convene REST API for terminal-based access to meetings, agents, and tasks.
 
-## Installation
+## Quick Install
 
 ```bash
-cd services/cli
-uv sync
+curl -LsSf https://convene.ai/install.sh | bash
 ```
 
-Or add to your path:
+This will install `git` and `uv` if needed, clone the Convene repository, and install the CLI to your PATH.
+
+## Install from Source
+
+If you prefer to install manually:
+
 ```bash
+git clone https://github.com/dyerinnovation/convene-ai.git
+cd convene-ai
 uv tool install -e services/cli
 ```
 
