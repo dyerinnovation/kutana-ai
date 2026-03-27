@@ -9,6 +9,7 @@ dependencies = [
     "asyncpg>=0.29",
     "pgvector>=0.3",
     "alembic>=1.13",
+    "cryptography>=44.0",
 ]
 
 [tool.hatch.build.targets.wheel]

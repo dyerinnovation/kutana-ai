@@ -20,7 +20,7 @@ from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import ResponseError
 from sqlalchemy import select
 
-from api_server.encryption import decrypt_value
+from convene_core.encryption import decrypt_value
 from convene_core.database.models import FeedORM, FeedRunORM, FeedSecretORM
 from convene_core.feeds.adapters import build_adapter
 from worker.feed_agent import run_feed
