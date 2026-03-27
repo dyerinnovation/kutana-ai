@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import type { Agent, AgentTemplate, Meeting } from "@/types";
 import { listAgents } from "@/api/agents";
 import { listTemplates, activateTemplate } from "@/api/agentTemplates";
+import { formatCapability } from "@/lib/capabilities";
 import { listMeetings } from "@/api/meetings";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -166,7 +167,7 @@ export function AgentsPage() {
                             key={cap}
                             className="inline-flex items-center rounded-md border border-gray-700 bg-gray-800 px-2 py-0.5 text-[10px] font-medium text-gray-400"
                           >
-                            {cap}
+                            {formatCapability(cap)}
                           </span>
                         ))}
                       </div>
@@ -242,7 +243,7 @@ export function AgentsPage() {
                         CATEGORY_COLORS[template.category] ?? CATEGORY_COLORS.general
                       }`}
                     >
-                      {template.category}
+                      {template.category.charAt(0).toUpperCase() + template.category.slice(1)}
                     </span>
                   </div>
                 </CardHeader>
@@ -255,7 +256,7 @@ export function AgentsPage() {
                           key={cap}
                           className="inline-flex rounded-md bg-gray-800 px-2 py-0.5 text-xs text-gray-400"
                         >
-                          {cap}
+                          {formatCapability(cap)}
                         </span>
                       ))}
                     </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { AgentTemplate, Meeting } from "@/types";
 import { listTemplates, activateTemplate } from "@/api/agentTemplates";
+import { formatCapability } from "@/lib/capabilities";
 import { listMeetings } from "@/api/meetings";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -161,7 +162,7 @@ export function AgentTemplatePage() {
                       CATEGORY_COLORS.general
                     }`}
                   >
-                    {template.category}
+                    {template.category.charAt(0).toUpperCase() + template.category.slice(1)}
                   </span>
                 </div>
               </CardHeader>
@@ -176,7 +177,7 @@ export function AgentTemplatePage() {
                         key={cap}
                         className="inline-flex rounded-md bg-gray-800 px-2 py-0.5 text-xs text-gray-400"
                       >
-                        {cap}
+                        {formatCapability(cap)}
                       </span>
                     ))}
                   </div>

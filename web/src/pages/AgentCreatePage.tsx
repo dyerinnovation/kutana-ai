@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { createAgent } from "@/api/agents";
+import { formatCapability, CAPABILITY_TOOLTIPS } from "@/lib/capabilities";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/Card";
@@ -16,7 +17,6 @@ const CAPABILITY_OPTIONS = [
 export function AgentCreatePage() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
-  const [systemPrompt, setSystemPrompt] = useState("");
   const [capabilities, setCapabilities] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,11 +33,7 @@ export function AgentCreatePage() {
     setIsLoading(true);
 
     try {
-      const agent = await createAgent({
-        name,
-        system_prompt: systemPrompt,
-        capabilities,
-      });
+      const agent = await createAgent({ name, capabilities });
       navigate(`/agents/${agent.id}`);
     } catch (err) {
       setError(
@@ -54,7 +50,7 @@ export function AgentCreatePage() {
         <CardHeader>
           <CardTitle className="text-xl">Create New Agent</CardTitle>
           <p className="text-sm text-gray-400">
-            Configure an AI agent that can connect to meetings via MCP
+            Register a custom agent that connects to meetings via MCP. Declare what it can do — Convene handles the rest.
           </p>
         </CardHeader>
 
@@ -74,18 +70,6 @@ export function AgentCreatePage() {
               required
             />
 
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-gray-300">
-                System Prompt
-              </label>
-              <textarea
-                className="flex min-h-[120px] w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-50 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="You are a meeting assistant that tracks action items and commitments..."
-                value={systemPrompt}
-                onChange={(e) => setSystemPrompt(e.target.value)}
-              />
-            </div>
-
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-300">
                 Capabilities
@@ -101,8 +85,9 @@ export function AgentCreatePage() {
                         ? "border-blue-500 bg-blue-600/20 text-blue-400"
                         : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
                     }`}
+                    title={CAPABILITY_TOOLTIPS[cap] ?? ""}
                   >
-                    {cap}
+                    {formatCapability(cap)}
                   </button>
                 ))}
               </div>
