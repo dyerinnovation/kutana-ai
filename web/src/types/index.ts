@@ -76,7 +76,17 @@ export type GatewayMessage =
   | { type: "participant_update"; action: string; participant_id: string; name: string; role: string }
   | { type: "error"; code: string; message: string }
   | { type: "joined"; meeting_id: string; granted_capabilities: string[] }
-  | { type: "left"; meeting_id: string };
+  | { type: "left"; meeting_id: string }
+  | { type: "event"; event_type: string; payload: Record<string, unknown> };
+
+export interface TtsAudioPayload {
+  meeting_id: string;
+  speaker_session_id: string;
+  speaker_name: string;
+  data: string;       // base64-encoded audio
+  format: string;     // "wav" | "pcm_s16le" | "mp3"
+  char_count: number;
+}
 
 export interface Participant {
   id: string;
