@@ -1,9 +1,9 @@
 FROM oven/bun:1-slim AS builder
 WORKDIR /app
-COPY package.json bun.lock* ./
+COPY services/discord-mcp/package.json services/discord-mcp/bun.lock* ./
 RUN bun install --frozen-lockfile || bun install
-COPY tsconfig.json ./
-COPY src/ ./src/
+COPY services/discord-mcp/tsconfig.json ./
+COPY services/discord-mcp/src/ ./src/
 
 FROM oven/bun:1-slim
 WORKDIR /app
