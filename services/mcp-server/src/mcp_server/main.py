@@ -337,10 +337,13 @@ async def convene_join_meeting(
     token = await client.exchange_for_gateway_token()
 
     # Connect to gateway and join meeting
+    # Pass tts_enabled when the caller requested the tts_enabled capability
+    _is_tts = "tts_enabled" in requested_caps
     _gateway_client = GatewayClient(settings.gateway_ws_url, token)
     result = await _gateway_client.connect_and_join(
         meeting_id=str(mid),
         capabilities=gateway_caps,
+        tts_enabled=_is_tts,
     )
 
     # Augment response with audio connection details for voice agents
@@ -1086,6 +1089,74 @@ async def convene_mark_finished_speaking(meeting_id: str) -> str:
         "status": "finished",
         "next_speaker": str(next_speaker_id) if next_speaker_id else None,
         "queue_remaining": len(queue_status.queue),
+    })
+
+
+@mcp.tool()
+async def convene_speak(meeting_id: str, text: str) -> str:
+    """Speak aloud in the meeting using text-to-speech synthesis.
+
+    Sends the provided text through the gateway's TTS engine, which synthesizes
+    audio and broadcasts it as a ``tts.audio`` event to all meeting participants
+    with the ``listen`` capability (both human browser clients and other agents).
+
+    This tool requires the agent to have joined with the ``tts_enabled`` capability.
+    It automatically handles the start_speaking → spoken_text → stop_speaking
+    gateway protocol and calls mark_finished_speaking on the turn manager.
+
+    Workflow:
+        1. Join the meeting with ``capabilities=["tts_enabled"]``
+        2. Optionally call ``convene_raise_hand()`` to request the floor
+        3. Wait for ``turn_your_turn`` event via ``convene_get_meeting_events()``
+        4. Call ``convene_speak()`` with your message
+        5. The gateway synthesizes and broadcasts audio automatically
+
+    Args:
+        meeting_id: UUID of the meeting.
+        text: The text to synthesize and speak aloud to the meeting room.
+
+    Returns:
+        JSON with status ("spoken" or error) and char_count of the synthesized text.
+    """
+    try:
+        mid = validate_meeting_id(meeting_id)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
+    identity = await _ensure_authenticated()
+    if err := await _security_check("speak", identity, meeting_id=str(mid)):
+        return err
+
+    if _gateway_client is None or _gateway_client.meeting_id is None:
+        return json.dumps({
+            "error": "Not in a meeting. Call convene_join_meeting() with tts_enabled capability first.",
+        })
+
+    sanitized_text = sanitize_content(text)
+    if not sanitized_text:
+        return json.dumps({"error": "text must not be empty"})
+
+    try:
+        await _gateway_client.start_speaking()
+        await _gateway_client.send_spoken_text(sanitized_text)
+        await _gateway_client.stop_speaking()
+    except RuntimeError as e:
+        return json.dumps({"error": f"Gateway communication failed: {e}"})
+
+    # Notify turn manager that speaking is finished so queue advances
+    try:
+        tm = _get_turn_manager()
+        pid = identity.agent_config_id
+        await tm.mark_finished_speaking(mid, pid)
+    except Exception:
+        # Turn manager failure is non-fatal — audio was already synthesized
+        logger.warning("Failed to mark_finished_speaking after convene_speak")
+
+    log_tool_call("speak", agent_id=identity.agent_config_id, meeting_id=str(mid))
+    return json.dumps({
+        "status": "spoken",
+        "char_count": len(sanitized_text),
+        "meeting_id": str(mid),
     })
 
 

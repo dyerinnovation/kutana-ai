@@ -44,6 +44,8 @@ class GatewayClient:
         meeting_id: str,
         capabilities: list[str] | None = None,
         source: str = "claude-code",
+        tts_enabled: bool = False,
+        tts_voice: str | None = None,
     ) -> dict[str, Any]:
         """Connect to the gateway and join a meeting.
 
@@ -51,6 +53,8 @@ class GatewayClient:
             meeting_id: UUID of the meeting to join.
             capabilities: Requested capabilities list.
             source: Connection source identifier sent in the join message.
+            tts_enabled: Set True for TTS-capable agents that will send spoken_text.
+            tts_voice: Preferred voice ID; assigned from pool if None.
 
         Returns:
             The 'joined' response message from the gateway.
@@ -67,12 +71,15 @@ class GatewayClient:
         self._ws = await websockets.connect(ws_url)
         logger.info("Connected. Joining meeting %s...", meeting_id)
 
-        join_msg = {
+        join_msg: dict[str, Any] = {
             "type": "join_meeting",
             "meeting_id": meeting_id,
             "capabilities": capabilities,
             "source": source,
+            "tts_enabled": tts_enabled,
         }
+        if tts_voice is not None:
+            join_msg["tts_voice"] = tts_voice
         await self._ws.send(json.dumps(join_msg))
 
         raw = await asyncio.wait_for(self._ws.recv(), timeout=10.0)
@@ -201,6 +208,53 @@ class GatewayClient:
             asyncio.create_task(self._ws.send(subscribe_msg))
 
         logger.info("Subscribed to channel: %s", channel)
+
+    async def start_speaking(self) -> None:
+        """Send a start_speaking signal to the gateway.
+
+        Activates TTS mode (for tts_enabled agents) and transitions the
+        agent's turn state from "your_turn" to "actively_speaking".
+
+        Raises:
+            RuntimeError: If not connected to the gateway.
+        """
+        if self._ws is None:
+            raise RuntimeError("Not connected to gateway")
+        await self._ws.send(json.dumps({"type": "start_speaking"}))
+        logger.debug("Sent start_speaking to gateway")
+
+    async def send_spoken_text(self, text: str) -> None:
+        """Send a spoken_text message to the gateway for TTS synthesis.
+
+        The gateway will synthesize the text using the configured TTS provider
+        and broadcast the resulting audio as tts.audio events to all meeting
+        participants that have the listen capability.
+
+        Must be preceded by start_speaking() to activate TTS mode.
+
+        Args:
+            text: The text to synthesize and broadcast.
+
+        Raises:
+            RuntimeError: If not connected to the gateway.
+        """
+        if self._ws is None:
+            raise RuntimeError("Not connected to gateway")
+        await self._ws.send(json.dumps({"type": "spoken_text", "text": text}))
+        logger.debug("Sent spoken_text (%d chars) to gateway", len(text))
+
+    async def stop_speaking(self) -> None:
+        """Send a stop_speaking signal to the gateway.
+
+        Deactivates TTS mode and signals that the agent has finished its turn.
+
+        Raises:
+            RuntimeError: If not connected to the gateway.
+        """
+        if self._ws is None:
+            raise RuntimeError("Not connected to gateway")
+        await self._ws.send(json.dumps({"type": "stop_speaking"}))
+        logger.debug("Sent stop_speaking to gateway")
 
     async def publish_to_channel(
         self, channel: str, payload: dict[str, Any]
