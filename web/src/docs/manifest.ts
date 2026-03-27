@@ -3,24 +3,16 @@
 // Vite resolves these at build time — no runtime fetching needed.
 
 import readmeContent from "../../../external-docs/README.md?raw";
-import agentPlatformOverview from "../../../external-docs/agent-platform/overview.md?raw";
-import connectingMcpAuth from "../../../external-docs/agent-platform/connecting/mcp-auth.md?raw";
-import connectingMcpQuickstart from "../../../external-docs/agent-platform/connecting/mcp-quickstart.md?raw";
-import connectingClaudeCodeChannel from "../../../external-docs/agent-platform/connecting/claude-code-channel.md?raw";
-import connectingCli from "../../../external-docs/agent-platform/connecting/cli.md?raw";
-import openclawPluginGuide from "../../../external-docs/openclaw/plugin-guide.md?raw";
-import openclawConveneSkill from "../../../external-docs/openclaw/convene-skill.md?raw";
-import providersReadme from "../../../external-docs/providers/README.md?raw";
-import providersLlmAnthropic from "../../../external-docs/providers/llm/anthropic.md?raw";
-import providersLlmGroq from "../../../external-docs/providers/llm/groq.md?raw";
-import providersLlmOllama from "../../../external-docs/providers/llm/ollama.md?raw";
-import providersSttAssemblyai from "../../../external-docs/providers/stt/assemblyai.md?raw";
-import providersSttDeepgram from "../../../external-docs/providers/stt/deepgram.md?raw";
-import providersSttWhisper from "../../../external-docs/providers/stt/whisper.md?raw";
-import providersTtsCartesia from "../../../external-docs/providers/tts/cartesia.md?raw";
-import providersTtsElevenlabs from "../../../external-docs/providers/tts/elevenlabs.md?raw";
-import providersTtsPiper from "../../../external-docs/providers/tts/piper.md?raw";
-import selfHostingDeployment from "../../../external-docs/self-hosting/deployment.md?raw";
+import connectingOverview from "../../../external-docs/connecting-agents/overview.md?raw";
+import connectingMcpAuth from "../../../external-docs/connecting-agents/custom-agents/mcp-auth.md?raw";
+import connectingMcpQuickstart from "../../../external-docs/connecting-agents/custom-agents/mcp-quickstart.md?raw";
+import connectingClaudeCodeChannel from "../../../external-docs/connecting-agents/custom-agents/claude-code-channel.md?raw";
+import connectingClaudeAgentSdk from "../../../external-docs/connecting-agents/custom-agents/claude-agent-sdk.md?raw";
+import connectingCli from "../../../external-docs/connecting-agents/custom-agents/cli.md?raw";
+import connectingOpenclawPlugin from "../../../external-docs/connecting-agents/custom-agents/openclaw-plugin.md?raw";
+import connectingConveneSkill from "../../../external-docs/connecting-agents/custom-agents/convene-skill.md?raw";
+import managedAgentsOverview from "../../../external-docs/connecting-agents/managed-agents/overview.md?raw";
+import feedsOverview from "../../../external-docs/feeds/overview.md?raw";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,74 +25,46 @@ export type DocNode =
 export const docPages: Record<string, { title: string; content: string }> = {
   overview: { title: "Overview", content: readmeContent },
 
-  "agent-platform/overview": {
-    title: "Agent Platform Overview",
-    content: agentPlatformOverview,
+  "connecting-agents/overview": {
+    title: "Connecting Agents",
+    content: connectingOverview,
   },
-  "agent-platform/connecting/mcp-auth": {
+  "connecting-agents/custom-agents/mcp-auth": {
     title: "MCP Authentication",
     content: connectingMcpAuth,
   },
-  "agent-platform/connecting/mcp-quickstart": {
+  "connecting-agents/custom-agents/mcp-quickstart": {
     title: "Connecting via MCP",
     content: connectingMcpQuickstart,
   },
-  "agent-platform/connecting/claude-code-channel": {
+  "connecting-agents/custom-agents/claude-code-channel": {
     title: "Claude Code Channel",
     content: connectingClaudeCodeChannel,
   },
-  "agent-platform/connecting/cli": {
+  "connecting-agents/custom-agents/claude-agent-sdk": {
+    title: "Claude Agent SDK",
+    content: connectingClaudeAgentSdk,
+  },
+  "connecting-agents/custom-agents/cli": {
     title: "Convene CLI",
     content: connectingCli,
   },
-
-  "openclaw/plugin-guide": {
-    title: "OpenClaw Plugin Guide",
-    content: openclawPluginGuide,
+  "connecting-agents/custom-agents/openclaw-plugin": {
+    title: "OpenClaw Plugin",
+    content: connectingOpenclawPlugin,
   },
-  "openclaw/convene-skill": {
+  "connecting-agents/custom-agents/convene-skill": {
     title: "Convene Skill",
-    content: openclawConveneSkill,
+    content: connectingConveneSkill,
+  },
+  "connecting-agents/managed-agents/overview": {
+    title: "Managed Agents",
+    content: managedAgentsOverview,
   },
 
-  "providers/overview": {
-    title: "Providers Overview",
-    content: providersReadme,
-  },
-  "providers/llm/anthropic": {
-    title: "Anthropic",
-    content: providersLlmAnthropic,
-  },
-  "providers/llm/groq": { title: "Groq", content: providersLlmGroq },
-  "providers/llm/ollama": { title: "Ollama", content: providersLlmOllama },
-  "providers/stt/assemblyai": {
-    title: "AssemblyAI",
-    content: providersSttAssemblyai,
-  },
-  "providers/stt/deepgram": {
-    title: "Deepgram",
-    content: providersSttDeepgram,
-  },
-  "providers/stt/whisper": {
-    title: "Whisper (Self-hosted)",
-    content: providersSttWhisper,
-  },
-  "providers/tts/cartesia": {
-    title: "Cartesia",
-    content: providersTtsCartesia,
-  },
-  "providers/tts/elevenlabs": {
-    title: "ElevenLabs",
-    content: providersTtsElevenlabs,
-  },
-  "providers/tts/piper": {
-    title: "Piper (Self-hosted)",
-    content: providersTtsPiper,
-  },
-
-  "self-hosting/deployment": {
-    title: "Deployment",
-    content: selfHostingDeployment,
+  "feeds/overview": {
+    title: "Feeds",
+    content: feedsOverview,
   },
 };
 
@@ -111,44 +75,75 @@ export const docsTree: DocNode[] = [
 
   {
     kind: "section",
-    id: "agent-platform",
-    title: "Agent Platform",
+    id: "connecting-agents",
+    title: "Connecting Agents",
     children: [
       {
         kind: "page",
-        id: "agent-platform/overview",
+        id: "connecting-agents/overview",
         title: "Overview",
-        content: agentPlatformOverview,
+        content: connectingOverview,
       },
       {
         kind: "section",
-        id: "agent-platform/connecting",
-        title: "Connecting",
+        id: "connecting-agents/custom-agents",
+        title: "Custom Agents",
         children: [
           {
             kind: "page",
-            id: "agent-platform/connecting/mcp-auth",
+            id: "connecting-agents/custom-agents/mcp-quickstart",
+            title: "MCP Quickstart",
+            content: connectingMcpQuickstart,
+          },
+          {
+            kind: "page",
+            id: "connecting-agents/custom-agents/mcp-auth",
             title: "MCP Authentication",
             content: connectingMcpAuth,
           },
           {
             kind: "page",
-            id: "agent-platform/connecting/mcp-quickstart",
-            title: "Connecting via MCP",
-            content: connectingMcpQuickstart,
-          },
-          {
-            kind: "page",
-            id: "agent-platform/connecting/claude-code-channel",
+            id: "connecting-agents/custom-agents/claude-code-channel",
             title: "Claude Code Channel",
             content: connectingClaudeCodeChannel,
           },
           {
             kind: "page",
-            id: "agent-platform/connecting/cli",
+            id: "connecting-agents/custom-agents/claude-agent-sdk",
+            title: "Claude Agent SDK",
+            content: connectingClaudeAgentSdk,
+          },
+          {
+            kind: "page",
+            id: "connecting-agents/custom-agents/cli",
             title: "Convene CLI",
             content: connectingCli,
           },
+          {
+            kind: "page",
+            id: "connecting-agents/custom-agents/openclaw-plugin",
+            title: "OpenClaw Plugin",
+            content: connectingOpenclawPlugin,
+          },
+          {
+            kind: "page",
+            id: "connecting-agents/custom-agents/convene-skill",
+            title: "Convene Skill",
+            content: connectingConveneSkill,
+          },
+        ],
+      },
+      {
+        kind: "section",
+        id: "connecting-agents/managed-agents",
+        title: "Managed Agents",
+        children: [
+          {
+            kind: "page",
+            id: "connecting-agents/managed-agents/overview",
+            title: "Overview",
+            content: managedAgentsOverview,
+          },
         ],
       },
     ],
@@ -156,123 +151,14 @@ export const docsTree: DocNode[] = [
 
   {
     kind: "section",
-    id: "openclaw",
-    title: "OpenClaw",
+    id: "feeds",
+    title: "Feeds",
     children: [
       {
         kind: "page",
-        id: "openclaw/plugin-guide",
-        title: "Plugin Guide",
-        content: openclawPluginGuide,
-      },
-      {
-        kind: "page",
-        id: "openclaw/convene-skill",
-        title: "Convene Skill",
-        content: openclawConveneSkill,
-      },
-    ],
-  },
-
-  {
-    kind: "section",
-    id: "providers",
-    title: "Providers",
-    children: [
-      {
-        kind: "page",
-        id: "providers/overview",
+        id: "feeds/overview",
         title: "Overview",
-        content: providersReadme,
-      },
-      {
-        kind: "section",
-        id: "providers/llm",
-        title: "LLM",
-        children: [
-          {
-            kind: "page",
-            id: "providers/llm/anthropic",
-            title: "Anthropic",
-            content: providersLlmAnthropic,
-          },
-          {
-            kind: "page",
-            id: "providers/llm/groq",
-            title: "Groq",
-            content: providersLlmGroq,
-          },
-          {
-            kind: "page",
-            id: "providers/llm/ollama",
-            title: "Ollama",
-            content: providersLlmOllama,
-          },
-        ],
-      },
-      {
-        kind: "section",
-        id: "providers/stt",
-        title: "Speech-to-Text",
-        children: [
-          {
-            kind: "page",
-            id: "providers/stt/assemblyai",
-            title: "AssemblyAI",
-            content: providersSttAssemblyai,
-          },
-          {
-            kind: "page",
-            id: "providers/stt/deepgram",
-            title: "Deepgram",
-            content: providersSttDeepgram,
-          },
-          {
-            kind: "page",
-            id: "providers/stt/whisper",
-            title: "Whisper (Self-hosted)",
-            content: providersSttWhisper,
-          },
-        ],
-      },
-      {
-        kind: "section",
-        id: "providers/tts",
-        title: "Text-to-Speech",
-        children: [
-          {
-            kind: "page",
-            id: "providers/tts/cartesia",
-            title: "Cartesia",
-            content: providersTtsCartesia,
-          },
-          {
-            kind: "page",
-            id: "providers/tts/elevenlabs",
-            title: "ElevenLabs",
-            content: providersTtsElevenlabs,
-          },
-          {
-            kind: "page",
-            id: "providers/tts/piper",
-            title: "Piper (Self-hosted)",
-            content: providersTtsPiper,
-          },
-        ],
-      },
-    ],
-  },
-
-  {
-    kind: "section",
-    id: "self-hosting",
-    title: "Self-Hosting",
-    children: [
-      {
-        kind: "page",
-        id: "self-hosting/deployment",
-        title: "Deployment",
-        content: selfHostingDeployment,
+        content: feedsOverview,
       },
     ],
   },
