@@ -32,7 +32,6 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-import redis.asyncio as aioredis
 from mcp.server.fastmcp import FastMCP
 
 from convene_providers.chat.redis_chat_store import RedisChatStore
@@ -46,6 +45,7 @@ from mcp_server.security.sanitization import (
     clamp_last_n,
     clamp_limit,
     sanitize_content,
+    sanitize_context,
     sanitize_description,
     sanitize_title,
     sanitize_topic,
@@ -147,9 +147,7 @@ def _get_api_client() -> ApiClient:
     global _api_client
     if _api_client is None:
         if not settings.mcp_api_key:
-            raise RuntimeError(
-                "MCP_API_KEY not set. Generate an API key in the Convene dashboard."
-            )
+            raise RuntimeError("MCP_API_KEY not set. Generate an API key in the Convene dashboard.")
         _api_client = ApiClient(settings.api_base_url, settings.mcp_api_key)
     return _api_client
 
@@ -322,10 +320,12 @@ async def convene_join_meeting(
         return err
 
     if _gateway_client is not None and _gateway_client.meeting_id is not None:
-        return json.dumps({
-            "error": "Already in a meeting. Call convene_leave_meeting() first.",
-            "current_meeting_id": _gateway_client.meeting_id,
-        })
+        return json.dumps(
+            {
+                "error": "Already in a meeting. Call convene_leave_meeting() first.",
+                "current_meeting_id": _gateway_client.meeting_id,
+            }
+        )
 
     client = _get_api_client()
 
@@ -472,6 +472,97 @@ async def convene_create_task(
     task = await client.create_task(str(mid), safe_description, priority)
     log_tool_call("create_task", agent_id=identity.agent_config_id, meeting_id=str(mid))
     return json.dumps(task, indent=2, default=str)
+
+
+@mcp.tool()
+async def convene_get_summary(meeting_id: str) -> str:
+    """Get a structured summary for a meeting.
+
+    Returns title, duration, participant count, key discussion points,
+    recorded decisions, and action item count. If no cached summary
+    exists, one is generated on-demand via Claude Haiku.
+
+    Suitable for external distribution (e.g. Slack recap, Notion page)
+    without exposing raw transcript data.
+
+    Args:
+        meeting_id: UUID of the meeting.
+
+    Returns:
+        JSON object with keys: meeting_id, title, duration_minutes,
+        participant_count, key_points, decisions, task_count, ended_at.
+    """
+    try:
+        mid = validate_meeting_id(meeting_id)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
+    identity = await _ensure_authenticated()
+    if err := await _security_check("get_summary", identity, meeting_id=str(mid)):
+        return err
+
+    client = _get_api_client()
+    try:
+        summary = await client.get_summary(str(mid))
+    except RuntimeError as e:
+        return json.dumps({"error": str(e)})
+
+    log_tool_call("get_summary", agent_id=identity.agent_config_id, meeting_id=str(mid))
+    return json.dumps(summary, indent=2, default=str)
+
+
+@mcp.tool()
+async def convene_set_context(meeting_id: str, context: str) -> str:
+    """Inject context into a meeting for participants to see.
+
+    Use this to provide pre-meeting context (e.g. agenda, linked
+    documents, previous meeting notes) that will be visible to all
+    participants. Context is published to the meeting's data channel.
+
+    Args:
+        meeting_id: UUID of the meeting to inject context into.
+        context: The context text to inject (max 5000 chars).
+
+    Returns:
+        JSON confirmation of the context injection.
+    """
+    try:
+        mid = validate_meeting_id(meeting_id)
+        safe_context = sanitize_context(context)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
+    identity = await _ensure_authenticated()
+    if err := await _security_check("set_context", identity, meeting_id=str(mid)):
+        return err
+
+    # Publish context to the meeting's data channel via the gateway
+    if _gateway_client is None or _gateway_client.meeting_id is None:
+        return json.dumps({"error": "Not in a meeting. Call convene_join_meeting() first."})
+
+    # Publish as a channel message on the "context" channel
+    payload = {
+        "type": "meeting_context",
+        "meeting_id": str(mid),
+        "context": safe_context,
+        "injected_by": identity.agent_config_id,
+        "injected_at": datetime.now(tz=UTC).isoformat(),
+    }
+
+    try:
+        await _gateway_client.publish_to_channel("context", payload)
+    except Exception as e:
+        logger.error("Failed to publish context: %s", e)
+        return json.dumps({"error": f"Failed to inject context: {e}"})
+
+    log_tool_call("set_context", agent_id=identity.agent_config_id, meeting_id=str(mid))
+    return json.dumps(
+        {
+            "status": "context_injected",
+            "meeting_id": str(mid),
+            "context_length": len(safe_context),
+        }
+    )
 
 
 @mcp.tool()
@@ -669,12 +760,16 @@ async def convene_join_or_create_meeting(
     # Join the meeting
     global _gateway_client
     if _gateway_client is not None and _gateway_client.meeting_id is not None:
-        return json.dumps({
-            "meeting": meeting_data,
-            "join_status": "already_in_meeting",
-            "current_meeting_id": _gateway_client.meeting_id,
-            "created": created,
-        }, indent=2, default=str)
+        return json.dumps(
+            {
+                "meeting": meeting_data,
+                "join_status": "already_in_meeting",
+                "current_meeting_id": _gateway_client.meeting_id,
+                "created": created,
+            },
+            indent=2,
+            default=str,
+        )
 
     requested_caps: list[str] = capabilities if capabilities is not None else ["text_only"]
     gateway_caps = _map_capabilities(requested_caps)
@@ -686,7 +781,9 @@ async def convene_join_or_create_meeting(
         capabilities=gateway_caps,
     )
 
-    response: dict[str, Any] = dict(join_result) if isinstance(join_result, dict) else {"raw": join_result}
+    response: dict[str, Any] = (
+        dict(join_result) if isinstance(join_result, dict) else {"raw": join_result}
+    )
     response["requested_capabilities"] = requested_caps
     if set(requested_caps) & _VOICE_CAPABILITIES:
         response["audio_ws_url"] = settings.gateway_ws_url.rstrip("/") + "/agent/connect"
@@ -697,11 +794,15 @@ async def convene_join_or_create_meeting(
         agent_id=identity.agent_config_id,
         meeting_id=meeting_id,
     )
-    return json.dumps({
-        "meeting": meeting_data,
-        "join_result": response,
-        "created": created,
-    }, indent=2, default=str)
+    return json.dumps(
+        {
+            "meeting": meeting_data,
+            "join_result": response,
+            "created": created,
+        },
+        indent=2,
+        default=str,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -744,11 +845,13 @@ async def convene_subscribe_channel(channel: str) -> str:
         agent_id=identity.agent_config_id,
         meeting_id=_gateway_client.meeting_id,
     )
-    return json.dumps({
-        "status": "subscribed",
-        "channel": safe_channel,
-        "subscribed_channels": list(_gateway_client.subscribed_channels),
-    })
+    return json.dumps(
+        {
+            "status": "subscribed",
+            "channel": safe_channel,
+            "subscribed_channels": list(_gateway_client.subscribed_channels),
+        }
+    )
 
 
 @mcp.tool()
@@ -899,18 +1002,22 @@ async def start_speaking(meeting_id: str) -> str:
         queue_info = ""
         if status.in_queue and status.queue_position is not None:
             queue_info = f" You are #{status.queue_position} in queue."
-        return json.dumps({
-            "error": f"Not the active speaker.{queue_info} "
-                     "Call raise_hand() and wait for a turn_your_turn event.",
-            "is_in_queue": status.in_queue,
-            "queue_position": status.queue_position,
-        })
+        return json.dumps(
+            {
+                "error": f"Not the active speaker.{queue_info} "
+                "Call raise_hand() and wait for a turn_your_turn event.",
+                "is_in_queue": status.in_queue,
+                "queue_position": status.queue_position,
+            }
+        )
 
-    return json.dumps({
-        "status": "speaking",
-        "meeting_id": meeting_id,
-        "message": "You have the floor. Call mark_finished_speaking() when done.",
-    })
+    return json.dumps(
+        {
+            "status": "speaking",
+            "meeting_id": meeting_id,
+            "message": "You have the floor. Call mark_finished_speaking() when done.",
+        }
+    )
 
 
 @mcp.tool()
@@ -951,12 +1058,14 @@ async def convene_raise_hand(
     current_speaker_id = await tm.get_active_speaker(mid)
 
     log_tool_call("raise_hand", agent_id=identity.agent_config_id, meeting_id=str(mid))
-    return json.dumps({
-        "queue_position": result.queue_position,
-        "hand_raise_id": str(result.hand_raise_id),
-        "estimated_wait": None,
-        "current_speaker": str(current_speaker_id) if current_speaker_id else None,
-    })
+    return json.dumps(
+        {
+            "queue_position": result.queue_position,
+            "hand_raise_id": str(result.hand_raise_id),
+            "estimated_wait": None,
+            "current_speaker": str(current_speaker_id) if current_speaker_id else None,
+        }
+    )
 
 
 @mcp.tool()
@@ -993,21 +1102,23 @@ async def convene_get_queue_status(meeting_id: str) -> str:
             break
 
     log_tool_call("get_queue_status", agent_id=identity.agent_config_id, meeting_id=str(mid))
-    return json.dumps({
-        "current_speaker": str(status.active_speaker_id) if status.active_speaker_id else None,
-        "queue": [
-            {
-                "position": e.position,
-                "participant_id": str(e.participant_id),
-                "priority": e.priority.value,
-                "topic": e.topic,
-                "raised_at": e.raised_at.isoformat(),
-            }
-            for e in status.queue
-        ],
-        "your_position": your_position,
-        "total_in_queue": len(status.queue),
-    })
+    return json.dumps(
+        {
+            "current_speaker": str(status.active_speaker_id) if status.active_speaker_id else None,
+            "queue": [
+                {
+                    "position": e.position,
+                    "participant_id": str(e.participant_id),
+                    "priority": e.priority.value,
+                    "topic": e.topic,
+                    "raised_at": e.raised_at.isoformat(),
+                }
+                for e in status.queue
+            ],
+            "your_position": your_position,
+            "total_in_queue": len(status.queue),
+        }
+    )
 
 
 @mcp.tool()
@@ -1039,15 +1150,19 @@ async def convene_start_speaking(meeting_id: str) -> str:
     started_at = await tm.start_speaking(mid, pid)  # type: ignore[attr-defined]
 
     if started_at is None:
-        return json.dumps({
-            "status": "not_your_turn",
-            "started_at": None,
-        })
+        return json.dumps(
+            {
+                "status": "not_your_turn",
+                "started_at": None,
+            }
+        )
 
-    return json.dumps({
-        "status": "speaking",
-        "started_at": started_at.isoformat(),
-    })
+    return json.dumps(
+        {
+            "status": "speaking",
+            "started_at": started_at.isoformat(),
+        }
+    )
 
 
 @mcp.tool()
@@ -1085,11 +1200,13 @@ async def convene_mark_finished_speaking(meeting_id: str) -> str:
         agent_id=identity.agent_config_id,
         meeting_id=str(mid),
     )
-    return json.dumps({
-        "status": "finished",
-        "next_speaker": str(next_speaker_id) if next_speaker_id else None,
-        "queue_remaining": len(queue_status.queue),
-    })
+    return json.dumps(
+        {
+            "status": "finished",
+            "next_speaker": str(next_speaker_id) if next_speaker_id else None,
+            "queue_remaining": len(queue_status.queue),
+        }
+    )
 
 
 @mcp.tool()
@@ -1128,9 +1245,11 @@ async def convene_speak(meeting_id: str, text: str) -> str:
         return err
 
     if _gateway_client is None or _gateway_client.meeting_id is None:
-        return json.dumps({
-            "error": "Not in a meeting. Call convene_join_meeting() with tts_enabled capability first.",
-        })
+        return json.dumps(
+            {
+                "error": "Not in a meeting. Call convene_join_meeting() with tts_enabled capability first.",
+            }
+        )
 
     sanitized_text = sanitize_content(text)
     if not sanitized_text:
@@ -1153,11 +1272,13 @@ async def convene_speak(meeting_id: str, text: str) -> str:
         logger.warning("Failed to mark_finished_speaking after convene_speak")
 
     log_tool_call("speak", agent_id=identity.agent_config_id, meeting_id=str(mid))
-    return json.dumps({
-        "status": "spoken",
-        "char_count": len(sanitized_text),
-        "meeting_id": str(mid),
-    })
+    return json.dumps(
+        {
+            "status": "spoken",
+            "char_count": len(sanitized_text),
+            "meeting_id": str(mid),
+        }
+    )
 
 
 @mcp.tool()
@@ -1198,10 +1319,12 @@ async def convene_cancel_hand_raise(
     removed = await tm.cancel_hand_raise(mid, pid, hrid)
 
     log_tool_call("cancel_hand_raise", agent_id=identity.agent_config_id, meeting_id=str(mid))
-    return json.dumps({
-        "status": "cancelled" if removed else "not_in_queue",
-        "was_position": was_position,
-    })
+    return json.dumps(
+        {
+            "status": "cancelled" if removed else "not_in_queue",
+            "was_position": was_position,
+        }
+    )
 
 
 @mcp.tool()
@@ -1238,13 +1361,15 @@ async def convene_get_speaking_status(meeting_id: str) -> str:
         agent_id=identity.agent_config_id,
         meeting_id=str(mid),
     )
-    return json.dumps({
-        "is_speaking": status.is_speaking,
-        "is_in_queue": status.in_queue,
-        "queue_position": status.queue_position,
-        "current_speaker": str(current_speaker_id) if current_speaker_id else None,
-        "meeting_phase": "active",
-    })
+    return json.dumps(
+        {
+            "is_speaking": status.is_speaking,
+            "is_in_queue": status.in_queue,
+            "queue_position": status.queue_position,
+            "current_speaker": str(current_speaker_id) if current_speaker_id else None,
+            "meeting_phase": "active",
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1290,10 +1415,12 @@ async def convene_send_chat_message(
     try:
         msg_type = ChatMessageType(message_type)
     except ValueError:
-        return json.dumps({
-            "error": f"Invalid message_type '{message_type}'. "
-                     "Must be one of: text, question, action_item, decision."
-        })
+        return json.dumps(
+            {
+                "error": f"Invalid message_type '{message_type}'. "
+                "Must be one of: text, question, action_item, decision."
+            }
+        )
 
     msg = await cs.send_message(
         meeting_id=mid,
@@ -1304,16 +1431,18 @@ async def convene_send_chat_message(
     )
 
     log_tool_call("send_chat_message", agent_id=identity.agent_config_id, meeting_id=str(mid))
-    return json.dumps({
-        "message_id": str(msg.message_id),
-        "meeting_id": str(msg.meeting_id),
-        "sender_id": str(msg.sender_id),
-        "sender_name": msg.sender_name,
-        "content": msg.content,
-        "message_type": msg.message_type.value,
-        "sent_at": msg.sent_at.isoformat(),
-        "sequence": msg.sequence,
-    })
+    return json.dumps(
+        {
+            "message_id": str(msg.message_id),
+            "meeting_id": str(msg.meeting_id),
+            "sender_id": str(msg.sender_id),
+            "sender_name": msg.sender_name,
+            "content": msg.content,
+            "message_type": msg.message_type.value,
+            "sent_at": msg.sent_at.isoformat(),
+            "sequence": msg.sequence,
+        }
+    )
 
 
 @mcp.tool()
@@ -1340,6 +1469,7 @@ async def convene_get_chat_messages(
         JSON array of chat messages in chronological order (oldest first).
     """
     from datetime import datetime as _datetime
+
     from convene_core.models.chat import ChatMessageType
 
     try:
@@ -1368,9 +1498,7 @@ async def convene_get_chat_messages(
         try:
             since_dt = _datetime.fromisoformat(since.replace("Z", "+00:00"))
         except ValueError:
-            return json.dumps({
-                "error": f"Invalid since timestamp '{since}'. Use ISO 8601 format."
-            })
+            return json.dumps({"error": f"Invalid since timestamp '{since}'. Use ISO 8601 format."})
 
     messages = await cs.get_messages(
         meeting_id=mid,
@@ -1457,7 +1585,9 @@ async def convene_get_meeting_status(meeting_id: str) -> str:
         {
             "meeting": meeting_data,
             "queue": {
-                "active_speaker": str(queue_status.active_speaker_id) if queue_status.active_speaker_id else None,
+                "active_speaker": str(queue_status.active_speaker_id)
+                if queue_status.active_speaker_id
+                else None,
                 "queue_length": len(queue_status.queue),
                 "entries": [
                     {
@@ -1531,6 +1661,7 @@ async def meeting_transcript_resource(meeting_id: str) -> str:
 # ---------------------------------------------------------------------------
 # Entry point — Streamable HTTP transport
 # ---------------------------------------------------------------------------
+
 
 @mcp.custom_route("/health", methods=["GET"])
 async def health_check(request: object) -> object:

@@ -60,6 +60,7 @@ TOOL_REQUIRED_SCOPE: dict[str, str] = {
     "get_meeting_status": SCOPE_MEETINGS_READ,
     "get_channel_messages": SCOPE_MEETINGS_READ,
     "get_meeting_events": SCOPE_MEETINGS_READ,
+    "get_summary": SCOPE_MEETINGS_READ,
     "subscribe_channel": SCOPE_MEETINGS_READ,
     # Join/leave meetings
     "join_meeting": SCOPE_MEETINGS_JOIN,
@@ -68,9 +69,10 @@ TOOL_REQUIRED_SCOPE: dict[str, str] = {
     "create_new_meeting": SCOPE_MEETINGS_JOIN,
     "start_meeting_session": SCOPE_MEETINGS_JOIN,
     "end_meeting_session": SCOPE_MEETINGS_JOIN,
-    # Chat — requires explicit grant
+    # Chat / context — requires explicit grant
     "send_chat_message": SCOPE_MEETINGS_CHAT,
     "publish_to_channel": SCOPE_MEETINGS_CHAT,
+    "set_context": SCOPE_MEETINGS_CHAT,
     # Turn management — requires explicit grant
     "raise_hand": SCOPE_TURNS_MANAGE,
     "mark_finished_speaking": SCOPE_TURNS_MANAGE,
