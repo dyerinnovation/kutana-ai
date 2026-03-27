@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent, CardFooter } from "@/components/ui/Card";
 import { ConveneLogoMark } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ export function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-gray-950 px-4">
+      <ThemeToggle />
 
       {/* Ambient glow — radiates from top-center like a light source */}
       <div
