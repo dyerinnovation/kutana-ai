@@ -57,7 +57,7 @@ const INTEGRATIONS: Integration[] = [
     id: "discord",
     name: "Discord",
     description: "Share meeting notes and updates with your Discord server.",
-    status: "coming_soon",
+    status: "available",
     platform: "discord",
   },
   {
