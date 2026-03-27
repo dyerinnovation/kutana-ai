@@ -248,7 +248,7 @@
 - [ ] 🔗 BLOCK: MCP Tool Prefix Standardization (P0 — ships with April Release)
   - [ ] Rename all MCP tools from bare names to `convene_` prefix (e.g., `join_meeting` → `convene_join_meeting`)
   - [ ] Update OpenClaw plugin with renamed tools
-  - [ ] Update `examples/meeting-assistant-agent/` with new tool names
+  - [ ] Update `internal-docs/internal-docs/examples/meeting-assistant-agent/` with new tool names
   - [ ] Update all integration tests to use `convene_` prefix
   - [ ] Update `docs/research/channel-plugin.md` tool reference table (already uses `convene_` prefix)
   - [ ] Update `docs/research/skill-architecture.md` capability mapping table
@@ -257,7 +257,7 @@
   - [ ] Write `docs/integrations/CLAUDE_CODE_CHANNEL.md` — end-to-end setup guide (API key → settings.json → first join)
   - [ ] Write `docs/integrations/VOICE_AGENT_QUICKSTART.md` — voice agent setup (sidecar, PCM16, VAD)
   - [ ] Write `docs/integrations/TTS_AGENT_QUICKSTART.md` — TTS agent setup (tts_enabled, voice assignment, start_speaking)
-  - [ ] Update `examples/meeting-assistant-agent/` templates to use new capability declaration + `convene_` prefix
+  - [ ] Update `internal-docs/internal-docs/examples/meeting-assistant-agent/` templates to use new capability declaration + `convene_` prefix
   - [ ] Add developer onboarding checklist to `docs/SETUP_GUIDE.md`
 
 - [ ] 🔗 BLOCK: Frontend — Turn Management & Chat UI
@@ -268,7 +268,7 @@
   - [ ] Real-time state updates via WebSocket events
 
 - [ ] 🔗 BLOCK: April Release Examples & Docs
-  - [ ] Update `examples/meeting-assistant-agent/` to use turn management + chat tools
+  - [ ] Update `internal-docs/internal-docs/examples/meeting-assistant-agent/` to use turn management + chat tools
   - [x] Update OpenClaw plugin with new MCP tool definitions (turn management + chat — 12 tools total)
   - [ ] Write Claude Code channel setup guide (`docs/integrations/CLAUDE_CODE_CHANNEL.md`)
   - [ ] Write multi-agent meeting tutorial
@@ -291,7 +291,7 @@
 > **Research doc:** `docs/research/scheduled-agent-participation.md`
 
 - [ ] 🔗 BLOCK: F2.9-A — Observer Mode (MVP)
-  - [ ] Implement `MeetingObserver` agent template in `examples/` — joins via `join_meeting`, listens to full transcript, calls `leave_meeting` on meeting end
+  - [ ] Implement `MeetingObserver` agent template in `internal-docs/examples/` — joins via `join_meeting`, listens to full transcript, calls `leave_meeting` on meeting end
   - [ ] Implement post-meeting summary prompt chain (transcript → structured summary via Claude Sonnet: participants, decisions, action items)
   - [ ] Implement summary delivery: post structured summary to meeting chat + return in scheduled task result
   - [ ] Write scheduled task definition for observer mode (CoWork `create_scheduled_task` pattern)
