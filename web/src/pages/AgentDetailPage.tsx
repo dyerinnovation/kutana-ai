@@ -8,6 +8,7 @@ import {
   createKey,
   revokeKey,
 } from "@/api/agents";
+import { formatCapability } from "@/lib/capabilities";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import {
@@ -116,7 +117,10 @@ export function AgentDetailPage() {
       {
         mcpServers: {
           convene: {
-            url: "http://localhost:3001/mcp",
+            url: "http://convene.spark-b0f2.local/mcp",
+            headers: {
+              Authorization: "Bearer <YOUR_API_KEY>",
+            },
           },
         },
       },
@@ -127,7 +131,7 @@ export function AgentDetailPage() {
 
   function getDockerEnv(rawKey?: string): string {
     return [
-      "# Set these on the MCP server container (docker-compose.yml or .env):",
+      "# Set these environment variables for the MCP server:",
       `MCP_API_KEY=${rawKey ?? "cvn_..."}`,
       `MCP_AGENT_CONFIG_ID=${id ?? "<agent-uuid>"}`,
     ].join("\n");
@@ -200,7 +204,7 @@ export function AgentDetailPage() {
                     key={cap}
                     className="inline-flex items-center rounded-md bg-blue-600/20 border border-blue-500/30 px-2.5 py-0.5 text-xs font-medium text-blue-400"
                   >
-                    {cap}
+                    {formatCapability(cap)}
                   </span>
                 ))}
               </div>
@@ -321,8 +325,7 @@ export function AgentDetailPage() {
         <CardHeader>
           <CardTitle>MCP Configuration</CardTitle>
           <p className="text-sm text-gray-400">
-            The MCP server runs as a Docker container. Configure your client to
-            connect via Streamable HTTP.
+            Configure your MCP client to connect via Streamable HTTP.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -348,7 +351,7 @@ export function AgentDetailPage() {
           </div>
           <div>
             <h4 className="text-sm font-medium text-gray-400 mb-2">
-              2. Server Environment (set on MCP server container)
+              2. Server Environment
             </h4>
             <div className="relative">
               <pre className="overflow-x-auto rounded-lg bg-gray-950 border border-gray-800 p-4 text-sm font-mono text-gray-300">
