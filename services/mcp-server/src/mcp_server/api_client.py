@@ -216,6 +216,30 @@ class ApiClient:
                     )
                 return await resp.json()
 
+    async def get_summary(self, meeting_id: str) -> dict[str, Any]:
+        """Get or generate a meeting summary.
+
+        Calls the API server summary endpoint which returns a cached
+        summary or generates one on-demand via Haiku.
+
+        Args:
+            meeting_id: Meeting UUID string.
+
+        Returns:
+            Summary dict with key_points, decisions, task_count, etc.
+        """
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{self.base_url}/v1/meetings/{meeting_id}/summary",
+                headers=self._auth_headers,
+            ) as resp:
+                if resp.status != 200:
+                    text = await resp.text()
+                    raise RuntimeError(
+                        f"Get summary failed ({resp.status}): {text}"
+                    )
+                return await resp.json()
+
     async def end_meeting(self, meeting_id: str) -> dict[str, Any]:
         """End a meeting (transition active → completed).
 
