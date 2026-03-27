@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING, Literal
+from datetime import datetime
+from typing import Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
-
-if TYPE_CHECKING:
-    from datetime import datetime
 
 
 class FeedDirection(enum.StrEnum):
