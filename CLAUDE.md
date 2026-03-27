@@ -63,7 +63,7 @@ See `internal-docs/development/TASKLIST.md` for the full task queue and `interna
 - `external-docs/agent-platform/connecting/claude-agent-sdk.md` — Claude Agent SDK setup
 - `external-docs/agent-platform/connecting/claude-code-channel.md` — Claude Code channel connection
 - `external-docs/agent-platform/connecting/cli.md` — Convene CLI reference
-- `examples/meeting-assistant-agent/` — Claude Agent SDK example with 4 templates
+- `internal-docs/examples/meeting-assistant-agent/` — Claude Agent SDK example with 4 templates
 
 ## Infrastructure & Tooling
 - `internal-docs/architecture/patterns/dgx-spark-reference.md` — DGX hardware, K8s patterns, deployment gotchas
