@@ -6,4 +6,4 @@
 - Apply rate limiting to all public-facing endpoints (use FastAPI middleware).
 - Never hardcode secrets — all credentials live in environment variables.
 - Never log secrets, tokens, or PII. Use structured logging with redaction for sensitive fields.
-- Validate agent API keys on every WebSocket connection to the agent-gateway. See `claude_docs/Auth_And_API_Keys.md`.
+- Validate agent API keys on every WebSocket connection to the agent-gateway. See `internal-docs/architecture/patterns/auth-and-api-keys.md`.
