@@ -57,7 +57,7 @@ function DialogTitle({
   return (
     <h2
       className={cn(
-        "mb-4 text-base font-semibold leading-tight tracking-tight text-white",
+        "mb-4 text-base font-semibold leading-tight tracking-tight text-gray-50",
         className
       )}
       {...props}
