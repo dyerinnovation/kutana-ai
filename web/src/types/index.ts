@@ -77,7 +77,25 @@ export type GatewayMessage =
   | { type: "error"; code: string; message: string }
   | { type: "joined"; meeting_id: string; granted_capabilities: string[] }
   | { type: "left"; meeting_id: string }
-  | { type: "event"; event_type: string; payload: Record<string, unknown> };
+  | { type: "event"; event_type: string; payload: Record<string, unknown> }
+  | { type: "turn.speaker.changed"; speaker_id: string | null; speaker_name: string | null }
+  | { type: "turn.queue.updated"; queue: TurnQueueEntry[] }
+  | { type: "turn.your_turn" }
+  | { type: "chat"; sender_id: string; sender_name: string; text: string; timestamp: number; is_agent: boolean };
+
+export interface ChatMessage {
+  id: string;
+  sender_id: string;
+  sender_name: string;
+  text: string;
+  timestamp: number;
+  is_agent: boolean;
+}
+
+export interface TurnQueueEntry {
+  participant_id: string;
+  name: string;
+}
 
 export interface TtsAudioPayload {
   meeting_id: string;
