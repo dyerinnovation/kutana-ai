@@ -38,6 +38,8 @@ TOOL_RATE_LIMITS: dict[str, tuple[int, int]] = {
     "send_chat_message": (20, 60),
     "publish_to_channel": (20, 60),
     "get_transcript": (30, 60),
+    "get_summary": (10, 60),
+    "set_context": (10, 60),
     "get_chat_messages": (30, 60),
     "get_meeting_events": (30, 60),
     "get_channel_messages": (30, 60),

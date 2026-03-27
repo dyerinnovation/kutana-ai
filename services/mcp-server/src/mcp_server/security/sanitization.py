@@ -47,6 +47,7 @@ _CHANNEL_NAME_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 # ---------------------------------------------------------------------------
 
 MAX_CONTENT_LENGTH = 2_000
+MAX_CONTEXT_LENGTH = 5_000
 MAX_TOPIC_LENGTH = 200
 MAX_DESCRIPTION_LENGTH = 200
 MAX_CHANNEL_NAME_LENGTH = 64
@@ -103,6 +104,33 @@ def sanitize_content(content: str) -> str:
     if len(cleaned) > MAX_CONTENT_LENGTH:
         raise ValueError(
             f"Content too long: max {MAX_CONTENT_LENGTH} characters, "
+            f"got {len(cleaned)}"
+        )
+    return cleaned
+
+
+def sanitize_context(context: str) -> str:
+    """Sanitize meeting context content (allows up to 5000 chars).
+
+    Same cleaning rules as ``sanitize_content`` but with a higher length
+    limit, suitable for injecting meeting context blobs.
+
+    Args:
+        context: Raw context content.
+
+    Returns:
+        Cleaned context string.
+
+    Raises:
+        ValueError: If context exceeds the maximum length after sanitization.
+    """
+    cleaned = _HTML_TAG_RE.sub("", context)
+    cleaned = _CONTROL_CHAR_RE.sub("", cleaned)
+    cleaned = _INJECTION_PATTERN_RE.sub("[filtered]", cleaned)
+
+    if len(cleaned) > MAX_CONTEXT_LENGTH:
+        raise ValueError(
+            f"Context too long: max {MAX_CONTEXT_LENGTH} characters, "
             f"got {len(cleaned)}"
         )
     return cleaned
