@@ -20,8 +20,8 @@ from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import ResponseError
 from sqlalchemy import select
 
-from convene_core.encryption import decrypt_value
 from convene_core.database.models import FeedORM, FeedRunORM, FeedSecretORM
+from convene_core.encryption import decrypt_value
 from convene_core.feeds.adapters import build_adapter
 from worker.feed_agent import run_feed
 
@@ -223,23 +223,22 @@ class FeedRunner:
                 logger.warning("FeedRun %s not found — skipping", feed_run_id)
                 return
 
-            # Decrypt token if MCP feed
+            # Load secret for any feed that has one (MCP feeds need auth token, Discord needs bot token)
             decrypted_token: str | None = None
-            if feed.delivery_type == "mcp":
-                secret_result = await session.execute(
-                    select(FeedSecretORM).where(FeedSecretORM.feed_id == feed_id)
-                )
-                secret = secret_result.scalar_one_or_none()
-                if secret is not None:
-                    try:
-                        decrypted_token = decrypt_value(secret.encrypted_token)
-                    except ValueError:
-                        logger.exception("Failed to decrypt token for feed %s", feed_id)
-                        run.status = "failed"
-                        run.error = "Token decryption failed"
-                        run.finished_at = datetime.now(tz=UTC)
-                        await session.commit()
-                        return
+            secret_result = await session.execute(
+                select(FeedSecretORM).where(FeedSecretORM.feed_id == feed_id)
+            )
+            secret = secret_result.scalar_one_or_none()
+            if secret is not None:
+                try:
+                    decrypted_token = decrypt_value(secret.encrypted_token)
+                except ValueError:
+                    logger.exception("Failed to decrypt token for feed %s", feed_id)
+                    run.status = "failed"
+                    run.error = "Token decryption failed"
+                    run.finished_at = datetime.now(tz=UTC)
+                    await session.commit()
+                    return
 
             # Build adapter
             try:
