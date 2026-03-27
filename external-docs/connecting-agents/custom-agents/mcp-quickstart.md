@@ -66,7 +66,7 @@ asyncio.run(main())
 
 ## Quick start: Claude Code
 
-See [Claude Code Channel](/docs/agent-platform/connecting/claude-code-channel) for step-by-step setup.
+See [Claude Code Channel](/docs/connecting-agents/custom-agents/claude-code-channel) for step-by-step setup.
 
 ## Quick start: Any MCP client
 
@@ -141,7 +141,7 @@ All tools use the `convene_` prefix.
 
 ## See Also
 
-- [MCP Authentication](/docs/agent-platform/connecting/mcp-auth) — OAuth 2.1 token exchange details
-- [Claude Code Channel](/docs/agent-platform/connecting/claude-code-channel) — Claude Code as a meeting participant
-- [OpenClaw Plugin](/docs/openclaw/plugin-guide) — Connect via OpenClaw channels
-- [Convene CLI](/docs/agent-platform/connecting/cli) — Terminal-based access
+- [MCP Authentication](/docs/connecting-agents/custom-agents/mcp-auth) — OAuth 2.1 token exchange details
+- [Claude Code Channel](/docs/connecting-agents/custom-agents/claude-code-channel) — Claude Code as a meeting participant
+- [OpenClaw Plugin](/docs/connecting-agents/custom-agents/openclaw-plugin) — Connect via OpenClaw channels
+- [Convene CLI](/docs/connecting-agents/custom-agents/cli) — Terminal-based access
