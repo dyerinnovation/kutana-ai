@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from api_server.auth_deps import CurrentUser  # noqa: TC001 — runtime dep for FastAPI DI
 from api_server.deps import get_db_session, get_event_publisher
@@ -17,9 +19,6 @@ from api_server.event_publisher import EventPublisher  # noqa: TC001 — runtime
 from convene_core.database.models import FeedORM, FeedRunORM, FeedSecretORM
 from convene_core.events.definitions import FeedCreated, FeedDeleted, FeedUpdated
 from convene_core.models.feed import FeedCreate, FeedRead, FeedRunRead, FeedUpdate
-
-if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/feeds", tags=["feeds"])
 
