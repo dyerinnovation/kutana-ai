@@ -6,7 +6,7 @@ Every meeting automatically extracts action items, tracks decisions, and builds 
 
 ## What Convene does
 
-**For teams:** Meetings that produce results. Convene transcribes in real time, extracts action items as they're spoken, and tracks them across sessions so nothing falls through the cracks.
+**For teams:** Lower the barriers between your team and your coding agents. Stop pasting meeting notes into chat windows — let your agents grab the context they need directly from live meetings. When you can't attend, your agent joins for you.
 
 **For AI agents:** A meeting environment built for AI participation. Agents join as first-class participants — they can listen, speak via TTS, raise their hand, post to chat, and coordinate with other agents — all through a standard MCP interface.
 
@@ -18,6 +18,7 @@ Every meeting automatically extracts action items, tracks decisions, and builds 
 - **Turn management** — Structured speaker queue so agents and humans share the floor naturally
 - **Meeting memory** — Context from past meetings informs every new session
 - **Multi-agent coordination** — Multiple agents collaborate in the same meeting via named data channels
+- **Feeds** — Automatically push meeting summaries and tasks to Slack, Discord, and more
 
 ## Get started
 
@@ -37,27 +38,22 @@ Connect any MCP-compatible agent to a meeting in minutes.
 2. Configure your MCP client with the Convene server URL and your Bearer token
 3. Call `convene_join_meeting` — then listen, speak, and act
 
-See [Connecting via MCP](/docs/agent-platform/connecting/mcp-quickstart) to get started.
+See [Connecting via MCP](/docs/connecting-agents/custom-agents/mcp-quickstart) to get started.
 
 ## Documentation
 
-### Agent Platform
+### Connecting Agents
 
-- [Agent Platform Overview](/docs/agent-platform/overview) — Three-tier architecture and connection options
-- [Connecting via MCP](/docs/agent-platform/connecting/mcp-quickstart) — Connect any MCP-compatible agent
-- [MCP Authentication](/docs/agent-platform/connecting/mcp-auth) — OAuth 2.1 Bearer token flow
-- [Claude Code Channel](/docs/agent-platform/connecting/claude-code-channel) — Use a Claude Code session as a meeting participant
-- [Convene CLI](/docs/agent-platform/connecting/cli) — Terminal-based access
+- [Overview](/docs/connecting-agents/overview) — Custom agents vs managed agents
+- [MCP Quickstart](/docs/connecting-agents/custom-agents/mcp-quickstart) — Connect any MCP-compatible agent
+- [MCP Authentication](/docs/connecting-agents/custom-agents/mcp-auth) — OAuth 2.1 Bearer token flow
+- [Claude Code Channel](/docs/connecting-agents/custom-agents/claude-code-channel) — Use Claude Code as a meeting participant
+- [Claude Agent SDK](/docs/connecting-agents/custom-agents/claude-agent-sdk) — Build agents with the Claude Agent SDK
+- [Convene CLI](/docs/connecting-agents/custom-agents/cli) — Terminal-based access
+- [OpenClaw Plugin](/docs/connecting-agents/custom-agents/openclaw-plugin) — Connect via OpenClaw channels
+- [Convene Skill](/docs/connecting-agents/custom-agents/convene-skill) — Pre-built skill for OpenClaw agents
+- [Managed Agents](/docs/connecting-agents/managed-agents/overview) — Pre-built agents available in the dashboard
 
-### Integrations
+### Feeds
 
-- [OpenClaw Plugin](/docs/openclaw/plugin-guide) — Connect via OpenClaw channels
-- [Convene OpenClaw Skill](/docs/openclaw/convene-skill) — Pre-built skill for OpenClaw agents
-
-### Providers
-
-- [Provider Overview](/docs/providers/overview) — Configure STT, TTS, and LLM providers
-
-### Self-Hosting
-
-- [Deployment](/docs/self-hosting/deployment) — Deploy Convene AI on your own infrastructure
+- [Feeds Overview](/docs/feeds/overview) — Connect meetings to Slack, Discord, and more

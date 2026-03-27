@@ -12,7 +12,7 @@ Claude Code is just another MCP client — it uses the same tools as every other
 ## Get an API key
 
 1. Sign in to your Convene instance
-2. Go to **Settings → API Keys**
+2. Go to **Settings > API Keys**
 3. Click **Generate Key** — select the **Agent** scope
 4. Copy the key (it starts with `cvn_`)
 
@@ -67,8 +67,8 @@ You:          List available meetings.
 
 Claude Code:  [calls convene_list_meetings]
               Found 2 meetings:
-              • "Q1 Planning" — active, 4 participants
-              • "Weekly Standup" — scheduled in 15 minutes
+              - "Q1 Planning" — active, 4 participants
+              - "Weekly Standup" — scheduled in 15 minutes
 
 You:          Join Q1 Planning and monitor for action items.
 
@@ -149,14 +149,14 @@ When Claude Code wants to address the room:
 
 ```
 1.  convene_raise_hand(topic="action item summary")
-        → returns queue position
+        -> returns queue position
 
 2.  convene_get_meeting_events(event_types=["speaker.changed"])
-        → poll until Claude Code becomes the active speaker
+        -> poll until Claude Code becomes the active speaker
 
 3.  convene_start_speaking(text="Here are the three action items I noted...")
-        → text is routed to the TTS provider and mixed into the room audio
-        → floor is released automatically when done
+        -> text is routed to the TTS provider and mixed into the room audio
+        -> floor is released automatically when done
 ```
 
 Full example:
@@ -165,11 +165,11 @@ Full example:
 You:          Join the Q1 Planning meeting and share the action items you've found.
 
 Claude Code:
-  1. convene_list_meetings → finds "Q1 Planning"
+  1. convene_list_meetings -> finds "Q1 Planning"
   2. convene_join_meeting(audio_capability="tts_enabled")
-  3. convene_get_transcript → reads recent context
+  3. convene_get_transcript -> reads recent context
   4. convene_raise_hand(topic="action item summary")
-  5. [polls] convene_get_meeting_events → receives speaker.changed
+  5. [polls] convene_get_meeting_events -> receives speaker.changed
   6. convene_start_speaking(text="I've reviewed the last 10 minutes. Here are
      the action items: (1) Alex to finalize the API spec by Thursday,
      (2) Sarah to schedule the infrastructure review...")
@@ -216,20 +216,43 @@ Use channels to coordinate between a Claude Code session and autonomous agents �
 
 ```
 Claude Code Session
-        │
-        │  MCP Streamable HTTP
-        │  POST /mcp  (tool calls)
-        ▼
+        |
+        |  MCP Streamable HTTP
+        |  POST /mcp  (tool calls)
+        v
 Convene MCP Server  (http://convene.spark-b0f2.local/mcp)
-        │
-        ├── REST API ───────────► API Server + PostgreSQL
-        └── WebSocket ──────────► Agent Gateway + Redis Streams
+        |
+        |-- REST API ----------> API Server + PostgreSQL
+        +-- WebSocket ----------> Agent Gateway + Redis Streams
 ```
 
 The MCP server is the single point of entry. Claude Code never talks directly to the agent gateway — the MCP server proxies gateway operations and buffers events so Claude Code can poll them.
 
+## Coming Soon: Real-Time Channel Integration
+
+The current MCP integration is **pull-based** — Claude Code polls for events using `convene_get_meeting_events`. This works well but introduces latency between when something happens in a meeting and when Claude Code learns about it.
+
+**Claude Code Channels** (shipped March 2026) enable a **push-based** model. A local Convene channel plugin will run as a stdio subprocess alongside Claude Code and push meeting events (transcript segments, speaker changes, chat messages) into the session in real time.
+
+### How it will work
+
+1. A lightweight `convene-channel` process runs locally as a Claude Code channel plugin.
+2. It maintains a persistent WebSocket connection to the Convene agent gateway.
+3. When a meeting event occurs, the plugin pushes it into Claude Code immediately via `notifications/claude/channel`.
+4. Claude Code can then react autonomously — calling MCP tools in response to events without being prompted.
+
+### What changes for you
+
+- **MCP server stays the same.** All tools (`convene_join_meeting`, `convene_get_transcript`, etc.) continue to work over HTTP.
+- **The channel plugin adds real-time awareness.** Claude Code will know about new transcript segments, speaker changes, and chat messages the moment they happen.
+- **Configuration adds one entry.** You will add a `convene-channel` stdio server alongside the existing `convene` HTTP server in `settings.json`.
+
+### Timeline
+
+The channel plugin is planned for a future release. The MCP server is the primary and recommended integration path today.
+
 ## See Also
 
-- [OpenClaw Plugin](/docs/openclaw/plugin-guide) — Connect via OpenClaw channels
-- [Connecting via MCP](/docs/agent-platform/connecting/mcp-quickstart) — Connect any MCP-compatible agent
-- [CLI](/docs/agent-platform/connecting/cli) — Terminal-based access
+- [Connecting via MCP](/docs/connecting-agents/custom-agents/mcp-quickstart) — Connect any MCP-compatible agent
+- [OpenClaw Plugin](/docs/connecting-agents/custom-agents/openclaw-plugin) — Connect via OpenClaw
+- [CLI](/docs/connecting-agents/custom-agents/cli) — Terminal-based access
