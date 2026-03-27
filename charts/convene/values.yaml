@@ -99,6 +99,20 @@ mcpServer:
       memory: 512Mi
   env: {}
 
+worker:
+  enabled: true
+  replicas: 1
+  image:
+    tag: latest
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env: {}
+
 # ---------------------------------------------------------------------------
 # Web Frontend
 # ---------------------------------------------------------------------------
