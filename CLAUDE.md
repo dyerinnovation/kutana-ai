@@ -35,6 +35,7 @@ See `internal-docs/development/TASKLIST.md` for the task queue.
 ## Key References
 
 - **Architecture patterns:** `internal-docs/architecture/patterns/` (core, providers, message-bus, memory, service-patterns, auth, mcp-server, uv, git)
+- `internal-docs/architecture/patterns/claude-code-channels.md` — Claude Code channels spec and Convene integration plan
 - **Task queue:** `internal-docs/development/TASKLIST.md`
 - **Roadmap & strategy:** `internal-docs/strategy/roadmap.md` · `internal-docs/strategy/cost-architecture.md`
 - **Agent platform docs:** `external-docs/agent-platform/`
