@@ -165,7 +165,9 @@ class DecisionORM(Base):
     decided_by_id: Mapped[UUID] = mapped_column(
         sa.Uuid, ForeignKey("participants.id"), nullable=False
     )
-    participants_present: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True, default=list)
+    participants_present: Mapped[list[str] | None] = mapped_column(
+        JSONB, nullable=True, default=list
+    )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
     )
@@ -266,16 +268,16 @@ class AgentConfigORM(Base):
     voice_id: Mapped[str | None] = mapped_column(sa.String(100), nullable=True)
     system_prompt: Mapped[str] = mapped_column(sa.Text, nullable=False)
     capabilities: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True, default=list)
-    meeting_type_filter: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True, default=list)
+    meeting_type_filter: Mapped[list[str] | None] = mapped_column(
+        JSONB, nullable=True, default=list
+    )
     agent_type: Mapped[str] = mapped_column(sa.String(50), nullable=False, default="custom")
     protocol_version: Mapped[str] = mapped_column(sa.String(10), nullable=False, default="1.0")
     default_capabilities: Mapped[list[str] | None] = mapped_column(
         JSONB, nullable=True, default=list
     )
     max_concurrent_sessions: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=1)
-    owner_id: Mapped[UUID | None] = mapped_column(
-        sa.Uuid, ForeignKey("users.id"), nullable=True
-    )
+    owner_id: Mapped[UUID | None] = mapped_column(sa.Uuid, ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
     )
@@ -312,16 +314,10 @@ class AgentApiKeyORM(Base):
     agent_config_id: Mapped[UUID] = mapped_column(
         sa.Uuid, ForeignKey("agent_configs.id"), nullable=False
     )
-    user_id: Mapped[UUID] = mapped_column(
-        sa.Uuid, ForeignKey("users.id"), nullable=False
-    )
+    user_id: Mapped[UUID] = mapped_column(sa.Uuid, ForeignKey("users.id"), nullable=False)
     name: Mapped[str] = mapped_column(sa.String(255), nullable=False, default="default")
-    expires_at: Mapped[datetime | None] = mapped_column(
-        sa.DateTime(timezone=True), nullable=True
-    )
-    revoked_at: Mapped[datetime | None] = mapped_column(
-        sa.DateTime(timezone=True), nullable=True
-    )
+    expires_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
     )
@@ -348,9 +344,7 @@ class ApiKeyAuditLogORM(Base):
     __tablename__ = "api_key_audit_log"
 
     id: Mapped[UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid4)
-    key_id: Mapped[UUID] = mapped_column(
-        sa.Uuid, ForeignKey("agent_api_keys.id"), nullable=False
-    )
+    key_id: Mapped[UUID] = mapped_column(sa.Uuid, ForeignKey("agent_api_keys.id"), nullable=False)
     action: Mapped[str] = mapped_column(sa.String(20), nullable=False)
     ip_address: Mapped[str | None] = mapped_column(sa.String(45), nullable=True)
     user_agent: Mapped[str | None] = mapped_column(sa.String(500), nullable=True)
@@ -426,18 +420,14 @@ class AgentSessionORM(Base):
     agent_config_id: Mapped[UUID] = mapped_column(
         sa.Uuid, ForeignKey("agent_configs.id"), nullable=False
     )
-    meeting_id: Mapped[UUID] = mapped_column(
-        sa.Uuid, ForeignKey("meetings.id"), nullable=False
-    )
+    meeting_id: Mapped[UUID] = mapped_column(sa.Uuid, ForeignKey("meetings.id"), nullable=False)
     room_name: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
     connection_type: Mapped[str] = mapped_column(
         sa.String(50), nullable=False, default="agent_gateway"
     )
     capabilities: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True, default=list)
     status: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="connecting")
-    connected_at: Mapped[datetime | None] = mapped_column(
-        sa.DateTime(timezone=True), nullable=True
-    )
+    connected_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), nullable=True)
     disconnected_at: Mapped[datetime | None] = mapped_column(
         sa.DateTime(timezone=True), nullable=True
     )
@@ -500,25 +490,17 @@ class HostedAgentSessionORM(Base):
     __tablename__ = "hosted_agent_sessions"
 
     id: Mapped[UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid4)
-    user_id: Mapped[UUID] = mapped_column(
-        sa.Uuid, ForeignKey("users.id"), nullable=False
-    )
+    user_id: Mapped[UUID] = mapped_column(sa.Uuid, ForeignKey("users.id"), nullable=False)
     template_id: Mapped[UUID] = mapped_column(
         sa.Uuid, ForeignKey("agent_templates.id"), nullable=False
     )
-    meeting_id: Mapped[UUID] = mapped_column(
-        sa.Uuid, ForeignKey("meetings.id"), nullable=False
-    )
+    meeting_id: Mapped[UUID] = mapped_column(sa.Uuid, ForeignKey("meetings.id"), nullable=False)
     status: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="active")
-    anthropic_api_key_encrypted: Mapped[str | None] = mapped_column(
-        sa.Text, nullable=True
-    )
+    anthropic_api_key_encrypted: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     started_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
     )
-    ended_at: Mapped[datetime | None] = mapped_column(
-        sa.DateTime(timezone=True), nullable=True
-    )
+    ended_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
     )
@@ -528,3 +510,178 @@ class HostedAgentSessionORM(Base):
         Index("ix_hosted_agent_sessions_meeting_id", "meeting_id"),
         Index("ix_hosted_agent_sessions_status", "status"),
     )
+
+
+# ---------------------------------------------------------------------------
+# Feed models (Convene Feeds — bidirectional integration layer)
+# ---------------------------------------------------------------------------
+
+
+class FeedORM(Base):
+    """ORM model for feeds table.
+
+    Attributes:
+        id: Primary key UUID.
+        user_id: Owner of this feed configuration.
+        name: Human-readable feed name.
+        is_active: Whether the feed is enabled.
+        platform: Target platform (slack, discord, notion, etc.).
+        delivery_type: How to deliver — "mcp" or "channel".
+        mcp_server_url: MCP server URL (for delivery_type == "mcp").
+        channel_name: Channel plugin name (for delivery_type == "channel").
+        direction: "inbound", "outbound", or "bidirectional".
+        data_types: What to push outbound (summary, transcript, tasks, decisions).
+        context_types: What to pull inbound (thread, page, issue, document).
+        trigger: When to fire (meeting_ended, meeting_started, participant_left, manual).
+        meeting_tag: Optional tag filter — null means all meetings.
+        created_at: Record creation timestamp.
+        updated_at: Record update timestamp.
+        last_triggered_at: Last successful trigger time.
+        last_error: Most recent error message.
+    """
+
+    __tablename__ = "feeds"
+
+    id: Mapped[UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(sa.Uuid, ForeignKey("users.id"), nullable=False)
+    name: Mapped[str] = mapped_column(sa.String(120), nullable=False)
+    is_active: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
+    platform: Mapped[str] = mapped_column(sa.String(40), nullable=False)
+    delivery_type: Mapped[str] = mapped_column(sa.String(20), nullable=False)
+    mcp_server_url: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    channel_name: Mapped[str | None] = mapped_column(sa.String(80), nullable=True)
+    direction: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="outbound")
+    data_types: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    context_types: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    trigger: Mapped[str] = mapped_column(sa.String(40), nullable=False, default="meeting_ended")
+    meeting_tag: Mapped[str | None] = mapped_column(sa.String(80), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.func.now(),
+        onupdate=sa.func.now(),
+    )
+    last_triggered_at: Mapped[datetime | None] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
+    last_error: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+
+    runs: Mapped[list[FeedRunORM]] = relationship(back_populates="feed", lazy="selectin")
+    secret: Mapped[FeedSecretORM | None] = relationship(
+        back_populates="feed", uselist=False, lazy="selectin"
+    )
+
+    __table_args__ = (
+        Index("ix_feeds_user_id", "user_id"),
+        Index("ix_feeds_is_active", "is_active"),
+    )
+
+
+class FeedRunORM(Base):
+    """ORM model for feed_runs table.
+
+    Tracks every feed delivery attempt for observability and retry.
+
+    Attributes:
+        id: Primary key UUID.
+        feed_id: Foreign key to feeds table.
+        meeting_id: Foreign key to meetings table.
+        trigger: What triggered this run.
+        direction: "inbound" or "outbound".
+        status: "pending", "running", "delivered", or "failed".
+        agent_session_id: Identifier for the agent session running this feed.
+        started_at: When the run started.
+        finished_at: When the run finished.
+        error: Error message if the run failed.
+    """
+
+    __tablename__ = "feed_runs"
+
+    id: Mapped[UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid4)
+    feed_id: Mapped[UUID] = mapped_column(sa.Uuid, ForeignKey("feeds.id"), nullable=False)
+    meeting_id: Mapped[UUID] = mapped_column(sa.Uuid, ForeignKey("meetings.id"), nullable=False)
+    trigger: Mapped[str] = mapped_column(sa.String(40), nullable=False)
+    direction: Mapped[str] = mapped_column(sa.String(20), nullable=False)
+    status: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="pending")
+    agent_session_id: Mapped[str | None] = mapped_column(sa.String(80), nullable=True)
+    started_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), nullable=True)
+    error: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+
+    feed: Mapped[FeedORM] = relationship(back_populates="runs")
+
+    __table_args__ = (
+        Index("ix_feed_runs_feed_id", "feed_id"),
+        Index("ix_feed_runs_meeting_id", "meeting_id"),
+        Index("ix_feed_runs_status", "status"),
+    )
+
+
+class MeetingSummaryORM(Base):
+    """ORM model for meeting_summaries table.
+
+    Caches generated meeting summaries to avoid redundant LLM calls.
+
+    Attributes:
+        id: Primary key UUID.
+        meeting_id: Foreign key to meetings table (unique).
+        key_points: JSON array of key discussion points.
+        decisions: JSON array of recorded decisions.
+        task_count: Number of tasks extracted.
+        generated_at: When the summary was generated.
+        model_used: LLM model identifier used for generation.
+    """
+
+    __tablename__ = "meeting_summaries"
+
+    id: Mapped[UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid4)
+    meeting_id: Mapped[UUID] = mapped_column(
+        sa.Uuid, ForeignKey("meetings.id"), nullable=False, unique=True
+    )
+    key_points: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    decisions: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    task_count: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=0)
+    generated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+    model_used: Mapped[str] = mapped_column(sa.String(60), nullable=False)
+
+    __table_args__ = (Index("ix_meeting_summaries_meeting_id", "meeting_id", unique=True),)
+
+
+class FeedSecretORM(Base):
+    """ORM model for feed_secrets table.
+
+    Stores encrypted MCP auth tokens separately from feed config.
+    Tokens are AES-256-GCM encrypted and never returned via API.
+
+    Attributes:
+        id: Primary key UUID.
+        feed_id: Foreign key to feeds table (unique).
+        encrypted_token: AES-256-GCM ciphertext of the auth token.
+        token_hint: Last 4 characters of the plaintext token for UI display.
+        created_at: Record creation timestamp.
+        rotated_at: When the token was last rotated.
+    """
+
+    __tablename__ = "feed_secrets"
+
+    id: Mapped[UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid4)
+    feed_id: Mapped[UUID] = mapped_column(
+        sa.Uuid, ForeignKey("feeds.id"), nullable=False, unique=True
+    )
+    encrypted_token: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    token_hint: Mapped[str] = mapped_column(sa.String(8), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+    rotated_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), nullable=True)
+
+    feed: Mapped[FeedORM] = relationship(back_populates="secret")
+
+    __table_args__ = (Index("ix_feed_secrets_feed_id", "feed_id", unique=True),)

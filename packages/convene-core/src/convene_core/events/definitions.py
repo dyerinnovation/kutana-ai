@@ -298,6 +298,107 @@ class YourTurn(BaseEvent):
     participant_id: UUID
 
 
+# ---------------------------------------------------------------------------
+# Feed events (Convene Feeds — bidirectional integration layer)
+# ---------------------------------------------------------------------------
+
+
+class FeedCreated(BaseEvent):
+    """Emitted when a new feed configuration is created.
+
+    Attributes:
+        feed_id: ID of the newly created feed.
+        user_id: ID of the user who created the feed.
+        platform: Target platform.
+        direction: Feed direction.
+    """
+
+    event_type: ClassVar[str] = "feed.created"
+    feed_id: UUID
+    user_id: UUID
+    platform: str
+    direction: str
+
+
+class FeedUpdated(BaseEvent):
+    """Emitted when a feed configuration is updated.
+
+    Attributes:
+        feed_id: ID of the updated feed.
+        user_id: ID of the feed owner.
+    """
+
+    event_type: ClassVar[str] = "feed.updated"
+    feed_id: UUID
+    user_id: UUID
+
+
+class FeedDeleted(BaseEvent):
+    """Emitted when a feed configuration is deleted.
+
+    Attributes:
+        feed_id: ID of the deleted feed.
+        user_id: ID of the feed owner.
+    """
+
+    event_type: ClassVar[str] = "feed.deleted"
+    feed_id: UUID
+    user_id: UUID
+
+
+class FeedRunStarted(BaseEvent):
+    """Emitted when a feed run begins execution.
+
+    Attributes:
+        feed_run_id: ID of the feed run.
+        feed_id: ID of the parent feed.
+        meeting_id: Meeting being processed.
+        direction: Run direction (inbound or outbound).
+    """
+
+    event_type: ClassVar[str] = "feed.run.started"
+    feed_run_id: UUID
+    feed_id: UUID
+    meeting_id: UUID
+    direction: str
+
+
+class FeedRunCompleted(BaseEvent):
+    """Emitted when a feed run completes successfully.
+
+    Attributes:
+        feed_run_id: ID of the feed run.
+        feed_id: ID of the parent feed.
+        meeting_id: Meeting that was processed.
+        direction: Run direction.
+    """
+
+    event_type: ClassVar[str] = "feed.run.completed"
+    feed_run_id: UUID
+    feed_id: UUID
+    meeting_id: UUID
+    direction: str
+
+
+class FeedRunFailed(BaseEvent):
+    """Emitted when a feed run fails after all retries.
+
+    Attributes:
+        feed_run_id: ID of the feed run.
+        feed_id: ID of the parent feed.
+        meeting_id: Meeting that was being processed.
+        direction: Run direction.
+        error: Error message describing the failure.
+    """
+
+    event_type: ClassVar[str] = "feed.run.failed"
+    feed_run_id: UUID
+    feed_id: UUID
+    meeting_id: UUID
+    direction: str
+    error: str
+
+
 # Rebuild models to resolve forward references from __future__ annotations
 TranscriptSegmentFinal.model_rebuild()
 TaskCreated.model_rebuild()
@@ -314,3 +415,9 @@ SpeakerChanged.model_rebuild()
 QueueUpdated.model_rebuild()
 FinishedSpeaking.model_rebuild()
 YourTurn.model_rebuild()
+FeedCreated.model_rebuild()
+FeedUpdated.model_rebuild()
+FeedDeleted.model_rebuild()
+FeedRunStarted.model_rebuild()
+FeedRunCompleted.model_rebuild()
+FeedRunFailed.model_rebuild()
