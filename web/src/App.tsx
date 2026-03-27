@@ -10,6 +10,7 @@ import { AgentDetailPage } from "@/pages/AgentDetailPage";
 import { MeetingsPage } from "@/pages/MeetingsPage";
 import { MeetingRoomPage } from "@/pages/MeetingRoomPage";
 import { DocsPage } from "@/pages/DocsPage";
+import { FeedsPage } from "@/pages/FeedsPage";
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/agents/:id" element={<AgentDetailPage />} />
         <Route path="/meetings" element={<MeetingsPage />} />
         <Route path="/meetings/:id/room" element={<MeetingRoomPage />} />
+        <Route path="/feeds" element={<FeedsPage />} />
         <Route path="/templates" element={<Navigate to="/agents" replace />} />
         <Route path="/docs" element={<DocsPage />} />
         <Route path="/docs/*" element={<DocsPage />} />

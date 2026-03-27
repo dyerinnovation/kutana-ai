@@ -132,3 +132,50 @@ export interface HostedSession {
   status: string;
   started_at: string;
 }
+
+export interface Feed {
+  id: string;
+  user_id: string;
+  name: string;
+  platform: string;
+  direction: "inbound" | "outbound" | "bidirectional";
+  delivery_type: "mcp" | "channel";
+  mcp_server_url: string | null;
+  channel_name: string | null;
+  data_types: string[];
+  context_types: string[];
+  trigger: string;
+  meeting_tag: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  last_triggered_at: string | null;
+  last_error: string | null;
+  token_hint: string | null;
+}
+
+export interface FeedCreate {
+  name: string;
+  platform: string;
+  direction: "inbound" | "outbound" | "bidirectional";
+  delivery_type: "mcp" | "channel";
+  mcp_server_url?: string;
+  mcp_auth_token?: string;
+  channel_name?: string;
+  data_types: string[];
+  context_types?: string[];
+  trigger: string;
+  meeting_tag?: string;
+}
+
+export interface FeedRun {
+  id: string;
+  feed_id: string;
+  meeting_id: string;
+  trigger: string;
+  direction: string;
+  status: "pending" | "running" | "delivered" | "failed";
+  started_at: string;
+  finished_at: string | null;
+  error: string | null;
+}
