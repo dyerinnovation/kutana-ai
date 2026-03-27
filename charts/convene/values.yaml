@@ -113,6 +113,19 @@ worker:
       memory: 512Mi
   env: {}
 
+discordMcp:
+  enabled: true
+  replicas: 1
+  image:
+    tag: latest
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
 # ---------------------------------------------------------------------------
 # Web Frontend
 # ---------------------------------------------------------------------------

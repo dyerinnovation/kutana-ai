@@ -23,3 +23,4 @@ data:
   AGENT_GATEWAY_WHISPER_API_URL: ""
   # Worker (feed dispatcher/runner)
   CONVENE_MCP_URL: "http://mcp-server.{{ .Release.Namespace }}.svc:3001/mcp"
+  DISCORD_MCP_URL: "http://discord-mcp.{{ .Release.Namespace }}.svc:3002/mcp"
