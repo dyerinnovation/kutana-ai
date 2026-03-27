@@ -7,6 +7,7 @@ import type {
   TranscriptSegment,
   Participant,
   GatewayMessage,
+  TtsAudioPayload,
 } from "@/types";
 
 const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -53,10 +54,12 @@ export function MeetingRoomPage() {
   const [isMuted, setIsMuted] = useState(false);
   const [transcripts, setTranscripts] = useState<TranscriptSegment[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [speakingNames, setSpeakingNames] = useState<Set<string>>(new Set());
 
   const wsRef = useRef<WebSocket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const playbackContextRef = useRef<AudioContext | null>(null);
   const workletRef = useRef<AudioWorkletNode | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
@@ -81,10 +84,69 @@ export function MeetingRoomPage() {
       audioContextRef.current.close();
       audioContextRef.current = null;
     }
+    if (playbackContextRef.current) {
+      playbackContextRef.current.close();
+      playbackContextRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
+  }, []);
+
+  const playTtsAudio = useCallback(async (payload: TtsAudioPayload) => {
+    const { speaker_name, data, format } = payload;
+
+    // Decode base64 → ArrayBuffer
+    const binary = atob(data);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const audioBuffer = bytes.buffer;
+
+    // Lazy-create a playback AudioContext (separate from the capture context)
+    if (!playbackContextRef.current) {
+      playbackContextRef.current = new AudioContext();
+    }
+    const ctx = playbackContextRef.current;
+
+    // Resume context if suspended (browser autoplay policy)
+    if (ctx.state === "suspended") {
+      await ctx.resume();
+    }
+
+    let decoded: AudioBuffer;
+    if (format === "pcm_s16le") {
+      // Raw signed 16-bit little-endian PCM — convert manually
+      const pcm16 = new Int16Array(audioBuffer);
+      const float32 = new Float32Array(pcm16.length);
+      for (let i = 0; i < pcm16.length; i++) {
+        float32[i] = pcm16[i] / (pcm16[i] < 0 ? 0x8000 : 0x7fff);
+      }
+      decoded = ctx.createBuffer(1, float32.length, ctx.sampleRate);
+      decoded.copyToChannel(float32, 0);
+    } else {
+      // WAV / MP3 / any other container — let the browser decode it
+      try {
+        decoded = await ctx.decodeAudioData(audioBuffer);
+      } catch (err) {
+        console.error("[TTS] decodeAudioData failed:", err);
+        return;
+      }
+    }
+
+    // Mark speaker as active, play, then clear
+    setSpeakingNames((prev) => new Set([...prev, speaker_name]));
+    const source = ctx.createBufferSource();
+    source.buffer = decoded;
+    source.connect(ctx.destination);
+    source.onended = () => {
+      setSpeakingNames((prev) => {
+        const next = new Set(prev);
+        next.delete(speaker_name);
+        return next;
+      });
+    };
+    source.start();
   }, []);
 
   const handleWsMessage = useCallback((event: MessageEvent) => {
@@ -139,8 +201,13 @@ export function MeetingRoomPage() {
       case "error":
         setError(msg.message);
         break;
+      case "event":
+        if (msg.event_type === "tts.audio") {
+          void playTtsAudio(msg.payload as unknown as TtsAudioPayload);
+        }
+        break;
     }
-  }, []);
+  }, [playTtsAudio]);
 
   // Connect on mount
   useEffect(() => {
@@ -363,14 +430,20 @@ export function MeetingRoomPage() {
                         {p.name.charAt(0).toUpperCase()}
                       </div>
                     )}
-                    {p.is_speaking && (
+                    {(p.is_speaking || speakingNames.has(p.name)) && (
                       <div className={`absolute inset-0 ${getAvatarSize(otherParticipants.length + 1)} rounded-full border-2 border-green-400 animate-pulse`} />
                     )}
                   </div>
                   <p className="text-lg font-medium text-gray-200 truncate max-w-full">
                     {p.name}
                   </p>
-                  <p className="text-sm text-gray-400">{p.role}</p>
+                  <p className="text-sm text-gray-400">
+                    {speakingNames.has(p.name) ? (
+                      <span className="text-green-400">Speaking...</span>
+                    ) : (
+                      p.role
+                    )}
+                  </p>
                   {p.is_muted && (
                     <div className="absolute top-3 right-3 text-red-400" title="Muted">
                       <MicOffIconSmall />
