@@ -216,21 +216,25 @@
   - [ ] Update OpenClaw plugin with new `audio_capability` parameter
   - [ ] Integration tests: each capability value routes audio correctly
 
-- [ ] 🔗 BLOCK: convene_start_speaking MCP Tool (P0 — ships with April Release)
-  - [ ] Implement `convene_start_speaking` tool in mcp-server (text parameter for TTS agents, no text for voice agents)
-  - [ ] `wait_for_turn: true` path — enqueue in TurnManager, wait for `speaker.granted`, then open audio
-  - [ ] `wait_for_turn: false` path — immediate interrupt speak
-  - [ ] For `tts_enabled` agents: route text to TTS Engine in gateway, mix PCM16 into room, auto-call mark_finished_speaking
-  - [ ] For `voice_bidirectional` agents: open the sidecar stream for PCM16 transmit
-  - [ ] Integration tests: TTS agent speaks, voice agent speaks, turn-queue coordination
+- [x] 🔗 BLOCK: convene_start_speaking MCP Tool (P0 — ships with April Release)
+  - [x] Implement `convene_speak` MCP tool — sends start_speaking → spoken_text → stop_speaking to gateway, auto-calls mark_finished_speaking
+  - [x] For `tts_enabled` agents: route text to TTS Engine in gateway, broadcasts tts.audio to room
+  - [x] `GatewayClient.connect_and_join` passes `tts_enabled=True` when joining with tts_enabled capability
+  - [x] `GatewayClient` has `start_speaking()`, `send_spoken_text()`, `stop_speaking()` methods
+  - [ ] `wait_for_turn: true` path — full turn-queue coordination before speaking (future)
+  - [ ] `wait_for_turn: false` path — immediate interrupt speak (future)
+  - [ ] For `voice_bidirectional` agents: open the sidecar stream for PCM16 transmit (future)
+  - [ ] Integration tests: TTS agent speaks end-to-end, turn-queue coordination (future)
 
-- [ ] 🔗 BLOCK: TTS Pipeline — Gateway TTS Engine (P0 — ships with April Release)
-  - [ ] Implement `TTS Engine` component in agent-gateway (receives text from MCP, synthesizes, mixes into room)
-  - [ ] Voice resolution: per-call `tts_voice_id` → agent config → provider default
-  - [ ] TTS result cache in Redis (key: `tts:{provider}:{voice_id}:{sha256(text)[:16]}`, TTL: 24h)
-  - [ ] Character metering — append to `api_key_events` with `character_count` in metadata
-  - [ ] Per-tier character limits (500/Free, 2000/Pro, 5000/Business, unlimited/Enterprise)
-  - [ ] Integration tests: text → PCM16 → room broadcast, caching, length enforcement
+- [x] 🔗 BLOCK: TTS Pipeline — Gateway TTS Engine (P0 — ships with April Release)
+  - [x] TTSBridge in agent-gateway: receives spoken_text, synthesizes via provider, broadcasts tts.audio
+  - [x] Voice pool: distinct voice per agent (round-robin), per-session char budget (100K default), phrase cache
+  - [x] Provider selection: cartesia → elevenlabs → piper fallback by config
+  - [x] `_handle_start_speaking` fixed: now notifies turn bridge AND activates TTS mode (was duplicate method bug)
+  - [ ] TTS result cache in Redis (key: `tts:{provider}:{voice_id}:{sha256(text)[:16]}`, TTL: 24h) (future)
+  - [ ] Character metering — append to `api_key_events` with `character_count` in metadata (future)
+  - [ ] Per-tier character limits (500/Free, 2000/Pro, 5000/Business, unlimited/Enterprise) (future)
+  - [ ] Integration tests: text → PCM16 → room broadcast (future)
 
 - [ ] 🔗 BLOCK: Voice Agent Audio Sidecar (P0 — ships with April Release)
   - [ ] Add sidecar WebSocket endpoint to agent-gateway (`/v1/audio/{session_id}`)
