@@ -28,7 +28,7 @@ export CONVENE_API_KEY="cvn_..."
 ### 2. Install and run
 
 ```bash
-cd examples/meeting-assistant-agent
+cd internal-docs/examples/meeting-assistant-agent
 uv sync
 uv run python agent.py
 ```
@@ -86,7 +86,7 @@ convene_mcp = MCPServerConfig(
 
 ## Agent templates
 
-The example at `examples/meeting-assistant-agent/` ships with four ready-made templates:
+The example at `internal-docs/examples/meeting-assistant-agent/` ships with four ready-made templates:
 
 | Template | Command | What it does |
 |----------|---------|--------------|
@@ -157,4 +157,4 @@ All tools use the `convene_` prefix.
 - [OpenClaw Integration](./OPENCLAW.md) — Connect via OpenClaw channels
 - [Claude Code Channel](./CLAUDE_CODE_CHANNEL.md) — Use Claude Code as a meeting participant
 - [CLI](./CLI.md) — Terminal-based access
-- [Example agent code](../../examples/meeting-assistant-agent/) — Full working example with four templates
+- [Example agent code](../../internal-docs/examples/meeting-assistant-agent/) — Full working example with four templates

@@ -121,7 +121,7 @@ export ANTHROPIC_API_KEY=sk-ant-...
 export MCP_SERVER_URL=http://localhost:3001
 export MCP_BEARER_TOKEN=$MCP_TOKEN   # From step 2
 
-cd examples/meeting-assistant-agent
+cd internal-docs/examples/meeting-assistant-agent
 uv run python agent.py
 ```
 
