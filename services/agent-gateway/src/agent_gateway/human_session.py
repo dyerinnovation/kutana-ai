@@ -307,6 +307,7 @@ class HumanSessionHandler:
         name: str,
         role: str,
         connection_type: str | None = None,
+        source: str | None = None,
     ) -> None:
         """Send a participant join/leave notification to the browser.
 
@@ -316,6 +317,7 @@ class HumanSessionHandler:
             name: Display name.
             role: Participant role.
             connection_type: How they're connected.
+            source: Connection source (e.g. "agent", "claude-code", "human").
         """
         msg = ParticipantUpdate(
             action=action,
