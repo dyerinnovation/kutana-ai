@@ -51,28 +51,6 @@ function isAgentParticipant(p: Participant): boolean {
   return p.role === "agent" || p.role.toLowerCase().includes("agent");
 }
 
-function getGridClasses(count: number): string {
-  if (count === 1) return "grid-cols-1 max-w-lg mx-auto";
-  if (count === 2) return "grid-cols-2";
-  if (count <= 4) return "grid-cols-2";
-  if (count <= 6) return "grid-cols-3";
-  return "grid-cols-3 xl:grid-cols-4";
-}
-
-function getTileHeight(count: number): string {
-  if (count === 1) return "h-full min-h-[400px]";
-  if (count === 2) return "h-72";
-  if (count <= 4) return "h-60";
-  if (count <= 6) return "h-48";
-  return "h-40";
-}
-
-function getAvatarSize(count: number): string {
-  if (count <= 2) return "h-28 w-28 text-4xl";
-  if (count <= 4) return "h-24 w-24 text-3xl";
-  return "h-20 w-20 text-2xl";
-}
-
 export function MeetingRoomPage() {
   const { id: meetingId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -445,8 +423,6 @@ export function MeetingRoomPage() {
     cleanup();
     navigate("/meetings");
   }
-
-  const otherParticipants = participants.filter((p) => p.id !== user?.id);
 
   function toggleMute() {
     setIsMuted((prev) => {
