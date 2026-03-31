@@ -1,10 +1,7 @@
 """Convene AI MCP Server — FastMCP server exposing meeting tools.
 
-Runs as a Streamable HTTP server in a Docker container.
-Default endpoint: http://localhost:3001/mcp
-
-Run locally: uv run python -m mcp_server.main
-Run via Docker: docker compose up mcp-server
+Hosted endpoint: https://convene.spark-b0f2.local/mcp
+Run locally for development: uv run python -m mcp_server.main
 
 All tools use the ``convene_`` prefix for namespace safety when mixed with
 tools from other MCP servers in multi-server configurations.

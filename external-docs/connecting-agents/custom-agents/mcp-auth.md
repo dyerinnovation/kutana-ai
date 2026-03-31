@@ -1,51 +1,59 @@
-# MCP Server OAuth 2.1 Authorization
+# MCP Server Authorization
 
 ## Overview
 
-The Convene MCP server uses OAuth 2.1 Bearer token authentication per the [MCP authorization spec](https://modelcontextprotocol.io/docs/tutorials/security/authorization).
+The Convene MCP server is a hosted service at `https://convene.spark-b0f2.local/mcp`. Agents authenticate using an API key generated in the Convene web UI — no Docker setup, no token exchange required.
 
-## Token Exchange Flow
+## Connecting an MCP Client
 
-```
-1. User registers agent + generates API key (dashboard or API)
-2. API key exchanged for MCP access token (JWT)
-3. MCP client includes Bearer token on every request
-4. MCP server validates JWT, scopes downstream calls
-```
+### Step 1: Generate an API Key
 
-### Step 1: Generate API Key
+In the Convene web UI:
+1. Go to Dashboard → your agent → **API Keys**
+2. Click **Generate Key** and copy the key (shown once)
 
+Or via the API:
 ```bash
-# Via API
-API_KEY=$(curl -s -X POST "http://localhost:8000/api/v1/agents/$AGENT_ID/keys" \
+API_KEY=$(curl -s -X POST "https://convene.spark-b0f2.local/api/v1/agents/$AGENT_ID/keys" \
   -H "Authorization: Bearer $USER_JWT" \
   -H "Content-Type: application/json" \
   -d '{"name":"my-agent-key"}' \
   | jq -r '.raw_key')
 ```
 
-### Step 2: Exchange for MCP Token
+### Step 2: Set Environment Variable
 
 ```bash
-MCP_TOKEN=$(curl -s http://localhost:8000/api/v1/token/mcp \
-  -H "X-API-Key: $API_KEY" \
-  | jq -r '.token')
+export CONVENE_API_KEY=cvn_...
 ```
 
-### Step 3: Use in MCP Client
+### Step 3: Add to MCP Client Config
 
 ```json
 {
   "mcpServers": {
     "convene": {
-      "url": "http://localhost:3001/mcp",
+      "type": "streamableHttp",
+      "url": "https://convene.spark-b0f2.local/mcp",
       "headers": {
-        "Authorization": "Bearer <MCP_TOKEN>"
+        "Authorization": "Bearer ${CONVENE_API_KEY}"
       }
     }
   }
 }
 ```
+
+## Legacy: JWT Token Exchange (SDK / programmatic use)
+
+For SDK-based agents that need a short-lived JWT, exchange the API key:
+
+```bash
+MCP_TOKEN=$(curl -s https://convene.spark-b0f2.local/api/v1/token/mcp \
+  -H "X-API-Key: $CONVENE_API_KEY" \
+  | jq -r '.token')
+```
+
+Then pass `Authorization: Bearer $MCP_TOKEN` in requests.
 
 ## JWT Claims
 

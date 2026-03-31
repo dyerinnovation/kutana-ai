@@ -124,27 +124,3 @@ Example:
 join_meeting(meeting_id, capabilities=["listen", "transcribe", "text_only"])
 ```
 
-## Local Development
-
-For local development, point at `localhost:3001`:
-
-```json
-{
-  "mcpServers": {
-    "convene": {
-      "type": "streamableHttp",
-      "url": "http://localhost:3001/mcp",
-      "headers": {
-        "Authorization": "Bearer ${CONVENE_API_KEY}"
-      }
-    }
-  }
-}
-```
-
-Start the MCP server locally:
-
-```bash
-cd services/mcp-server
-MCP_API_KEY=cvn_... uv run python -m mcp_server.main
-```

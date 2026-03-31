@@ -79,7 +79,7 @@
     "mcpUrl": {
       "type": "string",
       "description": "Convene MCP server URL",
-      "default": "http://localhost:3001/mcp"
+      "default": "https://convene.spark-b0f2.local/mcp"
     }
   }
 }
