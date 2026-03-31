@@ -27,15 +27,15 @@ Deploys the latest code to the DGX Spark K3s cluster using git + Helm.
    ssh dgx 'cd ~/convene-ai && bash scripts/build_and_push.sh all'
    ```
 
-4. **Deploy via Helm:**
+4. **Deploy via Helm (runs locally — kubectl/helm configured to target DGX Spark):**
    ```bash
-   ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml /home/jondyer3/.local/bin/helm upgrade --install convene charts/convene -n convene'
+   helm upgrade --install convene charts/convene -n convene --create-namespace
    ```
 
 5. **Wait for pods and check status:**
    ```bash
-   ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl rollout status -n convene deploy/api-server --timeout=120s'
-   ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get pods -n convene'
+   kubectl rollout status -n convene deploy/api-server --timeout=120s
+   kubectl get pods -n convene
    ```
 
 6. **Report final status**

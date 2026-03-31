@@ -27,20 +27,17 @@ fi
 # 3. Helm upgrade
 echo ""
 echo "==> Applying Helm chart..."
-ssh "$DGX" "echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml \
-  /home/jondyer3/.local/bin/helm upgrade --install convene ~/convene-ai/charts/convene -n convene --create-namespace"
+helm upgrade --install convene charts/convene -n convene --create-namespace
 
 # 4. Wait for rollout
 echo ""
 echo "==> Waiting for pods..."
-ssh "$DGX" "echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml \
-  kubectl -n convene wait --for=condition=ready pod --all --timeout=120s"
+kubectl -n convene wait --for=condition=ready pod --all --timeout=120s
 
 # 5. Status + health check
 echo ""
 echo "==> Pod status:"
-ssh "$DGX" "echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml \
-  kubectl -n convene get pods"
+kubectl -n convene get pods
 
 echo ""
 curl -sk "https://convene.spark-b0f2.local/api/health" && echo "  API: OK" || echo "  API: FAIL"

@@ -34,22 +34,23 @@ sshpass -p "$DGX_PASSWORD" ssh dgx 'echo '"$DGX_PASSWORD"' | sudo -S <command>'
 ```
 
 ## Kubernetes Commands (kubectl / helm)
-K3s requires both `sudo` and an explicit `KUBECONFIG` env var (sudo drops the environment):
+kubectl and helm are configured locally to connect directly to the DGX Spark K3s cluster — no SSH required for cluster operations:
 
 ```bash
-# kubectl
-sshpass -p "$DGX_PASSWORD" ssh dgx \
-  'echo '"$DGX_PASSWORD"' | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get pods -A'
+# kubectl (runs locally, targets DGX K3s cluster)
+kubectl get pods -A
+kubectl -n convene get pods
 
-# helm (must use full path — not in default PATH)
-sshpass -p "$DGX_PASSWORD" ssh dgx \
-  'echo '"$DGX_PASSWORD"' | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml /home/jondyer3/.local/bin/helm list -A'
+# helm (runs locally, targets DGX K3s cluster)
+helm list -A
+helm upgrade --install convene charts/convene -n convene --create-namespace
 ```
 
 Key facts:
-- **KUBECONFIG:** `/etc/rancher/k3s/k3s.yaml` — always pass explicitly via `sudo env KUBECONFIG=...`
-- **Helm path:** `/home/jondyer3/.local/bin/helm` — `sudo env` does not inherit PATH, always use the full path
-- **Container runtime:** `containerd` (not Docker) — import images via `sudo k3s ctr images import <file>`
+- **Local kubectl/helm:** configured via `~/.kube/config` to target the DGX Spark cluster directly
+- **Container runtime:** `containerd` (not Docker) — import images via `k3s ctr images import <file>` on the DGX
+- **Image builds still happen on DGX:** `ssh dgx 'cd ~/convene-ai && bash scripts/build_and_push.sh all'`
+- **Old pattern (no longer needed):** the previous `ssh dgx 'echo PASSWORD | sudo -S env KUBECONFIG=... kubectl ...'` approach is retired
 
 ## PATH on Spark
 The Spark's PATH includes non-standard locations. When running commands over SSH, the shell is non-interactive and may not source `.bashrc`. Use full paths or explicitly set PATH:
