@@ -2,7 +2,6 @@
 # Health check all Convene AI services
 set -uo pipefail
 
-DGX=dgx
 BASE="https://convene.spark-b0f2.local"
 PASS=0
 FAIL=0
@@ -27,7 +26,7 @@ check_exec() {
   local cmd=$2
   local expected=$3
   local out
-  out=$(ssh "$DGX" "echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml $cmd 2>&1" || true)
+  out=$(eval "$cmd" 2>&1 || true)
   if echo "$out" | grep -q "$expected"; then
     printf "  %-20s OK\n" "$label"
     ((PASS++)) || true

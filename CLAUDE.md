@@ -51,11 +51,11 @@ ssh dgx 'cd ~/convene-ai && uv run pytest services/api-server/tests/'
 # Build & push images
 ssh dgx 'cd ~/convene-ai && bash scripts/build_and_push.sh all'
 
-# Deploy
-ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml /home/jondyer3/.local/bin/helm upgrade --install convene charts/convene -n convene'
+# Deploy (kubectl/helm run locally, configured to target DGX K3s cluster)
+helm upgrade --install convene charts/convene -n convene --create-namespace
 
 # Pod status
-ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get pods -n convene'
+kubectl get pods -n convene
 
 # Frontend dev (local)
 cd web && pnpm dev

@@ -24,5 +24,5 @@ bash .claude/skills/check-services/scripts/check-services.sh
 | MCP Server | `https://convene.spark-b0f2.local/mcp/health` | 200 |
 | Frontend | `https://convene.spark-b0f2.local/` | 200 |
 | Agent Gateway | `wss://convene.spark-b0f2.local/ws` | WebSocket upgrade |
-| Postgres | `ssh dgx kubectl exec postgres -- pg_isready` | `accepting connections` |
-| Redis | `ssh dgx kubectl exec redis -- redis-cli ping` | `PONG` |
+| Postgres | `kubectl -n convene exec statefulset/postgres -- pg_isready` | `accepting connections` |
+| Redis | `kubectl -n convene exec statefulset/redis -- redis-cli ping` | `PONG` |
