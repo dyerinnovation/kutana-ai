@@ -1,14 +1,17 @@
 """Channel adapter ABC and registry for Convene Feeds.
 
-All platforms use HTTP MCP servers. The ``MCPChannelAdapter`` connects to
-each platform's MCP endpoint and exposes tools to the feed agent.
+Supports two transport modes:
+- **HTTP MCP** (``MCPChannelAdapter``): connects to a remote MCP endpoint
+  via Streamable HTTP JSON-RPC (Slack, Notion, GitHub).
+- **Stdio MCP** (``ClaudeCodeChannelAdapter``): spawns an official Claude
+  channel plugin as a subprocess and communicates over stdio (Discord,
+  Telegram, iMessage).
 """
 
 from __future__ import annotations
 
-import os
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from convene_core.models.feed import FeedDirection
@@ -16,13 +19,10 @@ from convene_core.models.feed import FeedDirection
 if TYPE_CHECKING:
     from convene_core.database.models import FeedORM
 
-# Default in-cluster Discord MCP URL
-DISCORD_MCP_URL = os.environ.get("DISCORD_MCP_URL", "http://discord-mcp.convene.svc:3002/mcp")
-
 
 @dataclass(frozen=True)
 class MCPServerConfig:
-    """Configuration for connecting to an external MCP server.
+    """Configuration for connecting to an external MCP server over HTTP.
 
     Attributes:
         url: The MCP server URL.
@@ -33,6 +33,21 @@ class MCPServerConfig:
     token: str
 
 
+@dataclass(frozen=True)
+class StdioMCPServerConfig:
+    """Configuration for spawning an MCP server as a stdio subprocess.
+
+    Attributes:
+        command: Executable to run (e.g. "bun").
+        args: Arguments to pass (e.g. ["server.ts"]).
+        env: Extra environment variables for the subprocess.
+    """
+
+    command: str
+    args: list[str] = field(default_factory=list)
+    env: dict[str, str] = field(default_factory=dict)
+
+
 class ChannelAdapter(ABC):
     """Configures a FeedAgent's channel connection.
 
@@ -41,11 +56,11 @@ class ChannelAdapter(ABC):
     """
 
     @abstractmethod
-    def mcp_servers(self) -> list[MCPServerConfig]:
+    def mcp_servers(self) -> list[MCPServerConfig | StdioMCPServerConfig]:
         """MCP servers to attach to the agent.
 
         Returns:
-            List of MCP server configs.
+            List of MCP server configs (HTTP or stdio).
         """
         ...
 
@@ -63,7 +78,7 @@ class ChannelAdapter(ABC):
 
 
 class MCPChannelAdapter(ChannelAdapter):
-    """Bidirectional adapter via an MCP server (Slack, Notion, GitHub, Discord, etc.).
+    """Bidirectional adapter via an HTTP MCP server (Slack, Notion, GitHub).
 
     Attributes:
         _server_url: URL of the external MCP server.
@@ -83,7 +98,7 @@ class MCPChannelAdapter(ChannelAdapter):
         self._auth_token = auth_token
         self._platform = platform
 
-    def mcp_servers(self) -> list[MCPServerConfig]:
+    def mcp_servers(self) -> list[MCPServerConfig | StdioMCPServerConfig]:
         """Return the external MCP server config.
 
         Returns:
@@ -110,6 +125,74 @@ class MCPChannelAdapter(ChannelAdapter):
         )
 
 
+class ClaudeCodeChannelAdapter(ChannelAdapter):
+    """Adapter for official Claude channel plugins (Discord, Telegram, iMessage).
+
+    Spawns the official plugin as a stdio MCP subprocess. The plugin
+    provides its own tools (reply, fetch_messages, etc.) natively.
+
+    Attributes:
+        _platform: Platform name (discord, telegram, imessage).
+        _channel_name: Channel or guild-channel name.
+        _bot_token: Platform bot/API token passed via env to the subprocess.
+    """
+
+    # Map platform name → plugin directory under /app/plugins/
+    _PLUGIN_DIR = "/app/plugins"
+
+    def __init__(self, platform: str, channel_name: str, bot_token: str) -> None:
+        """Initialise the Claude Code channel adapter.
+
+        Args:
+            platform: Platform name (discord, telegram, imessage).
+            channel_name: Channel name for prompt context.
+            bot_token: Bot token passed as env var to the subprocess.
+        """
+        self._platform = platform
+        self._channel_name = channel_name
+        self._bot_token = bot_token
+
+    def mcp_servers(self) -> list[MCPServerConfig | StdioMCPServerConfig]:
+        """Return a stdio MCP server config for the channel plugin.
+
+        Returns:
+            Single-element list with the stdio subprocess config.
+        """
+        # Token env var name follows the official plugin convention
+        token_env_key = f"{self._platform.upper()}_BOT_TOKEN"
+        return [
+            StdioMCPServerConfig(
+                command="bun",
+                args=[f"{self._PLUGIN_DIR}/{self._platform}/server.ts"],
+                env={token_env_key: self._bot_token},
+            )
+        ]
+
+    def system_prompt_suffix(self, direction: FeedDirection) -> str:
+        """Generate channel-specific prompt suffix.
+
+        Args:
+            direction: The feed direction.
+
+        Returns:
+            Prompt suffix string with channel tool instructions.
+        """
+        if direction == FeedDirection.INBOUND:
+            return (
+                f"Use the fetch_messages tool to pull context from the "
+                f"'{self._channel_name}' {self._platform} channel."
+            )
+        if direction == FeedDirection.OUTBOUND:
+            return (
+                f"Use the reply tool to post to the "
+                f"'{self._channel_name}' {self._platform} channel."
+            )
+        return (
+            f"Use fetch_messages to pull context from and reply to post to "
+            f"the '{self._channel_name}' {self._platform} channel."
+        )
+
+
 # ---------------------------------------------------------------------------
 # Adapter registry
 # ---------------------------------------------------------------------------
@@ -118,7 +201,9 @@ ADAPTER_REGISTRY: dict[str, type[ChannelAdapter]] = {
     "slack": MCPChannelAdapter,
     "notion": MCPChannelAdapter,
     "github": MCPChannelAdapter,
-    "discord": MCPChannelAdapter,
+    "discord": ClaudeCodeChannelAdapter,
+    "telegram": ClaudeCodeChannelAdapter,
+    "imessage": ClaudeCodeChannelAdapter,
 }
 
 
@@ -127,25 +212,33 @@ def build_adapter(feed: FeedORM, decrypted_token: str | None = None) -> ChannelA
 
     Args:
         feed: The feed ORM row with platform and delivery config.
-        decrypted_token: The decrypted auth token (required for all feeds).
+        decrypted_token: The decrypted auth token (required for MCP feeds,
+            used as bot token for channel feeds).
 
     Returns:
-        An instantiated MCPChannelAdapter.
+        An instantiated ChannelAdapter.
 
     Raises:
         ValueError: If the platform is not in the registry.
-        ValueError: If required fields are missing.
+        ValueError: If required fields are missing for the adapter type.
     """
     cls = ADAPTER_REGISTRY.get(feed.platform)
     if cls is None:
         msg = f"Unknown platform '{feed.platform}'. Supported: {list(ADAPTER_REGISTRY.keys())}"
         raise ValueError(msg)
 
-    # For Discord, fall back to the in-cluster MCP URL if not explicitly set
-    server_url = feed.mcp_server_url
-    if feed.platform == "discord" and not server_url:
-        server_url = DISCORD_MCP_URL
+    if issubclass(cls, ClaudeCodeChannelAdapter):
+        channel_name = feed.channel_name
+        if not channel_name:
+            msg = f"Feed '{feed.name}' (platform={feed.platform}) requires channel_name"
+            raise ValueError(msg)
+        if not decrypted_token:
+            msg = f"Feed '{feed.name}' (platform={feed.platform}) requires a bot token"
+            raise ValueError(msg)
+        return ClaudeCodeChannelAdapter(feed.platform, channel_name, decrypted_token)
 
+    # MCPChannelAdapter path
+    server_url = feed.mcp_server_url
     if not server_url:
         msg = f"Feed '{feed.name}' (platform={feed.platform}) requires mcp_server_url"
         raise ValueError(msg)

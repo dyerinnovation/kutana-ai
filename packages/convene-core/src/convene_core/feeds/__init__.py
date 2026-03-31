@@ -8,6 +8,7 @@ from convene_core.feeds.adapters import (
     ClaudeCodeChannelAdapter,
     MCPChannelAdapter,
     MCPServerConfig,
+    StdioMCPServerConfig,
     build_adapter,
 )
 
@@ -17,5 +18,6 @@ __all__ = [
     "ClaudeCodeChannelAdapter",
     "MCPChannelAdapter",
     "MCPServerConfig",
+    "StdioMCPServerConfig",
     "build_adapter",
 ]

@@ -9,7 +9,7 @@ set -euo pipefail
 REGISTRY="localhost:30500/convene"
 REPO_DIR="$HOME/convene-ai"
 
-ALL_SERVICES=(api-server agent-gateway audio-service task-engine mcp-server worker web discord-mcp)
+ALL_SERVICES=(api-server agent-gateway audio-service task-engine mcp-server worker web)
 
 # ---------------------------------------------------------------------------
 # Validate environment
