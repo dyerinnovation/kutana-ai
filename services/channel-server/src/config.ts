@@ -14,8 +14,16 @@ export interface ChannelServerConfig {
   conveneHttpUrl: string;
   /** Agent API key used for authentication. */
   conveneApiKey: string;
+  /**
+   * Optional pre-issued gateway JWT.  When set, the API-key → JWT exchange
+   * step is skipped and this token is used directly.  Useful for Claude Code
+   * sessions where a gateway token has already been obtained out-of-band.
+   */
+  conveneBearerToken: string;
   /** UUID of the meeting this server instance will join. */
   conveneMeetingId: string;
+  /** Display name shown in the meeting participant list (default: "Claude Code"). */
+  conveneAgentName: string;
   /** Controls which event types are forwarded to Claude. */
   agentMode: AgentMode;
   /** Entity types to forward when agentMode is "selective". */
@@ -46,7 +54,9 @@ export function loadConfig(): ChannelServerConfig {
     conveneApiUrl: rawApiUrl,
     conveneHttpUrl: rawHttpUrl,
     conveneApiKey: process.env["CONVENE_API_KEY"] ?? "",
+    conveneBearerToken: process.env["CONVENE_BEARER_TOKEN"] ?? "",
     conveneMeetingId: process.env["CONVENE_MEETING_ID"] ?? "",
+    conveneAgentName: process.env["CONVENE_AGENT_NAME"] ?? "Claude Code",
     agentMode,
     entityFilter,
   };

@@ -2,11 +2,19 @@
  * Convene AI WebSocket client for the channel server.
  *
  * Authenticates with the Convene API server to exchange an agent API key for
- * a gateway JWT, then connects to the agent gateway WebSocket, joins the
- * configured meeting, and forwards incoming events to registered callbacks.
+ * a gateway JWT (or uses a pre-issued bearer token), then connects to the
+ * agent gateway WebSocket, joins the configured meeting, and forwards
+ * incoming events to registered callbacks.
  *
  * Supports the four agent modes (transcript, insights, both, selective) by
  * filtering events before forwarding.
+ *
+ * New in Claude Code Channel Integration:
+ *   - Bearer token bypass: if CONVENE_BEARER_TOKEN is set, skip API-key exchange
+ *   - Turn management: raise_hand, lower_hand, finished_speaking, get_queue
+ *   - Chat: inbound chat buffering, get_chat_messages
+ *   - Participant tracking: get_participants with source: "claude-code" annotation
+ *   - Real-time event forwarding for turn changes, chat messages, participant updates
  */
 
 import WebSocket from "ws";
@@ -14,12 +22,15 @@ import type { ChannelServerConfig } from "./config.js";
 import type {
   AnyExtractedEntity,
   ChannelMessage,
+  ChatMessage,
   EntityType,
   GatewayError,
   GatewayEvent,
   InsightPayload,
   JoinedMessage,
+  ParticipantInfo,
   TranscriptSegment,
+  TurnQueueStatus,
 } from "./types.js";
 
 /** Callback invoked when a channel-worthy event arrives. */
@@ -38,6 +49,14 @@ export class ConveneClient {
 
   private transcriptBuffer: TranscriptSegment[] = [];
   private entityBuffer: AnyExtractedEntity[] = [];
+  private chatBuffer: ChatMessage[] = [];
+  private participantsBuffer: ParticipantInfo[] = [];
+  private lastQueueStatus: TurnQueueStatus | null = null;
+
+  /** Locally-tracked speaking state (updated from gateway events). */
+  private isSpeaking = false;
+  private isInQueue = false;
+  private chatIndex = 0;
 
   constructor(
     private readonly config: ChannelServerConfig,
@@ -87,7 +106,7 @@ export class ConveneClient {
     this.send({
       type: "data",
       channel: "chat",
-      payload: { text, from: "agent" },
+      payload: { text, from: this.config.conveneAgentName },
     });
   }
 
@@ -114,6 +133,47 @@ export class ConveneClient {
   }
 
   // ---------------------------------------------------------------------------
+  // Turn management (native gateway WebSocket messages)
+  // ---------------------------------------------------------------------------
+
+  async raiseHand(priority = "normal", topic?: string): Promise<void> {
+    this.assertConnected();
+    this.isInQueue = true;
+    const msg: Record<string, unknown> = { type: "raise_hand", priority };
+    if (topic) msg["topic"] = topic;
+    this.send(msg);
+  }
+
+  async lowerHand(handRaiseId?: string): Promise<void> {
+    this.assertConnected();
+    this.isInQueue = false;
+    const msg: Record<string, unknown> = { type: "lower_hand" };
+    if (handRaiseId) msg["hand_raise_id"] = handRaiseId;
+    this.send(msg);
+  }
+
+  async finishedSpeaking(): Promise<void> {
+    this.assertConnected();
+    this.isSpeaking = false;
+    this.isInQueue = false;
+    this.send({ type: "finished_speaking" });
+  }
+
+  /** Send get_queue; response arrives asynchronously as a turn.queue.updated event. */
+  async requestQueueStatus(): Promise<void> {
+    this.assertConnected();
+    this.send({ type: "get_queue" });
+  }
+
+  getLastQueueStatus(): TurnQueueStatus | null {
+    return this.lastQueueStatus;
+  }
+
+  getSpeakingStatus(): { isSpeaking: boolean; isInQueue: boolean } {
+    return { isSpeaking: this.isSpeaking, isInQueue: this.isInQueue };
+  }
+
+  // ---------------------------------------------------------------------------
   // Buffer accessors (called by MCP tool handlers)
   // ---------------------------------------------------------------------------
 
@@ -128,11 +188,35 @@ export class ConveneClient {
     return all.slice(-limit);
   }
 
+  getChatMessages(limit = 50): ChatMessage[] {
+    return this.chatBuffer.slice(-limit);
+  }
+
+  /**
+   * Return the current participant list, annotating our own session with
+   * source: "claude-code".  Our session is identified by conveneAgentName.
+   */
+  getParticipants(): ParticipantInfo[] {
+    const agentName = this.config.conveneAgentName;
+    return this.participantsBuffer.map((p) =>
+      p.name === agentName ? { ...p, source: "claude-code" } : p,
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Authentication
   // ---------------------------------------------------------------------------
 
   private async authenticate(): Promise<void> {
+    // If a pre-issued gateway JWT is configured, use it directly.
+    if (this.config.conveneBearerToken) {
+      this.token = this.config.conveneBearerToken;
+      process.stderr.write(
+        "[channel-server] Using pre-issued bearer token (skipping API-key exchange)\n",
+      );
+      return;
+    }
+
     const url = `${this.config.conveneHttpUrl}/api/v1/token/gateway`;
     const resp = await fetch(url, {
       method: "POST",
@@ -182,7 +266,33 @@ export class ConveneClient {
         if (msg["type"] === "joined") {
           const joined = msg as unknown as JoinedMessage;
           this.connected = true;
-          // Subscribe to insight data channels
+
+          // Seed participant buffer from the joined message
+          const initialParticipants = joined.participants ?? [];
+          if (Array.isArray(initialParticipants)) {
+            for (const p of initialParticipants as Array<Record<string, unknown>>) {
+              this.upsertParticipant({
+                participant_id: String(p["participant_id"] ?? p["id"] ?? ""),
+                name: String(p["name"] ?? ""),
+                role: String(p["role"] ?? "agent"),
+                connection_type: p["connection_type"] != null ? String(p["connection_type"]) : null,
+              });
+            }
+          }
+
+          // Add our own session if not already present
+          const selfName = this.config.conveneAgentName;
+          if (!this.participantsBuffer.find((p) => p.name === selfName)) {
+            this.participantsBuffer.push({
+              participant_id: "self",
+              name: selfName,
+              role: "agent",
+              connection_type: "claude-code",
+              source: "claude-code",
+            });
+          }
+
+          // Subscribe to insight + chat data channels
           this.send({
             type: "subscribe_channel",
             channels: [
@@ -198,7 +308,7 @@ export class ConveneClient {
             ],
           });
           process.stderr.write(
-            `[channel-server] Joined meeting ${joined.meeting_id}\n`,
+            `[channel-server] Joined meeting ${String(joined.meeting_id)}\n`,
           );
           resolve();
         } else if (msg["type"] === "error" && !this.connected) {
@@ -241,14 +351,16 @@ export class ConveneClient {
       });
     } else if (msgType === "event") {
       this.handleEventMessage(msg as unknown as GatewayEvent);
+    } else if (msgType === "participant_update") {
+      this.handleParticipantUpdate(msg);
     }
   }
 
   private handleEventMessage(event: GatewayEvent): void {
-    const isInsightChannel =
-      event.event_type?.startsWith("data.channel.insights") ?? false;
+    const et = event.event_type ?? "";
 
-    if (isInsightChannel && this.shouldForwardInsights()) {
+    // Insight channels
+    if (et.startsWith("data.channel.insights") && this.shouldForwardInsights()) {
       const payload = event.payload as InsightPayload | undefined;
       if (payload?.entities) {
         const filtered = this.applyEntityFilter(payload.entities);
@@ -261,6 +373,128 @@ export class ConveneClient {
           });
         }
       }
+      return;
+    }
+
+    // Chat channel
+    if (et === "data.channel.chat") {
+      const p = event.payload as Record<string, unknown> | undefined;
+      if (p) {
+        const msg: ChatMessage = {
+          index: this.chatIndex++,
+          sender_name: String(p["sender_name"] ?? p["from"] ?? "Unknown"),
+          sender_session_id: String(p["sender_session_id"] ?? ""),
+          text: String(p["payload"] != null
+            ? (p["payload"] as Record<string, unknown>)["text"] ?? ""
+            : p["text"] ?? ""),
+          timestamp: new Date().toISOString(),
+        };
+        this.chatBuffer.push(msg);
+        this.emit({
+          topic: "chat",
+          type: "chat_message",
+          content: formatChatMessage(msg),
+        });
+      }
+      return;
+    }
+
+    // Turn management events
+    if (et === "turn.queue.updated") {
+      const p = event.payload as Record<string, unknown> | undefined;
+      if (p) {
+        this.lastQueueStatus = {
+          meeting_id: String(p["meeting_id"] ?? ""),
+          active_speaker_id: p["active_speaker_id"] != null ? String(p["active_speaker_id"]) : null,
+          queue: Array.isArray(p["queue"])
+            ? (p["queue"] as Array<Record<string, unknown>>).map((entry) => ({
+                position: Number(entry["position"] ?? 0),
+                participant_id: String(entry["participant_id"] ?? ""),
+                priority: String(entry["priority"] ?? "normal"),
+                topic: entry["topic"] != null ? String(entry["topic"]) : null,
+                raised_at: String(entry["raised_at"] ?? ""),
+                hand_raise_id: entry["hand_raise_id"] != null ? String(entry["hand_raise_id"]) : undefined,
+              }))
+            : [],
+        };
+        this.emit({
+          topic: "turn",
+          type: "queue_updated",
+          content: formatQueueStatus(this.lastQueueStatus),
+        });
+      }
+      return;
+    }
+
+    if (et === "turn.speaker.changed") {
+      const p = event.payload as Record<string, unknown> | undefined;
+      if (p) {
+        this.emit({
+          topic: "turn",
+          type: "speaker_changed",
+          content: formatSpeakerChanged(p),
+        });
+      }
+      return;
+    }
+
+    if (et === "turn.your_turn") {
+      // We've been promoted to active speaker
+      this.isSpeaking = true;
+      this.isInQueue = false;
+      this.emit({
+        topic: "turn",
+        type: "your_turn",
+        content: "<turn>It's your turn to speak. Use mark_finished_speaking when done.</turn>",
+      });
+      return;
+    }
+
+    if (et === "turn.hand.raised") {
+      const p = event.payload as Record<string, unknown> | undefined;
+      if (p) {
+        this.emit({
+          topic: "turn",
+          type: "hand_raised",
+          content: `<turn>Hand raised: participant ${String(p["participant_id"] ?? "")} at queue position ${String(p["queue_position"] ?? "")}</turn>`,
+        });
+      }
+      return;
+    }
+
+    if (et === "turn.speaker.finished") {
+      const p = event.payload as Record<string, unknown> | undefined;
+      if (p) {
+        this.emit({
+          topic: "turn",
+          type: "speaker_finished",
+          content: `<turn>Speaker ${String(p["participant_id"] ?? "")} finished their turn.</turn>`,
+        });
+      }
+    }
+  }
+
+  private handleParticipantUpdate(msg: Record<string, unknown>): void {
+    const action = String(msg["action"] ?? "");
+    const pid = String(msg["participant_id"] ?? "");
+    const name = String(msg["name"] ?? "");
+    const role = String(msg["role"] ?? "agent");
+    const connectionType = msg["connection_type"] != null ? String(msg["connection_type"]) : null;
+
+    if (action === "joined") {
+      this.upsertParticipant({ participant_id: pid, name, role, connection_type: connectionType });
+      this.emit({
+        topic: "participant",
+        type: "joined",
+        content: `<participant action="joined">${name} (${role}) joined the meeting.</participant>`,
+      });
+    } else if (action === "left") {
+      this.participantsBuffer = this.participantsBuffer.filter((p) => p.participant_id !== pid);
+      this.emit({
+        topic: "participant",
+        type: "left",
+        content: `<participant action="left">${name} left the meeting.</participant>`,
+      });
     }
   }
 
@@ -300,6 +534,17 @@ export class ConveneClient {
   // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
+
+  private upsertParticipant(p: ParticipantInfo): void {
+    const idx = this.participantsBuffer.findIndex(
+      (x) => x.participant_id === p.participant_id,
+    );
+    if (idx >= 0) {
+      this.participantsBuffer[idx] = p;
+    } else {
+      this.participantsBuffer.push(p);
+    }
+  }
 
   private send(payload: Record<string, unknown>): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
@@ -342,4 +587,25 @@ function formatTranscript(segment: TranscriptSegment): string {
 
 function formatEntity(entity: AnyExtractedEntity): string {
   return `<insight type="${entity.entity_type}">${JSON.stringify(entity, null, 2)}</insight>`;
+}
+
+function formatChatMessage(msg: ChatMessage): string {
+  return `<chat>[${msg.timestamp}] ${msg.sender_name}: ${msg.text}</chat>`;
+}
+
+function formatQueueStatus(status: TurnQueueStatus): string {
+  const speaker = status.active_speaker_id ?? "none";
+  const queueStr =
+    status.queue.length === 0
+      ? "Queue is empty."
+      : status.queue
+          .map((e) => `  ${e.position.toString()}. ${e.participant_id}${e.topic ? ` — "${e.topic}"` : ""}`)
+          .join("\n");
+  return `<turn type="queue_updated">Active speaker: ${speaker}\n${queueStr}</turn>`;
+}
+
+function formatSpeakerChanged(p: Record<string, unknown>): string {
+  const prev = p["previous_speaker_id"] != null ? String(p["previous_speaker_id"]) : "none";
+  const next = p["new_speaker_id"] != null ? String(p["new_speaker_id"]) : "none";
+  return `<turn type="speaker_changed">Speaker changed: ${prev} → ${next}</turn>`;
 }

@@ -6,7 +6,9 @@
       "env": {
         "CONVENE_API_URL": "ws://localhost:8003",
         "CONVENE_HTTP_URL": "http://localhost:8000",
-        "CONVENE_MEETING_ID": ""
+        "CONVENE_MEETING_ID": "",
+        "CONVENE_AGENT_NAME": "Claude Code",
+        "CONVENE_BEARER_TOKEN": ""
       }
     }
   }
