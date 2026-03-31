@@ -308,6 +308,13 @@ export function MeetingRoomPage() {
 
         // 3. Start audio capture
         console.log("[Meeting] calling getUserMedia, mediaDevices=", !!navigator.mediaDevices);
+        if (!navigator.mediaDevices) {
+          console.warn("[Meeting] mediaDevices unavailable (non-secure context)");
+          if (!cancelled) {
+            setError("Microphone requires a secure connection (HTTPS). Audio is disabled — you can still view the meeting.");
+          }
+          return;
+        }
         let stream: MediaStream;
         try {
           stream = await navigator.mediaDevices.getUserMedia({
