@@ -673,8 +673,10 @@ The formatting layer — how raw meeting data becomes a platform-appropriate mes
 
 | Approach | Model | Prompt style | Tradeoff |
 |---|---|---|---|
-| A | **Haiku + structured output** | Detailed system prompt + JSON schema tool | Cheaper, faster, less flexible |
-| B | **Sonnet + freeform** | Simpler prompt, let the model format naturally | Higher quality, more expensive |
+| A | **Haiku + structured output** | Detailed system prompt + structured output (JSON schema tool) | Cheaper model, more prompt engineering to compensate |
+| B | **Sonnet + structured output** | Simpler prompt + structured output (JSON schema tool) | Smarter model, less prompt engineering — shorter prompt may offset higher per-token cost, yielding similar total cost with better results |
+
+**Both approaches use structured output.** The variable under test is whether a smarter model (Sonnet) with a simpler prompt can match or beat a cheaper model (Haiku) with a heavily engineered prompt, at comparable total cost. Sonnet is more expensive per token, but a shorter prompt means fewer input tokens — the goal is to eval whether the cost curves cross at acceptable quality.
 
 ### Adapter Contract
 
@@ -705,19 +707,19 @@ class FormattingAdapter(ABC):
 
 
 class HaikuStructuredFormattingAdapter(FormattingAdapter):
-    """Approach A: Claude Haiku + structured output tool."""
+    """Approach A: Claude Haiku + structured output (detailed system prompt)."""
     ...
 
 
-class SonnetFreeformFormattingAdapter(FormattingAdapter):
-    """Approach B: Claude Sonnet + freeform formatting."""
+class SonnetStructuredFormattingAdapter(FormattingAdapter):
+    """Approach B: Claude Sonnet + structured output (simpler prompt)."""
     ...
 ```
 
 ### A/B Testing Plan
 
 - Both adapters are implemented in Phase 2.
-- `FeedORM` gets a `formatting_approach: Literal["haiku_structured", "sonnet_freeform", "auto"]` field (default: `"auto"`).
+- `FeedORM` gets a `formatting_approach: Literal["haiku_structured", "sonnet_structured", "auto"]` field (default: `"auto"`).
 - `"auto"` randomly assigns one approach per FeedRun and logs the result for eval.
 - Eval criteria: user satisfaction (did they edit/delete the post?), delivery latency, cost per run.
 - Phase 3 decision: pick the default based on eval results, or expose it as a user preference.
@@ -761,4 +763,4 @@ These anti-patterns are explicitly out of scope and should be rejected in code r
    - **Within-org user limits (Phase 3):** users within an org will eventually have limits on Feed creation (e.g., Business tier: 10 Feeds per user, 50 per org). Enforced when org billing is wired up.
    - `FeedRunner` also honors a configurable `max_concurrent_feed_agents` (default: 3) to avoid hammering external APIs during a post-meeting burst.
 
-5. **LLM formatting approach** — ~~Decided~~ (see §11). Both Haiku-structured and Sonnet-freeform adapters will be built and A/B tested in Phase 2. Default is `"auto"` (random assignment for eval) until Phase 3 decision.
+5. **LLM formatting approach** — ~~Decided~~ (see §11). Both Haiku-structured and Sonnet-structured adapters will be built and A/B tested in Phase 2. Default is `"auto"` (random assignment for eval) until Phase 3 decision.
