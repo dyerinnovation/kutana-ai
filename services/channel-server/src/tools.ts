@@ -3,6 +3,16 @@
  *
  * Tools enable two-way communication: Claude can send messages, claim tasks,
  * report progress, search the transcript buffer, and query entity history.
+ *
+ * Turn management tools (raise_hand, get_queue_status, mark_finished_speaking,
+ * cancel_hand_raise, get_speaking_status) send native WebSocket messages to the
+ * agent gateway and return the latest cached state.
+ *
+ * Chat tools (get_chat_messages) read from the in-process buffer populated by
+ * inbound data.channel.chat gateway events.
+ *
+ * Participant tools (get_participants) return the current participant list with
+ * the Claude Code session annotated as source: "claude-code".
  */
 
 import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -25,6 +35,9 @@ import type {
 export function registerTools(server: Server, client: ConveneClient): void {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [
+      // -----------------------------------------------------------------------
+      // Chat & messaging
+      // -----------------------------------------------------------------------
       {
         name: "reply",
         description:
@@ -40,6 +53,24 @@ export function registerTools(server: Server, client: ConveneClient): void {
           required: ["text"],
         },
       },
+      {
+        name: "get_chat_messages",
+        description:
+          "Read recent chat messages from the meeting. Use this to catch up on the chat history or check what others have said.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            limit: {
+              type: "number",
+              description: "Maximum number of recent messages to return (default: 50).",
+            },
+          },
+          required: [],
+        },
+      },
+      // -----------------------------------------------------------------------
+      // Task management
+      // -----------------------------------------------------------------------
       {
         name: "accept_task",
         description:
@@ -79,6 +110,90 @@ export function registerTools(server: Server, client: ConveneClient): void {
           required: ["task_id", "status", "message"],
         },
       },
+      // -----------------------------------------------------------------------
+      // Turn management
+      // -----------------------------------------------------------------------
+      {
+        name: "raise_hand",
+        description:
+          "Request a turn to speak in the meeting. Adds you to the speaker queue. If no one is currently speaking, you become the active speaker immediately (queue_position = 0).",
+        inputSchema: {
+          type: "object",
+          properties: {
+            priority: {
+              type: "string",
+              enum: ["normal", "urgent"],
+              description: "Queue priority — normal (FIFO) or urgent (front of queue). Default: normal.",
+            },
+            topic: {
+              type: "string",
+              description: "Optional short description of what you want to discuss.",
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: "get_queue_status",
+        description:
+          "Get the current speaker queue status. Shows who is speaking, who is waiting, and queue positions. Triggers a queue refresh from the gateway.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+      {
+        name: "mark_finished_speaking",
+        description:
+          "Signal that you have finished your speaking turn, advancing the queue to the next participant.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+      {
+        name: "cancel_hand_raise",
+        description:
+          "Withdraw from the speaker queue (lower your hand). If hand_raise_id is provided, cancels that specific raise; otherwise cancels your current hand raise.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            hand_raise_id: {
+              type: "string",
+              description: "Specific hand raise UUID to cancel (optional).",
+            },
+          },
+          required: [],
+        },
+      },
+      {
+        name: "get_speaking_status",
+        description:
+          "Check your current speaking status: whether you are the active speaker, in the queue, and the latest queue snapshot.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+      // -----------------------------------------------------------------------
+      // Participants
+      // -----------------------------------------------------------------------
+      {
+        name: "get_participants",
+        description:
+          "List the current participants in the meeting. Your own session is annotated with source: 'claude-code'.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+      // -----------------------------------------------------------------------
+      // Transcript & entity history
+      // -----------------------------------------------------------------------
       {
         name: "request_context",
         description:
@@ -149,10 +264,24 @@ export function registerTools(server: Server, client: ConveneClient): void {
     switch (name) {
       case "reply":
         return handleReply(client, safeArgs);
+      case "get_chat_messages":
+        return handleGetChatMessages(client, safeArgs);
       case "accept_task":
         return handleAcceptTask(client, safeArgs);
       case "update_status":
         return handleUpdateStatus(client, safeArgs);
+      case "raise_hand":
+        return handleRaiseHand(client, safeArgs);
+      case "get_queue_status":
+        return handleGetQueueStatus(client);
+      case "mark_finished_speaking":
+        return handleMarkFinishedSpeaking(client);
+      case "cancel_hand_raise":
+        return handleCancelHandRaise(client, safeArgs);
+      case "get_speaking_status":
+        return handleGetSpeakingStatus(client);
+      case "get_participants":
+        return handleGetParticipants(client);
       case "request_context":
         return handleRequestContext(client, safeArgs);
       case "get_meeting_recap":
@@ -169,7 +298,7 @@ export function registerTools(server: Server, client: ConveneClient): void {
 }
 
 // ---------------------------------------------------------------------------
-// Handler implementations
+// Handler implementations — Chat
 // ---------------------------------------------------------------------------
 
 async function handleReply(
@@ -184,6 +313,23 @@ async function handleReply(
   await client.sendChatMessage(text);
   return ok(`Message sent: "${text}"`);
 }
+
+function handleGetChatMessages(
+  client: ConveneClient,
+  args: Record<string, unknown>,
+) {
+  const limit =
+    typeof args["limit"] === "number" && args["limit"] > 0
+      ? Math.floor(args["limit"])
+      : 50;
+
+  const messages = client.getChatMessages(limit);
+  return ok(JSON.stringify(messages, null, 2));
+}
+
+// ---------------------------------------------------------------------------
+// Handler implementations — Task management
+// ---------------------------------------------------------------------------
 
 async function handleAcceptTask(
   client: ConveneClient,
@@ -223,6 +369,99 @@ async function handleUpdateStatus(
     }),
   );
 }
+
+// ---------------------------------------------------------------------------
+// Handler implementations — Turn management
+// ---------------------------------------------------------------------------
+
+async function handleRaiseHand(
+  client: ConveneClient,
+  args: Record<string, unknown>,
+) {
+  const priority =
+    args["priority"] === "urgent" ? "urgent" : "normal";
+  const topic =
+    typeof args["topic"] === "string" && args["topic"].trim()
+      ? args["topic"]
+      : undefined;
+
+  await client.raiseHand(priority, topic);
+  return ok(
+    JSON.stringify({
+      status: "hand_raised",
+      priority,
+      topic: topic ?? null,
+      note: "Queue state will arrive via turn.queue.updated event. Call get_queue_status to check position.",
+    }),
+  );
+}
+
+async function handleGetQueueStatus(client: ConveneClient) {
+  await client.requestQueueStatus();
+  const status = client.getLastQueueStatus();
+  if (status === null) {
+    return ok(
+      JSON.stringify({
+        note: "Queue refresh sent to gateway. No cached state yet — try again in a moment.",
+      }),
+    );
+  }
+  return ok(JSON.stringify(status, null, 2));
+}
+
+async function handleMarkFinishedSpeaking(client: ConveneClient) {
+  await client.finishedSpeaking();
+  return ok(JSON.stringify({ status: "finished_speaking" }));
+}
+
+async function handleCancelHandRaise(
+  client: ConveneClient,
+  args: Record<string, unknown>,
+) {
+  const handRaiseId =
+    typeof args["hand_raise_id"] === "string" && args["hand_raise_id"].trim()
+      ? args["hand_raise_id"]
+      : undefined;
+
+  await client.lowerHand(handRaiseId);
+  return ok(
+    JSON.stringify({
+      status: "hand_lowered",
+      hand_raise_id: handRaiseId ?? null,
+    }),
+  );
+}
+
+function handleGetSpeakingStatus(client: ConveneClient) {
+  const { isSpeaking, isInQueue } = client.getSpeakingStatus();
+  const queueStatus = client.getLastQueueStatus();
+
+  return ok(
+    JSON.stringify(
+      {
+        is_speaking: isSpeaking,
+        is_in_queue: isInQueue,
+        last_known_queue: queueStatus,
+        note: "Local state may lag by one event. Call get_queue_status to force a refresh.",
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Handler implementations — Participants
+// ---------------------------------------------------------------------------
+
+function handleGetParticipants(client: ConveneClient) {
+  const participants = client.getParticipants();
+  return ok(JSON.stringify(participants, null, 2));
+}
+
+// ---------------------------------------------------------------------------
+// Handler implementations — Transcript & entity history
+// ---------------------------------------------------------------------------
 
 function handleRequestContext(
   client: ConveneClient,
