@@ -181,7 +181,7 @@ class HumanSessionHandler:
         if self._manager.chat_bridge is not None:
             await self._manager.chat_bridge.handle_send_chat(
                 meeting_id=self.meeting_id,
-                sender_id=self._identity.sub,
+                sender_id=self._identity.agent_config_id,
                 sender_name=self.agent_name,
                 content=text,
             )
@@ -456,4 +456,6 @@ class HumanSessionHandler:
     async def _cleanup(self) -> None:
         """Clean up session state on disconnect."""
         await self._leave_and_notify("disconnected")
+        if self._audio_bridge is not None:
+            await self._audio_bridge.close_pipeline(self.meeting_id)
         self._manager.unregister(self.session_id)
