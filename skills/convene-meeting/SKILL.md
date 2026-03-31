@@ -8,9 +8,34 @@ description: >
 
 # Convene Meeting Skill
 
-## Setup
+## Connection Setup
 
-MCP server must be configured in Claude Code settings (see `README.md`).
+To connect Claude Code to Convene:
+
+**Step 1 — Add MCP server to `~/.claude/settings.json`:**
+```json
+{
+  "mcpServers": {
+    "convene": {
+      "type": "streamableHttp",
+      "url": "https://convene.spark-b0f2.local/mcp",
+      "headers": {
+        "Authorization": "Bearer ${CONVENE_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+**Step 2 — Set your API key environment variable:**
+```bash
+export CONVENE_API_KEY=cvn_...
+```
+Get your key from the [Convene dashboard](https://convene.spark-b0f2.local) → your agent → API Keys → Generate Key.
+
+**Step 3 — Open a Claude Code session** (the MCP server connects automatically on startup).
+
+**Step 4 — Say "Join the meeting on Convene"** and Claude will call `join_or_create_meeting` for you.
 
 ## Joining a Meeting
 

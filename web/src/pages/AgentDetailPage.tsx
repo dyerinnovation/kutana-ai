@@ -112,14 +112,15 @@ export function AgentDetailPage() {
     setTimeout(() => setCopiedField(null), 2000);
   }
 
-  function getMcpConfig(): string {
+  function getMcpConfig(rawKey?: string): string {
     return JSON.stringify(
       {
         mcpServers: {
           convene: {
-            url: "http://convene.spark-b0f2.local/mcp",
+            type: "streamableHttp",
+            url: "https://convene.spark-b0f2.local/mcp",
             headers: {
-              Authorization: "Bearer <YOUR_API_KEY>",
+              Authorization: `Bearer ${rawKey ?? "${CONVENE_API_KEY}"}`,
             },
           },
         },
@@ -129,11 +130,10 @@ export function AgentDetailPage() {
     );
   }
 
-  function getDockerEnv(rawKey?: string): string {
+  function getEnvSetup(rawKey?: string): string {
     return [
-      "# Set these environment variables for the MCP server:",
-      `MCP_API_KEY=${rawKey ?? "cvn_..."}`,
-      `MCP_AGENT_CONFIG_ID=${id ?? "<agent-uuid>"}`,
+      "# Set this environment variable, then restart Claude Code:",
+      `export CONVENE_API_KEY=${rawKey ?? "cvn_..."}`,
     ].join("\n");
   }
 
@@ -323,57 +323,64 @@ export function AgentDetailPage() {
       {/* MCP Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle>MCP Configuration</CardTitle>
+          <CardTitle>Connect to Convene</CardTitle>
           <p className="text-sm text-gray-400">
-            Configure your MCP client to connect via Streamable HTTP.
+            Add the Convene MCP server to your Claude Code or MCP client settings.
+            Your API key authenticates requests — no Docker or server setup required.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <h4 className="text-sm font-medium text-gray-400 mb-2">
-              1. Client Config (Claude Desktop / MCP client)
+            <h4 className="text-sm font-medium text-gray-400 mb-1">
+              1. Add to <code className="text-xs bg-gray-800 px-1 py-0.5 rounded">~/.claude/settings.json</code>
             </h4>
+            <p className="text-xs text-gray-500 mb-2">
+              The capabilities you configured above control what this agent can do. Your API key is what connects it.
+            </p>
             <div className="relative">
               <pre className="overflow-x-auto rounded-lg bg-gray-950 border border-gray-800 p-4 text-sm font-mono text-gray-300">
-                {getMcpConfig()}
+                {getMcpConfig(newKey?.raw_key)}
               </pre>
               <Button
                 variant="ghost"
                 size="sm"
                 className="absolute top-2 right-2"
                 onClick={() =>
-                  copyToClipboard(getMcpConfig(), "mcp_config")
+                  copyToClipboard(getMcpConfig(newKey?.raw_key), "mcp_config")
                 }
               >
                 {copiedField === "mcp_config" ? "Copied!" : "Copy"}
               </Button>
             </div>
+            {!newKey && (
+              <p className="mt-2 text-xs text-gray-500">
+                Generate an API key above to see your key pre-filled in the config.
+              </p>
+            )}
           </div>
           <div>
             <h4 className="text-sm font-medium text-gray-400 mb-2">
-              2. Server Environment
+              2. Set your API key environment variable
             </h4>
             <div className="relative">
               <pre className="overflow-x-auto rounded-lg bg-gray-950 border border-gray-800 p-4 text-sm font-mono text-gray-300">
-                {getDockerEnv(newKey?.raw_key)}
+                {getEnvSetup(newKey?.raw_key)}
               </pre>
               <Button
                 variant="ghost"
                 size="sm"
                 className="absolute top-2 right-2"
                 onClick={() =>
-                  copyToClipboard(getDockerEnv(newKey?.raw_key), "docker_env")
+                  copyToClipboard(getEnvSetup(newKey?.raw_key), "env_setup")
                 }
               >
-                {copiedField === "docker_env" ? "Copied!" : "Copy"}
+                {copiedField === "env_setup" ? "Copied!" : "Copy"}
               </Button>
             </div>
-            {!newKey && (
-              <p className="mt-2 text-xs text-gray-500">
-                Generate an API key above, then the env vars will auto-populate
-                with the real key value.
-              </p>
-            )}
+          </div>
+          <div className="rounded-lg border border-gray-800 bg-gray-900/50 px-4 py-3 text-sm text-gray-400">
+            <p className="font-medium text-gray-300 mb-1">Then in Claude Code:</p>
+            <p>Open a new session and say <span className="font-mono text-blue-400">"Join the meeting on Convene"</span></p>
           </div>
         </CardContent>
       </Card>

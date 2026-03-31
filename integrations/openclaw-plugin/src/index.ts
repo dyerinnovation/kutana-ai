@@ -30,7 +30,7 @@ type ToolHandler = (params: Record<string, unknown>) => Promise<string>;
 export default function register(ctx: PluginContext): void {
   const config: ConveneConfig = {
     apiKey: ctx.config.apiKey,
-    mcpUrl: ctx.config.mcpUrl ?? "http://localhost:3001/mcp",
+    mcpUrl: ctx.config.mcpUrl ?? "https://convene.spark-b0f2.local/mcp",
   };
 
   const client = new ConveneClient(config);

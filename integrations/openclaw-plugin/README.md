@@ -18,8 +18,10 @@ plugins:
     convene:
       config:
         apiKey: "cvn_your_api_key_here"
-        mcpUrl: "http://localhost:3001/mcp"  # Optional, defaults to localhost
+        mcpUrl: "https://convene.spark-b0f2.local/mcp"  # Optional, defaults to hosted server
 ```
+
+Get your API key from the [Convene dashboard](https://convene.spark-b0f2.local) → your agent → API Keys → Generate Key.
 
 ## Available Tools
 
