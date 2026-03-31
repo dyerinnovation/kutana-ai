@@ -6,7 +6,6 @@ import { listTemplates, activateTemplate } from "@/api/agentTemplates";
 import { formatCapability } from "@/lib/capabilities";
 import { listMeetings } from "@/api/meetings";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import {
   Card,
   CardHeader,
@@ -44,7 +43,6 @@ export function AgentsPage() {
   const [activateTarget, setActivateTarget] = useState<AgentTemplate | null>(null);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [selectedMeetingId, setSelectedMeetingId] = useState("");
-  const [apiKey, setApiKey] = useState("");
   const [isActivating, setIsActivating] = useState(false);
 
   useEffect(() => {
@@ -70,7 +68,6 @@ export function AgentsPage() {
   async function openActivateModal(template: AgentTemplate) {
     setActivateTarget(template);
     setSelectedMeetingId("");
-    setApiKey("");
     try {
       const res = await listMeetings();
       setMeetings(
@@ -86,7 +83,7 @@ export function AgentsPage() {
     if (!activateTarget || !selectedMeetingId) return;
     setIsActivating(true);
     try {
-      await activateTemplate(activateTarget.id, selectedMeetingId, apiKey || undefined);
+      await activateTemplate(activateTarget.id, selectedMeetingId);
       setActivateTarget(null);
     } catch (err) {
       setTemplatesError(err instanceof Error ? err.message : "Failed to activate");
@@ -307,17 +304,6 @@ export function AgentsPage() {
                 </select>
               )}
             </div>
-            <Input
-              label="Anthropic API Key (optional)"
-              type="password"
-              placeholder="sk-ant-..."
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-            />
-            <p className="text-xs text-gray-500">
-              Provide your own API key for this agent, or leave blank to use the platform
-              key.
-            </p>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setActivateTarget(null)}>

@@ -330,14 +330,20 @@ export function MeetingRoomPage() {
 
         // 3. Start audio capture
         console.log("[Meeting] calling getUserMedia, mediaDevices=", !!navigator.mediaDevices);
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            sampleRate: SAMPLE_RATE,
-            channelCount: 1,
-            echoCancellation: true,
-            noiseSuppression: true,
-          },
-        });
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              sampleRate: { ideal: SAMPLE_RATE },
+              channelCount: { ideal: 1 },
+              echoCancellation: true,
+              noiseSuppression: true,
+            },
+          });
+        } catch {
+          // Fallback: accept any audio device
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
         console.log("[Meeting] getUserMedia succeeded, cancelled=", cancelled);
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
@@ -397,9 +403,25 @@ export function MeetingRoomPage() {
         console.error("[Meeting] connect() error:", err);
         if (!cancelled) {
           setStatus("error");
-          setError(
-            err instanceof Error ? err.message : "Failed to connect"
-          );
+          let message = "Failed to connect";
+          if (err instanceof DOMException) {
+            switch (err.name) {
+              case "NotFoundError":
+                message = "No microphone found. Please connect a microphone and try again.";
+                break;
+              case "NotAllowedError":
+                message = "Microphone permission denied. Please allow microphone access and reload.";
+                break;
+              case "NotReadableError":
+                message = "Microphone is in use by another application.";
+                break;
+              default:
+                message = err.message;
+            }
+          } else if (err instanceof Error) {
+            message = err.message;
+          }
+          setError(message);
         }
       }
     }
