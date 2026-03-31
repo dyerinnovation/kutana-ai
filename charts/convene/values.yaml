@@ -113,18 +113,9 @@ worker:
       memory: 512Mi
   env: {}
 
-discordMcp:
-  enabled: true
-  replicas: 1
-  image:
-    tag: latest
-  resources:
-    requests:
-      cpu: 50m
-      memory: 128Mi
-    limits:
-      cpu: 200m
-      memory: 256Mi
+# discord-mcp: RETIRED — Discord feeds now use the official Claude channel
+# plugin spawned as a stdio subprocess by the worker. See
+# internal-docs/integrations/discord-bot-setup.md for setup.
 
 # ---------------------------------------------------------------------------
 # Web Frontend
@@ -149,6 +140,7 @@ secrets:
   jwtSecret: Y2hhbmdlLW1lLWluLXByb2R1Y3Rpb24=
   deepgramApiKey: "MmU5YmVlYzRhY2EzY2ZlMmVmMDA0Nzc2OTQzY2UzMTExZjg4NjE4Mg=="
   anthropicApiKey: ""
+  discordBotToken: ""
 
 # ---------------------------------------------------------------------------
 # Ingress
