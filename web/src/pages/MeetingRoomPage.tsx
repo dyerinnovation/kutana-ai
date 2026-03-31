@@ -241,8 +241,11 @@ export function MeetingRoomPage() {
             timestamp: (p.timestamp as number) ?? Date.now() / 1000,
             is_agent: (p.is_agent as boolean) ?? false,
           };
-          setChatMessages((prev) => [...prev, cm]);
-          if (cm.is_agent) setRightTab("chat");
+          // Skip if this is our own message (already added optimistically)
+          if (cm.sender_id !== user?.id) {
+            setChatMessages((prev) => [...prev, cm]);
+            if (cm.is_agent) setRightTab("chat");
+          }
         }
         break;
       case "turn.speaker.changed":
