@@ -51,6 +51,8 @@ agentGateway:
   replicas: 1
   image:
     tag: latest
+  ttsProvider: cartesia
+  ttsCartesiaApiKey: ""
   resources:
     requests:
       cpu: 100m

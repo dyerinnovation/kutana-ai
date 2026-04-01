@@ -139,6 +139,21 @@ export function registerTools(
         },
       },
       {
+        name: "speak",
+        description:
+          "Speak text aloud in the meeting using TTS. The gateway synthesizes your text into audio and broadcasts it to all participants. Use this when you want participants to hear you speak rather than just reading a chat message.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            text: {
+              type: "string",
+              description: "The text to speak aloud in the meeting.",
+            },
+          },
+          required: ["text"],
+        },
+      },
+      {
         name: "get_chat_messages",
         description:
           "Read recent chat messages from the meeting.",
@@ -367,6 +382,16 @@ export function registerTools(
         const g = requireMeeting(client);
         if (g) return g;
         return handleReply(client, safeArgs);
+      }
+      case "speak": {
+        const g = requireMeeting(client);
+        if (g) return g;
+        const text = String(safeArgs.text ?? "");
+        if (!text) {
+          return { content: [{ type: "text", text: "Error: text is required." }], isError: true };
+        }
+        await client.speak(text);
+        return { content: [{ type: "text", text: `Speaking: "${text.slice(0, 100)}${text.length > 100 ? "..." : ""}"` }] };
       }
       case "get_chat_messages": {
         const g = requireMeeting(client);

@@ -21,5 +21,7 @@ data:
   AGENT_GATEWAY_STT_PROVIDER: "deepgram"
   AGENT_GATEWAY_JWT_SECRET: "convene-dev-secret-2026"
   AGENT_GATEWAY_WHISPER_API_URL: ""
+  AGENT_GATEWAY_TTS_PROVIDER: {{ .Values.agentGateway.ttsProvider | default "cartesia" | quote }}
+  AGENT_GATEWAY_TTS_CARTESIA_API_KEY: {{ .Values.agentGateway.ttsCartesiaApiKey | default "" | quote }}
   # Worker (feed dispatcher/runner)
   CONVENE_MCP_URL: "http://mcp-server.{{ .Release.Namespace }}.svc:3001/"

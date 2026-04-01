@@ -112,6 +112,31 @@ class HumanSessionHandler:
             self.meeting_id,
         )
 
+        # Send existing participants so the browser knows who's already here
+        existing_sessions = self._manager.get_meeting_sessions(self.meeting_id)
+        for session in existing_sessions:
+            if session.session_id == self.session_id:
+                continue
+            role = "human" if getattr(session, "source", "") == "human" else "agent"
+            participant_id = (
+                getattr(session, "_identity", None)
+                and getattr(session._identity, "agent_config_id", session.session_id)
+                or session.session_id
+            )
+            try:
+                await self.send_participant_update(
+                    action="joined",
+                    participant_id=participant_id,
+                    name=session.agent_name,
+                    role=role,
+                    source=getattr(session, "source", None),
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to send existing participant %s to new human session",
+                    session.agent_name,
+                )
+
         # Notify others and publish event after sending Joined to self
         await self._broadcast_participant_update("joined")
         await self._publish_participant_event("joined")
