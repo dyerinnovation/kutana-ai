@@ -1,0 +1,64 @@
+server:
+  enabled: true
+
+  env:
+    WOODPECKER_HOST: "https://ci.convene.ai"
+    WOODPECKER_GITHUB: "true"
+    WOODPECKER_ADMIN: "jonathandyer"
+    WOODPECKER_DATABASE_DRIVER: postgres
+    WOODPECKER_LOG_LEVEL: info
+
+  # Pull GitHub OAuth, agent secret, and DB credentials from the secret
+  extraSecretNamesForEnvFrom:
+    - woodpecker-secrets
+
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    hosts:
+      - host: ci.convene.ai
+        paths:
+          - path: /
+            backend:
+              serviceName: woodpecker-server
+              servicePort: 80
+
+  persistentVolume:
+    enabled: true
+    size: 5Gi
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+agent:
+  enabled: true
+  replicaCount: 1
+
+  env:
+    WOODPECKER_SERVER: "woodpecker-server:9000"
+    WOODPECKER_BACKEND: kubernetes
+    WOODPECKER_BACKEND_K8S_NAMESPACE: woodpecker
+    WOODPECKER_BACKEND_K8S_STORAGE_CLASS: ""
+    WOODPECKER_BACKEND_K8S_VOLUME_SIZE: 10G
+    WOODPECKER_BACKEND_K8S_STORAGE_RWX: true
+    WOODPECKER_LOG_LEVEL: info
+
+  extraSecretNamesForEnvFrom:
+    - woodpecker-secrets
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
