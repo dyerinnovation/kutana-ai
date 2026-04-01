@@ -52,32 +52,40 @@ bun install
 
 ### 3. Configure Claude Code
 
-Add the Convene channel to your `~/.claude/settings.json`:
+Register the Convene channel as an MCP server using the Claude Code CLI:
 
-```json
-{
-  "mcpServers": {
-    "convene": {
-      "type": "stdio",
-      "command": "bun",
-      "args": ["/path/to/convene-ai/services/channel-server/src/server.ts"],
-      "env": {
-        "CONVENE_API_KEY": "cvn_your_key_here",
-        "CONVENE_API_URL": "wss://convene.spark-b0f2.local/ws",
-        "CONVENE_HTTP_URL": "https://convene.spark-b0f2.local/api",
-        "CONVENE_TLS_REJECT_UNAUTHORIZED": "0",
-        "CONVENE_AGENT_NAME": "Claude Code"
-      }
-    }
+```bash
+claude mcp add-json --scope user convene '{
+  "type": "stdio",
+  "command": "bun",
+  "args": ["/path/to/convene-ai/services/channel-server/src/server.ts"],
+  "env": {
+    "CONVENE_API_KEY": "cvn_your_key_here",
+    "CONVENE_API_URL": "wss://convene.spark-b0f2.local/ws",
+    "CONVENE_HTTP_URL": "https://convene.spark-b0f2.local/api",
+    "CONVENE_TLS_REJECT_UNAUTHORIZED": "0",
+    "CONVENE_AGENT_NAME": "Claude Code"
   }
-}
+}'
 ```
 
 Replace `/path/to/convene-ai` with the actual path to your repository, and paste your API key.
 
-### 4. Restart Claude Code
+`--scope user` makes the server available across all your projects. You can verify registration with `claude mcp get convene`.
 
-Close and reopen Claude Code (or start a new session). Verify the plugin loaded:
+### 4. Launch Claude Code with the channel enabled
+
+The Convene channel is a custom (non-plugin) channel, so during the research preview you need to explicitly enable it at launch:
+
+```bash
+claude --dangerously-load-development-channels server:convene
+```
+
+`server:convene` references the server you registered with `claude mcp add-json`. This flag activates the push event flow — without it, tools work but real-time events (transcript, chat, insights) are silently dropped.
+
+> **Note:** Published channel plugins (Discord, Telegram) use `--channels plugin:name@publisher` instead. The `--dangerously-load-development-channels` flag is specific to custom channels during the research preview and may change when channels graduate from preview.
+
+Verify the plugin loaded:
 
 ```
 /mcp
