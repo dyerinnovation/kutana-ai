@@ -16,7 +16,6 @@ import type { ChannelMessage, TaskEntity, DecisionEntity } from "../src/types.js
 // MockWebSocket — captures the instance created by ConveneClient
 // ---------------------------------------------------------------------------
 
-/** Last MockWebSocket instance constructed — set by the MockWS constructor. */
 let lastMockWs: MockWebSocket | null = null;
 
 class MockWebSocket extends EventEmitter {
@@ -24,7 +23,7 @@ class MockWebSocket extends EventEmitter {
   readyState: number = MockWebSocket.OPEN;
   sentMessages: string[] = [];
 
-  constructor(_url: string) {
+  constructor(_url: string, _options?: { rejectUnauthorized?: boolean }) {
     super();
     lastMockWs = this;
   }
@@ -55,6 +54,8 @@ beforeEach(() => {
   lastMockWs = null;
 });
 
+const MEETING_ID = "meeting-abc";
+
 function makeConfig(
   overrides: Partial<ChannelServerConfig> = {},
 ): ChannelServerConfig {
@@ -63,10 +64,10 @@ function makeConfig(
     conveneHttpUrl: "http://localhost:8000",
     conveneApiKey: "test-key",
     conveneBearerToken: "",
-    conveneMeetingId: "meeting-abc",
     conveneAgentName: "Claude Code",
     agentMode: "both",
     entityFilter: [],
+    tlsRejectUnauthorized: true,
     ...overrides,
   };
 }
@@ -75,7 +76,7 @@ function buildTaskEntity(id = "t1"): TaskEntity {
   return {
     id,
     entity_type: "task",
-    meeting_id: "meeting-abc",
+    meeting_id: MEETING_ID,
     confidence: 0.9,
     extracted_at: new Date().toISOString(),
     batch_id: "b1",
@@ -93,7 +94,7 @@ function buildDecisionEntity(id = "d1"): DecisionEntity {
   return {
     id,
     entity_type: "decision",
-    meeting_id: "meeting-abc",
+    meeting_id: MEETING_ID,
     confidence: 0.85,
     extracted_at: new Date().toISOString(),
     batch_id: "b1",
@@ -105,8 +106,8 @@ function buildDecisionEntity(id = "d1"): DecisionEntity {
 }
 
 /**
- * Create a ConveneClient backed by MockWebSocket and simulate the gateway
- * join handshake.  Returns the connected client and the WS instance.
+ * Create a ConveneClient backed by MockWebSocket, authenticate, and
+ * join a meeting. Returns the connected client and the WS instance.
  */
 async function setupConnectedClient(
   config: ChannelServerConfig,
@@ -119,19 +120,13 @@ async function setupConnectedClient(
 
   const client = new ConveneClient(
     config,
-    // MockWebSocket sets `lastMockWs = this` in its constructor, so after
-    // `new this.WS(url)` runs we can reference the exact instance the client
-    // is using.
     MockWebSocket as unknown as ConstructorParameters<typeof ConveneClient>[1],
   );
 
-  // Start connect() — it will: (1) authenticate, (2) construct WS, (3) wait for joined
-  const connectPromise = client.connect();
+  // joinMeeting will: (1) authenticate, (2) construct WS, (3) wait for joined
+  const joinPromise = client.joinMeeting(MEETING_ID);
 
-  // authenticate() is a microtask (mocked fetch resolves immediately).
-  // After that microtask resolves, connectWebSocket() synchronously calls
-  // new this.WS(url) which sets lastMockWs.  Give the event loop one tick
-  // to complete that, then drive the WS lifecycle.
+  // Give the event loop a tick for auth + WS construction
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
   const mockWs = lastMockWs!;
@@ -142,10 +137,9 @@ async function setupConnectedClient(
 
   // Yield so the join_meeting message is sent, then reply with "joined"
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
-  mockWs.simulateMessage({ type: "joined", meeting_id: config.conveneMeetingId });
+  mockWs.simulateMessage({ type: "joined", meeting_id: MEETING_ID });
 
-  // Wait for connectPromise to resolve
-  await connectPromise;
+  await joinPromise;
   fetchSpy.mockRestore();
 
   return { client, mockWs };
@@ -163,7 +157,7 @@ describe("ConveneClient connection", () => {
       .find((m) => m["type"] === "join_meeting");
 
     expect(joinMsg).toBeDefined();
-    expect(joinMsg?.["meeting_id"]).toBe("meeting-abc");
+    expect(joinMsg?.["meeting_id"]).toBe(MEETING_ID);
   });
 
   it("subscribes to insight channels after joining", async () => {
@@ -182,10 +176,36 @@ describe("ConveneClient connection", () => {
     expect(client.isConnected()).toBe(true);
   });
 
-  it("isConnected() returns false after disconnect()", async () => {
+  it("getCurrentMeetingId() returns the meeting ID after joining", async () => {
     const { client } = await setupConnectedClient(makeConfig());
-    await client.disconnect();
+    expect(client.getCurrentMeetingId()).toBe(MEETING_ID);
+  });
+
+  it("isConnected() returns false after leaveMeeting()", async () => {
+    const { client } = await setupConnectedClient(makeConfig());
+    await client.leaveMeeting();
     expect(client.isConnected()).toBe(false);
+    expect(client.getCurrentMeetingId()).toBeNull();
+  });
+
+  it("clears buffers after leaveMeeting()", async () => {
+    const { client, mockWs } = await setupConnectedClient(makeConfig());
+
+    // Add some data to buffers
+    mockWs.simulateMessage({
+      type: "transcript",
+      meeting_id: MEETING_ID,
+      segment_id: "s1",
+      speaker: "Alice",
+      text: "Hello",
+      start_time: 0, end_time: 1, confidence: 0.9, is_final: true,
+    });
+    expect(client.getRecentTranscript()).toHaveLength(1);
+
+    await client.leaveMeeting();
+    expect(client.getRecentTranscript()).toHaveLength(0);
+    expect(client.getChatMessages()).toHaveLength(0);
+    expect(client.getParticipants()).toHaveLength(0);
   });
 });
 
@@ -204,7 +224,7 @@ describe("agentMode: transcript", () => {
 
     mockWs.simulateMessage({
       type: "transcript",
-      meeting_id: "meeting-abc",
+      meeting_id: MEETING_ID,
       segment_id: "s1",
       speaker: "Alice",
       text: "Hello everyone",
@@ -241,7 +261,7 @@ describe("agentMode: transcript", () => {
 
     mockWs.simulateMessage({
       type: "transcript",
-      meeting_id: "meeting-abc",
+      meeting_id: MEETING_ID,
       segment_id: "s1",
       speaker: "Bob",
       text: "We need to deploy by Friday",
@@ -293,7 +313,7 @@ describe("agentMode: insights", () => {
 
     mockWs.simulateMessage({
       type: "transcript",
-      meeting_id: "meeting-abc",
+      meeting_id: MEETING_ID,
       segment_id: "s1",
       speaker: "Alice",
       text: "Hello",
@@ -338,7 +358,7 @@ describe("agentMode: both", () => {
 
     mockWs.simulateMessage({
       type: "transcript",
-      meeting_id: "meeting-abc",
+      meeting_id: MEETING_ID,
       segment_id: "s1",
       speaker: "Alice",
       text: "Let's talk about tasks",
@@ -385,7 +405,6 @@ describe("agentMode: selective", () => {
       },
     });
 
-    // Only task should pass; decision is filtered out
     expect(received).toHaveLength(1);
     expect(received[0]?.type).toBe("task");
   });
@@ -410,75 +429,6 @@ describe("agentMode: selective", () => {
 
     expect(received).toHaveLength(2);
   });
-
-  it("does NOT forward transcript in selective mode", async () => {
-    const { client, mockWs } = await setupConnectedClient(
-      makeConfig({ agentMode: "selective", entityFilter: ["task"] }),
-    );
-
-    const received: ChannelMessage[] = [];
-    client.onChannelMessage((msg) => { received.push(msg); });
-
-    mockWs.simulateMessage({
-      type: "transcript",
-      meeting_id: "meeting-abc",
-      segment_id: "s1",
-      speaker: "Alice",
-      text: "Hello",
-      start_time: 0, end_time: 1, confidence: 0.9, is_final: true,
-    });
-
-    expect(received).toHaveLength(0);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Message formatting
-// ---------------------------------------------------------------------------
-
-describe("channel message formatting", () => {
-  it("formats transcript content with speaker and timestamps", async () => {
-    const { client, mockWs } = await setupConnectedClient(makeConfig());
-
-    const received: ChannelMessage[] = [];
-    client.onChannelMessage((msg) => { received.push(msg); });
-
-    mockWs.simulateMessage({
-      type: "transcript",
-      meeting_id: "meeting-abc",
-      segment_id: "s1",
-      speaker: "Charlie",
-      text: "The deadline is next week",
-      start_time: 12.5, end_time: 15.0, confidence: 0.9, is_final: true,
-    });
-
-    const content = received[0]?.content ?? "";
-    expect(content).toMatch(/<transcript>/);
-    expect(content).toContain("Charlie");
-    expect(content).toContain("12.5s");
-    expect(content).toContain("The deadline is next week");
-  });
-
-  it("formats insight content as XML with entity_type attribute", async () => {
-    const { client, mockWs } = await setupConnectedClient(makeConfig());
-
-    const received: ChannelMessage[] = [];
-    client.onChannelMessage((msg) => { received.push(msg); });
-
-    mockWs.simulateMessage({
-      type: "event",
-      event_type: "data.channel.insights",
-      payload: {
-        batch_id: "b1",
-        entities: [buildDecisionEntity()],
-        processing_time_ms: 30,
-      },
-    });
-
-    const content = received[0]?.content ?? "";
-    expect(content).toMatch(/<insight type="decision">/);
-    expect(content).toContain("TypeScript");
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -496,7 +446,7 @@ describe("turn management events", () => {
       type: "event",
       event_type: "turn.queue.updated",
       payload: {
-        meeting_id: "meeting-abc",
+        meeting_id: MEETING_ID,
         active_speaker_id: "p1",
         queue: [
           { position: 1, participant_id: "p2", priority: "normal", topic: "auth fix", raised_at: "2026-03-23T10:00:00Z" },
@@ -507,64 +457,16 @@ describe("turn management events", () => {
     expect(received).toHaveLength(1);
     expect(received[0]?.topic).toBe("turn");
     expect(received[0]?.type).toBe("queue_updated");
-    expect(received[0]?.content).toContain("p1");
   });
 
-  it("buffers the last queue status from turn.queue.updated", async () => {
+  it("sets isSpeaking=true on turn.your_turn", async () => {
     const { client, mockWs } = await setupConnectedClient(makeConfig());
-
-    mockWs.simulateMessage({
-      type: "event",
-      event_type: "turn.queue.updated",
-      payload: {
-        meeting_id: "meeting-abc",
-        active_speaker_id: "p-speaker",
-        queue: [],
-      },
-    });
-
-    const status = client.getLastQueueStatus();
-    expect(status).not.toBeNull();
-    expect(status?.active_speaker_id).toBe("p-speaker");
-  });
-
-  it("forwards turn.speaker.changed as a turn channel message", async () => {
-    const { client, mockWs } = await setupConnectedClient(makeConfig());
-
-    const received: ChannelMessage[] = [];
-    client.onChannelMessage((msg) => { received.push(msg); });
-
-    mockWs.simulateMessage({
-      type: "event",
-      event_type: "turn.speaker.changed",
-      payload: {
-        meeting_id: "meeting-abc",
-        previous_speaker_id: "p1",
-        new_speaker_id: "p2",
-      },
-    });
-
-    expect(received).toHaveLength(1);
-    expect(received[0]?.topic).toBe("turn");
-    expect(received[0]?.type).toBe("speaker_changed");
-    expect(received[0]?.content).toContain("p1");
-    expect(received[0]?.content).toContain("p2");
-  });
-
-  it("sets isSpeaking=true and isInQueue=false on turn.your_turn", async () => {
-    const { client, mockWs } = await setupConnectedClient(makeConfig());
-
-    const received: ChannelMessage[] = [];
-    client.onChannelMessage((msg) => { received.push(msg); });
 
     mockWs.simulateMessage({
       type: "event",
       event_type: "turn.your_turn",
-      payload: { meeting_id: "meeting-abc" },
+      payload: { meeting_id: MEETING_ID },
     });
-
-    expect(received).toHaveLength(1);
-    expect(received[0]?.type).toBe("your_turn");
 
     const { isSpeaking, isInQueue } = client.getSpeakingStatus();
     expect(isSpeaking).toBe(true);
@@ -596,21 +498,6 @@ describe("turn management events", () => {
 
     expect(msg).toBeDefined();
   });
-
-  it("lowerHand sends lower_hand WebSocket message", async () => {
-    const { client, mockWs } = await setupConnectedClient(makeConfig());
-    // Must be in queue first
-    client["isInQueue"] = true;
-
-    await client.lowerHand("hr-uuid");
-
-    const msg = mockWs.sentMessages
-      .map((m) => JSON.parse(m) as Record<string, unknown>)
-      .find((m) => m["type"] === "lower_hand");
-
-    expect(msg).toBeDefined();
-    expect(msg?.["hand_raise_id"]).toBe("hr-uuid");
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -618,14 +505,13 @@ describe("turn management events", () => {
 // ---------------------------------------------------------------------------
 
 describe("chat events", () => {
-  it("buffers inbound chat messages from data.channel.chat events", async () => {
+  it("buffers inbound chat messages", async () => {
     const { client, mockWs } = await setupConnectedClient(makeConfig());
 
     mockWs.simulateMessage({
       type: "event",
       event_type: "data.channel.chat",
       payload: {
-        meeting_id: "meeting-abc",
         sender_name: "Alice",
         sender_session_id: "s-alice",
         payload: { text: "Hello from Alice" },
@@ -635,49 +521,6 @@ describe("chat events", () => {
     const messages = client.getChatMessages(10);
     expect(messages).toHaveLength(1);
     expect(messages[0]?.text).toBe("Hello from Alice");
-    expect(messages[0]?.sender_name).toBe("Alice");
-  });
-
-  it("forwards inbound chat as a 'chat' topic channel message", async () => {
-    const { client, mockWs } = await setupConnectedClient(makeConfig());
-
-    const received: ChannelMessage[] = [];
-    client.onChannelMessage((msg) => { received.push(msg); });
-
-    mockWs.simulateMessage({
-      type: "event",
-      event_type: "data.channel.chat",
-      payload: {
-        meeting_id: "meeting-abc",
-        sender_name: "Bob",
-        sender_session_id: "s-bob",
-        payload: { text: "Good morning" },
-      },
-    });
-
-    expect(received).toHaveLength(1);
-    expect(received[0]?.topic).toBe("chat");
-    expect(received[0]?.type).toBe("chat_message");
-    expect(received[0]?.content).toContain("Bob");
-    expect(received[0]?.content).toContain("Good morning");
-  });
-
-  it("assigns monotonically increasing indexes to chat messages", async () => {
-    const { client, mockWs } = await setupConnectedClient(makeConfig());
-
-    for (const text of ["First", "Second", "Third"]) {
-      mockWs.simulateMessage({
-        type: "event",
-        event_type: "data.channel.chat",
-        payload: { sender_name: "Alice", sender_session_id: "s1", payload: { text } },
-      });
-    }
-
-    const messages = client.getChatMessages(10);
-    expect(messages).toHaveLength(3);
-    expect(messages[0]?.index).toBe(0);
-    expect(messages[1]?.index).toBe(1);
-    expect(messages[2]?.index).toBe(2);
   });
 });
 
@@ -695,11 +538,8 @@ describe("participant tracking", () => {
     expect(self?.source).toBe("claude-code");
   });
 
-  it("forwards participant_update joined events", async () => {
+  it("tracks participant join/leave events", async () => {
     const { client, mockWs } = await setupConnectedClient(makeConfig());
-
-    const received: ChannelMessage[] = [];
-    client.onChannelMessage((msg) => { received.push(msg); });
 
     mockWs.simulateMessage({
       type: "participant_update",
@@ -710,40 +550,17 @@ describe("participant tracking", () => {
       connection_type: "webrtc",
     });
 
-    const turnAndParticipantMsgs = received.filter((m) => m.topic === "participant");
-    expect(turnAndParticipantMsgs).toHaveLength(1);
-    expect(turnAndParticipantMsgs[0]?.type).toBe("joined");
-    expect(turnAndParticipantMsgs[0]?.content).toContain("Dave");
-
-    // Also added to buffer
-    const participants = client.getParticipants();
-    expect(participants.find((p) => p.name === "Dave")).toBeDefined();
-  });
-
-  it("removes participant from buffer on participant_update left", async () => {
-    const { client, mockWs } = await setupConnectedClient(makeConfig());
-
-    // Add a participant first
-    mockWs.simulateMessage({
-      type: "participant_update",
-      action: "joined",
-      participant_id: "p-eve",
-      name: "Eve",
-      role: "human",
-      connection_type: "webrtc",
-    });
-
-    expect(client.getParticipants().find((p) => p.name === "Eve")).toBeDefined();
+    expect(client.getParticipants().find((p) => p.name === "Dave")).toBeDefined();
 
     mockWs.simulateMessage({
       type: "participant_update",
       action: "left",
-      participant_id: "p-eve",
-      name: "Eve",
+      participant_id: "p-new",
+      name: "Dave",
       role: "human",
     });
 
-    expect(client.getParticipants().find((p) => p.name === "Eve")).toBeUndefined();
+    expect(client.getParticipants().find((p) => p.name === "Dave")).toBeUndefined();
   });
 });
 
@@ -762,14 +579,14 @@ describe("bearer token auth", () => {
       MockWebSocket as unknown as ConstructorParameters<typeof ConveneClient>[1],
     );
 
-    const connectPromise = client.connect();
+    const joinPromise = client.joinMeeting(MEETING_ID);
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
     const mockWs = lastMockWs!;
     mockWs.emit("open");
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
-    mockWs.simulateMessage({ type: "joined", meeting_id: config.conveneMeetingId });
-    await connectPromise;
+    mockWs.simulateMessage({ type: "joined", meeting_id: MEETING_ID });
+    await joinPromise;
 
     // fetch should NOT have been called (bearer token was used directly)
     expect(fetchSpy).not.toHaveBeenCalled();

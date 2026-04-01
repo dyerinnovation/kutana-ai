@@ -32,7 +32,6 @@ export function AgentCreatePage() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [capabilities, setCapabilities] = useState<string[]>([]);
-  const [systemPrompt, setSystemPrompt] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -100,23 +99,6 @@ export function AgentCreatePage() {
               onChange={(e) => setName(e.target.value)}
               required
             />
-
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-gray-300">
-                Agent Instructions{" "}
-                <span className="font-normal text-gray-500">(optional)</span>
-              </label>
-              <p className="text-xs text-gray-500">
-                Describe what your agent should do in meetings
-              </p>
-              <textarea
-                className="flex min-h-[120px] w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="You are a meeting assistant that tracks action items and commitments..."
-                value={systemPrompt}
-                onChange={(e) => setSystemPrompt(e.target.value)}
-              />
-            </div>
-
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-300">

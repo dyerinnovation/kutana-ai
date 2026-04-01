@@ -2,40 +2,39 @@
  * Configuration for the Convene AI Channel Server.
  *
  * All settings are read from environment variables so the server can be
- * parameterised per-meeting without code changes.
+ * parameterised without code changes.
  */
 
 import type { AgentMode, EntityType } from "./types.js";
 
 export interface ChannelServerConfig {
-  /** WebSocket URL of the Convene agent gateway (e.g. ws://localhost:8003). */
+  /** WebSocket URL of the Convene agent gateway (e.g. wss://convene.spark-b0f2.local/ws). */
   conveneApiUrl: string;
-  /** HTTP base URL of the Convene API server (for API-key → JWT exchange). */
+  /** HTTP base URL of the Convene API server. */
   conveneHttpUrl: string;
   /** Agent API key used for authentication. */
   conveneApiKey: string;
   /**
    * Optional pre-issued gateway JWT.  When set, the API-key → JWT exchange
-   * step is skipped and this token is used directly.  Useful for Claude Code
-   * sessions where a gateway token has already been obtained out-of-band.
+   * step is skipped and this token is used directly.
    */
   conveneBearerToken: string;
-  /** UUID of the meeting this server instance will join. */
-  conveneMeetingId: string;
   /** Display name shown in the meeting participant list (default: "Claude Code"). */
   conveneAgentName: string;
   /** Controls which event types are forwarded to Claude. */
   agentMode: AgentMode;
   /** Entity types to forward when agentMode is "selective". */
   entityFilter: EntityType[];
+  /** Whether to reject unauthorized TLS certificates. Set false for self-signed certs. */
+  tlsRejectUnauthorized: boolean;
 }
 
 /**
  * Load configuration from environment variables.
  *
  * Logs a warning and applies defaults for optional variables.
- * Callers should validate that required fields (conveneApiKey,
- * conveneMeetingId) are non-empty before starting the server.
+ * Callers should validate that required fields (conveneApiKey)
+ * are non-empty before starting the server.
  */
 export function loadConfig(): ChannelServerConfig {
   const rawApiUrl = process.env["CONVENE_API_URL"] ?? "ws://localhost:8003";
@@ -50,15 +49,18 @@ export function loadConfig(): ChannelServerConfig {
   const rawFilter = process.env["CONVENE_ENTITY_FILTER"] ?? "";
   const entityFilter = parseEntityFilter(rawFilter);
 
+  const rawTls = process.env["CONVENE_TLS_REJECT_UNAUTHORIZED"] ?? "0";
+  const tlsRejectUnauthorized = rawTls !== "0";
+
   return {
     conveneApiUrl: rawApiUrl,
     conveneHttpUrl: rawHttpUrl,
     conveneApiKey: process.env["CONVENE_API_KEY"] ?? "",
     conveneBearerToken: process.env["CONVENE_BEARER_TOKEN"] ?? "",
-    conveneMeetingId: process.env["CONVENE_MEETING_ID"] ?? "",
     conveneAgentName: process.env["CONVENE_AGENT_NAME"] ?? "Claude Code",
     agentMode,
     entityFilter,
+    tlsRejectUnauthorized,
   };
 }
 

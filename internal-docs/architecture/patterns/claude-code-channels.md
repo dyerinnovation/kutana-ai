@@ -1,6 +1,6 @@
-# Claude Code Channels — Spec & Convene Integration Plan
+# Claude Code Channels — Architecture & Implementation
 
-> Claude Code Channels (shipped March 20, 2026) are MCP servers that push events into a running Claude Code session. They complement the existing pull-based MCP server by enabling real-time, event-driven interaction.
+> The Convene channel plugin is **implemented and shipping**. It is a single stdio MCP server that provides both tools and real-time push events.
 
 ---
 
@@ -8,13 +8,15 @@
 
 Claude Code Channels are **stdio-transport MCP servers** spawned as subprocesses by Claude Code. Unlike standard MCP servers (which Claude Code calls on demand), a channel declares the `claude/channel` capability and **pushes** events into the session via `notifications/claude/channel` messages.
 
-Official first-party channel plugins exist for Telegram, Discord, and iMessage. Any MCP server can become a channel by:
+Official first-party channel plugins exist for Telegram, Discord, and iMessage. The Convene channel plugin follows the same pattern.
 
-1. Using **stdio transport** (spawned as a child process, not HTTP).
-2. Declaring the **`claude/channel` capability** during initialization.
-3. Emitting **`notifications/claude/channel`** JSON-RPC notifications whenever an event occurs.
+A channel must:
 
-When Claude Code receives a channel notification, it treats the payload as new context — similar to a user message — and can respond, call tools, or take action autonomously.
+1. Use **stdio transport** (spawned as a child process, not HTTP).
+2. Declare **`experimental: { 'claude/channel': {} }`** during initialization.
+3. Emit **`notifications/claude/channel`** JSON-RPC notifications with `{ content, meta }` params.
+
+Events arrive in Claude's context as `<channel source="server-name" attr="val">content</channel>` XML tags.
 
 ---
 
@@ -22,7 +24,7 @@ When Claude Code receives a channel notification, it treats the payload as new c
 
 ### Transport
 
-Channels use **stdio** (stdin/stdout), not HTTP. Claude Code spawns the channel binary as a subprocess and communicates over JSON-RPC 2.0 on stdio.
+Channels use **stdio** (stdin/stdout), not HTTP. Claude Code spawns the channel binary as a subprocess.
 
 ```
 Claude Code (parent)
@@ -33,172 +35,165 @@ Claude Code (parent)
 
 ### Capability Declaration
 
-During MCP initialization, the channel server includes `claude/channel` in its capabilities response:
+During MCP initialization, the channel server declares the `claude/channel` capability under `experimental`:
 
-```json
-{
-  "capabilities": {
-    "claude/channel": {}
-  }
-}
+```typescript
+const server = new Server(
+  { name: 'convene-ai', version: '0.2.0' },
+  {
+    capabilities: {
+      tools: {},
+      resources: { subscribe: true, listChanged: true },
+      experimental: { 'claude/channel': {} },
+    },
+    instructions: 'Events from the convene-ai channel arrive as <channel source="convene-ai" ...>.',
+  },
+)
 ```
 
 ### Event Emission
 
-The channel pushes events as JSON-RPC notifications (no `id` field, no response expected):
+The channel pushes events as JSON-RPC notifications:
 
 ```json
 {
   "jsonrpc": "2.0",
   "method": "notifications/claude/channel",
   "params": {
-    "channel": "convene",
-    "event": "transcript.segment",
-    "data": {
-      "speaker": "Alice",
-      "text": "We should finalize the API spec by Thursday.",
-      "timestamp": "2026-03-26T14:32:01Z"
+    "content": "[2.0s-4.5s] Alice: We should finalize the API spec by Thursday.",
+    "meta": {
+      "topic": "transcript",
+      "type": "transcript_segment"
     }
   }
 }
 ```
 
-Claude Code receives this as inline context and can act on it — e.g., call `convene_create_task` via the MCP server.
+Claude Code renders this as:
+
+```xml
+<channel source="convene-ai" topic="transcript" type="transcript_segment">
+[2.0s-4.5s] Alice: We should finalize the API spec by Thursday.
+</channel>
+```
+
+The `source` attribute comes from the server's `name` field. The `meta` keys become additional tag attributes.
 
 ---
 
-## Convene Integration Architecture
+## Convene Implementation
 
-### Current State: MCP Server (Pull Model)
+### Architecture
 
-Claude Code connects to `http://convene.spark-b0f2.local/mcp` over MCP Streamable HTTP. It calls tools on demand (`convene_get_transcript`, `convene_get_meeting_events`, etc.) and polls for new events.
+The channel plugin is a **single stdio MCP server** (TypeScript, runs with Bun) that handles both tools and push events:
 
 ```
 Claude Code
     │
-    │  MCP Streamable HTTP (pull)
-    │  POST /mcp
-    ▼
-Convene MCP Server ──► Agent Gateway ──► Redis Streams
+    └── stdio MCP ──→ Convene Channel Plugin (bun)
+                          │
+                          ├── HTTP (fetch) ──→ API Server   (list/create meetings)
+                          └── WebSocket    ──→ Agent Gateway (join, events, chat, turn)
 ```
 
-**Limitation:** Claude Code must explicitly poll. Events are buffered in Redis for up to 5 minutes, but there is no push notification when something happens.
+### Lifecycle
 
-### Future State: Channel Plugin (Push Model)
+1. **Startup** — Plugin authenticates with the API (API key → JWT). Tools and resources are registered. No meeting joined yet.
+2. **Discovery** — User calls `list_meetings` or browses `convene://meeting/{id}` resources.
+3. **Join** — User calls `join_meeting` → WebSocket opens → events push via `notifications/claude/channel`.
+4. **Active** — All 18 tools available. Transcript, chat, turn, and insight events flow as `<channel>` tags.
+5. **Leave** — User calls `leave_meeting` → WebSocket closes, buffers clear.
 
-A local **Convene Channel Plugin** runs as a stdio subprocess alongside Claude Code. It maintains a persistent WebSocket to the agent gateway and pushes meeting events into the Claude Code session in real time.
+### Configuration
+
+Register the MCP server using the Claude Code CLI:
+
+```bash
+claude mcp add-json --scope user convene '{
+  "type": "stdio",
+  "command": "bun",
+  "args": ["/path/to/services/channel-server/src/server.ts"],
+  "env": {
+    "CONVENE_API_KEY": "cvn_...",
+    "CONVENE_API_URL": "wss://convene.spark-b0f2.local/ws",
+    "CONVENE_HTTP_URL": "https://convene.spark-b0f2.local/api",
+    "CONVENE_TLS_REJECT_UNAUTHORIZED": "0"
+  }
+}'
+```
+
+**Important:** The server must be registered via `claude mcp add-json` (not manually in `~/.claude/settings.json`). The `--dangerously-load-development-channels` flag looks up servers from the `claude mcp` managed registry — manual `settings.json` entries are invisible to it.
+
+Then launch Claude Code with the channel enabled:
+
+```bash
+claude --dangerously-load-development-channels server:convene
+```
+
+`server:convene` references the server registered with `claude mcp add-json`. This flag is required during the research preview for custom (non-plugin) channels — without it, tools load but push events (`notifications/claude/channel`) are silently dropped. Published plugins use `--channels plugin:name@publisher` instead.
+
+No `CONVENE_MEETING_ID` needed — meetings are joined dynamically via tools.
+
+### Event Mapping
+
+| Gateway Event | Channel Topic | Channel Type |
+|--------------|---------------|--------------|
+| `transcript` | `transcript` | `transcript_segment` |
+| `data.channel.insights.*` | `insight` | Entity type (task, decision, etc.) |
+| `data.channel.chat` | `chat` | `chat_message` |
+| `turn.queue.updated` | `turn` | `queue_updated` |
+| `turn.speaker.changed` | `turn` | `speaker_changed` |
+| `turn.your_turn` | `turn` | `your_turn` |
+| `participant_update` | `participant` | `joined` / `left` |
+
+### Tools (18 total)
+
+**Lobby tools** (no meeting required): `list_meetings`, `join_meeting`, `create_meeting`, `join_or_create_meeting`
+
+**Meeting tools** (require active meeting): `leave_meeting`, `reply`, `get_chat_messages`, `accept_task`, `update_status`, `raise_hand`, `get_queue_status`, `mark_finished_speaking`, `cancel_hand_raise`, `get_speaking_status`, `get_participants`, `request_context`, `get_meeting_recap`, `get_entity_history`
+
+### Resources
+
+| URI | Description |
+|-----|-------------|
+| `convene://platform/context` | Static platform context |
+| `convene://meeting/{id}` | Meeting info + connection status |
+| `convene://meeting/{id}/context` | Detailed context with transcript preview |
+| `convene://meeting/{id}/transcript` | Buffered transcript (JSON) |
+
+### Source Code
 
 ```
-Claude Code
-    │
-    ├── MCP HTTP (pull) ──► Convene MCP Server ──► tools, transcripts, tasks
-    │
-    └── stdio (push) ◄── Convene Channel Plugin
-                              │
-                              └── WebSocket ──► Agent Gateway ──► Redis Streams
+services/channel-server/
+├── src/
+│   ├── server.ts           # MCP server entry, channel notification forwarding
+│   ├── convene-client.ts   # WebSocket client: auth, join, leave, HTTP API
+│   ├── config.ts           # Environment variable loading
+│   ├── types.ts            # TypeScript types (mirrors Python domain models)
+│   ├── tools.ts            # 18 MCP tools with meeting-active guards
+│   └── resources.ts        # MCP resources with listChanged notifications
+├── tests/                  # 71 tests (vitest)
+└── package.json            # Bun runtime, @modelcontextprotocol/sdk
 ```
-
-**Benefits:**
-- **Instant awareness:** Claude Code learns about new transcript segments, speaker changes, chat messages, and task updates the moment they happen.
-- **No polling overhead:** Eliminates the need for periodic `convene_get_meeting_events` calls.
-- **Autonomous action:** Claude Code can react to events without being prompted — e.g., automatically flag action items as they are spoken.
-
-### How They Work Together
-
-| Concern | MCP Server (HTTP) | Channel Plugin (stdio) |
-|---------|-------------------|----------------------|
-| Transport | Streamable HTTP | stdio (subprocess) |
-| Direction | Pull (Claude calls tools) | Push (plugin emits events) |
-| Auth | Bearer token (JWT) | Local process — inherits env |
-| Use case | Tool calls, data queries | Real-time event stream |
-| Status | **Shipping today** | **Planned (Phase 2)** |
-
-Both are MCP servers. Claude Code can use them simultaneously — the channel provides awareness, the MCP server provides action.
-
----
-
-## Implementation Roadmap
-
-### Phase 1: MCP Only (Current)
-
-- Claude Code connects via `http://convene.spark-b0f2.local/mcp`.
-- All interaction is pull-based: Claude Code calls tools, polls events.
-- Event buffering in Redis (5 min window, 50 events per poll).
-- This works today and covers all meeting participation use cases.
-
-### Phase 2: Channel Plugin for Real-Time Push
-
-**Deliverables:**
-
-1. **`convene-channel` CLI binary** (Python, packaged via `uv`):
-   - Reads `CONVENE_API_KEY` from environment.
-   - Opens a WebSocket to the agent gateway (`wss://convene.spark-b0f2.local/v1/agent/connect`).
-   - Joins a specified meeting (passed via CLI arg or env var).
-   - Translates gateway WebSocket events into `notifications/claude/channel` on stdout.
-   - Handles reconnection, heartbeat, and graceful shutdown.
-
-2. **Claude Code configuration** (`~/.claude/settings.json`):
-   ```json
-   {
-     "mcpServers": {
-       "convene": {
-         "type": "http",
-         "url": "http://convene.spark-b0f2.local/mcp",
-         "headers": {
-           "Authorization": "Bearer ${CONVENE_API_KEY}"
-         }
-       },
-       "convene-channel": {
-         "type": "stdio",
-         "command": "convene-channel",
-         "args": ["--meeting", "${CONVENE_MEETING_ID}"],
-         "env": {
-           "CONVENE_API_KEY": "${CONVENE_API_KEY}"
-         }
-       }
-     }
-   }
-   ```
-
-3. **Event mapping** (gateway WebSocket events to channel notifications):
-
-   | Gateway Event | Channel Notification |
-   |--------------|---------------------|
-   | `transcript.segment.final` | `transcript.segment` |
-   | `speaker.changed` | `speaker.changed` |
-   | `speaker.queue.updated` | `speaker.queue.updated` |
-   | `chat.message.received` | `chat.message` |
-   | `participant.joined` | `participant.joined` |
-   | `participant.left` | `participant.left` |
-   | `channel.*` | `data_channel.*` |
-   | `task.created` | `task.created` |
-
-4. **Tests:**
-   - Unit tests for event translation.
-   - Integration test: channel plugin connects to gateway, receives event, emits notification on stdout.
-   - E2E test: Claude Code receives channel notification, calls MCP tool in response.
-
-### Phase 3: Bi-Directional Channel (Future)
-
-- Channel plugin accepts tool-call-like messages from Claude Code (not just notifications).
-- Enables low-latency operations that bypass the HTTP round-trip.
-- Requires MCP spec evolution (channels are currently notification-only).
 
 ---
 
 ## Technical Notes
 
-- **stdio vs HTTP:** Channels must use stdio because they run as subprocesses. The existing MCP server remains HTTP because it is a shared remote service.
-- **Auth boundary:** The channel plugin runs locally and inherits the user's env vars (including `CONVENE_API_KEY`). It authenticates to the gateway the same way any agent does.
-- **mDNS resolution:** The channel plugin must use `aiohttp` (not `httpx`) for WebSocket connections to `*.local` hostnames. httpx hangs on IPv6/mDNS resolution. See memory note on this issue.
-- **Reconnection:** The channel plugin should implement exponential backoff with jitter for WebSocket reconnection. Meeting events missed during disconnection can be recovered via `convene_get_meeting_events` on the MCP server side.
-- **Resource usage:** The channel plugin is a lightweight Python process. It holds one WebSocket connection and emits JSON on stdout. Memory footprint should be under 50 MB.
+- **stdio vs HTTP:** The channel plugin uses stdio because it runs as a subprocess. The separate HTTP MCP server (`services/mcp-server/`) remains available for remote agents that can't run a local process.
+- **Auth:** The plugin reads `CONVENE_API_KEY` from env and exchanges it for a gateway JWT via `POST /api/v1/token/gateway`.
+- **TLS:** Self-signed certs are common in dev. Set `CONVENE_TLS_REJECT_UNAUTHORIZED=0` (default) to accept them. The plugin sets `NODE_TLS_REJECT_UNAUTHORIZED=0` at startup.
+- **MCP registration:** The server must be registered via `claude mcp add-json` (managed registry), not manually in `~/.claude/settings.json`. The `--dangerously-load-development-channels` flag only finds servers in the managed registry.
+- **Research preview:** Custom channels require `--dangerously-load-development-channels server:convene` at launch. This bypasses the channel allowlist (which only includes published Anthropic plugins like Discord, Telegram). This flag may be removed or renamed when channels graduate from preview.
+- **Reconnection:** Not yet implemented. If the WebSocket drops, use `leave_meeting` + `join_meeting` to reconnect. Missed events can be recovered via the HTTP MCP server's `convene_get_meeting_events`.
 
 ---
 
 ## References
 
-- External setup guide: `external-docs/agent-platform/connecting/claude-code-channel.md`
+- External setup guide: `external-docs/connecting-agents/custom-agents/claude-code-channel.md`
+- Claude Code channels docs: https://code.claude.com/docs/en/channels
+- Claude Code channels reference: https://code.claude.com/docs/en/channels-reference
 - MCP server architecture: `internal-docs/architecture/patterns/mcp-server.md`
 - Agent gateway protocol: `internal-docs/architecture/patterns/agent-gateway.md`
 - Auth and API keys: `internal-docs/architecture/patterns/auth-and-api-keys.md`

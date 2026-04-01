@@ -1,20 +1,14 @@
 /**
  * Convene AI WebSocket client for the channel server.
  *
- * Authenticates with the Convene API server to exchange an agent API key for
- * a gateway JWT (or uses a pre-issued bearer token), then connects to the
- * agent gateway WebSocket, joins the configured meeting, and forwards
- * incoming events to registered callbacks.
+ * Lifecycle:
+ *   1. authenticate() — exchanges API key for a gateway JWT (or uses pre-issued token)
+ *   2. listMeetings() / createMeeting() — HTTP calls against the API server
+ *   3. joinMeeting(meetingId) — opens WebSocket, joins the meeting, starts event forwarding
+ *   4. leaveMeeting() — sends leave, closes WebSocket, clears buffers
  *
- * Supports the four agent modes (transcript, insights, both, selective) by
- * filtering events before forwarding.
- *
- * New in Claude Code Channel Integration:
- *   - Bearer token bypass: if CONVENE_BEARER_TOKEN is set, skip API-key exchange
- *   - Turn management: raise_hand, lower_hand, finished_speaking, get_queue
- *   - Chat: inbound chat buffering, get_chat_messages
- *   - Participant tracking: get_participants with source: "claude-code" annotation
- *   - Real-time event forwarding for turn changes, chat messages, participant updates
+ * Authentication is required before any operation. WebSocket is only opened
+ * when joining a meeting — listing and creating meetings use plain HTTP.
  */
 
 import WebSocket from "ws";
@@ -28,6 +22,7 @@ import type {
   GatewayEvent,
   InsightPayload,
   JoinedMessage,
+  MeetingInfo,
   ParticipantInfo,
   TranscriptSegment,
   TurnQueueStatus,
@@ -39,11 +34,15 @@ export type ChannelEventCallback = (
 ) => Promise<void> | void;
 
 /** Injectable WebSocket constructor — allows test code to supply a mock. */
-export type WebSocketConstructor = new (url: string) => WebSocket;
+export type WebSocketConstructor = new (
+  url: string,
+  options?: { rejectUnauthorized?: boolean },
+) => WebSocket;
 
 export class ConveneClient {
   private ws: WebSocket | null = null;
   private token: string | null = null;
+  private currentMeetingId: string | null = null;
   private connected = false;
   private channelCallback: ChannelEventCallback | null = null;
 
@@ -61,11 +60,11 @@ export class ConveneClient {
   constructor(
     private readonly config: ChannelServerConfig,
     /** Allows injecting a mock WebSocket in tests. */
-    private readonly WS: WebSocketConstructor = WebSocket,
+    private readonly WS: WebSocketConstructor = WebSocket as unknown as WebSocketConstructor,
   ) {}
 
   // ---------------------------------------------------------------------------
-  // Public API
+  // Public API — Lifecycle
   // ---------------------------------------------------------------------------
 
   /** Register a callback that receives channel messages. */
@@ -73,14 +72,71 @@ export class ConveneClient {
     this.channelCallback = callback;
   }
 
-  /** Authenticate and connect to the Convene agent gateway. */
-  async connect(): Promise<void> {
-    await this.authenticate();
-    await this.connectWebSocket();
+  /**
+   * Exchange the API key for a gateway JWT.
+   * Idempotent — skips if a token is already available.
+   */
+  async authenticate(): Promise<void> {
+    if (this.token) return;
+
+    // If a pre-issued gateway JWT is configured, use it directly.
+    if (this.config.conveneBearerToken) {
+      this.token = this.config.conveneBearerToken;
+      process.stderr.write(
+        "[channel-server] Using pre-issued bearer token (skipping API-key exchange)\n",
+      );
+      return;
+    }
+
+    const url = `${this.config.conveneHttpUrl}/api/v1/token/gateway`;
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "X-API-Key": this.config.conveneApiKey },
+      ...(this.config.tlsRejectUnauthorized
+        ? {}
+        : { tls: { rejectUnauthorized: false } }),
+    });
+
+    if (!resp.ok) {
+      throw new Error(
+        `Convene auth failed: ${resp.status.toString()} ${resp.statusText}`,
+      );
+    }
+
+    const data = (await resp.json()) as { token: string };
+    this.token = data.token;
   }
 
-  /** Disconnect gracefully from the gateway. */
-  async disconnect(): Promise<void> {
+  /**
+   * Join a meeting by ID. Opens a WebSocket to the agent gateway,
+   * sends join_meeting, and starts event forwarding.
+   *
+   * @param meetingId UUID of the meeting to join.
+   * @param capabilities Capabilities to request (default: listen, transcribe, data_channel).
+   */
+  async joinMeeting(
+    meetingId: string,
+    capabilities: string[] = ["listen", "transcribe", "data_channel"],
+  ): Promise<void> {
+    if (this.currentMeetingId) {
+      throw new Error(
+        `Already in meeting ${this.currentMeetingId}. Call leaveMeeting() first.`,
+      );
+    }
+    if (!this.token) {
+      // Auto-authenticate if not yet done
+      await this.authenticate();
+    }
+    await this.connectWebSocket(meetingId, capabilities);
+  }
+
+  /**
+   * Leave the current meeting. Sends leave_meeting, closes the WebSocket,
+   * and clears all per-meeting buffers.
+   */
+  async leaveMeeting(): Promise<void> {
+    if (!this.currentMeetingId) return;
+
     if (this.ws) {
       try {
         this.send({ type: "leave_meeting", reason: "agent_disconnect" });
@@ -91,14 +147,83 @@ export class ConveneClient {
       this.ws = null;
     }
     this.connected = false;
+    const leftMeeting = this.currentMeetingId;
+    this.currentMeetingId = null;
+    this.resetBuffers();
+
+    this.emit({
+      topic: "meeting_lifecycle",
+      type: "left",
+      content: `<meeting action="left">Left meeting ${leftMeeting}.</meeting>`,
+    });
   }
 
   isConnected(): boolean {
     return this.connected;
   }
 
+  getCurrentMeetingId(): string | null {
+    return this.currentMeetingId;
+  }
+
   // ---------------------------------------------------------------------------
-  // Two-way communication (called by MCP tool handlers)
+  // Public API — HTTP (no WebSocket required)
+  // ---------------------------------------------------------------------------
+
+  /** List available meetings from the API server. */
+  async listMeetings(): Promise<MeetingInfo[]> {
+    if (!this.token) {
+      await this.authenticate();
+    }
+
+    const url = `${this.config.conveneHttpUrl}/api/v1/meetings`;
+    const resp = await fetch(url, {
+      headers: { "X-API-Key": this.config.conveneApiKey },
+      ...(this.config.tlsRejectUnauthorized
+        ? {}
+        : { tls: { rejectUnauthorized: false } }),
+    });
+
+    if (!resp.ok) {
+      throw new Error(
+        `Failed to list meetings: ${resp.status.toString()} ${resp.statusText}`,
+      );
+    }
+
+    const data = (await resp.json()) as { items: MeetingInfo[] };
+    return data.items;
+  }
+
+  /** Create a new meeting via the API server. */
+  async createMeeting(title: string): Promise<MeetingInfo> {
+    if (!this.token) {
+      await this.authenticate();
+    }
+
+    const url = `${this.config.conveneHttpUrl}/api/v1/meetings`;
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        "X-API-Key": this.config.conveneApiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title, platform: "convene" }),
+      ...(this.config.tlsRejectUnauthorized
+        ? {}
+        : { tls: { rejectUnauthorized: false } }),
+    });
+
+    if (!resp.ok) {
+      throw new Error(
+        `Failed to create meeting: ${resp.status.toString()} ${resp.statusText}`,
+      );
+    }
+
+    return (await resp.json()) as MeetingInfo;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Public API — Two-way communication (requires active meeting)
   // ---------------------------------------------------------------------------
 
   async sendChatMessage(text: string): Promise<void> {
@@ -133,7 +258,7 @@ export class ConveneClient {
   }
 
   // ---------------------------------------------------------------------------
-  // Turn management (native gateway WebSocket messages)
+  // Public API — Turn management (requires active meeting)
   // ---------------------------------------------------------------------------
 
   async raiseHand(priority = "normal", topic?: string): Promise<void> {
@@ -174,7 +299,7 @@ export class ConveneClient {
   }
 
   // ---------------------------------------------------------------------------
-  // Buffer accessors (called by MCP tool handlers)
+  // Public API — Buffer accessors
   // ---------------------------------------------------------------------------
 
   getRecentTranscript(limit = 50): TranscriptSegment[] {
@@ -194,7 +319,7 @@ export class ConveneClient {
 
   /**
    * Return the current participant list, annotating our own session with
-   * source: "claude-code".  Our session is identified by conveneAgentName.
+   * source: "claude-code".
    */
   getParticipants(): ParticipantInfo[] {
     const agentName = this.config.conveneAgentName;
@@ -204,40 +329,13 @@ export class ConveneClient {
   }
 
   // ---------------------------------------------------------------------------
-  // Authentication
+  // WebSocket lifecycle (private)
   // ---------------------------------------------------------------------------
 
-  private async authenticate(): Promise<void> {
-    // If a pre-issued gateway JWT is configured, use it directly.
-    if (this.config.conveneBearerToken) {
-      this.token = this.config.conveneBearerToken;
-      process.stderr.write(
-        "[channel-server] Using pre-issued bearer token (skipping API-key exchange)\n",
-      );
-      return;
-    }
-
-    const url = `${this.config.conveneHttpUrl}/api/v1/token/gateway`;
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: { "X-API-Key": this.config.conveneApiKey },
-    });
-
-    if (!resp.ok) {
-      throw new Error(
-        `Convene auth failed: ${resp.status.toString()} ${resp.statusText}`,
-      );
-    }
-
-    const data = (await resp.json()) as { token: string };
-    this.token = data.token;
-  }
-
-  // ---------------------------------------------------------------------------
-  // WebSocket lifecycle
-  // ---------------------------------------------------------------------------
-
-  private connectWebSocket(): Promise<void> {
+  private connectWebSocket(
+    meetingId: string,
+    capabilities: string[],
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!this.token) {
         reject(new Error("Not authenticated — call authenticate() first"));
@@ -245,13 +343,16 @@ export class ConveneClient {
       }
 
       const wsUrl = `${this.config.conveneApiUrl}/agent/connect?token=${this.token}`;
-      this.ws = new this.WS(wsUrl);
+      const wsOptions = this.config.tlsRejectUnauthorized
+        ? undefined
+        : { rejectUnauthorized: false };
+      this.ws = new this.WS(wsUrl, wsOptions);
 
       this.ws.on("open", () => {
         this.send({
           type: "join_meeting",
-          meeting_id: this.config.conveneMeetingId,
-          capabilities: ["listen", "transcribe", "data_channel"],
+          meeting_id: meetingId,
+          capabilities,
         });
       });
 
@@ -266,16 +367,22 @@ export class ConveneClient {
         if (msg["type"] === "joined") {
           const joined = msg as unknown as JoinedMessage;
           this.connected = true;
+          this.currentMeetingId = meetingId;
 
           // Seed participant buffer from the joined message
           const initialParticipants = joined.participants ?? [];
           if (Array.isArray(initialParticipants)) {
-            for (const p of initialParticipants as Array<Record<string, unknown>>) {
+            for (const p of initialParticipants as Array<
+              Record<string, unknown>
+            >) {
               this.upsertParticipant({
                 participant_id: String(p["participant_id"] ?? p["id"] ?? ""),
                 name: String(p["name"] ?? ""),
                 role: String(p["role"] ?? "agent"),
-                connection_type: p["connection_type"] != null ? String(p["connection_type"]) : null,
+                connection_type:
+                  p["connection_type"] != null
+                    ? String(p["connection_type"])
+                    : null,
               });
             }
           }
@@ -307,6 +414,13 @@ export class ConveneClient {
               "chat",
             ],
           });
+
+          this.emit({
+            topic: "meeting_lifecycle",
+            type: "joined",
+            content: `<meeting action="joined">Joined meeting ${String(joined.meeting_id)}.</meeting>`,
+          });
+
           process.stderr.write(
             `[channel-server] Joined meeting ${String(joined.meeting_id)}\n`,
           );
@@ -323,7 +437,9 @@ export class ConveneClient {
         if (!this.connected) {
           reject(err);
         } else {
-          process.stderr.write(`[channel-server] WebSocket error: ${err.message}\n`);
+          process.stderr.write(
+            `[channel-server] WebSocket error: ${err.message}\n`,
+          );
         }
       });
 
@@ -360,7 +476,10 @@ export class ConveneClient {
     const et = event.event_type ?? "";
 
     // Insight channels
-    if (et.startsWith("data.channel.insights") && this.shouldForwardInsights()) {
+    if (
+      et.startsWith("data.channel.insights") &&
+      this.shouldForwardInsights()
+    ) {
       const payload = event.payload as InsightPayload | undefined;
       if (payload?.entities) {
         const filtered = this.applyEntityFilter(payload.entities);
@@ -384,9 +503,11 @@ export class ConveneClient {
           index: this.chatIndex++,
           sender_name: String(p["sender_name"] ?? p["from"] ?? "Unknown"),
           sender_session_id: String(p["sender_session_id"] ?? ""),
-          text: String(p["payload"] != null
-            ? (p["payload"] as Record<string, unknown>)["text"] ?? ""
-            : p["text"] ?? ""),
+          text: String(
+            p["payload"] != null
+              ? ((p["payload"] as Record<string, unknown>)["text"] ?? "")
+              : (p["text"] ?? ""),
+          ),
           timestamp: new Date().toISOString(),
         };
         this.chatBuffer.push(msg);
@@ -405,22 +526,29 @@ export class ConveneClient {
       if (p) {
         this.lastQueueStatus = {
           meeting_id: String(p["meeting_id"] ?? ""),
-          active_speaker_id: p["active_speaker_id"] != null ? String(p["active_speaker_id"]) : null,
+          active_speaker_id:
+            p["active_speaker_id"] != null
+              ? String(p["active_speaker_id"])
+              : null,
           queue: Array.isArray(p["queue"])
             ? (p["queue"] as Array<Record<string, unknown>>).map((entry) => ({
                 position: Number(entry["position"] ?? 0),
                 participant_id: String(entry["participant_id"] ?? ""),
                 priority: String(entry["priority"] ?? "normal"),
-                topic: entry["topic"] != null ? String(entry["topic"]) : null,
+                topic:
+                  entry["topic"] != null ? String(entry["topic"]) : null,
                 raised_at: String(entry["raised_at"] ?? ""),
-                hand_raise_id: entry["hand_raise_id"] != null ? String(entry["hand_raise_id"]) : undefined,
+                hand_raise_id:
+                  entry["hand_raise_id"] != null
+                    ? String(entry["hand_raise_id"])
+                    : undefined,
               }))
             : [],
         };
         this.emit({
           topic: "turn",
           type: "queue_updated",
-          content: formatQueueStatus(this.lastQueueStatus),
+          content: formatQueueStatus(this.lastQueueStatus!),
         });
       }
       return;
@@ -439,13 +567,13 @@ export class ConveneClient {
     }
 
     if (et === "turn.your_turn") {
-      // We've been promoted to active speaker
       this.isSpeaking = true;
       this.isInQueue = false;
       this.emit({
         topic: "turn",
         type: "your_turn",
-        content: "<turn>It's your turn to speak. Use mark_finished_speaking when done.</turn>",
+        content:
+          "<turn>It's your turn to speak. Use mark_finished_speaking when done.</turn>",
       });
       return;
     }
@@ -479,17 +607,25 @@ export class ConveneClient {
     const pid = String(msg["participant_id"] ?? "");
     const name = String(msg["name"] ?? "");
     const role = String(msg["role"] ?? "agent");
-    const connectionType = msg["connection_type"] != null ? String(msg["connection_type"]) : null;
+    const connectionType =
+      msg["connection_type"] != null ? String(msg["connection_type"]) : null;
 
     if (action === "joined") {
-      this.upsertParticipant({ participant_id: pid, name, role, connection_type: connectionType });
+      this.upsertParticipant({
+        participant_id: pid,
+        name,
+        role,
+        connection_type: connectionType,
+      });
       this.emit({
         topic: "participant",
         type: "joined",
         content: `<participant action="joined">${name} (${role}) joined the meeting.</participant>`,
       });
     } else if (action === "left") {
-      this.participantsBuffer = this.participantsBuffer.filter((p) => p.participant_id !== pid);
+      this.participantsBuffer = this.participantsBuffer.filter(
+        (p) => p.participant_id !== pid,
+      );
       this.emit({
         topic: "participant",
         type: "left",
@@ -535,6 +671,17 @@ export class ConveneClient {
   // Helpers
   // ---------------------------------------------------------------------------
 
+  private resetBuffers(): void {
+    this.transcriptBuffer = [];
+    this.entityBuffer = [];
+    this.chatBuffer = [];
+    this.participantsBuffer = [];
+    this.lastQueueStatus = null;
+    this.isSpeaking = false;
+    this.isInQueue = false;
+    this.chatIndex = 0;
+  }
+
   private upsertParticipant(p: ParticipantInfo): void {
     const idx = this.participantsBuffer.findIndex(
       (x) => x.participant_id === p.participant_id,
@@ -566,9 +713,9 @@ export class ConveneClient {
   }
 
   private assertConnected(): void {
-    if (!this.connected) {
+    if (!this.connected || !this.currentMeetingId) {
       throw new Error(
-        "ConveneClient is not connected to a meeting. Call connect() first.",
+        "Not in a meeting. Use join_meeting first.",
       );
     }
   }
@@ -599,13 +746,20 @@ function formatQueueStatus(status: TurnQueueStatus): string {
     status.queue.length === 0
       ? "Queue is empty."
       : status.queue
-          .map((e) => `  ${e.position.toString()}. ${e.participant_id}${e.topic ? ` — "${e.topic}"` : ""}`)
+          .map(
+            (e) =>
+              `  ${e.position.toString()}. ${e.participant_id}${e.topic ? ` — "${e.topic}"` : ""}`,
+          )
           .join("\n");
   return `<turn type="queue_updated">Active speaker: ${speaker}\n${queueStr}</turn>`;
 }
 
 function formatSpeakerChanged(p: Record<string, unknown>): string {
-  const prev = p["previous_speaker_id"] != null ? String(p["previous_speaker_id"]) : "none";
-  const next = p["new_speaker_id"] != null ? String(p["new_speaker_id"]) : "none";
+  const prev =
+    p["previous_speaker_id"] != null
+      ? String(p["previous_speaker_id"])
+      : "none";
+  const next =
+    p["new_speaker_id"] != null ? String(p["new_speaker_id"]) : "none";
   return `<turn type="speaker_changed">Speaker changed: ${prev} → ${next}</turn>`;
 }

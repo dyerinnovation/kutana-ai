@@ -68,6 +68,7 @@ mcp = FastMCP(
     instructions="Tools for joining and participating in Convene AI meetings.",
     stateless_http=True,
     json_response=True,
+    streamable_http_path="/",
     host=settings.mcp_host,
     port=settings.mcp_port,
 )
