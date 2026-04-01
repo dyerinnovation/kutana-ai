@@ -102,7 +102,8 @@ export interface TtsAudioPayload {
   speaker_session_id: string;
   speaker_name: string;
   data: string;       // base64-encoded audio
-  format: string;     // "wav" | "pcm_s16le" | "mp3"
+  format: string;     // "pcm_s16le" | "wav" | "mp3"
+  sample_rate?: number; // source sample rate (e.g. 24000 for Cartesia)
   char_count: number;
 }
 
