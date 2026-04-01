@@ -396,7 +396,7 @@ class TTSBridge:
         text: str,
         speaker_name: str,
         voice: str | None = None,
-        audio_format: str = "wav",
+        audio_format: str = "pcm_s16le",
     ) -> bool:
         """Synthesize text and broadcast audio to all meeting listeners.
 
@@ -425,6 +425,7 @@ class TTSBridge:
             "speaker_name": speaker_name,
             "data": audio_b64,
             "format": audio_format,
+            "sample_rate": 24000,  # Cartesia outputs PCM16 @ 24kHz
             "char_count": len(text),
         }
 
