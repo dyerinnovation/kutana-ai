@@ -32,6 +32,7 @@ export function AgentCreatePage() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [capabilities, setCapabilities] = useState<string[]>([]);
+  const [systemPrompt, setSystemPrompt] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 

@@ -1,0 +1,109 @@
+# Woodpecker CI Helm values for Convene AI / DGX Spark
+#
+# Chart: woodpecker-ci/woodpecker
+# Install:  see infra/woodpecker/deploy.sh
+#
+# Secrets come from the woodpecker-secrets K8s Secret (NOT from this file).
+# See infra/woodpecker/secrets.example.yaml for the required keys.
+# ---------------------------------------------------------------------------
+
+server:
+  env:
+    # Public URL — must match the Cloudflare Tunnel / Tailscale hostname
+    WOODPECKER_HOST: "https://woodpecker.spark-b0f2.local"
+
+    # GitHub forge
+    WOODPECKER_GITHUB: "true"
+
+    # Admin and org allowlist (GitHub usernames / org)
+    WOODPECKER_ADMIN: "jonathandyer"
+    WOODPECKER_ORGS: "dyerinnovation"
+    WOODPECKER_OPEN: "false"
+
+    # Database — reuse the convene PostgreSQL instance with a separate DB
+    # The woodpecker database must be created before first install.
+    # deploy.sh handles this automatically.
+    WOODPECKER_DATABASE_DRIVER: "postgres"
+    WOODPECKER_DATABASE_DATASOURCE: "postgres://convene:convene@postgres.convene.svc:5432/woodpecker?sslmode=disable"
+
+  # Sensitive values injected from the woodpecker-secrets K8s Secret
+  extraEnv:
+    - name: WOODPECKER_GITHUB_CLIENT
+      valueFrom:
+        secretKeyRef:
+          name: woodpecker-secrets
+          key: WOODPECKER_GITHUB_CLIENT
+    - name: WOODPECKER_GITHUB_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: woodpecker-secrets
+          key: WOODPECKER_GITHUB_SECRET
+    - name: WOODPECKER_AGENT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: woodpecker-secrets
+          key: WOODPECKER_AGENT_SECRET
+
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - host: woodpecker.spark-b0f2.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# ---------------------------------------------------------------------------
+# Agent — runs on DGX, mounts Docker socket and K3s kubeconfig
+# ---------------------------------------------------------------------------
+agent:
+  env:
+    WOODPECKER_BACKEND: "docker"
+    # Allow CI steps to mount the Docker socket and K3s kubeconfig
+    WOODPECKER_BACKEND_DOCKER_VOLUMES: >-
+      /var/run/docker.sock:/var/run/docker.sock,/etc/rancher/k3s/k3s.yaml:/etc/rancher/k3s/k3s.yaml:ro
+    # Max concurrent CI workflows (DGX has ample resources)
+    WOODPECKER_MAX_WORKFLOWS: "2"
+
+  # Shared agent secret injected from the K8s Secret
+  extraEnv:
+    - name: WOODPECKER_AGENT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: woodpecker-secrets
+          key: WOODPECKER_AGENT_SECRET
+
+  # Mount Docker socket and K3s kubeconfig from the DGX host
+  extraVolumes:
+    - name: docker-sock
+      hostPath:
+        path: /var/run/docker.sock
+        type: Socket
+    - name: k3s-kubeconfig
+      hostPath:
+        path: /etc/rancher/k3s/k3s.yaml
+        type: File
+
+  extraVolumeMounts:
+    - name: docker-sock
+      mountPath: /var/run/docker.sock
+    - name: k3s-kubeconfig
+      mountPath: /etc/rancher/k3s/k3s.yaml
+      readOnly: true
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi

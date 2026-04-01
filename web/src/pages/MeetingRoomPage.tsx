@@ -51,28 +51,6 @@ function isAgentParticipant(p: Participant): boolean {
   return p.role === "agent" || p.role.toLowerCase().includes("agent");
 }
 
-function getGridClasses(count: number): string {
-  if (count === 1) return "grid-cols-1 max-w-lg mx-auto";
-  if (count === 2) return "grid-cols-2";
-  if (count <= 4) return "grid-cols-2";
-  if (count <= 6) return "grid-cols-3";
-  return "grid-cols-3 xl:grid-cols-4";
-}
-
-function getTileHeight(count: number): string {
-  if (count === 1) return "h-full min-h-[400px]";
-  if (count === 2) return "h-72";
-  if (count <= 4) return "h-60";
-  if (count <= 6) return "h-48";
-  return "h-40";
-}
-
-function getAvatarSize(count: number): string {
-  if (count <= 2) return "h-28 w-28 text-4xl";
-  if (count <= 4) return "h-24 w-24 text-3xl";
-  return "h-20 w-20 text-2xl";
-}
-
 export function MeetingRoomPage() {
   const { id: meetingId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -90,6 +68,7 @@ export function MeetingRoomPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [rightTab, setRightTab] = useState<RightTab>("transcript");
   const [yourTurnAlert, setYourTurnAlert] = useState(false);
+  const [chatInput, setChatInput] = useState("");
 
   const wsRef = useRef<WebSocket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -252,6 +231,21 @@ export function MeetingRoomPage() {
       case "event":
         if (msg.event_type === "tts.audio") {
           void playTtsAudio(msg.payload as unknown as TtsAudioPayload);
+        } else if (msg.event_type === "chat.message.received") {
+          const p = msg.payload as Record<string, unknown>;
+          const cm: ChatMessage = {
+            id: `${p.sender_id}-${p.timestamp ?? Date.now()}`,
+            sender_id: p.sender_id as string,
+            sender_name: p.sender_name as string,
+            text: (p.content ?? p.text) as string,
+            timestamp: (p.timestamp as number) ?? Date.now() / 1000,
+            is_agent: (p.is_agent as boolean) ?? false,
+          };
+          // Skip if this is our own message (already added optimistically)
+          if (cm.sender_id !== user?.id) {
+            setChatMessages((prev) => [...prev, cm]);
+            if (cm.is_agent) setRightTab("chat");
+          }
         }
         break;
       case "turn.speaker.changed":
@@ -328,78 +322,93 @@ export function MeetingRoomPage() {
           if (!cancelled) setStatus("disconnected");
         };
 
-        // 3. Start audio capture
-        console.log("[Meeting] calling getUserMedia, mediaDevices=", !!navigator.mediaDevices);
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            sampleRate: SAMPLE_RATE,
-            channelCount: 1,
-            echoCancellation: true,
-            noiseSuppression: true,
-          },
-        });
-        console.log("[Meeting] getUserMedia succeeded, cancelled=", cancelled);
-        if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        streamRef.current = stream;
-
-        const audioCtx = new AudioContext({ sampleRate: SAMPLE_RATE });
-        audioContextRef.current = audioCtx;
-
-        // Use ScriptProcessorNode as fallback (widely supported)
-        const source = audioCtx.createMediaStreamSource(stream);
-        const processor = audioCtx.createScriptProcessor(4096, 1, 1);
-
-        processor.onaudioprocess = (e: AudioProcessingEvent) => {
-          if (
-            wsRef.current?.readyState !== WebSocket.OPEN ||
-            isMutedRef.current
-          )
+        // 3. Start audio capture (optional — meeting works without mic)
+        try {
+          console.log("[Meeting] calling getUserMedia, mediaDevices=", !!navigator.mediaDevices);
+          let stream: MediaStream;
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                sampleRate: { ideal: SAMPLE_RATE },
+                channelCount: { ideal: 1 },
+                echoCancellation: true,
+                noiseSuppression: true,
+              },
+            });
+          } catch {
+            // Fallback: accept any audio device
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          }
+          console.log("[Meeting] getUserMedia succeeded, cancelled=", cancelled);
+          if (cancelled) {
+            stream.getTracks().forEach((t) => t.stop());
             return;
-
-          const input = e.inputBuffer.getChannelData(0);
-
-          // Energy gate: skip silent frames to avoid sending ambient noise to
-          // the STT backend (primary cause of Whisper hallucinations).
-          let sumSq = 0;
-          for (let i = 0; i < input.length; i++) sumSq += input[i] * input[i];
-          const rms = Math.sqrt(sumSq / input.length);
-          if (rms < RMS_SILENCE_THRESHOLD) return;
-          // Convert Float32 [-1,1] to Int16
-          const pcm16 = new Int16Array(input.length);
-          for (let i = 0; i < input.length; i++) {
-            const s = Math.max(-1, Math.min(1, input[i]));
-            pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
           }
+          streamRef.current = stream;
 
-          // Base64 encode
-          const bytes = new Uint8Array(pcm16.buffer);
-          let binary = "";
-          for (let i = 0; i < bytes.length; i++) {
-            binary += String.fromCharCode(bytes[i]);
+          const audioCtx = new AudioContext({ sampleRate: SAMPLE_RATE });
+          audioContextRef.current = audioCtx;
+
+          // Use ScriptProcessorNode as fallback (widely supported)
+          const source = audioCtx.createMediaStreamSource(stream);
+          const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+
+          processor.onaudioprocess = (e: AudioProcessingEvent) => {
+            if (
+              wsRef.current?.readyState !== WebSocket.OPEN ||
+              isMutedRef.current
+            )
+              return;
+
+            const input = e.inputBuffer.getChannelData(0);
+
+            // Energy gate: skip silent frames to avoid sending ambient noise to
+            // the STT backend (primary cause of Whisper hallucinations).
+            let sumSq = 0;
+            for (let i = 0; i < input.length; i++) sumSq += input[i] * input[i];
+            const rms = Math.sqrt(sumSq / input.length);
+            if (rms < RMS_SILENCE_THRESHOLD) return;
+            // Convert Float32 [-1,1] to Int16
+            const pcm16 = new Int16Array(input.length);
+            for (let i = 0; i < input.length; i++) {
+              const s = Math.max(-1, Math.min(1, input[i]));
+              pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+            }
+
+            // Base64 encode
+            const bytes = new Uint8Array(pcm16.buffer);
+            let binary = "";
+            for (let i = 0; i < bytes.length; i++) {
+              binary += String.fromCharCode(bytes[i]);
+            }
+            const b64 = btoa(binary);
+
+            wsRef.current.send(
+              JSON.stringify({
+                type: "audio_data",
+                data: b64,
+                sample_rate: SAMPLE_RATE,
+              })
+            );
+          };
+
+          source.connect(processor);
+          processor.connect(audioCtx.destination);
+        } catch (audioErr) {
+          console.warn("[Meeting] Audio capture unavailable:", audioErr);
+          if (!cancelled) {
+            setError("No microphone detected — you can still view the meeting.");
           }
-          const b64 = btoa(binary);
-
-          wsRef.current.send(
-            JSON.stringify({
-              type: "audio_data",
-              data: b64,
-              sample_rate: SAMPLE_RATE,
-            })
-          );
-        };
-
-        source.connect(processor);
-        processor.connect(audioCtx.destination);
+        }
       } catch (err) {
         console.error("[Meeting] connect() error:", err);
         if (!cancelled) {
           setStatus("error");
-          setError(
-            err instanceof Error ? err.message : "Failed to connect"
-          );
+          let message = "Failed to connect";
+          if (err instanceof Error) {
+            message = err.message;
+          }
+          setError(message);
         }
       }
     }
@@ -424,7 +433,19 @@ export function MeetingRoomPage() {
     navigate("/meetings");
   }
 
-  const otherParticipants = participants.filter((p) => p.id !== user?.id);
+  function sendChat() {
+    if (!chatInput.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    wsRef.current.send(JSON.stringify({ type: "chat", text: chatInput.trim() }));
+    setChatMessages((prev) => [...prev, {
+      id: `self-${Date.now()}`,
+      sender_id: user?.id ?? "unknown",
+      sender_name: user?.name ?? "You",
+      text: chatInput.trim(),
+      timestamp: Date.now() / 1000,
+      is_agent: false,
+    }]);
+    setChatInput("");
+  }
 
   function toggleMute() {
     setIsMuted((prev) => {
@@ -709,6 +730,18 @@ export function MeetingRoomPage() {
               <div ref={chatEndRef} />
             </div>
           )}
+          <form
+            onSubmit={(e) => { e.preventDefault(); sendChat(); }}
+            className="flex gap-2 p-3 border-t border-gray-700"
+          >
+            <input
+              className="flex-1 rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-50 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="Type a message..."
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+            />
+            <Button type="submit" size="sm" disabled={!chatInput.trim()}>Send</Button>
+          </form>
         </div>
       </div>
 

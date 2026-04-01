@@ -94,11 +94,20 @@ const DIRECTION_ARROW: Record<string, string> = {
   bidirectional: "<->",
 };
 
+const PLATFORM_DELIVERY: Record<string, "channel" | "mcp"> = {
+  slack: "mcp",
+  notion: "mcp",
+  github: "mcp",
+  discord: "channel",
+  telegram: "channel",
+  imessage: "channel",
+};
+
 const EMPTY_FORM: FeedCreate = {
   name: "",
   platform: "slack",
   direction: "outbound",
-  delivery_type: "channel",
+  delivery_type: "mcp",
   channel_name: "",
   mcp_server_url: "",
   mcp_auth_token: "",
@@ -138,7 +147,7 @@ export function FeedsPage() {
 
   function openCreateModal(platform: string) {
     setEditingFeed(null);
-    setForm({ ...EMPTY_FORM, platform });
+    setForm({ ...EMPTY_FORM, platform, delivery_type: PLATFORM_DELIVERY[platform] ?? "mcp" });
     setSaveError(null);
     setModalOpen(true);
   }
@@ -440,9 +449,14 @@ export function FeedsPage() {
               <select
                 className="flex h-9 w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-50 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50"
                 value={form.platform}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, platform: e.target.value }))
-                }
+                onChange={(e) => {
+                  const platform = e.target.value;
+                  setForm((p) => ({
+                    ...p,
+                    platform,
+                    delivery_type: PLATFORM_DELIVERY[platform] ?? "mcp",
+                  }));
+                }}
               >
                 <option value="slack">Slack</option>
               </select>
@@ -472,41 +486,6 @@ export function FeedsPage() {
                     {opt.label}
                   </label>
                 ))}
-              </div>
-            </div>
-
-            {/* Delivery type */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-medium uppercase tracking-widest text-gray-400">
-                Delivery Type
-              </label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 text-sm text-gray-300">
-                  <input
-                    type="radio"
-                    name="delivery_type"
-                    value="channel"
-                    checked={form.delivery_type === "channel"}
-                    onChange={() =>
-                      setForm((p) => ({ ...p, delivery_type: "channel" }))
-                    }
-                    className="accent-blue-500"
-                  />
-                  Channel
-                </label>
-                <label className="flex items-center gap-2 text-sm text-gray-300">
-                  <input
-                    type="radio"
-                    name="delivery_type"
-                    value="mcp"
-                    checked={form.delivery_type === "mcp"}
-                    onChange={() =>
-                      setForm((p) => ({ ...p, delivery_type: "mcp" }))
-                    }
-                    className="accent-blue-500"
-                  />
-                  MCP Server
-                </label>
               </div>
             </div>
 

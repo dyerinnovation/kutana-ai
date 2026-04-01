@@ -61,6 +61,45 @@ kubectl get pods -n convene
 cd web && pnpm dev
 ```
 
+## CI/CD — Woodpecker CI
+
+Woodpecker CI runs inside the DGX Spark K3s cluster. It replaces GitHub Actions for build and deploy; GitHub Actions still handles lint/test for PRs.
+
+**Pipeline** (`.woodpecker.yml`):
+- `lint` → `type-check` ∥ `test` → `build` → `deploy`
+- Build and deploy run on `main` branch pushes only.
+- Build uses the host Docker socket (`/var/run/docker.sock`) to push to `localhost:30500/convene`.
+- Deploy runs `helm upgrade --set global.imageTag=<SHORT_SHA>`.
+
+**Helm imageTag override** (`charts/convene`):
+- `global.imageTag` in `values.yaml` overrides every service image tag at once.
+- CI sets it to the 8-char commit SHA. Leave empty for per-service `image.tag` values.
+
+**Setup files:**
+| File | Purpose |
+|------|---------|
+| `infra/woodpecker/values.yaml` | Helm values (non-secret config) |
+| `infra/woodpecker/secrets.example.yaml` | Template — copy to `secrets.yaml`, fill in, apply |
+| `infra/woodpecker/deploy.sh` | Idempotent install script |
+| `infra/cloudflare-tunnel/deployment.yaml` | cloudflared deployment manifest |
+| `infra/cloudflare-tunnel/secrets.example.yaml` | Tunnel token secret template |
+
+**First-time setup** (user does this — not CI):
+```bash
+# 1. Copy and fill in secrets
+cp infra/woodpecker/secrets.example.yaml infra/woodpecker/secrets.yaml
+# edit secrets.yaml
+
+# 2. Deploy Woodpecker
+bash infra/woodpecker/deploy.sh
+
+# 3. Deploy Cloudflare Tunnel (after creating tunnel in CF dashboard)
+cp infra/cloudflare-tunnel/secrets.example.yaml infra/cloudflare-tunnel/secrets.yaml
+# edit secrets.yaml with tunnel token
+kubectl apply -f infra/cloudflare-tunnel/secrets.yaml
+kubectl apply -f infra/cloudflare-tunnel/deployment.yaml
+```
+
 ## TASKLIST Lock Protocol
 
 - **Start:** Add 🔒 to the item
