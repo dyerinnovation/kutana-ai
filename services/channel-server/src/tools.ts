@@ -1,18 +1,16 @@
 /**
  * MCP tool registrations for the Convene AI Channel Server.
  *
- * Tools enable two-way communication: Claude can send messages, claim tasks,
- * report progress, search the transcript buffer, and query entity history.
+ * Tools are grouped into two categories:
  *
- * Turn management tools (raise_hand, get_queue_status, mark_finished_speaking,
- * cancel_hand_raise, get_speaking_status) send native WebSocket messages to the
- * agent gateway and return the latest cached state.
+ * **Lobby tools** (work without an active meeting):
+ *   list_meetings, join_meeting, create_meeting, join_or_create_meeting
  *
- * Chat tools (get_chat_messages) read from the in-process buffer populated by
- * inbound data.channel.chat gateway events.
- *
- * Participant tools (get_participants) return the current participant list with
- * the Claude Code session annotated as source: "claude-code".
+ * **Meeting tools** (require an active meeting — return an error otherwise):
+ *   reply, get_chat_messages, accept_task, update_status, raise_hand,
+ *   get_queue_status, mark_finished_speaking, cancel_hand_raise,
+ *   get_speaking_status, get_participants, request_context,
+ *   get_meeting_recap, get_entity_history, leave_meeting
  */
 
 import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -31,17 +29,104 @@ import type {
   TaskEntity,
 } from "./types.js";
 
+/** Callback invoked when meeting state changes (join/leave) so the server can notify Claude. */
+export type MeetingStateChangeCallback = () => Promise<void> | void;
+
 /** Register all Convene AI tools on the MCP server. */
-export function registerTools(server: Server, client: ConveneClient): void {
+export function registerTools(
+  server: Server,
+  client: ConveneClient,
+  onMeetingStateChange?: MeetingStateChangeCallback,
+): void {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [
       // -----------------------------------------------------------------------
-      // Chat & messaging
+      // Meeting lifecycle (lobby tools — no active meeting required)
+      // -----------------------------------------------------------------------
+      {
+        name: "list_meetings",
+        description:
+          "List available meetings. Returns meetings with their IDs, titles, and status.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+      {
+        name: "join_meeting",
+        description:
+          "Join a meeting by ID. Opens a WebSocket connection to the gateway and starts receiving real-time events (transcript, chat, speaker changes).",
+        inputSchema: {
+          type: "object",
+          properties: {
+            meeting_id: {
+              type: "string",
+              description: "UUID of the meeting to join.",
+            },
+            capabilities: {
+              type: "array",
+              items: { type: "string" },
+              description:
+                'Capabilities to request. Default: ["listen", "transcribe", "data_channel"].',
+            },
+          },
+          required: ["meeting_id"],
+        },
+      },
+      {
+        name: "create_meeting",
+        description:
+          "Create a new meeting. Returns the meeting info including its ID.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            title: {
+              type: "string",
+              description: "Title for the new meeting.",
+            },
+          },
+          required: ["title"],
+        },
+      },
+      {
+        name: "join_or_create_meeting",
+        description:
+          "Find an active meeting by title and join it. If no matching active meeting exists, create one and join it.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            title: {
+              type: "string",
+              description: "Title to search for or create.",
+            },
+            capabilities: {
+              type: "array",
+              items: { type: "string" },
+              description:
+                'Capabilities to request. Default: ["listen", "transcribe", "data_channel"].',
+            },
+          },
+          required: ["title"],
+        },
+      },
+      {
+        name: "leave_meeting",
+        description:
+          "Leave the current meeting. Closes the WebSocket connection and clears all meeting state.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+      // -----------------------------------------------------------------------
+      // Chat & messaging (requires active meeting)
       // -----------------------------------------------------------------------
       {
         name: "reply",
         description:
-          "Send a text message to the meeting chat. Use this to communicate with meeting participants when you have something meaningful to contribute.",
+          "Send a text message to the meeting chat. Use this to communicate with meeting participants.",
         inputSchema: {
           type: "object",
           properties: {
@@ -56,25 +141,26 @@ export function registerTools(server: Server, client: ConveneClient): void {
       {
         name: "get_chat_messages",
         description:
-          "Read recent chat messages from the meeting. Use this to catch up on the chat history or check what others have said.",
+          "Read recent chat messages from the meeting.",
         inputSchema: {
           type: "object",
           properties: {
             limit: {
               type: "number",
-              description: "Maximum number of recent messages to return (default: 50).",
+              description:
+                "Maximum number of recent messages to return (default: 50).",
             },
           },
           required: [],
         },
       },
       // -----------------------------------------------------------------------
-      // Task management
+      // Task management (requires active meeting)
       // -----------------------------------------------------------------------
       {
         name: "accept_task",
         description:
-          "Claim a task extracted from the meeting, indicating this agent will handle it. Call this when you see a task assigned to you or matching your capabilities.",
+          "Claim a task extracted from the meeting.",
         inputSchema: {
           type: "object",
           properties: {
@@ -89,7 +175,7 @@ export function registerTools(server: Server, client: ConveneClient): void {
       {
         name: "update_status",
         description:
-          "Push a progress update for a task this agent has accepted. Call this whenever your status changes.",
+          "Push a progress update for a task this agent has accepted.",
         inputSchema: {
           type: "object",
           properties: {
@@ -111,23 +197,25 @@ export function registerTools(server: Server, client: ConveneClient): void {
         },
       },
       // -----------------------------------------------------------------------
-      // Turn management
+      // Turn management (requires active meeting)
       // -----------------------------------------------------------------------
       {
         name: "raise_hand",
         description:
-          "Request a turn to speak in the meeting. Adds you to the speaker queue. If no one is currently speaking, you become the active speaker immediately (queue_position = 0).",
+          "Request a turn to speak. Adds you to the speaker queue.",
         inputSchema: {
           type: "object",
           properties: {
             priority: {
               type: "string",
               enum: ["normal", "urgent"],
-              description: "Queue priority — normal (FIFO) or urgent (front of queue). Default: normal.",
+              description:
+                "Queue priority — normal (FIFO) or urgent (front of queue). Default: normal.",
             },
             topic: {
               type: "string",
-              description: "Optional short description of what you want to discuss.",
+              description:
+                "Optional short description of what you want to discuss.",
             },
           },
           required: [],
@@ -136,7 +224,7 @@ export function registerTools(server: Server, client: ConveneClient): void {
       {
         name: "get_queue_status",
         description:
-          "Get the current speaker queue status. Shows who is speaking, who is waiting, and queue positions. Triggers a queue refresh from the gateway.",
+          "Get the current speaker queue status.",
         inputSchema: {
           type: "object",
           properties: {},
@@ -146,7 +234,7 @@ export function registerTools(server: Server, client: ConveneClient): void {
       {
         name: "mark_finished_speaking",
         description:
-          "Signal that you have finished your speaking turn, advancing the queue to the next participant.",
+          "Signal that you have finished your speaking turn.",
         inputSchema: {
           type: "object",
           properties: {},
@@ -156,7 +244,7 @@ export function registerTools(server: Server, client: ConveneClient): void {
       {
         name: "cancel_hand_raise",
         description:
-          "Withdraw from the speaker queue (lower your hand). If hand_raise_id is provided, cancels that specific raise; otherwise cancels your current hand raise.",
+          "Withdraw from the speaker queue.",
         inputSchema: {
           type: "object",
           properties: {
@@ -171,7 +259,7 @@ export function registerTools(server: Server, client: ConveneClient): void {
       {
         name: "get_speaking_status",
         description:
-          "Check your current speaking status: whether you are the active speaker, in the queue, and the latest queue snapshot.",
+          "Check your current speaking status: whether you are the active speaker or in the queue.",
         inputSchema: {
           type: "object",
           properties: {},
@@ -179,12 +267,12 @@ export function registerTools(server: Server, client: ConveneClient): void {
         },
       },
       // -----------------------------------------------------------------------
-      // Participants
+      // Participants (requires active meeting)
       // -----------------------------------------------------------------------
       {
         name: "get_participants",
         description:
-          "List the current participants in the meeting. Your own session is annotated with source: 'claude-code'.",
+          "List the current participants in the meeting.",
         inputSchema: {
           type: "object",
           properties: {},
@@ -192,12 +280,12 @@ export function registerTools(server: Server, client: ConveneClient): void {
         },
       },
       // -----------------------------------------------------------------------
-      // Transcript & entity history
+      // Transcript & entity history (requires active meeting)
       // -----------------------------------------------------------------------
       {
         name: "request_context",
         description:
-          "Search the meeting transcript buffer for segments relevant to a topic or question. Use this before answering questions to ensure accuracy.",
+          "Search the meeting transcript buffer for segments relevant to a topic or question.",
         inputSchema: {
           type: "object",
           properties: {
@@ -218,7 +306,7 @@ export function registerTools(server: Server, client: ConveneClient): void {
       {
         name: "get_meeting_recap",
         description:
-          "Fetch the current meeting recap built from all extracted entities: tasks, decisions, key points, and open questions.",
+          "Fetch the current meeting recap: tasks, decisions, key points, and open questions.",
         inputSchema: {
           type: "object",
           properties: {},
@@ -262,39 +350,227 @@ export function registerTools(server: Server, client: ConveneClient): void {
     const safeArgs = args ?? {};
 
     switch (name) {
-      case "reply":
+      // Lobby tools — no meeting required
+      case "list_meetings":
+        return handleListMeetings(client);
+      case "join_meeting":
+        return handleJoinMeeting(client, safeArgs, onMeetingStateChange);
+      case "create_meeting":
+        return handleCreateMeeting(client, safeArgs);
+      case "join_or_create_meeting":
+        return handleJoinOrCreateMeeting(client, safeArgs, onMeetingStateChange);
+      case "leave_meeting":
+        return handleLeaveMeeting(client, onMeetingStateChange);
+
+      // Meeting tools — require active meeting
+      case "reply": {
+        const g = requireMeeting(client);
+        if (g) return g;
         return handleReply(client, safeArgs);
-      case "get_chat_messages":
+      }
+      case "get_chat_messages": {
+        const g = requireMeeting(client);
+        if (g) return g;
         return handleGetChatMessages(client, safeArgs);
-      case "accept_task":
+      }
+      case "accept_task": {
+        const g = requireMeeting(client);
+        if (g) return g;
         return handleAcceptTask(client, safeArgs);
-      case "update_status":
+      }
+      case "update_status": {
+        const g = requireMeeting(client);
+        if (g) return g;
         return handleUpdateStatus(client, safeArgs);
-      case "raise_hand":
+      }
+      case "raise_hand": {
+        const g = requireMeeting(client);
+        if (g) return g;
         return handleRaiseHand(client, safeArgs);
-      case "get_queue_status":
+      }
+      case "get_queue_status": {
+        const g = requireMeeting(client);
+        if (g) return g;
         return handleGetQueueStatus(client);
-      case "mark_finished_speaking":
+      }
+      case "mark_finished_speaking": {
+        const g = requireMeeting(client);
+        if (g) return g;
         return handleMarkFinishedSpeaking(client);
-      case "cancel_hand_raise":
+      }
+      case "cancel_hand_raise": {
+        const g = requireMeeting(client);
+        if (g) return g;
         return handleCancelHandRaise(client, safeArgs);
-      case "get_speaking_status":
+      }
+      case "get_speaking_status": {
+        const g = requireMeeting(client);
+        if (g) return g;
         return handleGetSpeakingStatus(client);
-      case "get_participants":
+      }
+      case "get_participants": {
+        const g = requireMeeting(client);
+        if (g) return g;
         return handleGetParticipants(client);
-      case "request_context":
+      }
+      case "request_context": {
+        const g = requireMeeting(client);
+        if (g) return g;
         return handleRequestContext(client, safeArgs);
-      case "get_meeting_recap":
+      }
+      case "get_meeting_recap": {
+        const g = requireMeeting(client);
+        if (g) return g;
         return handleGetMeetingRecap(client);
-      case "get_entity_history":
+      }
+      case "get_entity_history": {
+        const g = requireMeeting(client);
+        if (g) return g;
         return handleGetEntityHistory(client, safeArgs);
+      }
       default:
-        return {
-          content: [{ type: "text" as const, text: `Unknown tool: ${name}` }],
-          isError: true,
-        };
+        return error(`Unknown tool: ${name}`);
     }
   });
+}
+
+// ---------------------------------------------------------------------------
+// Meeting guard
+// ---------------------------------------------------------------------------
+
+function requireMeeting(client: ConveneClient) {
+  if (!client.getCurrentMeetingId()) {
+    return error("Not in a meeting. Use join_meeting or join_or_create_meeting first.");
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Handler implementations — Meeting lifecycle
+// ---------------------------------------------------------------------------
+
+async function handleListMeetings(client: ConveneClient) {
+  try {
+    const meetings = await client.listMeetings();
+    return ok(JSON.stringify(meetings, null, 2));
+  } catch (err) {
+    return error(String(err));
+  }
+}
+
+async function handleJoinMeeting(
+  client: ConveneClient,
+  args: Record<string, unknown>,
+  onMeetingStateChange?: MeetingStateChangeCallback,
+) {
+  const meetingId = args["meeting_id"];
+  if (typeof meetingId !== "string" || !meetingId.trim()) {
+    return error("meeting_id is required");
+  }
+
+  const capabilities = Array.isArray(args["capabilities"])
+    ? (args["capabilities"] as string[])
+    : undefined;
+
+  try {
+    await client.joinMeeting(meetingId, capabilities);
+    if (onMeetingStateChange) await onMeetingStateChange();
+    return ok(
+      JSON.stringify({
+        status: "joined",
+        meeting_id: meetingId,
+        note: "You are now receiving real-time events. Use reply to chat, raise_hand to speak.",
+      }),
+    );
+  } catch (err) {
+    return error(String(err));
+  }
+}
+
+async function handleCreateMeeting(
+  client: ConveneClient,
+  args: Record<string, unknown>,
+) {
+  const title = args["title"];
+  if (typeof title !== "string" || !title.trim()) {
+    return error("title is required");
+  }
+
+  try {
+    const meeting = await client.createMeeting(title);
+    return ok(JSON.stringify(meeting, null, 2));
+  } catch (err) {
+    return error(String(err));
+  }
+}
+
+async function handleJoinOrCreateMeeting(
+  client: ConveneClient,
+  args: Record<string, unknown>,
+  onMeetingStateChange?: MeetingStateChangeCallback,
+) {
+  const title = args["title"];
+  if (typeof title !== "string" || !title.trim()) {
+    return error("title is required");
+  }
+
+  const capabilities = Array.isArray(args["capabilities"])
+    ? (args["capabilities"] as string[])
+    : undefined;
+
+  try {
+    // Look for an active meeting with a matching title
+    const meetings = await client.listMeetings();
+    const match = meetings.find(
+      (m) =>
+        m.title?.toLowerCase() === title.toLowerCase() &&
+        (m.status === "active" || m.status === "scheduled"),
+    );
+
+    let meetingId: string;
+    let action: string;
+
+    if (match) {
+      meetingId = match.id;
+      action = "joined_existing";
+    } else {
+      const created = await client.createMeeting(title);
+      meetingId = created.id;
+      action = "created_and_joined";
+    }
+
+    await client.joinMeeting(meetingId, capabilities);
+    if (onMeetingStateChange) await onMeetingStateChange();
+
+    return ok(
+      JSON.stringify({
+        status: action,
+        meeting_id: meetingId,
+        title,
+      }),
+    );
+  } catch (err) {
+    return error(String(err));
+  }
+}
+
+async function handleLeaveMeeting(
+  client: ConveneClient,
+  onMeetingStateChange?: MeetingStateChangeCallback,
+) {
+  const g = requireMeeting(client);
+  if (g) return g;
+
+  const meetingId = client.getCurrentMeetingId();
+  await client.leaveMeeting();
+  if (onMeetingStateChange) await onMeetingStateChange();
+
+  return ok(
+    JSON.stringify({
+      status: "left",
+      meeting_id: meetingId,
+    }),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -378,8 +654,7 @@ async function handleRaiseHand(
   client: ConveneClient,
   args: Record<string, unknown>,
 ) {
-  const priority =
-    args["priority"] === "urgent" ? "urgent" : "normal";
+  const priority = args["priority"] === "urgent" ? "urgent" : "normal";
   const topic =
     typeof args["topic"] === "string" && args["topic"].trim()
       ? args["topic"]
@@ -442,7 +717,6 @@ function handleGetSpeakingStatus(client: ConveneClient) {
         is_speaking: isSpeaking,
         is_in_queue: isInQueue,
         last_known_queue: queueStatus,
-        note: "Local state may lag by one event. Call get_queue_status to force a refresh.",
       },
       null,
       2,
@@ -501,7 +775,11 @@ function handleGetMeetingRecap(client: ConveneClient) {
 
   const decisions = allEntities
     .filter((e): e is DecisionEntity => e.entity_type === "decision")
-    .map((e) => ({ id: e.id, summary: e.summary, participants: e.participants }));
+    .map((e) => ({
+      id: e.id,
+      summary: e.summary,
+      participants: e.participants,
+    }));
 
   const keyPoints = allEntities
     .filter((e): e is KeyPointEntity => e.entity_type === "key_point")
@@ -516,7 +794,11 @@ function handleGetMeetingRecap(client: ConveneClient) {
 
   const blockers = allEntities
     .filter((e): e is BlockerEntity => e.entity_type === "blocker")
-    .map((e) => ({ id: e.id, description: e.description, severity: e.severity }));
+    .map((e) => ({
+      id: e.id,
+      description: e.description,
+      severity: e.severity,
+    }));
 
   const followUps = allEntities
     .filter((e): e is FollowUpEntity => e.entity_type === "follow_up")

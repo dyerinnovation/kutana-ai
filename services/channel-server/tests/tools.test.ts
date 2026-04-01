@@ -32,9 +32,13 @@ function getHandler(server: Server, methodName: string) {
 function makeMockClient(overrides: Partial<ConveneClient> = {}): ConveneClient {
   return {
     onChannelMessage: vi.fn(),
-    connect: vi.fn(),
-    disconnect: vi.fn(),
+    authenticate: vi.fn(),
+    joinMeeting: vi.fn(),
+    leaveMeeting: vi.fn(),
+    listMeetings: vi.fn(async () => []),
+    createMeeting: vi.fn(),
     isConnected: vi.fn(() => true),
+    getCurrentMeetingId: vi.fn(() => "meeting-123"),
     sendChatMessage: vi.fn(),
     acceptTask: vi.fn(),
     updateTaskStatus: vi.fn(),
@@ -66,7 +70,7 @@ function makeServer(client: ConveneClient): Server {
 // ---------------------------------------------------------------------------
 
 describe("list tools", () => {
-  it("returns all thirteen tool names", async () => {
+  it("returns all eighteen tool names", async () => {
     const server = makeServer(makeMockClient());
     const handler = getHandler(server, ListToolsRequestSchema.shape.method.value);
     expect(handler).toBeDefined();
@@ -93,7 +97,7 @@ describe("list tools", () => {
     expect(names).toContain("request_context");
     expect(names).toContain("get_meeting_recap");
     expect(names).toContain("get_entity_history");
-    expect(names).toHaveLength(13);
+    expect(names).toHaveLength(18);
   });
 
   it("reply tool has required text property in schema", async () => {
