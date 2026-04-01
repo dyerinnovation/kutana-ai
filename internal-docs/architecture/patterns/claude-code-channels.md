@@ -116,7 +116,7 @@ claude mcp add-json --scope user convene '{
   "env": {
     "CONVENE_API_KEY": "cvn_...",
     "CONVENE_API_URL": "wss://convene.spark-b0f2.local/ws",
-    "CONVENE_HTTP_URL": "https://convene.spark-b0f2.local/api",
+    "CONVENE_HTTP_URL": "https://convene.spark-b0f2.local",
     "CONVENE_TLS_REJECT_UNAUTHORIZED": "0"
   }
 }'
@@ -181,7 +181,7 @@ services/channel-server/
 ## Technical Notes
 
 - **stdio vs HTTP:** The channel plugin uses stdio because it runs as a subprocess. The separate HTTP MCP server (`services/mcp-server/`) remains available for remote agents that can't run a local process.
-- **Auth:** The plugin reads `CONVENE_API_KEY` from env and exchanges it for a gateway JWT via `POST /api/v1/token/gateway`.
+- **Auth:** The plugin reads `CONVENE_API_KEY` from env and exchanges it for a gateway JWT via `POST /api/v1/token/gateway`. The gateway JWT is used for WebSocket connections. For HTTP API calls (list/create meetings), the plugin sends the raw API key via `X-API-Key` header — the meetings endpoints accept both Bearer JWT (browser users) and X-API-Key (agents) via the `CurrentUserOrAgent` dependency.
 - **TLS:** Self-signed certs are common in dev. Set `CONVENE_TLS_REJECT_UNAUTHORIZED=0` (default) to accept them. The plugin sets `NODE_TLS_REJECT_UNAUTHORIZED=0` at startup.
 - **MCP registration:** The server must be registered via `claude mcp add-json` (managed registry), not manually in `~/.claude/settings.json`. The `--dangerously-load-development-channels` flag only finds servers in the managed registry.
 - **Research preview:** Custom channels require `--dangerously-load-development-channels server:convene` at launch. This bypasses the channel allowlist (which only includes published Anthropic plugins like Discord, Telegram). This flag may be removed or renamed when channels graduate from preview.

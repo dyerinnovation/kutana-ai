@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api_server.auth_deps import CurrentUser
+from api_server.auth_deps import CurrentUser, CurrentUserOrAgent
 from api_server.deps import get_db_session
 from convene_core.database.models import MeetingORM
 from convene_core.models.meeting import MeetingStatus
@@ -116,7 +116,7 @@ def _to_response(meeting: MeetingORM) -> MeetingResponse:
 
 @router.get("", response_model=MeetingListResponse)
 async def list_meetings(
-    _current_user: CurrentUser,
+    _current_user: CurrentUserOrAgent,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> MeetingListResponse:
     """List all meetings.
@@ -145,7 +145,7 @@ async def list_meetings(
 @router.post("", response_model=MeetingResponse, status_code=201)
 async def create_meeting(
     body: MeetingCreateRequest,
-    _current_user: CurrentUser,
+    _current_user: CurrentUserOrAgent,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> MeetingResponse:
     """Create a new meeting.
@@ -173,7 +173,7 @@ async def create_meeting(
 @router.get("/{meeting_id}", response_model=MeetingResponse)
 async def get_meeting(
     meeting_id: UUID,
-    _current_user: CurrentUser,
+    _current_user: CurrentUserOrAgent,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> MeetingResponse:
     """Get a single meeting by ID.
@@ -244,7 +244,7 @@ async def update_meeting(
 @router.post("/{meeting_id}/start", response_model=MeetingResponse)
 async def start_meeting(
     meeting_id: UUID,
-    _current_user: CurrentUser,
+    _current_user: CurrentUserOrAgent,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> MeetingResponse:
     """Start a meeting (transition from scheduled to active).
@@ -286,7 +286,7 @@ async def start_meeting(
 @router.post("/{meeting_id}/end", response_model=MeetingResponse)
 async def end_meeting(
     meeting_id: UUID,
-    _current_user: CurrentUser,
+    _current_user: CurrentUserOrAgent,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> MeetingResponse:
     """End a meeting (transition from active to completed).
