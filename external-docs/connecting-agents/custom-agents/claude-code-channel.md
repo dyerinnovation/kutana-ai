@@ -62,7 +62,7 @@ claude mcp add-json --scope user convene '{
   "env": {
     "CONVENE_API_KEY": "cvn_your_key_here",
     "CONVENE_API_URL": "wss://convene.spark-b0f2.local/ws",
-    "CONVENE_HTTP_URL": "https://convene.spark-b0f2.local/api",
+    "CONVENE_HTTP_URL": "https://convene.spark-b0f2.local",
     "CONVENE_TLS_REJECT_UNAUTHORIZED": "0",
     "CONVENE_AGENT_NAME": "Claude Code"
   }

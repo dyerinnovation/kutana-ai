@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import UTC, datetime
 from typing import Annotated
-from uuid import uuid4
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Header, Request, status
@@ -15,80 +13,16 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from agent_gateway.auth import create_agent_token
-from api_server.auth import hash_api_key
-from api_server.auth_deps import CurrentUser
+from api_server.auth_deps import CurrentUser, validate_api_key
 from api_server.deps import Settings, get_db_session, get_settings
 from convene_core.database.models import (
-    AgentApiKeyORM,
     AgentConfigORM,
-    ApiKeyAuditLogORM,
     MeetingORM,
 )
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/token", tags=["token"])
-
-
-# ---------------------------------------------------------------------------
-# Shared helpers
-# ---------------------------------------------------------------------------
-
-
-async def _validate_api_key(
-    raw_key: str,
-    db: AsyncSession,
-    request: Request | None = None,
-) -> AgentApiKeyORM:
-    """Validate an API key: check hash, revocation, and expiry.
-
-    Also logs an audit record on successful use.
-
-    Args:
-        raw_key: The raw API key string.
-        db: Database session.
-        request: Optional FastAPI request for IP/user-agent logging.
-
-    Returns:
-        The validated AgentApiKeyORM record.
-
-    Raises:
-        HTTPException: 401 if the key is invalid, revoked, or expired.
-    """
-    key_hash = hash_api_key(raw_key)
-
-    result = await db.execute(
-        select(AgentApiKeyORM).where(
-            AgentApiKeyORM.key_hash == key_hash,
-            AgentApiKeyORM.revoked_at.is_(None),
-        )
-    )
-    api_key = result.scalar_one_or_none()
-    if api_key is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or revoked API key",
-        )
-
-    # Check expiry
-    if api_key.expires_at is not None and api_key.expires_at < datetime.now(tz=UTC):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="API key has expired",
-        )
-
-    # Log audit event
-    ip_address = request.client.host if request and request.client else None
-    user_agent = request.headers.get("user-agent") if request else None
-    audit = ApiKeyAuditLogORM(
-        key_id=api_key.id,
-        action="used",
-        ip_address=ip_address,
-        user_agent=user_agent[:500] if user_agent else None,
-    )
-    db.add(audit)
-
-    return api_key
 
 
 class GatewayTokenResponse(BaseModel):
@@ -129,7 +63,7 @@ async def exchange_for_gateway_token(
     Raises:
         HTTPException: 401 if the API key is invalid, revoked, or expired.
     """
-    api_key = await _validate_api_key(x_api_key, db, request)
+    api_key = await validate_api_key(x_api_key, db, request)
 
     # Look up the agent config
     agent_result = await db.execute(
@@ -196,7 +130,7 @@ async def exchange_for_mcp_token(
     Raises:
         HTTPException: 401 if the API key is invalid, revoked, or expired.
     """
-    api_key = await _validate_api_key(x_api_key, db, request)
+    api_key = await validate_api_key(x_api_key, db, request)
 
     # Look up the agent config
     agent_result = await db.execute(
