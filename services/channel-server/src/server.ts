@@ -29,7 +29,6 @@ import { registerTools } from "./tools.js";
 import {
   registerResources,
   notifyResourcesChanged,
-  PLATFORM_CONTEXT_DOC,
 } from "./resources.js";
 import type { ChannelMessage } from "./types.js";
 
@@ -37,20 +36,20 @@ import type { ChannelMessage } from "./types.js";
 // Platform instructions (Layer 1 context — sent during MCP initialize)
 // ---------------------------------------------------------------------------
 
-const PLATFORM_INSTRUCTIONS = `You are an AI agent that can participate in Convene AI meetings.
+const CHANNEL_INSTRUCTIONS = `Events from the convene-ai channel arrive as <channel source="convene-ai" topic="..." type="...">.
+They contain real-time meeting data: transcript segments, chat messages, speaker queue changes,
+and extracted insights (tasks, decisions, questions, blockers).
+Use the convene tools (list_meetings, join_meeting, reply, raise_hand, etc.) to interact.
+Reply with the reply tool when you want to send a message to the meeting chat.
 
-${PLATFORM_CONTEXT_DOC}
-
-Start by listing available meetings with list_meetings, or join one with join_meeting.
-Once joined, you will receive real-time transcript segments and meeting insights as
-notifications. Use reply to chat, raise_hand to speak, and accept_task to claim work.`;
+Start by listing available meetings with list_meetings, or join one with join_meeting.`;
 
 // ---------------------------------------------------------------------------
 // Server capabilities
 // ---------------------------------------------------------------------------
 
 type ExtendedCapabilities = ServerCapabilities & {
-  "claude/channel": Record<string, never>;
+  experimental: { "claude/channel": Record<string, never> };
 };
 
 // ---------------------------------------------------------------------------
@@ -65,14 +64,14 @@ export function createServer(config: ReturnType<typeof loadConfig>): {
   const capabilities: ExtendedCapabilities = {
     tools: {},
     resources: { subscribe: true, listChanged: true },
-    "claude/channel": {},
+    experimental: { "claude/channel": {} },
   };
 
   const server = new Server(
     { name: "convene-ai", version: "0.2.0" },
     {
       capabilities,
-      ...({ instructions: PLATFORM_INSTRUCTIONS } as object),
+      ...({ instructions: CHANNEL_INSTRUCTIONS } as object),
     },
   );
 
@@ -86,15 +85,18 @@ export function createServer(config: ReturnType<typeof loadConfig>): {
   registerTools(server, client, onMeetingStateChange);
   registerResources(server, client, config);
 
-  // Forward Convene events → MCP notifications
+  // Forward Convene events → Claude Code channel notifications
   client.onChannelMessage(async (msg: ChannelMessage) => {
     try {
       await server.notification({
-        method: "notifications/message",
+        method: "notifications/claude/channel",
         params: {
-          level: "info",
-          logger: `convene/${msg.topic}`,
-          data: msg.content,
+          content: msg.content,
+          meta: {
+            topic: msg.topic,
+            type: msg.type,
+            ...(msg.metadata ?? {}),
+          },
         },
       });
     } catch (err) {
