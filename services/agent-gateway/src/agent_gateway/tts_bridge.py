@@ -23,14 +23,14 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Default voice pool — mix of Piper voices for offline use and generic IDs
-# that can be overridden by Cartesia/ElevenLabs voice IDs in settings.
+# Default voice pool — Cartesia voice IDs (English).
+# These are used in round-robin for agents that don't request a specific voice.
 _DEFAULT_VOICE_POOL: list[str] = [
-    "en_US-lessac-medium",
-    "en_US-amy-medium",
-    "en_GB-alan-medium",
-    "en_US-arctic-medium",
-    "en_US-libritts_r-medium",
+    "dbfa416f-d5c3-4006-854b-235ef6bdf4fd",  # Damon - Commanding Narrator
+    "d709a7e8-9495-4247-aef0-01b3207d11bf",  # Donny - Steady Presence
+    "ea7c252f-6cb1-45f5-8be9-b4f6ac282242",  # Logan - Approachable Friend
+    "df872fcd-da17-4b01-a49f-a80d7aaee95e",  # Cameron - Chill Companion
+    "db69127a-dbaf-4fa9-b425-2fe67680c348",  # Clint - Rugged Actor
 ]
 
 _CHAR_BUDGET_DEFAULT: int = 100_000  # characters per agent per session
