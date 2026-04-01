@@ -149,3 +149,5 @@ ingress:
   enabled: true
   className: nginx
   host: convene.spark-b0f2.local
+  tls:
+    secretName: convene-tls

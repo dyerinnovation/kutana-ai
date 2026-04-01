@@ -48,7 +48,7 @@ export function AgentCreatePage() {
     setIsLoading(true);
 
     try {
-      const agent = await createAgent({ name, capabilities });
+      const agent = await createAgent({ name, capabilities, system_prompt: systemPrompt || "You are a helpful AI meeting assistant." });
       navigate(`/agents/${agent.id}`);
     } catch (err) {
       setError(
