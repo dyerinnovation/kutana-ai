@@ -149,7 +149,9 @@ export function MeetingRoomPage() {
       for (let i = 0; i < pcm16.length; i++) {
         float32[i] = pcm16[i] / (pcm16[i] < 0 ? 0x8000 : 0x7fff);
       }
-      decoded = ctx.createBuffer(1, float32.length, ctx.sampleRate);
+      // Use source sample rate from payload, or 24000 (Cartesia default)
+      const sourceSampleRate = (payload as Record<string, unknown>).sample_rate as number || 24000;
+      decoded = ctx.createBuffer(1, float32.length, sourceSampleRate);
       decoded.copyToChannel(float32, 0);
     } else {
       // WAV / MP3 / any other container — let the browser decode it
