@@ -13,7 +13,6 @@ export async function listAgents(): Promise<PaginatedResponse<Agent>> {
 export async function createAgent(data: {
   name: string;
   capabilities: string[];
-  system_prompt?: string;
 }): Promise<Agent> {
   return apiFetch<Agent>("/agents", {
     method: "POST",
