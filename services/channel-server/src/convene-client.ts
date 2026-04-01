@@ -509,20 +509,23 @@ export class ConveneClient {
       return;
     }
 
-    // Chat channel
-    if (et === "data.channel.chat") {
+    // Chat channel — agent data channel messages (via EventRelay)
+    // AND chat.message.received events (via ChatBridge, e.g. from browser users)
+    if (et === "data.channel.chat" || et === "chat.message.received") {
       const p = event.payload as Record<string, unknown> | undefined;
       if (p) {
         const msg: ChatMessage = {
           index: this.chatIndex++,
           sender_name: String(p["sender_name"] ?? p["from"] ?? "Unknown"),
-          sender_session_id: String(p["sender_session_id"] ?? ""),
+          sender_session_id: String(p["sender_session_id"] ?? p["sender_id"] ?? ""),
           text: String(
-            p["payload"] != null
-              ? ((p["payload"] as Record<string, unknown>)["text"] ?? "")
-              : (p["text"] ?? ""),
+            p["content"] ?? (
+              p["payload"] != null
+                ? ((p["payload"] as Record<string, unknown>)["text"] ?? "")
+                : (p["text"] ?? "")
+            ),
           ),
-          timestamp: new Date().toISOString(),
+          timestamp: String(p["sent_at"] ?? new Date().toISOString()),
         };
         this.chatBuffer.push(msg);
         this.emit({
