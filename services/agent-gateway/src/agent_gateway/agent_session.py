@@ -276,6 +276,9 @@ class AgentSessionHandler:
         Publishes the data to Redis for routing to other agents in the
         same meeting, filtered by channel and capabilities.
 
+        Chat messages are additionally published to the ChatBridge so that
+        browser participants (HumanSessionHandler) also receive them.
+
         Args:
             msg: The data message.
         """
@@ -307,6 +310,30 @@ class AgentSessionHandler:
                     "Failed to publish data channel event for %s",
                     self.agent_name,
                 )
+
+            # Also broadcast chat messages via Redis Pub/Sub so the
+            # ChatBridge delivers them to browser (human) sessions.
+            if msg.channel == "chat":
+                text = msg.payload.get("text", "") if isinstance(msg.payload, dict) else str(msg.payload)
+                notification = _json.dumps({
+                    "meeting_id": str(self.meeting_id),
+                    "message_id": str(uuid4()),
+                    "sender_id": str(self.session_id),
+                    "sender_name": self.agent_name,
+                    "content": text,
+                    "text": text,
+                    "message_type": "text",
+                    "is_agent": True,
+                    "sent_at": datetime.now(tz=UTC).isoformat(),
+                    "sequence": 0,
+                })
+                try:
+                    await self._manager.redis.publish("convene:chat", notification)
+                except Exception:
+                    logger.warning(
+                        "Failed to publish agent chat to pub/sub for %s",
+                        self.agent_name,
+                    )
 
         logger.debug(
             "Data from agent %s on channel %s",

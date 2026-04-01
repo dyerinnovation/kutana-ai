@@ -235,6 +235,19 @@ export class ConveneClient {
     });
   }
 
+  /**
+   * Speak text aloud in the meeting via gateway TTS synthesis.
+   * Sends the full start_speaking → spoken_text → stop_speaking sequence.
+   * The gateway synthesizes the text using the configured TTS provider
+   * and broadcasts the audio to all meeting participants.
+   */
+  async speak(text: string): Promise<void> {
+    this.assertConnected();
+    this.send({ type: "start_speaking" });
+    this.send({ type: "spoken_text", text });
+    this.send({ type: "stop_speaking" });
+  }
+
   async acceptTask(taskId: string): Promise<void> {
     this.assertConnected();
     this.send({
@@ -353,6 +366,7 @@ export class ConveneClient {
           type: "join_meeting",
           meeting_id: meetingId,
           capabilities,
+          tts_enabled: true,
         });
       });
 
