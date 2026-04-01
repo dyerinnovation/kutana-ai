@@ -29,14 +29,14 @@ class AgentCreateRequest(BaseModel):
     Attributes:
         name: Human-readable agent name.
         voice_id: Optional TTS voice identifier.
-        system_prompt: System prompt for the agent.
+        system_prompt: Optional system prompt (not needed for self-managed agents).
         capabilities: List of capabilities the agent supports.
         meeting_type_filter: Meeting types this agent should join.
     """
 
     name: str
     voice_id: str | None = None
-    system_prompt: str
+    system_prompt: str = ""
     capabilities: list[str] = Field(default_factory=list)
     meeting_type_filter: list[str] = Field(default_factory=list)
 

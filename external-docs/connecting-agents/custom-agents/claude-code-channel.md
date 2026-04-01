@@ -1,258 +1,273 @@
 # Claude Code Channel
 
-Connect a Claude Code session to a Convene AI meeting as a first-class participant. Claude Code joins via the MCP server, receives the live transcript, can raise its hand to speak (with TTS), post chat messages, create tasks, and coordinate with other agents over named data channels.
+Connect Claude Code to Convene AI meetings as a first-class participant. The Convene channel plugin runs as a local stdio MCP server — it pushes real-time meeting events into your Claude Code session and provides tools for interacting with the meeting.
 
-Claude Code is just another MCP client — it uses the same tools as every other agent.
+## How it works
+
+The Convene channel plugin is an MCP server that Claude Code spawns as a subprocess. It:
+
+1. **Authenticates** with the Convene API using your agent API key
+2. **Exposes tools** for listing, joining, and interacting with meetings
+3. **Pushes events** — transcript segments, chat messages, speaker changes, and extracted insights arrive in Claude's context as `<channel>` tags in real time
+
+Events arrive as XML tags like this:
+
+```xml
+<channel source="convene-ai" topic="transcript" type="transcript_segment">
+[2.0s-4.5s] Alice: We should finalize the API spec by Thursday.
+</channel>
+
+<channel source="convene-ai" topic="chat" type="chat_message">
+[2026-03-31T23:33:25Z] Bob: Sounds good, I'll handle the review.
+</channel>
+```
+
+Claude reads these and can respond using the meeting tools — sending chat messages, raising a hand to speak, claiming tasks, and more.
 
 ## Prerequisites
 
-- Claude Code (latest version)
-- A Convene API key (see [Get an API key](#get-an-api-key))
+- **Claude Code** (latest version)
+- **Bun** runtime v1.0+ ([bun.sh](https://bun.sh))
+- A **Convene API key**
 
-## Get an API key
+## Setup
 
-1. Sign in to your Convene instance
-2. Go to **Settings > API Keys**
-3. Click **Generate Key** — select the **Agent** scope
-4. Copy the key (it starts with `cvn_`)
+### 1. Create an agent and get an API key
 
-## Configure Claude Code
+1. Sign in to your Convene instance (e.g. `https://convene.spark-b0f2.local`)
+2. Navigate to **Agents**
+3. Click **Create New Agent** — give it a name like "Claude Code"
+4. Select the capabilities your agent needs (listen, voice, text chat, etc.)
+5. Click **Create Agent**
+6. On the agent detail page, find the **API Keys** section
+7. Click **Generate Key** — give it a name (e.g. "my-macbook")
+8. **Copy the key immediately** — it starts with `cvn_` and is only shown once
 
-### 1. Set the environment variable
-
-Add to your shell profile (`~/.zshrc`, `~/.bashrc`, etc.):
-
-```bash
-export CONVENE_API_KEY="cvn_..."
-```
-
-Reload your shell or open a new terminal, then verify:
+### 2. Install dependencies
 
 ```bash
-echo $CONVENE_API_KEY
+cd /path/to/convene-ai/services/channel-server
+bun install
 ```
 
-### 2. Add the MCP server to Claude Code
+### 3. Configure Claude Code
 
-Edit `~/.claude/settings.json` and add the `convene` entry under `mcpServers`:
+Register the Convene channel as an MCP server using the Claude Code CLI:
 
-```json
-{
-  "mcpServers": {
-    "convene": {
-      "type": "http",
-      "url": "http://convene.spark-b0f2.local/mcp",
-      "headers": {
-        "Authorization": "Bearer ${CONVENE_API_KEY}"
-      }
-    }
+```bash
+claude mcp add-json --scope user convene '{
+  "type": "stdio",
+  "command": "bun",
+  "args": ["/path/to/convene-ai/services/channel-server/src/server.ts"],
+  "env": {
+    "CONVENE_API_KEY": "cvn_your_key_here",
+    "CONVENE_API_URL": "wss://convene.spark-b0f2.local/ws",
+    "CONVENE_HTTP_URL": "https://convene.spark-b0f2.local/api",
+    "CONVENE_TLS_REJECT_UNAUTHORIZED": "0",
+    "CONVENE_AGENT_NAME": "Claude Code"
   }
-}
+}'
 ```
 
-### 3. Verify the connection
+Replace `/path/to/convene-ai` with the actual path to your repository, and paste your API key.
 
-Restart Claude Code, then run:
+`--scope user` makes the server available across all your projects. You can verify registration with `claude mcp get convene`.
+
+### 4. Launch Claude Code with the channel enabled
+
+The Convene channel is a custom (non-plugin) channel, so during the research preview you need to explicitly enable it at launch:
+
+```bash
+claude --dangerously-load-development-channels server:convene
+```
+
+`server:convene` references the server you registered with `claude mcp add-json`. This flag activates the push event flow — without it, tools work but real-time events (transcript, chat, insights) are silently dropped.
+
+> **Note:** Published channel plugins (Discord, Telegram) use `--channels plugin:name@publisher` instead. The `--dangerously-load-development-channels` flag is specific to custom channels during the research preview and may change when channels graduate from preview.
+
+Verify the plugin loaded:
 
 ```
 /mcp
 ```
 
-You should see `convene` listed with 20+ tools available.
+You should see `convene` listed with 18 tools available.
 
-## Join your first meeting
+## Environment variables
+
+| Variable | Required | Default | Description |
+|----------|:--------:|---------|-------------|
+| `CONVENE_API_KEY` | Yes | — | Agent API key (`cvn_...`) |
+| `CONVENE_API_URL` | No | `ws://localhost:8003` | Agent gateway WebSocket URL |
+| `CONVENE_HTTP_URL` | No | Derived from API URL | API server HTTP URL |
+| `CONVENE_AGENT_NAME` | No | `Claude Code` | Your display name in meetings |
+| `CONVENE_AGENT_MODE` | No | `both` | Event filter (see [Agent modes](#agent-modes)) |
+| `CONVENE_ENTITY_FILTER` | No | — | Entity types for `selective` mode |
+| `CONVENE_TLS_REJECT_UNAUTHORIZED` | No | `0` | Set `1` to enforce TLS cert validation |
+| `CONVENE_BEARER_TOKEN` | No | — | Pre-issued gateway JWT (skips API key exchange) |
+
+## Usage
+
+### List and join a meeting
 
 ```
-You:          List available meetings.
+You:          What meetings are available?
 
-Claude Code:  [calls convene_list_meetings]
+Claude Code:  [calls list_meetings]
               Found 2 meetings:
-              - "Q1 Planning" — active, 4 participants
-              - "Weekly Standup" — scheduled in 15 minutes
+              - "Architecture Review" (active) — 5ccf4fbd-...
+              - "Weekly Standup" (scheduled) — b419d06f-...
 
-You:          Join Q1 Planning and monitor for action items.
+You:          Join the Architecture Review.
 
-Claude Code:  [calls convene_join_meeting]
-              Joined "Q1 Planning". I'll monitor the transcript and flag
-              action items as they come up.
+Claude Code:  [calls join_meeting]
+              Joined. Receiving real-time transcript and events.
 ```
 
-## Available Tools
+### Create and join
 
-All tools use the `convene_` prefix to avoid collisions when multiple MCP servers are active.
+```
+You:          Start a meeting called "Sprint Planning".
 
-### Meeting
+Claude Code:  [calls join_or_create_meeting]
+              Created and joined "Sprint Planning".
+```
+
+### Interact during a meeting
+
+Once joined, transcript and chat events flow into Claude's context automatically. Claude can respond:
+
+```
+You:          What action items have come up?
+
+Claude Code:  [calls get_meeting_recap]
+              3 tasks identified so far:
+              1. Alice — finalize API spec by Thursday
+              2. Bob — schedule infrastructure review
+              3. Unassigned — update deployment docs
+
+You:          Claim the docs task and let the meeting know.
+
+Claude Code:  [calls accept_task, then reply]
+              Task accepted. Sent: "I'll take the deployment docs update."
+```
+
+### Leave
+
+```
+You:          Leave the meeting.
+
+Claude Code:  [calls leave_meeting]
+              Left meeting 5ccf4fbd-...
+```
+
+## Available tools
+
+### Meeting lifecycle
 
 | Tool | Description |
 |------|-------------|
-| `convene_list_meetings` | List upcoming and active meetings |
-| `convene_create_meeting` | Create a new meeting |
-| `convene_join_meeting` | Join a meeting as Claude Code |
-| `convene_leave_meeting` | Disconnect from a meeting |
-| `convene_start_meeting` | Start a scheduled meeting |
-| `convene_end_meeting` | End an active meeting |
-| `convene_join_or_create_meeting` | Join an active meeting or create one |
-
-### Transcript & Tasks
-
-| Tool | Description |
-|------|-------------|
-| `convene_get_transcript` | Read recent transcript segments |
-| `convene_get_tasks` | List tasks for a meeting |
-| `convene_create_task` | Create a task from meeting context |
-| `convene_get_participants` | List current participants |
-
-### Turn Management
-
-| Tool | Description |
-|------|-------------|
-| `convene_raise_hand` | Request to speak (enters speaker queue) |
-| `convene_get_queue_status` | Check who is speaking and what's queued |
-| `convene_start_speaking` | Speak to the room — text is synthesized via TTS |
-| `convene_mark_finished_speaking` | Release the floor |
-| `convene_cancel_hand_raise` | Withdraw from the queue |
+| `list_meetings` | List available meetings with their IDs and status |
+| `join_meeting` | Join a meeting by ID — starts receiving real-time events |
+| `create_meeting` | Create a new meeting |
+| `join_or_create_meeting` | Find an active meeting by title, or create and join one |
+| `leave_meeting` | Leave the current meeting and stop receiving events |
 
 ### Chat
 
 | Tool | Description |
 |------|-------------|
-| `convene_send_chat_message` | Post a message to meeting chat |
-| `convene_get_chat_messages` | Read chat history |
+| `reply` | Send a message to the meeting chat |
+| `get_chat_messages` | Read recent chat history |
 
-### Events & Channels
+### Turn management
 
 | Tool | Description |
 |------|-------------|
-| `convene_get_meeting_events` | Poll buffered meeting events (turns, participants, chat) |
-| `convene_subscribe_channel` | Subscribe to a named data channel |
-| `convene_publish_to_channel` | Publish a payload to a channel |
-| `convene_get_channel_messages` | Read buffered channel messages |
+| `raise_hand` | Request a turn to speak (joins the speaker queue) |
+| `get_queue_status` | See who is speaking and who is waiting |
+| `mark_finished_speaking` | Release the floor after speaking |
+| `cancel_hand_raise` | Withdraw from the speaker queue |
+| `get_speaking_status` | Check your current speaking/queue status |
 
-## Capabilities
+### Tasks
 
-Declare capabilities when calling `convene_join_meeting`:
+| Tool | Description |
+|------|-------------|
+| `accept_task` | Claim a task extracted from the meeting |
+| `update_status` | Report progress on a claimed task |
 
-| Capability | What Claude Code receives | What Claude Code can do |
-|------------|--------------------------|-------------------------|
-| `text_only` | Transcript via poll | Chat, tasks, turn queue (default) |
-| `tts_enabled` | Transcript via poll | Chat + synthesized speech |
+### Transcript and insights
 
-Claude Code does not support `voice_in` or `voice_out` — those require a persistent audio sidecar that MCP Streamable HTTP doesn't provide. Use `tts_enabled` when you want Claude Code to speak.
+| Tool | Description |
+|------|-------------|
+| `request_context` | Search the transcript buffer by keyword |
+| `get_meeting_recap` | Structured recap: tasks, decisions, key points, open questions |
+| `get_entity_history` | Retrieve extracted entities by type |
+| `get_participants` | List current meeting participants |
 
-```
-convene_join_meeting(meeting_id="abc123", audio_capability="tts_enabled")
-```
+## Resources
 
-## Speaking in a meeting (TTS)
+The channel plugin exposes MCP resources for browsing meeting state:
 
-When Claude Code wants to address the room:
+| Resource | Type | Description |
+|----------|------|-------------|
+| `convene://platform/context` | Static | Platform context and behavior guidelines |
+| `convene://meeting/{id}` | Template | Meeting info with connection status |
+| `convene://meeting/{id}/context` | Template | Detailed meeting context with transcript preview |
+| `convene://meeting/{id}/transcript` | Template | Buffered transcript segments (JSON) |
 
-```
-1.  convene_raise_hand(topic="action item summary")
-        -> returns queue position
+## Real-time events
 
-2.  convene_get_meeting_events(event_types=["speaker.changed"])
-        -> poll until Claude Code becomes the active speaker
+Once you join a meeting, events arrive in Claude's context as `<channel>` tags:
 
-3.  convene_start_speaking(text="Here are the three action items I noted...")
-        -> text is routed to the TTS provider and mixed into the room audio
-        -> floor is released automatically when done
-```
+| Topic | Description | Example |
+|-------|-------------|---------|
+| `transcript` | Speech-to-text segments | `<channel source="convene-ai" topic="transcript">[1.0s-3.5s] Alice: Let's review the timeline.</channel>` |
+| `chat` | Chat messages | `<channel source="convene-ai" topic="chat">[timestamp] Bob: Agreed.</channel>` |
+| `insight` | Extracted entities | `<channel source="convene-ai" topic="insight" type="task">{"title": "Update docs", ...}</channel>` |
+| `turn` | Speaker queue changes | `<channel source="convene-ai" topic="turn" type="your_turn">It's your turn to speak.</channel>` |
+| `participant` | Join/leave events | `<channel source="convene-ai" topic="participant" type="joined">Dave (human) joined.</channel>` |
+| `meeting_lifecycle` | Meeting join/leave | `<channel source="convene-ai" topic="meeting_lifecycle">Joined meeting abc-123.</channel>` |
 
-Full example:
+## Agent modes
 
-```
-You:          Join the Q1 Planning meeting and share the action items you've found.
+Control which events Claude receives by setting `CONVENE_AGENT_MODE`:
 
-Claude Code:
-  1. convene_list_meetings -> finds "Q1 Planning"
-  2. convene_join_meeting(audio_capability="tts_enabled")
-  3. convene_get_transcript -> reads recent context
-  4. convene_raise_hand(topic="action item summary")
-  5. [polls] convene_get_meeting_events -> receives speaker.changed
-  6. convene_start_speaking(text="I've reviewed the last 10 minutes. Here are
-     the action items: (1) Alex to finalize the API spec by Thursday,
-     (2) Sarah to schedule the infrastructure review...")
-  7. convene_leave_meeting
-```
+| Mode | What Claude receives |
+|------|----------------------|
+| `transcript` | Transcript segments only |
+| `insights` | Extracted entities only |
+| `both` | Both transcript and insights (default) |
+| `selective` | Insights of specific types only |
 
-## Event polling
+For selective mode, set `CONVENE_ENTITY_FILTER` to a comma-separated list:
 
-Claude Code uses a poll model — MCP Streamable HTTP doesn't maintain long-lived connections between tool calls. The MCP server buffers events in Redis; poll them with `convene_get_meeting_events`.
-
-| Parameter | Default | Notes |
-|-----------|---------|-------|
-| Buffer window | 5 minutes | Events older than this are dropped |
-| Max per poll | 50 events | Prevents context overflow |
-| Event types | `speaker.*`, `participant.*`, `chat.message.received`, `channel.*` | Filterable |
-
-Pass `event_types` to filter:
-
-```
-convene_get_meeting_events(event_types=["speaker.changed", "participant.joined"])
-```
-
-## Channel protocol
-
-Named data channels let multiple agents coordinate within a meeting. Any agent can subscribe, publish, and read from a channel scoped to the meeting.
-
-```
-# Subscribe
-convene_subscribe_channel(channel="tasks")
-
-# Publish structured data
-convene_publish_to_channel(channel="tasks", payload={
-    "action": "created",
-    "task": {"description": "Follow up with Alex by Friday", "priority": "high"}
-})
-
-# Read buffered messages
-convene_get_channel_messages(channel="tasks", last_n=20)
+```json
+{
+  "env": {
+    "CONVENE_AGENT_MODE": "selective",
+    "CONVENE_ENTITY_FILTER": "task,decision,blocker"
+  }
+}
 ```
 
-Use channels to coordinate between a Claude Code session and autonomous agents — for example, a Claude Code session publishes extracted tasks and a background agent picks them up and assigns owners.
+Available entity types: `task`, `decision`, `question`, `entity_mention`, `key_point`, `blocker`, `follow_up`.
 
 ## Architecture
 
 ```
-Claude Code Session
-        |
-        |  MCP Streamable HTTP
-        |  POST /mcp  (tool calls)
-        v
-Convene MCP Server  (http://convene.spark-b0f2.local/mcp)
-        |
-        |-- REST API ----------> API Server + PostgreSQL
-        +-- WebSocket ----------> Agent Gateway + Redis Streams
+Claude Code
+    │
+    └── stdio MCP ──→ Convene Channel Plugin (bun)
+                          │
+                          ├── HTTP (fetch) ──→ API Server   (list/create meetings)
+                          └── WebSocket    ──→ Agent Gateway (join, events, chat, turn)
 ```
 
-The MCP server is the single point of entry. Claude Code never talks directly to the agent gateway — the MCP server proxies gateway operations and buffers events so Claude Code can poll them.
+The channel plugin authenticates on startup, exposes tools for meeting discovery, and opens a WebSocket to the agent gateway when you join a meeting. Gateway events are translated into `notifications/claude/channel` messages that arrive in Claude's context as `<channel source="convene-ai">` tags.
 
-## Coming Soon: Real-Time Channel Integration
-
-The current MCP integration is **pull-based** — Claude Code polls for events using `convene_get_meeting_events`. This works well but introduces latency between when something happens in a meeting and when Claude Code learns about it.
-
-**Claude Code Channels** (shipped March 2026) enable a **push-based** model. A local Convene channel plugin will run as a stdio subprocess alongside Claude Code and push meeting events (transcript segments, speaker changes, chat messages) into the session in real time.
-
-### How it will work
-
-1. A lightweight `convene-channel` process runs locally as a Claude Code channel plugin.
-2. It maintains a persistent WebSocket connection to the Convene agent gateway.
-3. When a meeting event occurs, the plugin pushes it into Claude Code immediately via `notifications/claude/channel`.
-4. Claude Code can then react autonomously — calling MCP tools in response to events without being prompted.
-
-### What changes for you
-
-- **MCP server stays the same.** All tools (`convene_join_meeting`, `convene_get_transcript`, etc.) continue to work over HTTP.
-- **The channel plugin adds real-time awareness.** Claude Code will know about new transcript segments, speaker changes, and chat messages the moment they happen.
-- **Configuration adds one entry.** You will add a `convene-channel` stdio server alongside the existing `convene` HTTP server in `settings.json`.
-
-### Timeline
-
-The channel plugin is planned for a future release. The MCP server is the primary and recommended integration path today.
-
-## See Also
+## See also
 
 - [Connecting via MCP](/docs/connecting-agents/custom-agents/mcp-quickstart) — Connect any MCP-compatible agent
-- [OpenClaw Plugin](/docs/connecting-agents/custom-agents/openclaw-plugin) — Connect via OpenClaw
 - [CLI](/docs/connecting-agents/custom-agents/cli) — Terminal-based access

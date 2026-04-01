@@ -109,6 +109,19 @@ export type AnyExtractedEntity =
   | FollowUpEntity;
 
 // ---------------------------------------------------------------------------
+// Meeting API responses
+// ---------------------------------------------------------------------------
+
+/** Meeting info returned by the API server. */
+export interface MeetingInfo {
+  id: string;
+  title: string | null;
+  status: string;
+  created_at: string;
+  scheduled_at: string | null;
+}
+
+// ---------------------------------------------------------------------------
 // Gateway WebSocket messages
 // ---------------------------------------------------------------------------
 
@@ -153,6 +166,7 @@ export interface JoinedMessage {
   meeting_id: string;
   agent_id?: string;
   capabilities?: string[];
+  participants?: Array<Record<string, unknown>>;
 }
 
 /** Union of all messages the gateway may send. */
@@ -173,7 +187,7 @@ export interface TurnQueueEntry {
   priority: string;
   topic: string | null;
   raised_at: string;
-  hand_raise_id?: string;
+  hand_raise_id?: string | undefined;
 }
 
 /** Snapshot of the speaker queue state. */
@@ -224,7 +238,8 @@ export interface ChannelMessage {
     | "meeting_context"
     | "chat"
     | "turn"
-    | "participant";
+    | "participant"
+    | "meeting_lifecycle";
   /** Fine-grained type within the topic (e.g. entity_type for insights). */
   type: string;
   /** Human-readable content string sent as notification data. */
