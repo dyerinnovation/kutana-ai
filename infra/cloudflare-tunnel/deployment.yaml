@@ -1,0 +1,59 @@
+# Cloudflare Tunnel — cloudflared deployment
+#
+# Prerequisites (done manually — not in this file):
+#   1. Create a tunnel in the Cloudflare dashboard and get the tunnel token.
+#   2. Apply the secret:  kubectl apply -f infra/cloudflare-tunnel/secrets.yaml
+#   3. Apply this manifest: kubectl apply -f infra/cloudflare-tunnel/deployment.yaml
+#
+# The tunnel token is read from the cloudflared-secrets K8s Secret.
+# See infra/cloudflare-tunnel/secrets.example.yaml.
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloudflared
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared
+  namespace: cloudflared
+  labels:
+    app: cloudflared
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cloudflared
+  template:
+    metadata:
+      labels:
+        app: cloudflared
+    spec:
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:latest
+          args:
+            - tunnel
+            - --no-autoupdate
+            - run
+          env:
+            - name: TUNNEL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cloudflared-secrets
+                  key: TUNNEL_TOKEN
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: 2000
+            failureThreshold: 1
+            initialDelaySeconds: 10
+            periodSeconds: 10

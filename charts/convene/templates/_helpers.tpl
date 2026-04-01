@@ -48,10 +48,15 @@ app.kubernetes.io/instance: {{ .root.Release.Name }}
 {{- end }}
 
 {{/*
-Image reference for a service
+Image reference for a service.
+If global.imageTag is set, it overrides the per-service tag (used by CI deploys).
 */}}
 {{- define "convene.image" -}}
-{{ .root.Values.global.registryPrefix }}/{{ .svc }}:{{ .tag }}
+{{- $tag := .tag -}}
+{{- if .root.Values.global.imageTag -}}
+{{- $tag = .root.Values.global.imageTag -}}
+{{- end -}}
+{{ .root.Values.global.registryPrefix }}/{{ .svc }}:{{ $tag }}
 {{- end }}
 
 {{/*
