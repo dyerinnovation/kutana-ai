@@ -1,6 +1,9 @@
 global:
   domain: spark-b0f2.local
   registryPrefix: localhost:30500/convene
+  # Override all service image tags at once (e.g., set by CI: --set global.imageTag=abc12345)
+  # When empty, each service uses its own image.tag value.
+  imageTag: ""
 
 # ---------------------------------------------------------------------------
 # PostgreSQL

@@ -143,7 +143,7 @@ class HumanSessionHandler:
         """Route an incoming message to the appropriate handler.
 
         Humans can send: audio_data, leave_meeting, raise_hand,
-        lower_hand, finished_speaking, get_queue.
+        lower_hand, finished_speaking, get_queue, chat.
         All other message types are silently ignored.
 
         Args:
@@ -166,6 +166,25 @@ class HumanSessionHandler:
             await self._handle_finished_speaking(FinishedSpeaking.model_validate(data))
         elif msg_type == "get_queue":
             await self._handle_get_queue(GetQueue.model_validate(data))
+        elif msg_type == "chat":
+            await self._handle_chat(data)
+
+    async def _handle_chat(self, data: dict[str, Any]) -> None:
+        """Handle a chat message from the browser and broadcast to all participants.
+
+        Args:
+            data: Raw message dict with ``text`` field.
+        """
+        text = data.get("text", "").strip()
+        if not text:
+            return
+        if self._manager.chat_bridge is not None:
+            await self._manager.chat_bridge.handle_send_chat(
+                meeting_id=self.meeting_id,
+                sender_id=self._identity.agent_config_id,
+                sender_name=self.agent_name,
+                content=text,
+            )
 
     async def _handle_audio(self, msg: AudioData) -> None:
         """Forward PCM16 audio from the browser to the STT pipeline.
@@ -182,7 +201,7 @@ class HumanSessionHandler:
         if self._audio_bridge is not None:
             await self._audio_bridge.process_audio(self.meeting_id, audio_bytes)
 
-        logger.debug(
+        logger.info(
             "Received %d bytes of audio from human %s",
             len(audio_bytes),
             self.agent_name,
@@ -325,6 +344,7 @@ class HumanSessionHandler:
             name=name,
             role=role,
             connection_type=connection_type,
+            source=source,
         )
         await self._send(msg.model_dump(mode="json"))
 
@@ -436,4 +456,6 @@ class HumanSessionHandler:
     async def _cleanup(self) -> None:
         """Clean up session state on disconnect."""
         await self._leave_and_notify("disconnected")
+        if self._audio_bridge is not None:
+            await self._audio_bridge.close_pipeline(self.meeting_id)
         self._manager.unregister(self.session_id)

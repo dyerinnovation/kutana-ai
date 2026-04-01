@@ -1,0 +1,115 @@
+# Woodpecker CI pipeline for Convene AI
+# Stages: lint → (type-check ∥ test) → build → deploy
+#
+# Build and deploy only run on pushes to main.
+# Services (postgres, redis) are available to all steps via hostname.
+---
+
+# ---------------------------------------------------------------------------
+# Services (sidecars — available to all steps)
+# ---------------------------------------------------------------------------
+services:
+  - name: postgres
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: convene
+      POSTGRES_PASSWORD: convene
+      POSTGRES_DB: convene
+
+  - name: redis
+    image: redis:7-alpine
+
+# ---------------------------------------------------------------------------
+# Pipeline steps
+# ---------------------------------------------------------------------------
+steps:
+
+  # ── lint ──────────────────────────────────────────────────────────────────
+  - name: lint
+    image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+    commands:
+      - uv sync
+      - uv run ruff check .
+      - uv run ruff format --check .
+
+  # ── type-check (parallel with test, depends on lint) ──────────────────────
+  - name: type-check
+    image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+    commands:
+      - uv sync
+      - uv run mypy packages/convene-core/
+    depends_on: [lint]
+
+  # ── test ──────────────────────────────────────────────────────────────────
+  - name: test
+    image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+    environment:
+      DATABASE_URL: postgresql+asyncpg://convene:convene@postgres:5432/convene
+      REDIS_URL: redis://redis:6379/0
+    commands:
+      - uv sync
+      - uv run pytest -x -v
+    depends_on: [lint]
+
+  # ── build (main branch only) ───────────────────────────────────────────────
+  # Runs on the DGX Spark Docker daemon via the host socket.
+  # Pushes both :<sha> and :latest tags to the local K3s registry.
+  - name: build
+    image: docker:27-cli
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    commands:
+      - |
+        set -e
+        SHORT_SHA=$(echo "$CI_COMMIT_SHA" | cut -c1-8)
+        REGISTRY="localhost:30500/convene"
+        echo "==> Building images for commit ${SHORT_SHA}"
+        for svc in api-server agent-gateway audio-service task-engine mcp-server worker web; do
+          if [ "$svc" = "web" ]; then
+            DF="web/Dockerfile"
+          else
+            DF="services/${svc}/Dockerfile"
+          fi
+          echo ""
+          echo "--- Building ${svc}:${SHORT_SHA} ---"
+          docker build \
+            -t "${REGISTRY}/${svc}:${SHORT_SHA}" \
+            -t "${REGISTRY}/${svc}:latest" \
+            -f "${DF}" \
+            .
+          docker push "${REGISTRY}/${svc}:${SHORT_SHA}"
+          docker push "${REGISTRY}/${svc}:latest"
+        done
+        echo ""
+        echo "==> All images pushed successfully (tag: ${SHORT_SHA})"
+    depends_on: [test, type-check]
+    when:
+      branch: main
+      event: push
+
+  # ── deploy (main branch only) ─────────────────────────────────────────────
+  # Uses network_mode: host so that 127.0.0.1:6443 (K3s API server) is reachable.
+  # Kubeconfig at /etc/rancher/k3s/k3s.yaml is mounted read-only from the host.
+  - name: deploy
+    image: alpine/helm:3.16.3
+    network_mode: host
+    volumes:
+      - /etc/rancher/k3s/k3s.yaml:/root/.kube/config:ro
+    environment:
+      KUBECONFIG: /root/.kube/config
+    commands:
+      - |
+        set -e
+        SHORT_SHA=$(echo "$CI_COMMIT_SHA" | cut -c1-8)
+        echo "==> Deploying convene with imageTag=${SHORT_SHA}"
+        helm upgrade --install convene charts/convene \
+          --namespace convene \
+          --create-namespace \
+          --set global.imageTag="${SHORT_SHA}" \
+          --wait \
+          --timeout 5m
+        echo "==> Deploy complete"
+    depends_on: [build]
+    when:
+      branch: main
+      event: push
