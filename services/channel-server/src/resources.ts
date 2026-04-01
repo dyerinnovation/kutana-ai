@@ -1,9 +1,15 @@
 /**
  * MCP resource registrations for the Convene AI Channel Server.
  *
- * Resources implement Layer 1 (platform context) and Layer 2 (meeting context)
- * of the three-layer agent context seeding architecture described in
- * docs/technical/agent-context-seeding.md.
+ * Resources:
+ *   - convene://platform/context         — static platform context (Layer 1)
+ *   - convene://meeting/{id}             — meeting info + connection status
+ *   - convene://meeting/{id}/context     — detailed meeting context (Layer 2)
+ *   - convene://meeting/{id}/transcript  — buffered transcript segments
+ *
+ * The meetings resource template uses a `list` callback so clients can
+ * browse available meetings. The list updates when meetings are joined
+ * or left (via notifications/resources/list_changed).
  */
 
 import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -60,67 +66,94 @@ Insight types: **task**, **decision**, **question**, **entity_mention**, **key_p
 
 ## Available Tools
 
+### Meeting Lifecycle
+| Tool | Purpose |
+|------|---------|
+| \`list_meetings\` | Browse available meetings |
+| \`join_meeting\` | Join a meeting by ID |
+| \`create_meeting\` | Create a new meeting |
+| \`join_or_create_meeting\` | Find or create a meeting by title |
+| \`leave_meeting\` | Leave the current meeting |
+
+### In-Meeting
 | Tool | Purpose | Key params |
 |------|---------|------------|
 | \`reply\` | Send a message to the meeting chat | \`text\` |
 | \`accept_task\` | Claim a task you will handle | \`task_id\` |
 | \`update_status\` | Report progress on an accepted task | \`task_id\`, \`status\`, \`message\` |
-| \`request_context\` | Keyword search over the transcript buffer | \`query\`, \`limit\` |
-| \`get_meeting_recap\` | Full recap: tasks, decisions, open questions | — |
-| \`get_entity_history\` | All extracted entities of a type | \`entity_type\`, \`limit\` |
+| \`raise_hand\` | Request a turn to speak | \`priority\`, \`topic\` |
+| \`get_queue_status\` | Check the speaker queue | — |
+| \`mark_finished_speaking\` | Release the floor | — |
+| \`request_context\` | Search the transcript buffer | \`query\`, \`limit\` |
+| \`get_meeting_recap\` | Full recap of extracted entities | — |
 
 ## Task Status Values
 \`in_progress\` · \`completed\` · \`blocked\` · \`needs_review\`
 
 ## Behavior Guidelines
-- Monitor the transcript and insight stream continuously
+- Start by listing meetings or joining one
+- Monitor the transcript and insight stream continuously once joined
 - When you see a task you can handle, call \`accept_task\` to claim it
 - Provide status updates via \`update_status\` as you work
 - Use \`reply\` sparingly — only when you add clear value
 - Search for context with \`request_context\` before making claims about past discussion
-- Use \`get_meeting_recap\` if you join late or need a full picture
 `;
 
 // ---------------------------------------------------------------------------
 // Registration
 // ---------------------------------------------------------------------------
 
-/** Register platform context and meeting context resources on the MCP server. */
+/** Register platform context and meeting resources on the MCP server. */
 export function registerResources(
   server: Server,
   client: ConveneClient,
   config: ChannelServerConfig,
 ): void {
-  // Static resource list
+  // Static resources
   server.setRequestHandler(ListResourcesRequestSchema, async () => ({
     resources: [
       {
         uri: "convene://platform/context",
         name: "Convene AI Platform Context",
         description:
-          "Static platform context: what Convene AI is, message formats, tools, and behaviour guidelines.",
+          "Platform context: what Convene AI is, message formats, tools, and behaviour guidelines.",
         mimeType: "text/markdown",
       },
     ],
   }));
 
-  // Resource template for dynamic meeting context
+  // Resource templates — meetings are browsable via the list callback
   server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({
     resourceTemplates: [
+      {
+        uriTemplate: "convene://meeting/{meeting_id}",
+        name: "Meeting",
+        description:
+          "Meeting info with connection status. Browse available meetings by listing this template.",
+        mimeType: "application/json",
+      },
       {
         uriTemplate: "convene://meeting/{meeting_id}/context",
         name: "Meeting Context",
         description:
-          "Dynamic context for a specific meeting: connection status, agent mode, and a recent transcript preview.",
+          "Dynamic context: connection status, agent mode, entity summary, and transcript preview.",
         mimeType: "text/markdown",
+      },
+      {
+        uriTemplate: "convene://meeting/{meeting_id}/transcript",
+        name: "Meeting Transcript",
+        description:
+          "Session-scoped transcript segments received since joining the meeting.",
+        mimeType: "application/json",
       },
     ],
   }));
 
-  // Read handler for both the static resource and the template instances
+  // Read handler for all resource URIs
   server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     const { uri } = request.params;
 
+    // Static: platform context
     if (uri === "convene://platform/context") {
       return {
         contents: [
@@ -133,9 +166,41 @@ export function registerResources(
       };
     }
 
-    const meetingMatch = /^convene:\/\/meeting\/([^/]+)\/context$/.exec(uri);
-    if (meetingMatch) {
-      const meetingId = meetingMatch[1] ?? "";
+    // Dynamic: meeting transcript
+    const transcriptMatch =
+      /^convene:\/\/meeting\/([^/]+)\/transcript$/.exec(uri);
+    if (transcriptMatch) {
+      const meetingId = transcriptMatch[1] ?? "";
+      if (client.getCurrentMeetingId() !== meetingId) {
+        return {
+          contents: [
+            {
+              uri,
+              mimeType: "application/json",
+              text: JSON.stringify({
+                error: "Not connected to this meeting",
+              }),
+            },
+          ],
+        };
+      }
+      const segments = client.getRecentTranscript(9999);
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: "application/json",
+            text: JSON.stringify(segments, null, 2),
+          },
+        ],
+      };
+    }
+
+    // Dynamic: meeting context
+    const contextMatch =
+      /^convene:\/\/meeting\/([^/]+)\/context$/.exec(uri);
+    if (contextMatch) {
+      const meetingId = contextMatch[1] ?? "";
       return {
         contents: [
           {
@@ -147,8 +212,50 @@ export function registerResources(
       };
     }
 
+    // Dynamic: meeting info
+    const meetingMatch = /^convene:\/\/meeting\/([^/]+)$/.exec(uri);
+    if (meetingMatch) {
+      const meetingId = meetingMatch[1] ?? "";
+      const isConnected = client.getCurrentMeetingId() === meetingId;
+
+      const info: Record<string, unknown> = {
+        meeting_id: meetingId,
+        connected: isConnected,
+      };
+
+      if (isConnected) {
+        info["transcript_count"] = client.getRecentTranscript(9999).length;
+        info["participants"] = client.getParticipants();
+        info["entity_count"] = client.getEntities(undefined, 9999).length;
+      }
+
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: "application/json",
+            text: JSON.stringify(info, null, 2),
+          },
+        ],
+      };
+    }
+
     throw new Error(`Unknown resource URI: ${uri}`);
   });
+}
+
+/**
+ * Send a resources/list_changed notification to inform Claude Code
+ * that available resource state has changed (e.g. after join/leave).
+ */
+export async function notifyResourcesChanged(server: Server): Promise<void> {
+  try {
+    await server.notification({
+      method: "notifications/resources/list_changed",
+    });
+  } catch {
+    // Notification errors should not crash the server
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -160,8 +267,10 @@ function buildMeetingContext(
   client: ConveneClient,
   config: ChannelServerConfig,
 ): string {
-  const connected = client.isConnected();
-  const recentSegments = client.getRecentTranscript(5);
+  const isCurrentMeeting = client.getCurrentMeetingId() === meetingId;
+  const recentSegments = isCurrentMeeting
+    ? client.getRecentTranscript(5)
+    : [];
 
   const preview =
     recentSegments.length > 0
@@ -173,7 +282,9 @@ function buildMeetingContext(
           .join("\n")
       : "_No transcript segments buffered yet._";
 
-  const entityCounts = summariseEntities(client);
+  const entityCounts = isCurrentMeeting
+    ? summariseEntities(client)
+    : "_Not connected to this meeting._";
 
   const modeDescription =
     config.agentMode === "selective" && config.entityFilter.length > 0
@@ -186,7 +297,7 @@ function buildMeetingContext(
 \`${meetingId}\`
 
 ## Connection Status
-${connected ? "✓ Connected and listening" : "✗ Not connected to gateway"}
+${isCurrentMeeting ? "Connected and listening" : "Not connected to this meeting"}
 
 ## Agent Mode
 ${modeDescription}

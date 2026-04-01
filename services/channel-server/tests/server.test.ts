@@ -15,9 +15,11 @@ function makeConfig(overrides: Partial<ChannelServerConfig> = {}): ChannelServer
     conveneApiUrl: "ws://localhost:8003",
     conveneHttpUrl: "http://localhost:8000",
     conveneApiKey: "test-api-key",
-    conveneMeetingId: "meeting-123",
+    conveneBearerToken: "",
+    conveneAgentName: "Claude Code",
     agentMode: "both",
     entityFilter: [],
+    tlsRejectUnauthorized: true,
     ...overrides,
   };
 }
@@ -36,15 +38,12 @@ describe("createServer", () => {
   it("creates distinct server instances for separate calls", () => {
     const { server: s1 } = createServer(makeConfig());
     const { server: s2 } = createServer(makeConfig());
-    // Each call produces a fresh instance
     expect(s1).not.toBe(s2);
   });
 
   it("passes through agentMode to the client", () => {
     const config = makeConfig({ agentMode: "transcript" });
     const { client } = createServer(config);
-    // Client is constructed with the provided config — verified indirectly
-    // by the fact that getRecentTranscript exists and returns an empty array
     expect(client.getRecentTranscript()).toEqual([]);
   });
 
@@ -54,9 +53,11 @@ describe("createServer", () => {
         conveneApiUrl: "ws://localhost:8003",
         conveneHttpUrl: "http://localhost:8000",
         conveneApiKey: "key",
-        conveneMeetingId: "m1",
+        conveneBearerToken: "",
+        conveneAgentName: "Claude Code",
         agentMode: "both",
         entityFilter: [],
+        tlsRejectUnauthorized: true,
       }),
     ).not.toThrow();
   });
@@ -69,9 +70,14 @@ describe("ConveneClient initial state", () => {
     config = makeConfig();
   });
 
-  it("is not connected before connect() is called", () => {
+  it("is not connected before joining a meeting", () => {
     const { client } = createServer(config);
     expect(client.isConnected()).toBe(false);
+  });
+
+  it("has no current meeting before joining", () => {
+    const { client } = createServer(config);
+    expect(client.getCurrentMeetingId()).toBeNull();
   });
 
   it("returns empty transcript buffer before any events", () => {
@@ -92,7 +98,6 @@ describe("channel callback wiring", () => {
     client.onChannelMessage(async (msg) => {
       received.push(msg.topic);
     });
-    // Callback is registered — no errors thrown
     expect(received).toEqual([]);
   });
 
@@ -102,7 +107,6 @@ describe("channel callback wiring", () => {
     const cb2 = vi.fn();
     client.onChannelMessage(cb1);
     client.onChannelMessage(cb2);
-    // Second registration wins; no errors
     expect(cb1).not.toHaveBeenCalled();
     expect(cb2).not.toHaveBeenCalled();
   });
