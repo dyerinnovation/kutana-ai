@@ -1,4 +1,4 @@
-"""Security infrastructure for Convene AI MCP server.
+"""Security infrastructure for Kutana AI MCP server.
 
 Modules:
     scopes: JWT scope definitions and per-tool enforcement.

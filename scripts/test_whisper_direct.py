@@ -28,7 +28,7 @@ async def main() -> None:
     parser = argparse.ArgumentParser(description="Direct Whisper API tester")
     parser.add_argument(
         "--api-url",
-        default="http://spark-b0f2.local/convene-stt/v1",
+        default="http://spark-b0f2.local/kutana-stt/v1",
         help="Base URL of the OpenAI-compatible Whisper API",
     )
     parser.add_argument(

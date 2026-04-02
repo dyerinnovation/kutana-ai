@@ -1,4 +1,4 @@
-# Convene AI — AWS Deployment (ECS/Fargate ready)
+# Kutana AI — AWS Deployment (ECS/Fargate ready)
 #
 # This compose file is designed to run on AWS ECS / Fargate.
 # It uses SNS+SQS as the message bus backend.
@@ -23,8 +23,8 @@ x-common-env: &common-env
   AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
   AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
   AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
-  SNS_TOPIC_PREFIX: ${SNS_TOPIC_PREFIX:-convene-prod-}
-  DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://convene:convene@rds.internal:5432/convene}
+  SNS_TOPIC_PREFIX: ${SNS_TOPIC_PREFIX:-kutana-prod-}
+  DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://kutana:kutana@rds.internal:5432/kutana}
   REDIS_URL: ${REDIS_URL:-redis://elasticache.internal:6379/0}
   ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
   DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY}
@@ -62,7 +62,7 @@ services:
   # API Server
   # ------------------------------------------------------------------
   api-server:
-    image: ${ECR_REGISTRY:-convene}/api-server:${IMAGE_TAG:-latest}
+    image: ${ECR_REGISTRY:-kutana}/api-server:${IMAGE_TAG:-latest}
     build:
       context: ../..
       dockerfile: services/api-server/Dockerfile
@@ -87,7 +87,7 @@ services:
   # Agent Gateway
   # ------------------------------------------------------------------
   agent-gateway:
-    image: ${ECR_REGISTRY:-convene}/agent-gateway:${IMAGE_TAG:-latest}
+    image: ${ECR_REGISTRY:-kutana}/agent-gateway:${IMAGE_TAG:-latest}
     build:
       context: ../..
       dockerfile: services/agent-gateway/Dockerfile
@@ -113,7 +113,7 @@ services:
   # Audio Service
   # ------------------------------------------------------------------
   audio-service:
-    image: ${ECR_REGISTRY:-convene}/audio-service:${IMAGE_TAG:-latest}
+    image: ${ECR_REGISTRY:-kutana}/audio-service:${IMAGE_TAG:-latest}
     build:
       context: ../..
       dockerfile: services/audio-service/Dockerfile
@@ -132,7 +132,7 @@ services:
   # Task Engine (extraction workers)
   # ------------------------------------------------------------------
   task-engine:
-    image: ${ECR_REGISTRY:-convene}/task-engine:${IMAGE_TAG:-latest}
+    image: ${ECR_REGISTRY:-kutana}/task-engine:${IMAGE_TAG:-latest}
     build:
       context: ../..
       dockerfile: services/task-engine/Dockerfile
@@ -152,7 +152,7 @@ services:
   # MCP Server
   # ------------------------------------------------------------------
   mcp-server:
-    image: ${ECR_REGISTRY:-convene}/mcp-server:${IMAGE_TAG:-latest}
+    image: ${ECR_REGISTRY:-kutana}/mcp-server:${IMAGE_TAG:-latest}
     build:
       context: ../..
       dockerfile: services/mcp-server/Dockerfile
@@ -177,7 +177,7 @@ services:
   # Worker (background jobs)
   # ------------------------------------------------------------------
   worker:
-    image: ${ECR_REGISTRY:-convene}/worker:${IMAGE_TAG:-latest}
+    image: ${ECR_REGISTRY:-kutana}/worker:${IMAGE_TAG:-latest}
     build:
       context: ../..
       dockerfile: services/worker/Dockerfile

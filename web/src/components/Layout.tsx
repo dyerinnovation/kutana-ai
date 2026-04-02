@@ -2,7 +2,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
-import { ConveneLogoMark } from "@/components/Logo";
+import { KutanaLogoMark } from "@/components/Logo";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: HomeIcon },
@@ -23,9 +23,9 @@ export function Layout() {
 
         {/* Logo / wordmark */}
         <div className="flex h-14 items-center gap-3 border-b border-gray-800 px-4">
-          <ConveneLogoMark size={26} />
+          <KutanaLogoMark size={26} />
           <span className="text-sm font-semibold tracking-tight text-gray-50">
-            Convene{" "}
+            Kutana{" "}
             <span className="text-blue-400">AI</span>
           </span>
         </div>

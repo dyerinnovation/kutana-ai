@@ -21,7 +21,7 @@ export function MeetingsPage() {
   // Create meeting state
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState("");
-  const [platform, setPlatform] = useState("convene");
+  const [platform, setPlatform] = useState("kutana");
   const [scheduledAt, setScheduledAt] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
@@ -55,7 +55,7 @@ export function MeetingsPage() {
       });
       setShowCreate(false);
       setTitle("");
-      setPlatform("convene");
+      setPlatform("kutana");
       setScheduledAt("");
       await loadMeetings();
     } catch (err) {
@@ -227,7 +227,7 @@ export function MeetingsPage() {
                 value={platform}
                 onChange={(e) => setPlatform(e.target.value)}
               >
-                <option value="convene">Convene</option>
+                <option value="kutana">Kutana</option>
                 <option value="zoom">Zoom</option>
                 <option value="teams">Teams</option>
                 <option value="meet">Google Meet</option>

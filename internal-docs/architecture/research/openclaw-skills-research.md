@@ -1,6 +1,6 @@
 # OpenClaw Skills Research
 
-> Research conducted March 2026 to inform the Convene AI skill architecture.
+> Research conducted March 2026 to inform the Kutana AI skill architecture.
 > Covers skill format, discovery, best practices, and comparison with MCP tools.
 
 ---
@@ -19,9 +19,9 @@ OpenClaw skills are self-contained capability packages that agents load into con
 
 ```markdown
 ---
-name: convene-meeting
+name: kutana-meeting
 version: 1.0.0
-description: Join and participate in Convene AI meetings — access transcripts, send chat, manage your turn to speak
+description: Join and participate in Kutana AI meetings — access transcripts, send chat, manage your turn to speak
 author: Dyer Innovation
 category: productivity
 tags: [meetings, transcription, collaboration, ai-agent]
@@ -37,7 +37,7 @@ mcp_compatible: true
 frameworks: [openclaw, claude-agent-sdk, generic]
 ---
 
-# Convene Meeting Skill
+# Kutana Meeting Skill
 
 [Full skill content here — loaded on demand when agent needs this capability]
 ```
@@ -81,7 +81,7 @@ Skills can be loaded from a local directory without ClawHub:
 
 ```
 ~/.openclaw/skills/
-  convene-meeting/
+  kutana-meeting/
     SKILL.md
     connect.sh
     mcp-bridge.py
@@ -116,7 +116,7 @@ Skill-based approach:
 ### Best Practices from Popular Skills
 
 1. **Single capability per skill** — skills that do one thing well get 3x more installs than catch-all skills
-2. **Actionable descriptions** — `"Join and participate in Convene AI meetings"` outperforms `"Convene AI integration"`
+2. **Actionable descriptions** — `"Join and participate in Kutana AI meetings"` outperforms `"Kutana AI integration"`
 3. **Include examples in skill body** — agents with example usage in the SKILL.md make 40% fewer errors
 4. **Tag generously** — tags drive 60% of skill discovery; use synonyms
 5. **Version with intent** — breaking changes get a major bump; additive changes get a minor bump
@@ -156,11 +156,11 @@ Skill-based approach:
 
 ---
 
-## Recommendations for Convene AI
+## Recommendations for Kutana AI
 
-1. **Publish a `convene-meeting` skill to ClawHub** — this is the primary discovery path for third-party agent developers. A well-ranked ClawHub skill drives organic adoption.
+1. **Publish a `kutana-meeting` skill to ClawHub** — this is the primary discovery path for third-party agent developers. A well-ranked ClawHub skill drives organic adoption.
 
-2. **Keep the skill focused on participation** — joining, chat, turn management, and context retrieval. Leave admin operations (creating meetings, managing users) in a separate `convene-admin` skill.
+2. **Keep the skill focused on participation** — joining, chat, turn management, and context retrieval. Leave admin operations (creating meetings, managing users) in a separate `kutana-admin` skill.
 
 3. **Bundle the MCP connection instructions** — the skill body should explain how to configure the MCP server URL, authenticate with an API key, and verify the connection. Most agents that fail to connect do so because of misconfiguration, not code bugs.
 
@@ -176,5 +176,5 @@ Skill-based approach:
 
 - ClawHub Skills Registry: `https://clawhub.dev/skills`
 - OpenClaw Skill Format Spec: `docs/integrations/OPENCLAW.md`
-- Convene MCP Server: `services/mcp-server/`
+- Kutana MCP Server: `services/mcp-server/`
 - Skill Architecture Proposal: `docs/research/skill-architecture.md`

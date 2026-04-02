@@ -19,7 +19,7 @@ export MEETING_ID=$(curl -s -X POST http://localhost:8000/api/v1/meetings \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "title": "Browser Room Test",
-    "platform": "convene",
+    "platform": "kutana",
     "scheduled_at": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"
   }' | jq -r '.id')
 
@@ -32,7 +32,7 @@ Expected: `"active"`
 ## Step 2: Login to Web UI
 
 1. Open `http://localhost:5173`
-2. Log in with `tester@convene.dev` / `TestPass123!`
+2. Log in with `tester@kutana.dev` / `TestPass123!`
 3. Navigate to the Meetings page
 
 ## Step 3: Join the Meeting Room

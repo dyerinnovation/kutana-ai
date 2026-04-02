@@ -1,4 +1,4 @@
-"""FastAPI application entry point for the Convene AI API server."""
+"""FastAPI application entry point for the Kutana AI API server."""
 
 from __future__ import annotations
 
@@ -46,8 +46,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(
-    title="Convene AI API",
-    description=("REST and WebSocket API for the Convene AI meeting assistant"),
+    title="Kutana AI API",
+    description=("REST and WebSocket API for the Kutana AI meeting assistant"),
     version="0.1.0",
     lifespan=lifespan,
 )

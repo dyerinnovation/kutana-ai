@@ -11,8 +11,8 @@ from agent_gateway.audio_bridge import AudioBridge
 from agent_gateway.connection_manager import ConnectionManager
 from agent_gateway.event_relay import EventRelay
 
-from convene_core.models.transcript import TranscriptSegment
-from convene_providers.testing import MockSTT
+from kutana_core.models.transcript import TranscriptSegment
+from kutana_providers.testing import MockSTT
 
 
 def _make_session(session_id, meeting_id, capabilities):

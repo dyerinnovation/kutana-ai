@@ -8,7 +8,7 @@
 - Created `docs/milestone-testing/01-meeting-lifecycle.md` — Full CRUD + state machine (Part A: API with 10 curl commands, Part B: UI walkthrough)
 - Created `docs/milestone-testing/02-browser-meeting-room.md` — Mic capture, WebSocket audio, live transcripts, mute/unmute, participants
 - Created `docs/milestone-testing/03-mcp-auth-flow.md` — API key → MCP JWT → Bearer chain, JWT claim decode, revocation, invalid token 401s
-- Created `docs/milestone-testing/04-convene-cli.md` — All Typer CLI commands: login, status, agents create/list, meetings create/list, keys generate, logout
+- Created `docs/milestone-testing/04-kutana-cli.md` — All Typer CLI commands: login, status, agents create/list, meetings create/list, keys generate, logout
 - Created `docs/milestone-testing/05-api-key-security.md` — 4 parts: expiry (5s TTL), revocation, rate limiting (60/min → 429), audit log queries
 - Created `docs/milestone-testing/06-openclaw-plugin.md` — Build, install in OpenClaw, test all 6 tools, error handling
 - Created `docs/milestone-testing/07-claude-agent-sdk.md` — 4 templates (assistant/summarizer/action-tracker/decision-logger), custom prompt, Claude Desktop/Code config

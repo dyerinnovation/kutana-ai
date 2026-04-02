@@ -1,6 +1,6 @@
 # Claude Code Channels — Architecture & Implementation
 
-> The Convene channel plugin is **implemented and shipping**. It is a single stdio MCP server that provides both tools and real-time push events.
+> The Kutana channel plugin is **implemented and shipping**. It is a single stdio MCP server that provides both tools and real-time push events.
 
 ---
 
@@ -8,7 +8,7 @@
 
 Claude Code Channels are **stdio-transport MCP servers** spawned as subprocesses by Claude Code. Unlike standard MCP servers (which Claude Code calls on demand), a channel declares the `claude/channel` capability and **pushes** events into the session via `notifications/claude/channel` messages.
 
-Official first-party channel plugins exist for Telegram, Discord, and iMessage. The Convene channel plugin follows the same pattern.
+Official first-party channel plugins exist for Telegram, Discord, and iMessage. The Kutana channel plugin follows the same pattern.
 
 A channel must:
 
@@ -39,14 +39,14 @@ During MCP initialization, the channel server declares the `claude/channel` capa
 
 ```typescript
 const server = new Server(
-  { name: 'convene-ai', version: '0.2.0' },
+  { name: 'kutana-ai', version: '0.2.0' },
   {
     capabilities: {
       tools: {},
       resources: { subscribe: true, listChanged: true },
       experimental: { 'claude/channel': {} },
     },
-    instructions: 'Events from the convene-ai channel arrive as <channel source="convene-ai" ...>.',
+    instructions: 'Events from the kutana-ai channel arrive as <channel source="kutana-ai" ...>.',
   },
 )
 ```
@@ -72,7 +72,7 @@ The channel pushes events as JSON-RPC notifications:
 Claude Code renders this as:
 
 ```xml
-<channel source="convene-ai" topic="transcript" type="transcript_segment">
+<channel source="kutana-ai" topic="transcript" type="transcript_segment">
 [2.0s-4.5s] Alice: We should finalize the API spec by Thursday.
 </channel>
 ```
@@ -81,7 +81,7 @@ The `source` attribute comes from the server's `name` field. The `meta` keys bec
 
 ---
 
-## Convene Implementation
+## Kutana Implementation
 
 ### Architecture
 
@@ -90,7 +90,7 @@ The channel plugin is a **single stdio MCP server** (TypeScript, runs with Bun) 
 ```
 Claude Code
     │
-    └── stdio MCP ──→ Convene Channel Plugin (bun)
+    └── stdio MCP ──→ Kutana Channel Plugin (bun)
                           │
                           ├── HTTP (fetch) ──→ API Server   (list/create meetings)
                           └── WebSocket    ──→ Agent Gateway (join, events, chat, turn)
@@ -99,7 +99,7 @@ Claude Code
 ### Lifecycle
 
 1. **Startup** — Plugin authenticates with the API (API key → JWT). Tools and resources are registered. No meeting joined yet.
-2. **Discovery** — User calls `list_meetings` or browses `convene://meeting/{id}` resources.
+2. **Discovery** — User calls `list_meetings` or browses `kutana://meeting/{id}` resources.
 3. **Join** — User calls `join_meeting` → WebSocket opens → events push via `notifications/claude/channel`.
 4. **Active** — All 18 tools available. Transcript, chat, turn, and insight events flow as `<channel>` tags.
 5. **Leave** — User calls `leave_meeting` → WebSocket closes, buffers clear.
@@ -109,14 +109,14 @@ Claude Code
 Register the MCP server using the Claude Code CLI:
 
 ```bash
-claude mcp add-json --scope user convene '{
+claude mcp add-json --scope user kutana '{
   "type": "stdio",
   "command": "bun",
   "args": ["/path/to/services/channel-server/src/server.ts"],
   "env": {
     "CONVENE_API_KEY": "cvn_...",
-    "CONVENE_API_URL": "wss://convene.spark-b0f2.local/ws",
-    "CONVENE_HTTP_URL": "https://convene.spark-b0f2.local",
+    "CONVENE_API_URL": "wss://kutana.spark-b0f2.local/ws",
+    "CONVENE_HTTP_URL": "https://kutana.spark-b0f2.local",
     "CONVENE_TLS_REJECT_UNAUTHORIZED": "0"
   }
 }'
@@ -127,10 +127,10 @@ claude mcp add-json --scope user convene '{
 Then launch Claude Code with the channel enabled:
 
 ```bash
-claude --dangerously-load-development-channels server:convene
+claude --dangerously-load-development-channels server:kutana
 ```
 
-`server:convene` references the server registered with `claude mcp add-json`. This flag is required during the research preview for custom (non-plugin) channels — without it, tools load but push events (`notifications/claude/channel`) are silently dropped. Published plugins use `--channels plugin:name@publisher` instead.
+`server:kutana` references the server registered with `claude mcp add-json`. This flag is required during the research preview for custom (non-plugin) channels — without it, tools load but push events (`notifications/claude/channel`) are silently dropped. Published plugins use `--channels plugin:name@publisher` instead.
 
 No `CONVENE_MEETING_ID` needed — meetings are joined dynamically via tools.
 
@@ -156,10 +156,10 @@ No `CONVENE_MEETING_ID` needed — meetings are joined dynamically via tools.
 
 | URI | Description |
 |-----|-------------|
-| `convene://platform/context` | Static platform context |
-| `convene://meeting/{id}` | Meeting info + connection status |
-| `convene://meeting/{id}/context` | Detailed context with transcript preview |
-| `convene://meeting/{id}/transcript` | Buffered transcript (JSON) |
+| `kutana://platform/context` | Static platform context |
+| `kutana://meeting/{id}` | Meeting info + connection status |
+| `kutana://meeting/{id}/context` | Detailed context with transcript preview |
+| `kutana://meeting/{id}/transcript` | Buffered transcript (JSON) |
 
 ### Source Code
 
@@ -167,7 +167,7 @@ No `CONVENE_MEETING_ID` needed — meetings are joined dynamically via tools.
 services/channel-server/
 ├── src/
 │   ├── server.ts           # MCP server entry, channel notification forwarding
-│   ├── convene-client.ts   # WebSocket client: auth, join, leave, HTTP API
+│   ├── kutana-client.ts   # WebSocket client: auth, join, leave, HTTP API
 │   ├── config.ts           # Environment variable loading
 │   ├── types.ts            # TypeScript types (mirrors Python domain models)
 │   ├── tools.ts            # 18 MCP tools with meeting-active guards
@@ -184,8 +184,8 @@ services/channel-server/
 - **Auth:** The plugin reads `CONVENE_API_KEY` from env and exchanges it for a gateway JWT via `POST /api/v1/token/gateway`. The gateway JWT is used for WebSocket connections. For HTTP API calls (list/create meetings), the plugin sends the raw API key via `X-API-Key` header — the meetings endpoints accept both Bearer JWT (browser users) and X-API-Key (agents) via the `CurrentUserOrAgent` dependency.
 - **TLS:** Self-signed certs are common in dev. Set `CONVENE_TLS_REJECT_UNAUTHORIZED=0` (default) to accept them. The plugin sets `NODE_TLS_REJECT_UNAUTHORIZED=0` at startup.
 - **MCP registration:** The server must be registered via `claude mcp add-json` (managed registry), not manually in `~/.claude/settings.json`. The `--dangerously-load-development-channels` flag only finds servers in the managed registry.
-- **Research preview:** Custom channels require `--dangerously-load-development-channels server:convene` at launch. This bypasses the channel allowlist (which only includes published Anthropic plugins like Discord, Telegram). This flag may be removed or renamed when channels graduate from preview.
-- **Reconnection:** Not yet implemented. If the WebSocket drops, use `leave_meeting` + `join_meeting` to reconnect. Missed events can be recovered via the HTTP MCP server's `convene_get_meeting_events`.
+- **Research preview:** Custom channels require `--dangerously-load-development-channels server:kutana` at launch. This bypasses the channel allowlist (which only includes published Anthropic plugins like Discord, Telegram). This flag may be removed or renamed when channels graduate from preview.
+- **Reconnection:** Not yet implemented. If the WebSocket drops, use `leave_meeting` + `join_meeting` to reconnect. Missed events can be recovered via the HTTP MCP server's `kutana_get_meeting_events`.
 
 ---
 

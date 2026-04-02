@@ -1,4 +1,4 @@
-# Convene AI — Local Providers + Provider Docs — Completed
+# Kutana AI — Local Providers + Provider Docs — Completed
 
 **Date:** 2026-02-27
 **Scope:** Local/free providers, mock providers, provider docs, registry updates

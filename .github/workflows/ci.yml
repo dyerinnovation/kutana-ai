@@ -26,7 +26,7 @@ jobs:
         with:
           version: "latest"
       - run: uv sync
-      - run: uv run mypy packages/convene-core/
+      - run: uv run mypy packages/kutana-core/
 
   test:
     runs-on: ubuntu-latest
@@ -34,9 +34,9 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_USER: convene
-          POSTGRES_PASSWORD: convene
-          POSTGRES_DB: convene
+          POSTGRES_USER: kutana
+          POSTGRES_PASSWORD: kutana
+          POSTGRES_DB: kutana
         ports:
           - 5432:5432
         options: >-
@@ -54,7 +54,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: postgresql+asyncpg://convene:convene@localhost:5432/convene
+      DATABASE_URL: postgresql+asyncpg://kutana:kutana@localhost:5432/kutana
       REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v4

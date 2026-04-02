@@ -1,7 +1,7 @@
 # Plan: Create All 4 Service Packages Under `services/`
 
 ## Objective
-Create the complete service layer for the Convene AI monorepo. Four independent FastAPI services that consume the shared `convene-core`, `convene-providers`, and `convene-memory` packages.
+Create the complete service layer for the Kutana AI monorepo. Four independent FastAPI services that consume the shared `kutana-core`, `kutana-providers`, and `kutana-memory` packages.
 
 ## Services to Create
 

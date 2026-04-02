@@ -1,4 +1,4 @@
-# Convene AI — Development Progress Log
+# Kutana AI — Development Progress Log
 
 > Append-only log of completed work. Each entry is written by whoever completed
 > the work — either CoWork (scheduled) or Jonathan (manual session).
@@ -20,7 +20,7 @@
   - Added `_left_announced: bool = False` flag for idempotent leave notifications
   - Added `_snapshot_participants(meeting_id)` — builds current participant list before self joins
   - Added `_broadcast_participant_update(action)` — sends `ParticipantUpdate` to all other sessions in the meeting
-  - Added `_publish_participant_event(action, reason)` — publishes `participant.joined` / `participant.left` to Redis Streams `convene:events`
+  - Added `_publish_participant_event(action, reason)` — publishes `participant.joined` / `participant.left` to Redis Streams `kutana:events`
   - Added `_leave_and_notify(reason)` — idempotent leave: broadcasts + publishes + calls `leave_meeting` exactly once
   - Updated `_handle_join`: snapshot existing participants BEFORE joining, populate `Joined.participants` list, call `_broadcast_participant_update("joined")` and `_publish_participant_event("joined")` after sending `Joined` to self
   - Updated `_handle_leave`: delegates to `_leave_and_notify` instead of directly calling `leave_meeting`
@@ -76,7 +76,7 @@
 **Author:** CoWork (scheduled)
 
 ### Changes
-- Created `services/task-engine/src/task_engine/event_publisher.py` — `EventPublisher` class (redis-url-based, mirrors the audio-service publisher) that serialises `BaseEvent` instances and writes them to the `convene:events` Redis Stream with `XADD` and an approximate 10 000-entry cap.
+- Created `services/task-engine/src/task_engine/event_publisher.py` — `EventPublisher` class (redis-url-based, mirrors the audio-service publisher) that serialises `BaseEvent` instances and writes them to the `kutana:events` Redis Stream with `XADD` and an approximate 10 000-entry cap.
 - Updated `services/task-engine/src/task_engine/extractor.py` — added optional `event_publisher: EventPublisher | None = None` constructor parameter; new `_emit_task_created_events` async method emits one `TaskCreated` event per persisted task; publish errors are swallowed (logged) so a Redis outage cannot break task extraction.
 - Updated `services/task-engine/src/task_engine/main.py` — creates an `EventPublisher` at startup, stores it in `_event_publisher` global, closes it on shutdown.
 - Created `services/api-server/src/api_server/event_publisher.py` — FastAPI-native `EventPublisher` variant; accepts a live `redis.asyncio.Redis` client instead of a URL, enabling clean dependency injection via the existing `get_redis` provider.
@@ -95,7 +95,7 @@
 - pytest: ⚠️ Cannot run — same environment constraint; 35 total tests verified via static analysis
 
 ### Notes
-- `EventPublisher` is duplicated in `task-engine` and `api-server` rather than moved to `convene-core` because convene-core has no redis dependency.
+- `EventPublisher` is duplicated in `task-engine` and `api-server` rather than moved to `kutana-core` because kutana-core has no redis dependency.
 - All publish errors are intentionally swallowed with logging so a Redis outage cannot cascade to HTTP response failures.
 - `update_task_status` now stamps `task.updated_at` on every status change (previously omitted).
 
@@ -123,7 +123,7 @@ None — quality checks (ruff, mypy, pytest) must be run by Jonathan on his Mac 
 ### Quality Check Results
 - ruff check: ✅ No issues (run on modified files — api-server pyproject.toml causes filesystem deadlock when scanning whole repo)
 - ruff format: ✅ All files formatted
-- mypy: ⚠️ Cannot run — VM Python 3.10 vs required 3.12 (same constraint as previous sessions); `datetime.UTC` used throughout convene_core causes ImportError on 3.10
+- mypy: ⚠️ Cannot run — VM Python 3.10 vs required 3.12 (same constraint as previous sessions); `datetime.UTC` used throughout kutana_core causes ImportError on 3.10
 - pytest: ⚠️ Cannot run — same Python version constraint; all tests verified for correctness via static analysis
 
 ### Notes
@@ -217,12 +217,12 @@ None
 - Implemented FastAPI service with WebSocket endpoint, health check, lifespan management
 - 58 tests across 6 test files: protocol, auth, connection manager, audio bridge, event relay, E2E flow
 
-**WhisperRemoteSTT provider (`packages/convene-providers/`):**
+**WhisperRemoteSTT provider (`packages/kutana-providers/`):**
 - New STT provider targeting remote OpenAI-compatible Whisper API (DGX Spark)
 - Registered as `"whisper-remote"` in provider registry
 - One-shot transcription (not streaming) — `_consume_segments` loops periodically
 
-**Core model & event updates (`packages/convene-core/`):**
+**Core model & event updates (`packages/kutana-core/`):**
 - Added 6 new event types: `room.created`, `agent.joined`, `agent.left`, `participant.joined`, `participant.left`, `agent.data`
 - Updated `TranscriptSegment.confidence` handling — Whisper avg_logprob is negative, convert via `math.exp()`
 
@@ -287,7 +287,7 @@ None
 **Author:** CoWork (scheduled)
 
 ### Changes
-- Expanded `packages/convene-providers/tests/test_registry_integration.py` from 8 tests to 20 tests across 6 test classes:
+- Expanded `packages/kutana-providers/tests/test_registry_integration.py` from 8 tests to 20 tests across 6 test classes:
   - `TestSTTLifecycle` — added `test_audio_buffer_accumulates`, `test_multiple_segments_ordered`, `test_close_resets_state`
   - `TestTTSLifecycle` — added `test_synthesize_different_texts_return_same_audio`, `test_get_voices_returns_voice_objects`
   - `TestLLMLifecycle` — added `test_extract_tasks_returns_configured_tasks`, `test_generate_report_with_tasks`, `test_defaults_when_no_kwargs`
@@ -387,9 +387,9 @@ None
 - .gitignore
 
 **Packages:**
-- `packages/convene-core/` — Pydantic v2 domain models (Meeting, Participant, Task, Decision, TranscriptSegment, AgentConfig), event definitions (6 event types), provider ABCs (STT, TTS, LLM), SQLAlchemy ORM models, Alembic config, async session factory
-- `packages/convene-providers/` — STT (AssemblyAI, Deepgram), TTS (Cartesia, ElevenLabs), LLM (Anthropic), provider registry
-- `packages/convene-memory/` — Working (Redis), short-term (SQL), long-term (pgvector), structured memory layers
+- `packages/kutana-core/` — Pydantic v2 domain models (Meeting, Participant, Task, Decision, TranscriptSegment, AgentConfig), event definitions (6 event types), provider ABCs (STT, TTS, LLM), SQLAlchemy ORM models, Alembic config, async session factory
+- `packages/kutana-providers/` — STT (AssemblyAI, Deepgram), TTS (Cartesia, ElevenLabs), LLM (Anthropic), provider registry
+- `packages/kutana-memory/` — Working (Redis), short-term (SQL), long-term (pgvector), structured memory layers
 
 **Services:**
 - `services/api-server/` — FastAPI app with health check, meeting/task/agent CRUD routes, DI, CORS middleware

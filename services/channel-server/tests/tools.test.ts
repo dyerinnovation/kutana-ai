@@ -1,7 +1,7 @@
 /**
  * Tests for MCP tool schemas and handlers.
  *
- * Tools are tested by constructing a mock ConveneClient and calling the tool
+ * Tools are tested by constructing a mock KutanaClient and calling the tool
  * handlers through a real Server instance. This exercises the routing logic
  * without any network I/O.
  */
@@ -13,7 +13,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { registerTools } from "../src/tools.js";
-import type { ConveneClient } from "../src/convene-client.js";
+import type { KutanaClient } from "../src/kutana-client.js";
 import type { TaskEntity, DecisionEntity, QuestionEntity, ChatMessage, ParticipantInfo, TurnQueueStatus } from "../src/types.js";
 
 // Helper to retrieve an internal request handler from the MCP Server.
@@ -29,7 +29,7 @@ function getHandler(server: Server, methodName: string) {
 // Mock client factory
 // ---------------------------------------------------------------------------
 
-function makeMockClient(overrides: Partial<ConveneClient> = {}): ConveneClient {
+function makeMockClient(overrides: Partial<KutanaClient> = {}): KutanaClient {
   return {
     onChannelMessage: vi.fn(),
     authenticate: vi.fn(),
@@ -53,10 +53,10 @@ function makeMockClient(overrides: Partial<ConveneClient> = {}): ConveneClient {
     getLastQueueStatus: vi.fn(() => null),
     getSpeakingStatus: vi.fn(() => ({ isSpeaking: false, isInQueue: false })),
     ...overrides,
-  } as unknown as ConveneClient;
+  } as unknown as KutanaClient;
 }
 
-function makeServer(client: ConveneClient): Server {
+function makeServer(client: KutanaClient): Server {
   const server = new Server(
     { name: "test", version: "0.0.0" },
     { capabilities: { tools: {} } },

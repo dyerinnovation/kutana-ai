@@ -1,8 +1,8 @@
-# Convene AI
+# Kutana AI
 
 **The agent-first meeting platform — where AI agents are first-class participants.**
 
-Convene AI is a meeting platform built from the ground up for AI agents. Agents connect via a native WebSocket gateway, humans join via browser (WebRTC planned), and every meeting automatically extracts tasks, builds persistent memory, and drives accountability. It's not a transcription tool — it's a platform where AI and humans collaborate in real-time.
+Kutana AI is a meeting platform built from the ground up for AI agents. Agents connect via a native WebSocket gateway, humans join via browser (WebRTC planned), and every meeting automatically extracts tasks, builds persistent memory, and drives accountability. It's not a transcription tool — it's a platform where AI and humans collaborate in real-time.
 
 ---
 
@@ -21,11 +21,11 @@ Convene AI is a meeting platform built from the ground up for AI agents. Agents 
 Python monorepo managed with [uv](https://docs.astral.sh/uv/) workspaces. Services communicate via Redis Streams events.
 
 ```
-convene-ai/
+kutana-ai/
 ├── packages/                      # Shared libraries
-│   ├── convene-core/              # Domain models, events, provider interfaces (ABCs)
-│   ├── convene-providers/         # STT, TTS, LLM provider implementations
-│   └── convene-memory/            # Four-layer persistent memory system
+│   ├── kutana-core/              # Domain models, events, provider interfaces (ABCs)
+│   ├── kutana-providers/         # STT, TTS, LLM provider implementations
+│   └── kutana-memory/            # Four-layer persistent memory system
 ├── services/                      # Independently runnable services
 │   ├── api-server/                # FastAPI REST + WebSocket API
 │   ├── audio-service/             # Transport-agnostic audio pipeline + STT streaming
@@ -59,7 +59,7 @@ Agent Gateway ──→ AudioBridge ──→ STT Provider ──→ Redis Strea
 
 ### Architecture Decision: Agent-First Platform
 
-Convene **owns the meeting environment** rather than bolting onto existing platforms. Instead of hacking bots into Zoom/Teams via phone dial-in or browser automation, Convene is the meeting platform itself.
+Kutana **owns the meeting environment** rather than bolting onto existing platforms. Instead of hacking bots into Zoom/Teams via phone dial-in or browser automation, Kutana is the meeting platform itself.
 
 - **AI agents connect natively** via the Agent Gateway API — clean audio streams, structured data, no workarounds
 - **MCP support** (planned) — any MCP-compatible AI assistant joins meetings through standard tool calls
@@ -114,7 +114,7 @@ uv run uvicorn audio_service.main:app --reload --port 8001
 uv run uvicorn task_engine.main:app --reload --port 8002
 
 # Agent Gateway (requires PYTHONPATH for cross-package imports)
-PYTHONPATH=services/agent-gateway/src:services/audio-service/src:packages/convene-core/src:packages/convene-providers/src:packages/convene-memory/src \
+PYTHONPATH=services/agent-gateway/src:services/audio-service/src:packages/kutana-core/src:packages/kutana-providers/src:packages/kutana-memory/src \
   .venv/bin/uvicorn agent_gateway.main:app --reload --port 8003
 
 # Run tests
@@ -157,7 +157,7 @@ See [docs/TASKLIST.md](docs/TASKLIST.md) for the full development task queue.
 
 ### Technical Reference
 - [Provider Implementations](docs/providers/README.md) — per-provider setup and usage docs
-- [Core Package Patterns](claude_docs/Convene_Core_Patterns.md) — models, events, interfaces, database
+- [Core Package Patterns](claude_docs/Kutana_Core_Patterns.md) — models, events, interfaces, database
 - [Provider Patterns](claude_docs/Provider_Patterns.md) — ABC signatures, registry usage
 - [Memory Architecture](claude_docs/Memory_Architecture.md) — four-layer memory system
 - [Service Patterns](claude_docs/Service_Patterns.md) — health endpoints, lifespan, settings, DI

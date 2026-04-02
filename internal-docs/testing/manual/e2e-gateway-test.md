@@ -13,7 +13,7 @@ This guide walks you through verifying the full agent-gateway pipeline:
 ## 1. Sync Dependencies
 
 ```bash
-cd /path/to/convene-ai
+cd /path/to/kutana-ai
 
 # Sync all workspace packages
 UV_LINK_MODE=copy uv sync --all-packages
@@ -38,7 +38,7 @@ docker compose exec redis redis-cli ping
 ## 3. Verify DGX Spark Whisper is Running
 
 ```bash
-curl -s http://spark-b0f2.local/convene-stt/v1/models | python3 -m json.tool
+curl -s http://spark-b0f2.local/kutana-stt/v1/models | python3 -m json.tool
 ```
 
 You should see a response listing `openai/whisper-large-v3`. If this fails:
@@ -50,17 +50,17 @@ You should see a response listing `openai/whisper-large-v3`. If this fails:
 Open a new terminal:
 
 ```bash
-cd /path/to/convene-ai
+cd /path/to/kutana-ai
 
 # Fix venv hidden flags (do this each time after uv sync)
 chflags -R nohidden .venv
 
 # Set STT to whisper-remote pointing at DGX Spark
 export AGENT_GATEWAY_STT_PROVIDER=whisper-remote
-export AGENT_GATEWAY_WHISPER_API_URL=http://spark-b0f2.local/convene-stt/v1
+export AGENT_GATEWAY_WHISPER_API_URL=http://spark-b0f2.local/kutana-stt/v1
 
 # Start the gateway (PYTHONPATH required for cross-package imports)
-PYTHONPATH=services/agent-gateway/src:services/audio-service/src:packages/convene-core/src:packages/convene-providers/src:packages/convene-memory/src \
+PYTHONPATH=services/agent-gateway/src:services/audio-service/src:packages/kutana-core/src:packages/kutana-providers/src:packages/kutana-memory/src \
   .venv/bin/uvicorn agent_gateway.main:app --port 8003
 ```
 
@@ -86,13 +86,13 @@ curl http://localhost:8003/health
 This sends a 3-second 440Hz sine wave. The STT will likely return garbled text or silence — but it proves the full pipeline works end-to-end.
 
 ```bash
-cd /path/to/convene-ai
+cd /path/to/kutana-ai
 
 # Option 1: via uv run (may hang during lockfile resolution)
 uv run python scripts/test_e2e_gateway.py --generate-audio --wait-timeout 20
 
 # Option 2: via .venv directly (faster, no resolver)
-PYTHONPATH=services/agent-gateway/src:services/audio-service/src:packages/convene-core/src:packages/convene-providers/src:packages/convene-memory/src \
+PYTHONPATH=services/agent-gateway/src:services/audio-service/src:packages/kutana-core/src:packages/kutana-providers/src:packages/kutana-memory/src \
   .venv/bin/python scripts/test_e2e_gateway.py --generate-audio --wait-timeout 20
 ```
 
@@ -171,7 +171,7 @@ The JWT secret in the test script doesn't match the gateway's `AGENT_GATEWAY_JWT
 
 ### No transcripts received (timeout)
 
-1. **Check Redis**: `docker compose exec redis redis-cli XLEN convene:events` — should show entries after sending audio
+1. **Check Redis**: `docker compose exec redis redis-cli XLEN kutana:events` — should show entries after sending audio
 2. **Check STT**: The Whisper API at `spark-b0f2.local` may be down. Verify with the curl command in step 3.
 3. **Check timing**: Transcription happens every 5 seconds. Increase `--wait-timeout` to 30+.
 4. **Check gateway logs**: Look for `Segment from meeting` or error messages in the gateway terminal.
@@ -187,7 +187,7 @@ ffmpeg -i input.wav -ar 16000 -ac 1 -f wav -acodec pcm_s16le output.wav
 
 Check if the consumer group exists:
 ```bash
-docker compose exec redis redis-cli XINFO GROUPS convene:events
+docker compose exec redis redis-cli XINFO GROUPS kutana:events
 ```
 Should show group `agent-gateway` with consumer `gateway-0`.
 
@@ -200,8 +200,8 @@ Tested with real audio file (`data/input/test-speech.wav`) against DGX Spark Whi
 | Metric | Value |
 |--------|-------|
 | Audio file | `test-speech.wav` (LibriSpeech sample) |
-| STT provider | WhisperRemoteSTT → `spark-b0f2.local/convene-stt/v1` |
+| STT provider | WhisperRemoteSTT → `spark-b0f2.local/kutana-stt/v1` |
 | Transcript segments received | **29** |
-| Redis XLEN (convene:events) | **31** (29 segments + meeting.started + meeting.ended) |
+| Redis XLEN (kutana:events) | **31** (29 segments + meeting.started + meeting.ended) |
 | HTTP client | aiohttp (replaced httpx — httpx hangs on `.local` hosts) |
 | All tests passing | 58 gateway + 38 audio-service = **96 service tests** |

@@ -16,7 +16,7 @@
   - `tests/__init__.py`
 
 - Created `services/audio-service/` (7 files)
-  - `pyproject.toml` with Twilio, FastAPI, convene-core, convene-providers dependencies
+  - `pyproject.toml` with Twilio, FastAPI, kutana-core, kutana-providers dependencies
   - `src/audio_service/__init__.py`
   - `src/audio_service/main.py` with health check and WebSocket /audio-stream endpoint
   - `src/audio_service/twilio_handler.py` with TwilioHandler class (connected/start/media/stop events)
@@ -25,7 +25,7 @@
   - `tests/__init__.py`
 
 - Created `services/task-engine/` (6 files)
-  - `pyproject.toml` with convene-core, convene-providers, convene-memory, Redis, SQLAlchemy dependencies
+  - `pyproject.toml` with kutana-core, kutana-providers, kutana-memory, Redis, SQLAlchemy dependencies
   - `src/task_engine/__init__.py`
   - `src/task_engine/main.py` with health check and extraction consumer background task
   - `src/task_engine/extractor.py` with TaskExtractor class (LLM-powered extraction + DB persistence)
@@ -33,7 +33,7 @@
   - `tests/__init__.py`
 
 - Created `services/worker/` (7 files)
-  - `pyproject.toml` with convene-core, convene-memory, Redis, httpx dependencies
+  - `pyproject.toml` with kutana-core, kutana-memory, Redis, httpx dependencies
   - `src/worker/__init__.py`
   - `src/worker/main.py` with health check
   - `src/worker/slack_bot.py` with SlackBot class (webhook notifications for tasks and summaries)
@@ -54,8 +54,8 @@
 
 ## Lessons Learned
 
-- The existing convene-core package already defines `STTProvider`, `LLMProvider`, and `TTSProvider` ABCs under `convene_core.interfaces`, plus complete domain models (`Task`, `Meeting`, `TranscriptSegment`, etc.) under `convene_core.models` -- services should import from these rather than redefining
-- The convene-core `events/definitions.py` defines event classes (`TaskCreated`, `TranscriptSegmentFinal`, etc.) with a `BaseEvent` base class that includes `to_dict()` serialisation -- services should use these for Redis Streams integration
-- The `convene-providers` and `convene-memory` packages are declared in the root `pyproject.toml` workspace but have not been scaffolded yet -- services that depend on them will need those packages created before `uv sync` succeeds
+- The existing kutana-core package already defines `STTProvider`, `LLMProvider`, and `TTSProvider` ABCs under `kutana_core.interfaces`, plus complete domain models (`Task`, `Meeting`, `TranscriptSegment`, etc.) under `kutana_core.models` -- services should import from these rather than redefining
+- The kutana-core `events/definitions.py` defines event classes (`TaskCreated`, `TranscriptSegmentFinal`, etc.) with a `BaseEvent` base class that includes `to_dict()` serialisation -- services should use these for Redis Streams integration
+- The `kutana-providers` and `kutana-memory` packages are declared in the root `pyproject.toml` workspace but have not been scaffolded yet -- services that depend on them will need those packages created before `uv sync` succeeds
 - Audio transcoding from mulaw to PCM16 was implemented with a pure-Python lookup table approach (no `audioop` dependency, which was removed in Python 3.13)
 - The `ruff.toml` already includes all service module names in `known-first-party` for isort

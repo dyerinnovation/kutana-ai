@@ -19,13 +19,13 @@
 
 ## E2E Test Results
 - **transcripts_received**: 29
-- **Redis XLEN (convene:events)**: 31 (29 transcripts + meeting.started + meeting.ended)
+- **Redis XLEN (kutana:events)**: 31 (29 transcripts + meeting.started + meeting.ended)
 - **Audio**: data/input/test-speech.wav (5.9s, 187,360 bytes, 59 chunks)
 - **Latency**: ~10s from audio send to first transcript segment
 - **Results file**: data/output/e2e_results.json
 
 ## Work Remaining
-- Remove httpx dependency from convene-providers if no other code uses it
+- Remove httpx dependency from kutana-providers if no other code uses it
 - Improve transcript accuracy — Whisper is producing repetitive "I'm sorry" / "It's all right" instead of actual speech content (likely a Whisper model issue on DGX Spark, not an integration issue)
 - Consider adding `--log-level info` to uvicorn startup to surface application-level logs
 

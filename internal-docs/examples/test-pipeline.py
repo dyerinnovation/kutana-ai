@@ -32,7 +32,7 @@ import redis.asyncio as redis_async
 # ---------------------------------------------------------------------------
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-STREAM_KEY = "convene:events"
+STREAM_KEY = "kutana:events"
 TIMEOUT_SECONDS = 90  # Wait up to 90s for LLM to respond (window is 30s by default)
 
 # Fake meeting transcript — rich with actionable content so the extractor fires
@@ -154,7 +154,7 @@ def print_result(result: dict) -> None:
 
 
 async def main() -> int:
-    print("=== Convene AI Pipeline Test ===")
+    print("=== Kutana AI Pipeline Test ===")
     print(f"Redis: {REDIS_URL}")
     print(f"Meeting ID: {MEETING_ID}\n")
 

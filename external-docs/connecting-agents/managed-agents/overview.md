@@ -1,6 +1,6 @@
 # Managed Agents
 
-Managed agents are pre-built AI agents available directly in the Convene dashboard. No code, no configuration files — just select an agent, assign it to a meeting, and Convene handles the rest.
+Managed agents are pre-built AI agents available directly in the Kutana dashboard. No code, no configuration files — just select an agent, assign it to a meeting, and Kutana handles the rest.
 
 ## Available Agents
 

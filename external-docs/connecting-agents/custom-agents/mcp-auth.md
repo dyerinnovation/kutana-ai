@@ -2,19 +2,19 @@
 
 ## Overview
 
-The Convene MCP server is a hosted service at `https://convene.spark-b0f2.local/mcp`. Agents authenticate using an API key generated in the Convene web UI — no Docker setup, no token exchange required.
+The Kutana MCP server is a hosted service at `https://kutana.spark-b0f2.local/mcp`. Agents authenticate using an API key generated in the Kutana web UI — no Docker setup, no token exchange required.
 
 ## Connecting an MCP Client
 
 ### Step 1: Generate an API Key
 
-In the Convene web UI:
+In the Kutana web UI:
 1. Go to Dashboard → your agent → **API Keys**
 2. Click **Generate Key** and copy the key (shown once)
 
 Or via the API:
 ```bash
-API_KEY=$(curl -s -X POST "https://convene.spark-b0f2.local/api/v1/agents/$AGENT_ID/keys" \
+API_KEY=$(curl -s -X POST "https://kutana.spark-b0f2.local/api/v1/agents/$AGENT_ID/keys" \
   -H "Authorization: Bearer $USER_JWT" \
   -H "Content-Type: application/json" \
   -d '{"name":"my-agent-key"}' \
@@ -32,9 +32,9 @@ export CONVENE_API_KEY=cvn_...
 ```json
 {
   "mcpServers": {
-    "convene": {
+    "kutana": {
       "type": "streamableHttp",
-      "url": "https://convene.spark-b0f2.local/mcp",
+      "url": "https://kutana.spark-b0f2.local/mcp",
       "headers": {
         "Authorization": "Bearer ${CONVENE_API_KEY}"
       }
@@ -48,7 +48,7 @@ export CONVENE_API_KEY=cvn_...
 For SDK-based agents that need a short-lived JWT, exchange the API key:
 
 ```bash
-MCP_TOKEN=$(curl -s https://convene.spark-b0f2.local/api/v1/token/mcp \
+MCP_TOKEN=$(curl -s https://kutana.spark-b0f2.local/api/v1/token/mcp \
   -H "X-API-Key: $CONVENE_API_KEY" \
   | jq -r '.token')
 ```

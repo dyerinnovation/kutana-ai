@@ -1,4 +1,4 @@
-# Claude Code Restructuring Plan — Convene AI
+# Claude Code Restructuring Plan — Kutana AI
 
 **Date:** 2026-03-24
 **Purpose:** Map current CLAUDE.md + claude_docs/ to Claude Code best practices; produce concrete migration plan with skill and rule recommendations.
@@ -50,7 +50,7 @@ The current setup has a 272-line CLAUDE.md (target: ≤200), 13 claude_docs/ ref
 |---|---|---|
 | `Agent_Gateway_Architecture.md` | WebSocket protocol, message types, AudioBridge, domain models, 6 new events | **RULE reference** → keep in claude_docs/, @-ref from CLAUDE.md |
 | `Auth_And_API_Keys.md` | JWT auth, API key system (cvn_ prefix), token exchange pattern | **RULE reference** → keep in claude_docs/, @-ref from security.md rule |
-| `Convene_Core_Patterns.md` | Pydantic v2 patterns, enums, events, ORM patterns, session management | **RULE reference** → keep in claude_docs/, @-ref from python.md rule |
+| `Kutana_Core_Patterns.md` | Pydantic v2 patterns, enums, events, ORM patterns, session management | **RULE reference** → keep in claude_docs/, @-ref from python.md rule |
 | `DGX_Spark_Reference.md` | Hardware specs, K3s cluster, kubectl/helm patterns, 11 gotchas | **RULE reference** → keep in claude_docs/, @-ref from dgx-connection.md rule |
 | `DGX_Spark_SSH_Connection.md` | SSH alias, sudo patterns, sshpass, 5 gotchas, mDNS | **RULE reference** → keep in claude_docs/, @-ref from dgx-connection.md rule |
 | `Git_Best_Practices.md` | Commit cadence, SSH setup, branch strategy, co-author trailer | **RULE reference** → keep in claude_docs/, @-ref from git-workflow.md rule |
@@ -72,7 +72,7 @@ The current setup has a 272-line CLAUDE.md (target: ≤200), 13 claude_docs/ ref
 .claude/
 ├── settings.local.json     — Bash permissions (allow find for config files)
 └── skills/
-    └── convene-meeting/
+    └── kutana-meeting/
         └── SKILL.md        — MCP meeting participation skill (good, keep)
 ```
 
@@ -122,7 +122,7 @@ All files **stay in place** — they become detail references rather than needin
 │   ├── python.md           — Python 3.12+, ruff, mypy, uv (scoped: packages/**, services/**)
 │   └── security.md         — JWT, input validation, rate limiting
 └── skills/
-    ├── convene-meeting/    — existing (keep)
+    ├── kutana-meeting/    — existing (keep)
     ├── start-app/
     ├── stop-app/
     ├── wipe-data/
@@ -184,7 +184,7 @@ Hooks are defined in `.claude/settings.json` under the `hooks` key. They execute
 }
 ```
 
-#### Recommended Hooks for Convene AI
+#### Recommended Hooks for Kutana AI
 
 | Hook | Trigger | Command | Why |
 |---|---|---|---|
@@ -263,11 +263,11 @@ claude --print "Tests failed. Read the output above and propose the minimal fix 
 
 ### DGX Deployment Automation
 
-Since Convene runs on DGX Spark K3s, the deploy pattern is:
+Since Kutana runs on DGX Spark K3s, the deploy pattern is:
 
 ```bash
 # In CI or on-demand via skill
-ssh dgx 'cd ~/convene-ai && git pull && echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl rollout restart deployment -n convene'
+ssh dgx 'cd ~/kutana-ai && git pull && echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl rollout restart deployment -n kutana'
 ```
 
 ---
@@ -281,33 +281,33 @@ Skills live in `.claude/skills/<skill-name>/SKILL.md`. Users invoke with `/skill
 ### Operational Skills (Human-invocable)
 
 #### `/start-app`
-**Purpose:** Start all Convene services on DGX.
+**Purpose:** Start all Kutana services on DGX.
 
 ```markdown
 # start-app
 
-Start all Convene AI services on the DGX Spark cluster.
+Start all Kutana AI services on the DGX Spark cluster.
 
 ## Steps
 
 1. Check current pod status:
    ```
-   ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get pods -n convene'
+   ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get pods -n kutana'
    ```
 
 2. If using docker compose (dev mode):
    ```
-   ssh dgx 'cd ~/convene-ai && docker compose up -d'
+   ssh dgx 'cd ~/kutana-ai && docker compose up -d'
    ```
 
 3. If using K3s (production mode):
    ```
-   ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl rollout restart deployment -n convene'
+   ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl rollout restart deployment -n kutana'
    ```
 
 4. Wait for pods to be Running (poll every 5s, timeout 120s):
    ```
-   ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl rollout status deployment -n convene --timeout=120s'
+   ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl rollout status deployment -n kutana --timeout=120s'
    ```
 
 5. Run health checks via /check-services skill to verify.
@@ -319,28 +319,28 @@ All pods in `Running` state. Health endpoints returning 200.
 ---
 
 #### `/stop-app`
-**Purpose:** Shut down all Convene services cleanly.
+**Purpose:** Shut down all Kutana services cleanly.
 
 ```markdown
 # stop-app
 
-Shut down all Convene AI services on DGX Spark.
+Shut down all Kutana AI services on DGX Spark.
 
 ## Steps
 
 1. Scale all deployments to 0 (preserves config):
    ```
-   ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl scale deployment --all --replicas=0 -n convene'
+   ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl scale deployment --all --replicas=0 -n kutana'
    ```
 
 2. Or if using docker compose:
    ```
-   ssh dgx 'cd ~/convene-ai && docker compose down'
+   ssh dgx 'cd ~/kutana-ai && docker compose down'
    ```
 
 3. Confirm pods terminated:
    ```
-   ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get pods -n convene'
+   ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get pods -n kutana'
    ```
    Expected: No pods or all in `Terminating` → `none`.
 ```
@@ -363,12 +363,12 @@ Shut down all Convene AI services on DGX Spark.
 
 2. Drop and recreate the database:
    ```
-   ssh dgx 'cd ~/convene-ai && docker compose exec postgres psql -U convene -c "DROP DATABASE convene;" && docker compose exec postgres psql -U convene -c "CREATE DATABASE convene;"'
+   ssh dgx 'cd ~/kutana-ai && docker compose exec postgres psql -U kutana -c "DROP DATABASE kutana;" && docker compose exec postgres psql -U kutana -c "CREATE DATABASE kutana;"'
    ```
 
 3. Re-run migrations:
    ```
-   ssh dgx 'cd ~/convene-ai && uv run alembic upgrade head'
+   ssh dgx 'cd ~/kutana-ai && uv run alembic upgrade head'
    ```
 
 4. Flush Redis:
@@ -396,7 +396,7 @@ Show existing test user credentials or create a new test user.
 ## Check for Existing Test User
 
 ```bash
-ssh dgx 'cd ~/convene-ai && uv run python -c "
+ssh dgx 'cd ~/kutana-ai && uv run python -c "
 import asyncio
 from services.api_server.database import get_session
 from services.api_server.models.user import UserORM
@@ -408,18 +408,18 @@ asyncio.run(main())
 
 ```bash
 # Register
-curl -s -X POST http://convene.spark-b0f2.local/api/v1/auth/register \
+curl -s -X POST http://kutana.spark-b0f2.local/api/v1/auth/register \
   -H 'Content-Type: application/json' \
-  -d '{"email":"test@convene.local","password":"TestPass123!","full_name":"Test User"}'
+  -d '{"email":"test@kutana.local","password":"TestPass123!","full_name":"Test User"}'
 
 # Login and get token
-curl -s -X POST http://convene.spark-b0f2.local/api/v1/auth/login \
+curl -s -X POST http://kutana.spark-b0f2.local/api/v1/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"email":"test@convene.local","password":"TestPass123!"}' | jq .access_token
+  -d '{"email":"test@kutana.local","password":"TestPass123!"}' | jq .access_token
 ```
 
 ## Default Test Credentials
-- Email: `test@convene.local`
+- Email: `test@kutana.local`
 - Password: `TestPass123!`
 - API Key: Generate via `POST /api/v1/api-keys` after login
 ```
@@ -432,18 +432,18 @@ curl -s -X POST http://convene.spark-b0f2.local/api/v1/auth/login \
 ```markdown
 # standup-demo
 
-Launch the Convene AI 3-person standup demo: 1 human + Business Bot + Coding Bot.
+Launch the Kutana AI 3-person standup demo: 1 human + Business Bot + Coding Bot.
 
 ## Prerequisites
 - Services running (/start-app)
 - Test user available (/test-user)
-- MCP server accessible at https://convene.spark-b0f2.local/mcp
+- MCP server accessible at https://kutana.spark-b0f2.local/mcp
 
 ## Steps
 
 1. Create a standup meeting:
    ```bash
-   curl -X POST http://convene.spark-b0f2.local/api/v1/meetings \
+   curl -X POST http://kutana.spark-b0f2.local/api/v1/meetings \
      -H "Authorization: Bearer $TOKEN" \
      -d '{"title":"Standup Demo","meeting_type":"standup"}'
    ```
@@ -462,7 +462,7 @@ Launch the Convene AI 3-person standup demo: 1 human + Business Bot + Coding Bot
 
 4. Human joins via browser at:
    ```
-   https://convene.spark-b0f2.local/meetings/$MEETING_ID
+   https://kutana.spark-b0f2.local/meetings/$MEETING_ID
    ```
 
 5. Verify in logs:
@@ -488,32 +488,32 @@ Deploy the latest code to DGX Spark.
 1. Sync code to DGX:
    ```bash
    rsync -avz --exclude='.venv' --exclude='node_modules' --exclude='.git' \
-     /Users/jonathandyer/Documents/Dyer_Innovation/dev/convene-ai/ \
-     dgx:~/convene-ai/
+     /Users/jonathandyer/Documents/Dyer_Innovation/dev/kutana-ai/ \
+     dgx:~/kutana-ai/
    ```
 
 2. Or if already committed, pull on DGX:
    ```bash
-   ssh dgx 'cd ~/convene-ai && git pull origin main'
+   ssh dgx 'cd ~/kutana-ai && git pull origin main'
    ```
 
 3. Rebuild Python packages:
    ```bash
-   ssh dgx 'cd ~/convene-ai && UV_LINK_MODE=copy uv sync'
+   ssh dgx 'cd ~/kutana-ai && UV_LINK_MODE=copy uv sync'
    ```
 
 4. Run DB migrations:
    ```bash
-   ssh dgx 'cd ~/convene-ai && uv run alembic upgrade head'
+   ssh dgx 'cd ~/kutana-ai && uv run alembic upgrade head'
    ```
 
 5. Rebuild and restart services:
    ```bash
    # Docker compose
-   ssh dgx 'cd ~/convene-ai && docker compose build && docker compose up -d'
+   ssh dgx 'cd ~/kutana-ai && docker compose build && docker compose up -d'
 
    # OR K3s (if image-based)
-   ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl rollout restart deployment -n convene'
+   ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl rollout restart deployment -n kutana'
    ```
 
 6. Verify (/check-services).
@@ -531,37 +531,37 @@ Deploy the latest code to DGX Spark.
 ```markdown
 # run-tests
 
-Run the complete Convene AI test suite on DGX.
+Run the complete Kutana AI test suite on DGX.
 
 ## Python Tests (pytest)
 
 ```bash
 # All packages and services
-ssh dgx 'cd ~/convene-ai && UV_LINK_MODE=copy uv run pytest packages/ services/ -x --tb=short -q'
+ssh dgx 'cd ~/kutana-ai && UV_LINK_MODE=copy uv run pytest packages/ services/ -x --tb=short -q'
 
 # Specific package
-ssh dgx 'cd ~/convene-ai && UV_LINK_MODE=copy uv run pytest packages/convene-core/ -x --tb=short'
+ssh dgx 'cd ~/kutana-ai && UV_LINK_MODE=copy uv run pytest packages/kutana-core/ -x --tb=short'
 
 # With coverage
-ssh dgx 'cd ~/convene-ai && UV_LINK_MODE=copy uv run pytest packages/ services/ --cov=src --cov-report=term-missing'
+ssh dgx 'cd ~/kutana-ai && UV_LINK_MODE=copy uv run pytest packages/ services/ --cov=src --cov-report=term-missing'
 ```
 
 ## Frontend Tests (vitest)
 
 ```bash
-ssh dgx 'cd ~/convene-ai/web && npm run test'
+ssh dgx 'cd ~/kutana-ai/web && npm run test'
 ```
 
 ## Type Checking
 
 ```bash
-ssh dgx 'cd ~/convene-ai && uv run mypy packages/ services/ --ignore-missing-imports'
+ssh dgx 'cd ~/kutana-ai && uv run mypy packages/ services/ --ignore-missing-imports'
 ```
 
 ## Lint Check
 
 ```bash
-ssh dgx 'cd ~/convene-ai && uv run ruff check packages/ services/'
+ssh dgx 'cd ~/kutana-ai && uv run ruff check packages/ services/'
 ```
 
 ## Expected Pass Criteria
@@ -579,28 +579,28 @@ ssh dgx 'cd ~/convene-ai && uv run ruff check packages/ services/'
 ```markdown
 # check-services
 
-Check health of all Convene AI services.
+Check health of all Kutana AI services.
 
 ## K3s Pod Status
 
 ```bash
-ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get pods -n convene -o wide'
+ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get pods -n kutana -o wide'
 ```
 
 ## HTTP Health Endpoints
 
 ```bash
 # API Server
-curl -s http://convene.spark-b0f2.local/api/v1/health | jq .
+curl -s http://kutana.spark-b0f2.local/api/v1/health | jq .
 
 # Agent Gateway
-curl -s http://convene.spark-b0f2.local:8003/health | jq .
+curl -s http://kutana.spark-b0f2.local:8003/health | jq .
 
 # MCP Server
-curl -s https://convene.spark-b0f2.local/mcp/health | jq .
+curl -s https://kutana.spark-b0f2.local/mcp/health | jq .
 
 # Audio Service
-curl -s http://convene.spark-b0f2.local:8002/health | jq .
+curl -s http://kutana.spark-b0f2.local:8002/health | jq .
 ```
 
 ## Redis Check
@@ -613,7 +613,7 @@ ssh dgx 'docker compose exec redis redis-cli ping'
 ## Postgres Check
 
 ```bash
-ssh dgx 'docker compose exec postgres psql -U convene -c "SELECT 1"'
+ssh dgx 'docker compose exec postgres psql -U kutana -c "SELECT 1"'
 # Expected: 1 row
 ```
 
@@ -621,7 +621,7 @@ ssh dgx 'docker compose exec postgres psql -U convene -c "SELECT 1"'
 
 ```bash
 # All services
-ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl logs -n convene -l app=api-server --tail=20'
+ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl logs -n kutana -l app=api-server --tail=20'
 ```
 
 ## Expected: All green
@@ -641,17 +641,17 @@ ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml kub
 ```markdown
 # new-feature
 
-Scaffold a new Convene AI feature following the provider abstraction pattern.
+Scaffold a new Kutana AI feature following the provider abstraction pattern.
 
 ## Required Inputs
 - Feature name (snake_case): e.g., `calendar_sync`
-- Package it belongs to: e.g., `convene-core`, `convene-providers`, or a service
+- Package it belongs to: e.g., `kutana-core`, `kutana-providers`, or a service
 - Provider type (if applicable): e.g., `CalendarProvider`
 
 ## Steps
 
-### 1. Define the Abstract Interface (convene-core)
-Create `packages/convene-core/src/convene_core/interfaces/<feature>.py`:
+### 1. Define the Abstract Interface (kutana-core)
+Create `packages/kutana-core/src/kutana_core/interfaces/<feature>.py`:
 ```python
 from abc import ABC, abstractmethod
 
@@ -661,25 +661,25 @@ class <Name>Provider(ABC):
 ```
 
 ### 2. Define Domain Models
-Add to `packages/convene-core/src/convene_core/models/<feature>.py`:
+Add to `packages/kutana-core/src/kutana_core/models/<feature>.py`:
 - Pydantic v2 models with `from __future__ import annotations`
 - Enums as `str, Enum`
 - UTC timestamps with `default_factory=lambda: datetime.now(UTC)`
 
-### 3. Create First Implementation (convene-providers)
-Create `packages/convene-providers/src/convene_providers/<feature>/<provider_name>.py`:
+### 3. Create First Implementation (kutana-providers)
+Create `packages/kutana-providers/src/kutana_providers/<feature>/<provider_name>.py`:
 - Implement all abstract methods
 - Use async I/O only
 
 ### 4. Register in Provider Registry
-Add to `packages/convene-providers/src/convene_providers/registry.py`.
+Add to `packages/kutana-providers/src/kutana_providers/registry.py`.
 
 ### 5. Add ORM Model (if persisted)
 Create migration: `uv run alembic revision --autogenerate -m "add_<feature>"`
 
 ### 6. Write Tests
-- `packages/convene-core/tests/test_<feature>_models.py`
-- `packages/convene-providers/tests/test_<provider>_<feature>.py` (mock external calls)
+- `packages/kutana-core/tests/test_<feature>_models.py`
+- `packages/kutana-providers/tests/test_<provider>_<feature>.py` (mock external calls)
 
 ### 7. Update TASKLIST
 - Mark the relevant task `- [x]` in `docs/TASKLIST.md`
@@ -690,7 +690,7 @@ Create migration: `uv run alembic revision --autogenerate -m "add_<feature>"`
 - Update `CLAUDE.md` if a new package reference is needed
 
 ## Pattern Reference
-See @claude_docs/Convene_Core_Patterns.md and @claude_docs/Provider_Patterns.md
+See @claude_docs/Kutana_Core_Patterns.md and @claude_docs/Provider_Patterns.md
 ```
 
 ---
@@ -701,7 +701,7 @@ See @claude_docs/Convene_Core_Patterns.md and @claude_docs/Provider_Patterns.md
 ```markdown
 # new-mcp-tool
 
-Add a new tool to the Convene MCP server.
+Add a new tool to the Kutana MCP server.
 
 ## Required Inputs
 - Tool name (snake_case): e.g., `get_action_items`
@@ -731,7 +731,7 @@ async def <tool_name>(params: ...) -> ...:
 `services/mcp-server/tests/test_<tool_name>.py` — mock the API calls.
 
 ### 4. Update OpenClaw Plugin
-Add the tool to `integrations/openclaw-plugin/convene_tools.json`.
+Add the tool to `integrations/openclaw-plugin/kutana_tools.json`.
 
 ### 5. Update MCP Architecture Docs
 Add entry to `claude_docs/MCP_Server_Architecture.md` tool table.
@@ -799,7 +799,7 @@ git branch -d claude/<worktree-name>
 ```
 
 ## Notes
-- Use SSH remote (`git@github.com:dyerinnovation/convene-ai.git`) — HTTPS hangs
+- Use SSH remote (`git@github.com:dyerinnovation/kutana-ai.git`) — HTTPS hangs
 - If push hangs, split commits and push in smaller batches
 - See @claude_docs/Git_Best_Practices.md for full patterns
 ```
@@ -872,10 +872,10 @@ Rules in `.claude/rules/` are **always loaded** into Claude's context. They can 
 # Architecture Rules
 
 ## Provider Abstraction (ABC-First)
-Every external service integration MUST have an abstract base class in convene-core before any implementation:
-1. Define ABC in `packages/convene-core/src/convene_core/interfaces/<name>.py`
-2. Implement in `packages/convene-providers/src/convene_providers/<name>/`
-3. Register in `packages/convene-providers/src/convene_providers/registry.py`
+Every external service integration MUST have an abstract base class in kutana-core before any implementation:
+1. Define ABC in `packages/kutana-core/src/kutana_core/interfaces/<name>.py`
+2. Implement in `packages/kutana-providers/src/kutana_providers/<name>/`
+3. Register in `packages/kutana-providers/src/kutana_providers/registry.py`
 Never import a concrete provider directly in business logic — always resolve via registry.
 
 ## Event-Driven Between Services
@@ -935,7 +935,7 @@ Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `infra`
 - Scheduled: `scheduled/<date>-<description>`
 
 ## Remote: SSH Only
-Use `git@github.com:dyerinnovation/convene-ai.git` — HTTPS hangs in non-interactive shells.
+Use `git@github.com:dyerinnovation/kutana-ai.git` — HTTPS hangs in non-interactive shells.
 SSH key: `~/.ssh/dyerinnovation-key`
 
 ## TASKLIST Lock Protocol
@@ -1023,10 +1023,10 @@ ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml /ho
 ```
 
 ## Service URLs (K3s Cluster)
-- Frontend + API: `https://convene.spark-b0f2.local`
-- MCP Server: `https://convene.spark-b0f2.local/mcp`
+- Frontend + API: `https://kutana.spark-b0f2.local`
+- MCP Server: `https://kutana.spark-b0f2.local/mcp`
 - Agent Gateway: `ws://spark-b0f2.local:8003`
-- STT (Whisper): `http://spark-b0f2.local/convene-stt`
+- STT (Whisper): `http://spark-b0f2.local/kutana-stt`
 
 ## Critical Gotchas
 - Container runtime is `containerd` (not Docker) — import via `sudo k3s ctr images import <file>`
@@ -1114,13 +1114,13 @@ globs: ["packages/**/*.py", "services/**/*.py"]
 - All API models use Pydantic v2 with `model_validator` and `field_validator`
 - Enums as `class Foo(str, Enum)` for JSON serialization
 - UTC timestamps: `default_factory=lambda: datetime.now(UTC)`
-See @claude_docs/Convene_Core_Patterns.md
+See @claude_docs/Kutana_Core_Patterns.md
 
 ## SQLAlchemy 2.0
 - Async style with `mapped_column` and `Mapped[]` type hints
 - UUID primary keys with `server_default=text("gen_random_uuid()")`
 - Never use synchronous session in async context
-See @claude_docs/Convene_Core_Patterns.md
+See @claude_docs/Kutana_Core_Patterns.md
 
 ## Testing
 - pytest with `asyncio_mode=auto` and `--import-mode=importlib`
@@ -1160,7 +1160,7 @@ See @claude_docs/Auth_And_API_Keys.md
 
 ## API Keys
 - API keys stored SHA-256 hashed — never store plaintext
-- `cvn_` prefix for all Convene API keys
+- `cvn_` prefix for all Kutana API keys
 - Keys scoped to specific capabilities (listen, speak, extract_tasks, etc.)
 
 ## WebSocket Security
@@ -1236,7 +1236,7 @@ Keep in CLAUDE.md:
         "hooks": [
           {
             "type": "command",
-            "command": "FILE=$CLAUDE_TOOL_INPUT_FILE_PATH; if [[ \"$FILE\" == *.py ]]; then cd /Users/jonathandyer/Documents/Dyer_Innovation/dev/convene-ai && uv run ruff check --fix \"$FILE\" 2>/dev/null && uv run ruff format \"$FILE\" 2>/dev/null; fi"
+            "command": "FILE=$CLAUDE_TOOL_INPUT_FILE_PATH; if [[ \"$FILE\" == *.py ]]; then cd /Users/jonathandyer/Documents/Dyer_Innovation/dev/kutana-ai && uv run ruff check --fix \"$FILE\" 2>/dev/null && uv run ruff format \"$FILE\" 2>/dev/null; fi"
           }
         ]
       }
@@ -1253,7 +1253,7 @@ Ensure CLAUDE.md includes @references to all relevant claude_docs files:
 
 ```markdown
 ## Key References
-- Architecture patterns: @claude_docs/Convene_Core_Patterns.md
+- Architecture patterns: @claude_docs/Kutana_Core_Patterns.md
 - Provider patterns: @claude_docs/Provider_Patterns.md
 - Message bus: @claude_docs/MessageBus_Patterns.md
 - Memory system: @claude_docs/Memory_Architecture.md

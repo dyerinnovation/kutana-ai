@@ -14,7 +14,7 @@
 5. Redeploy agent-gateway with Deepgram config
 
 ## Key Files
-- `packages/convene-providers/src/convene_providers/stt/whisper_remote_stt.py` — hallucination filter fix
+- `packages/kutana-providers/src/kutana_providers/stt/whisper_remote_stt.py` — hallucination filter fix
 - `services/audio-service/tests/test_whisper_hallucination_filter.py` — new tests
 - `.env` — STT provider config switch to Deepgram
 - `docker-compose.yml` — service config

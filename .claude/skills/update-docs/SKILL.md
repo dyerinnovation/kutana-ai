@@ -24,7 +24,7 @@ Checklist of all documentation locations to review and update after a feature la
 
 **For agent/MCP changes:**
 - [ ] Update `docs/integrations/CLAUDE_AGENT_SDK.md` or `docs/integrations/OPENCLAW.md`
-- [ ] Update `.claude/skills/convene-meeting/SKILL.md` if tool signatures changed
+- [ ] Update `.claude/skills/kutana-meeting/SKILL.md` if tool signatures changed
 
 **For infrastructure changes:**
 - [ ] Update `claude_docs/DGX_Spark_Reference.md`

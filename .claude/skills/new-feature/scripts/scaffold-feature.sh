@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Scaffold a new Convene AI feature following the ABC provider pattern
+# Scaffold a new Kutana AI feature following the ABC provider pattern
 set -euo pipefail
 
 FEATURE=${1:-}
@@ -10,8 +10,8 @@ if [[ -z "$FEATURE" ]]; then
 fi
 
 REPO=$(git rev-parse --show-toplevel)
-CORE="$REPO/packages/convene-core/src/convene_core"
-PROVIDERS="$REPO/packages/convene-providers/src/convene_providers"
+CORE="$REPO/packages/kutana-core/src/kutana_core"
+PROVIDERS="$REPO/packages/kutana-providers/src/kutana_providers"
 
 echo "==> Scaffolding feature: $FEATURE"
 
@@ -36,13 +36,13 @@ class ${FEATURE^}Provider(ABC):
         """
         ...
 PYEOF
-echo "  Created: packages/convene-core/src/convene_core/interfaces/${FEATURE}.py"
+echo "  Created: packages/kutana-core/src/kutana_core/interfaces/${FEATURE}.py"
 
 # Stub provider implementation
 mkdir -p "$PROVIDERS"
 cat > "$PROVIDERS/${FEATURE}_provider.py" <<PYEOF
 """${FEATURE^} provider implementation."""
-from convene_core.interfaces.${FEATURE} import ${FEATURE^}Provider
+from kutana_core.interfaces.${FEATURE} import ${FEATURE^}Provider
 
 
 class Default${FEATURE^}Provider(${FEATURE^}Provider):
@@ -59,14 +59,14 @@ class Default${FEATURE^}Provider(${FEATURE^}Provider):
         """
         raise NotImplementedError("Implement this provider")
 PYEOF
-echo "  Created: packages/convene-providers/src/convene_providers/${FEATURE}_provider.py"
+echo "  Created: packages/kutana-providers/src/kutana_providers/${FEATURE}_provider.py"
 
 # Test file
 mkdir -p "$CORE/../../../tests"
 cat > "$CORE/../../../tests/test_${FEATURE}.py" <<PYEOF
 """Tests for ${FEATURE} interface and providers."""
 import pytest
-from convene_providers.${FEATURE}_provider import Default${FEATURE^}Provider
+from kutana_providers.${FEATURE}_provider import Default${FEATURE^}Provider
 
 
 @pytest.mark.asyncio
@@ -75,11 +75,11 @@ async def test_${FEATURE}_provider_stub() -> None:
     with pytest.raises(NotImplementedError):
         await provider.process("test input")
 PYEOF
-echo "  Created: packages/convene-core/tests/test_${FEATURE}.py"
+echo "  Created: packages/kutana-core/tests/test_${FEATURE}.py"
 
 echo ""
 echo "==> Next steps:"
-echo "  1. Implement Default${FEATURE^}Provider in convene-providers"
+echo "  1. Implement Default${FEATURE^}Provider in kutana-providers"
 echo "  2. Register in provider registry"
 echo "  3. Wire into the relevant service"
-echo "  4. See claude_docs/Convene_Core_Patterns.md and claude_docs/Provider_Patterns.md"
+echo "  4. See claude_docs/Kutana_Core_Patterns.md and claude_docs/Provider_Patterns.md"

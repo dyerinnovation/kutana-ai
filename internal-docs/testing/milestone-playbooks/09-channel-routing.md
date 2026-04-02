@@ -71,7 +71,7 @@ export MEETING_ID=$(curl -s -X POST http://localhost:8000/api/v1/meetings \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "title": "Channel Routing Test",
-    "platform": "convene",
+    "platform": "kutana",
     "scheduled_at": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"
   }' | jq -r '.id')
 
@@ -187,7 +187,7 @@ Agent B should receive the published message via the event relay. To verify, che
 ```bash
 # Check Redis stream for the channel event
 docker exec -it $(docker compose ps -q redis) redis-cli \
-  XRANGE convene:events - + COUNT 5 | tail -20
+  XRANGE kutana:events - + COUNT 5 | tail -20
 ```
 
 Look for an event with `event_type: "data.channel.tasks"` and the payload matching what Agent A published.
@@ -270,7 +270,7 @@ Now publish to "decisions" again — Agent B should receive it.
 | Subscribe returns error | Verify agent has joined a meeting first |
 | Published events not appearing in Redis | Check gateway is running and connected to Redis |
 | Agent B doesn't receive events | Check gateway logs for `_should_relay` decisions. Verify channel subscription |
-| Redis XRANGE shows nothing | Verify `convene:events` stream key. Gateway must be running to relay events |
+| Redis XRANGE shows nothing | Verify `kutana:events` stream key. Gateway must be running to relay events |
 | Both agents get all events | Check `_should_relay` logic — `data.channel.*` events should filter by subscription |
 
 ## Cleanup

@@ -9,12 +9,12 @@ from typing import TYPE_CHECKING, Any
 import redis.asyncio as redis
 
 if TYPE_CHECKING:
-    from convene_core.events.definitions import BaseEvent
-    from convene_core.extraction.types import ExtractionResult
+    from kutana_core.events.definitions import BaseEvent
+    from kutana_core.extraction.types import ExtractionResult
 
 logger = logging.getLogger(__name__)
 
-STREAM_KEY = "convene:events"
+STREAM_KEY = "kutana:events"
 MAX_STREAM_LEN = 10_000
 
 

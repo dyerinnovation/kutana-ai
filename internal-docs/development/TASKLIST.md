@@ -1,4 +1,4 @@
-# Convene AI — Development Task List
+# Kutana AI — Development Task List
 
 > This file is the task queue for both manual and scheduled development sessions.
 > The daily build sprint picks the next unchecked, unlocked item (or block) and implements it.
@@ -20,7 +20,7 @@
 <summary>Phase 1A: Foundation — Monorepo & Domain Models ✅</summary>
 
 - [x] Initialize uv workspace with root pyproject.toml
-- [x] Create package directory structure (convene-core, convene-providers, convene-memory)
+- [x] Create package directory structure (kutana-core, kutana-providers, kutana-memory)
 - [x] Create service directory structure (api-server, audio-service, task-engine, worker)
 - [x] Set up docker-compose.yml with PostgreSQL 16 (pgvector) and Redis 7
 - [x] Create .env.example with all environment variables
@@ -32,7 +32,7 @@
 - [x] Implement Decision Pydantic model
 - [x] Implement TranscriptSegment Pydantic model
 - [x] Implement AgentConfig Pydantic model
-- [x] Implement event definitions (convene-core/events/definitions.py)
+- [x] Implement event definitions (kutana-core/events/definitions.py)
 - [x] Create SQLAlchemy 2.0 ORM models for all domain entities
 - [x] Set up Alembic configuration with async support
 - [x] Create initial Alembic migration
@@ -96,7 +96,7 @@
 - [x] **🏁 Milestone M3: Agent connects via Gateway, receives audio, sends transcript events** — verified 2026-03-02 (29 segments, Redis XLEN=31)
 
 - [x] 🔗 BLOCK: Participant Abstraction & Human Connection Path
-  - [x] Base Participant ABC (human + agent types) in convene-core (`participants/base.py`)
+  - [x] Base Participant ABC (human + agent types) in kutana-core (`participants/base.py`)
   - [x] Human WebSocket connection endpoint (`/human/connect`) — auto-joins, no capability negotiation
   - [x] HumanSessionHandler — speak + listen + transcribe by default, PCM16 audio forwarding
   - [x] ConnectionManager updated to accept both AgentSessionHandler and HumanSessionHandler
@@ -106,7 +106,7 @@
   - [ ] WebRTC/LiveKit integration for production human connections (Phase 5)
 
 - [x] 🔗 BLOCK: Turn Management Infrastructure
-  - [x] Define TurnManager ABC in convene-core (raise_turn, release_turn, get_queue, get_active_speaker)
+  - [x] Define TurnManager ABC in kutana-core (raise_turn, release_turn, get_queue, get_active_speaker)
   - [x] Implement RedisTurnManager provider (ordered queue, atomic operations, position tracking)
   - [x] Register TurnManager in provider registry
   - [x] WebSocket events for queue changes (speaker.queue.updated, speaker.changed)
@@ -115,7 +115,7 @@
   - [x] Unit and integration tests for TurnManager
 
 - [x] 🔗 BLOCK: Meeting Chat Infrastructure
-  - [x] Define ChatStore ABC in convene-core (send_message, get_messages, subscribe)
+  - [x] Define ChatStore ABC in kutana-core (send_message, get_messages, subscribe)
   - [x] Implement RedisChatStore provider (message persistence + pub/sub delivery)
   - [x] Register ChatStore in provider registry
   - [x] WebSocket event delivery (chat.message.received)
@@ -159,35 +159,35 @@
 
 - [x] 🔗 BLOCK: Security Infrastructure (P0 — ships with April Release)
   - [x] Prompt injection defense — `mcp_server/security/sanitization.py`; regex strips control sequences and role-injection patterns (`ignore previous instructions`, `system:`, `[INST]`) from all agent-submitted text before storage/broadcast
-  - [x] Data isolation enforcement — Redis keys namespaced `convene:{meeting_id}:chat:*` and `convene:{meeting_id}:turns:*`; transcript scope enforced per-session (agents only see transcript after join); MCP tools validate meeting_id UUID before any data access
+  - [x] Data isolation enforcement — Redis keys namespaced `kutana:{meeting_id}:chat:*` and `kutana:{meeting_id}:turns:*`; transcript scope enforced per-session (agents only see transcript after join); MCP tools validate meeting_id UUID before any data access
   - [x] Input sanitization — `mcp_server/security/sanitization.py` with max-length, allowed-character, and type constraints on all 20 MCP tool inputs; meeting_id validated as UUID, content max 2000 chars + HTML stripped, priority restricted to normal/urgent, topic/channel max 200/64 chars
-  - [x] Rate limiting — `mcp_server/security/rate_limit.py` — Redis sliding-window per `convene:rate_limit:{agent_id}:{tool_name}`; raise_hand 10/min, send_chat_message 20/min, get_transcript 30/min; RateLimiter ABC + RedisRateLimiter + NoOpRateLimiter (test)
+  - [x] Rate limiting — `mcp_server/security/rate_limit.py` — Redis sliding-window per `kutana:rate_limit:{agent_id}:{tool_name}`; raise_hand 10/min, send_chat_message 20/min, get_transcript 30/min; RateLimiter ABC + RedisRateLimiter + NoOpRateLimiter (test)
   - [x] Auth hardening — MCP JWT now includes all 5 scopes (meetings:read, meetings:join, meetings:chat, turns:manage, tasks:write); `mcp_server/security/scopes.py` enforces required scope per tool before execution; scope violations return structured JSON error
-  - [x] Audit logging — `mcp_server/security/audit.py`; every auth event (token_validated, token_rejected, scope_check_failed) and tool call (tool, agent_id, meeting_id, success, error) logged as structured JSON to `convene.audit` logger
+  - [x] Audit logging — `mcp_server/security/audit.py`; every auth event (token_validated, token_rejected, scope_check_failed) and tool call (tool, agent_id, meeting_id, success, error) logged as structured JSON to `kutana.audit` logger
   - [x] Secure meeting defaults — `create_new_meeting` and `join_or_create_meeting` doc strings indicate private-by-default; transcript resource returns session-scoped data only; auto-disconnect (30 min idle) noted for Phase 2 agent gateway polish
   - [x] Content filtering — prompt injection patterns filtered in `sanitize_content`, `sanitize_topic`, `sanitize_description`; HTML/script tags stripped from all text inputs
   - [x] Transcript access controls — `get_transcript` tool enforces active WebSocket session in the meeting; returns error if not connected; transcript is session-scoped (only segments from after join)
   - [x] Unit tests for all security controls — `services/mcp-server/tests/test_security.py`: 40+ tests covering scope validation, input sanitization (injection, XSS, max-length), rate limiting (allow/block/Redis-down fail-open), and integration tests for `_security_check`
 
 - [x] 🔗 BLOCK: Turn Management MCP Tools
-  - [x] `convene_raise_hand` — request to speak, returns queue position
-  - [x] `convene_get_queue_status` — check speaker queue and current position
-  - [x] `convene_mark_finished_speaking` — signal done, promotes next in queue
-  - [x] `convene_cancel_hand_raise` — withdraw from speaker queue
-  - [x] `convene_get_speaking_status` — check if current session is active speaker
+  - [x] `kutana_raise_hand` — request to speak, returns queue position
+  - [x] `kutana_get_queue_status` — check speaker queue and current position
+  - [x] `kutana_mark_finished_speaking` — signal done, promotes next in queue
+  - [x] `kutana_cancel_hand_raise` — withdraw from speaker queue
+  - [x] `kutana_get_speaking_status` — check if current session is active speaker
   - [x] Wire TurnManager into MCP server tools
   - [x] Integration tests for all 5 turn management tools
 
 - [x] 🔗 BLOCK: start_speaking + MCP namespace + join capabilities
-  - [x] `convene_start_speaking` MCP tool — raise_hand → your_turn → start_speaking → finish_speaking state machine
+  - [x] `kutana_start_speaking` MCP tool — raise_hand → your_turn → start_speaking → finish_speaking state machine
   - [x] `start_speaking` method on TurnManager ABC + RedisTurnManager (records started_at, clears on finish)
   - [x] `StartSpeaking` client protocol message + `TurnSpeakingStarted` server event in agent-gateway
   - [x] `handle_start_speaking` in TurnBridge + dispatch in AgentSessionHandler
-  - [x] `convene_` prefix on all MCP tools (namespace safety for multi-server configs)
+  - [x] `kutana_` prefix on all MCP tools (namespace safety for multi-server configs)
   - [x] `join_meeting` capabilities vocabulary: text_only, voice_in, voice_out, voice_bidirectional, tts_enabled
   - [x] voice_in/voice_bidirectional join response includes audio_ws_url + audio_token
-  - [x] Unit tests for convene_start_speaking (active speaker, not_your_turn, started_at ISO)
-  - [x] Unit tests for convene_join_meeting capability mapping (text_only, voice_in, voice_bidirectional)
+  - [x] Unit tests for kutana_start_speaking (active speaker, not_your_turn, started_at ISO)
+  - [x] Unit tests for kutana_join_meeting capability mapping (text_only, voice_in, voice_bidirectional)
 
 - [x] 🔗 BLOCK: Chat & Status MCP Tools
   - [x] `send_chat_message` — post a message to meeting chat
@@ -209,15 +209,15 @@
   - [ ] Write Claude Code channel setup guide (`docs/integrations/CLAUDE_CODE_CHANNEL.md`)
 
 - [ ] 🔗 BLOCK: Agent Capability Declaration (P0 — ships with April Release)
-  - [ ] Extend `convene_join_meeting` with `audio_capability` parameter (`text_only`, `voice_in`, `voice_out`, `voice_bidirectional`, `tts_enabled`)
-  - [ ] Extend `convene_join_meeting` with `tts_voice_id` optional override parameter
+  - [ ] Extend `kutana_join_meeting` with `audio_capability` parameter (`text_only`, `voice_in`, `voice_out`, `voice_bidirectional`, `tts_enabled`)
+  - [ ] Extend `kutana_join_meeting` with `tts_voice_id` optional override parameter
   - [ ] Gateway routes audio based on declared capability at join time
   - [ ] Participant events include `audio_capability` field for visibility
   - [ ] Update OpenClaw plugin with new `audio_capability` parameter
   - [ ] Integration tests: each capability value routes audio correctly
 
-- [x] 🔗 BLOCK: convene_start_speaking MCP Tool (P0 — ships with April Release)
-  - [x] Implement `convene_speak` MCP tool — sends start_speaking → spoken_text → stop_speaking to gateway, auto-calls mark_finished_speaking
+- [x] 🔗 BLOCK: kutana_start_speaking MCP Tool (P0 — ships with April Release)
+  - [x] Implement `kutana_speak` MCP tool — sends start_speaking → spoken_text → stop_speaking to gateway, auto-calls mark_finished_speaking
   - [x] For `tts_enabled` agents: route text to TTS Engine in gateway, broadcasts tts.audio to room
   - [x] `GatewayClient.connect_and_join` passes `tts_enabled=True` when joining with tts_enabled capability
   - [x] `GatewayClient` has `start_speaking()`, `send_spoken_text()`, `stop_speaking()` methods
@@ -246,18 +246,18 @@
   - [ ] Integration tests: voice agent joins, sends audio, receives room audio, mixed-minus verified
 
 - [ ] 🔗 BLOCK: MCP Tool Prefix Standardization (P0 — ships with April Release)
-  - [ ] Rename all MCP tools from bare names to `convene_` prefix (e.g., `join_meeting` → `convene_join_meeting`)
+  - [ ] Rename all MCP tools from bare names to `kutana_` prefix (e.g., `join_meeting` → `kutana_join_meeting`)
   - [ ] Update OpenClaw plugin with renamed tools
   - [ ] Update `internal-docs/internal-docs/examples/meeting-assistant-agent/` with new tool names
-  - [ ] Update all integration tests to use `convene_` prefix
-  - [ ] Update `docs/research/channel-plugin.md` tool reference table (already uses `convene_` prefix)
+  - [ ] Update all integration tests to use `kutana_` prefix
+  - [ ] Update `docs/research/channel-plugin.md` tool reference table (already uses `kutana_` prefix)
   - [ ] Update `docs/research/skill-architecture.md` capability mapping table
 
 - [ ] 🔗 BLOCK: Developer Onboarding Documentation (P0 — ships with April Release)
   - [ ] Write `docs/integrations/CLAUDE_CODE_CHANNEL.md` — end-to-end setup guide (API key → settings.json → first join)
   - [ ] Write `docs/integrations/VOICE_AGENT_QUICKSTART.md` — voice agent setup (sidecar, PCM16, VAD)
   - [ ] Write `docs/integrations/TTS_AGENT_QUICKSTART.md` — TTS agent setup (tts_enabled, voice assignment, start_speaking)
-  - [ ] Update `internal-docs/internal-docs/examples/meeting-assistant-agent/` templates to use new capability declaration + `convene_` prefix
+  - [ ] Update `internal-docs/internal-docs/examples/meeting-assistant-agent/` templates to use new capability declaration + `kutana_` prefix
   - [ ] Add developer onboarding checklist to `docs/SETUP_GUIDE.md`
 
 - [ ] 🔗 BLOCK: Frontend — Turn Management & Chat UI
@@ -324,7 +324,7 @@
 > Portable messaging layer, real-time meeting insights, and Claude Code channel integration.
 
 - [ ] 🔗 BLOCK: Portable Message Bus Abstraction
-  - [ ] Define MessageBus ABC (publish, subscribe, ack) in convene-core
+  - [ ] Define MessageBus ABC (publish, subscribe, ack) in kutana-core
   - [ ] Implement RedisStreamsMessageBus provider (wrap existing Redis code)
   - [ ] Register in provider registry
   - [ ] Migrate existing services to MessageBus interface
@@ -353,8 +353,8 @@
 
 - [ ] 🔗 BLOCK: Agent Context Seeding
   - [ ] Define context document schema (Pydantic models for platform context, meeting context, meeting recap)
-  - [ ] Create `convene-ai-platform.md` template — fixed platform-level context for agents
-  - [ ] Implement as MCP Resources: `convene://platform/context` (static), `convene://meeting/{id}/context` (template with change notifications)
+  - [ ] Create `kutana-ai-platform.md` template — fixed platform-level context for agents
+  - [ ] Implement as MCP Resources: `kutana://platform/context` (static), `kutana://meeting/{id}/context` (template with change notifications)
   - [ ] Build MeetingContextGenerator — populates meeting context from calendar invite, attendees, agenda
   - [ ] Build MeetingRecapGenerator — creates meeting-recap from Insight Stream snapshots for late joiners
   - [ ] Implement as MCP Tools: `get_meeting_recap` (on-demand recap fetch), `get_entity_history` (filtered entity query)
@@ -385,7 +385,7 @@
 - [ ] 🔗 BLOCK: Subscription & Billing Infrastructure
   - [ ] Stripe SDK integration (stripe-python for API server)
   - [ ] Subscription plans configuration (products, prices, features matrix)
-  - [ ] Customer and subscription management (create customer on signup, link to Convene user)
+  - [ ] Customer and subscription management (create customer on signup, link to Kutana user)
   - [ ] Checkout flow: upgrade/downgrade/cancel via Stripe billing portal
   - [ ] Webhook endpoint for Stripe events (invoice.paid, customer.subscription.updated, etc.)
   - [ ] Usage metering service: count meeting minutes, LLM calls, STT minutes per user per period
@@ -404,7 +404,7 @@
 
 ## Phase 4: MCP Server & Agent SDK
 
-> Developer GTM wedge — make it trivial for any AI agent to join a Convene meeting.
+> Developer GTM wedge — make it trivial for any AI agent to join a Kutana meeting.
 
 - [ ] 🔗 BLOCK: MCP Server
   - [ ] Implement MCP server using Python MCP SDK
@@ -415,8 +415,8 @@
   - [ ] Write MCP server documentation and examples
 
 - [ ] 🔗 BLOCK: Agent SDK
-  - [ ] Create Agent Python SDK (ConveneAgent class, async API, audio helpers)
-  - [ ] Publish SDK to PyPI as `convene-ai`
+  - [ ] Create Agent Python SDK (KutanaAgent class, async API, audio helpers)
+  - [ ] Publish SDK to PyPI as `kutana-ai`
   - [ ] Write SDK documentation and example agents (Claude Agent SDK + OpenClaw examples)
 
 - [ ] **🏁 Milestone M4: MCP client (Claude) joins a meeting and extracts tasks via MCP tools**
@@ -511,7 +511,7 @@
 > Production deployment on AWS/GCP with native cloud STT providers.
 
 - [ ] 🔗 BLOCK: Kubernetes & Helm Deployment (DGX Spark / K3s)
-  - [ ] Create Helm charts for all Convene AI services
+  - [ ] Create Helm charts for all Kutana AI services
   - [ ] Kubernetes resource definitions (Deployments, Services, ConfigMaps, Secrets)
   - [ ] K3s deployment guide for DGX Spark
   - [ ] GPU-enabled pod spec for self-hosted Whisper STT
@@ -577,8 +577,8 @@
   - [ ] Implement ZoomAdapter via Zoom Meeting SDK (transcription bot entry point)
   - [ ] Implement GoogleMeetAdapter (via Meet bot or Google Meet API)
   - [ ] Implement TeamsAdapter via Teams Bot Framework SDK
-  - [ ] Define adoption path: start as transcription bot → graduate users to native Convene meetings
-  - [ ] Dashboard prompt: "Join this meeting in Convene instead" UX flow
+  - [ ] Define adoption path: start as transcription bot → graduate users to native Kutana meetings
+  - [ ] Dashboard prompt: "Join this meeting in Kutana instead" UX flow
 
 - [ ] **🏁 Milestone M7+: Full product experience — integrations, marketplace, analytics**
 

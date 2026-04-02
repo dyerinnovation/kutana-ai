@@ -13,9 +13,9 @@ import pytest
 from websockets.exceptions import ConnectionClosedError
 
 from audio_service.audio_pipeline import AudioPipeline
-from convene_core.models.transcript import TranscriptSegment
-from convene_providers.stt.deepgram_stt import DeepgramSTT
-from convene_providers.testing import MockSTT
+from kutana_core.models.transcript import TranscriptSegment
+from kutana_providers.stt.deepgram_stt import DeepgramSTT
+from kutana_providers.testing import MockSTT
 
 # ---- Helpers ----
 
@@ -104,11 +104,11 @@ class TestDeepgramKeepalive:
         # Patch the interval to be very short for testing
         with (
             patch(
-                "convene_providers.stt.deepgram_stt._KEEPALIVE_INTERVAL_S",
+                "kutana_providers.stt.deepgram_stt._KEEPALIVE_INTERVAL_S",
                 0.05,
             ),
             patch(
-                "convene_providers.stt.deepgram_stt._AUDIO_FRESHNESS_S",
+                "kutana_providers.stt.deepgram_stt._AUDIO_FRESHNESS_S",
                 0.01,
             ),
         ):
@@ -139,7 +139,7 @@ class TestDeepgramKeepalive:
         provider._last_audio_time = time.monotonic() + 9999
 
         with patch(
-            "convene_providers.stt.deepgram_stt._KEEPALIVE_INTERVAL_S",
+            "kutana_providers.stt.deepgram_stt._KEEPALIVE_INTERVAL_S",
             0.05,
         ):
             task = asyncio.create_task(provider._keepalive_loop())
@@ -162,11 +162,11 @@ class TestDeepgramKeepalive:
 
         with (
             patch(
-                "convene_providers.stt.deepgram_stt._KEEPALIVE_INTERVAL_S",
+                "kutana_providers.stt.deepgram_stt._KEEPALIVE_INTERVAL_S",
                 0.05,
             ),
             patch(
-                "convene_providers.stt.deepgram_stt._AUDIO_FRESHNESS_S",
+                "kutana_providers.stt.deepgram_stt._AUDIO_FRESHNESS_S",
                 0.01,
             ),
         ):
@@ -294,7 +294,7 @@ class TestReconnect:
         mock_ws_fresh = AsyncMock()
 
         with patch(
-            "convene_providers.stt.deepgram_stt.websockets.connect",
+            "kutana_providers.stt.deepgram_stt.websockets.connect",
             _make_async_connect_mock(mock_ws_fresh),
         ):
             await provider._reconnect()
@@ -329,10 +329,10 @@ class TestReconnect:
 
         with (
             patch(
-                "convene_providers.stt.deepgram_stt.websockets.connect",
+                "kutana_providers.stt.deepgram_stt.websockets.connect",
                 mock_connect,
             ),
-            patch("convene_providers.stt.deepgram_stt._RECONNECT_DELAY_S", 0.01),
+            patch("kutana_providers.stt.deepgram_stt._RECONNECT_DELAY_S", 0.01),
         ):
             await provider._reconnect()
 
@@ -358,10 +358,10 @@ class TestReconnect:
 
         with (
             patch(
-                "convene_providers.stt.deepgram_stt.websockets.connect",
+                "kutana_providers.stt.deepgram_stt.websockets.connect",
                 mock_connect,
             ),
-            patch("convene_providers.stt.deepgram_stt._RECONNECT_DELAY_S", 0.01),
+            patch("kutana_providers.stt.deepgram_stt._RECONNECT_DELAY_S", 0.01),
             pytest.raises(ConnectionClosedError),
         ):
             await provider._reconnect()

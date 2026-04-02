@@ -1,6 +1,6 @@
 ---
 name: test-user
-description: Show or create test user credentials for Convene AI. TRIGGER on: test credentials, test user, test account, login credentials, demo user, get API key.
+description: Show or create test user credentials for Kutana AI. TRIGGER on: test credentials, test user, test account, login credentials, demo user, get API key.
 permissions:
   - Bash(curl:*)
   - Bash(ssh:*)
@@ -8,7 +8,7 @@ permissions:
 
 # Test User
 
-Shows existing test credentials or creates a new test user via the Convene API.
+Shows existing test credentials or creates a new test user via the Kutana API.
 
 ## Usage
 
@@ -31,6 +31,6 @@ Prints:
 
 | Account | Email | Purpose |
 |---|---|---|
-| Free tier | `test-free@convene.test` | Test free plan limits |
-| Pro tier | `test-pro@convene.test` | Test Pro features |
-| Business tier | `test-biz@convene.test` | Test Business features |
+| Free tier | `test-free@kutana.test` | Test free plan limits |
+| Pro tier | `test-pro@kutana.test` | Test Pro features |
+| Business tier | `test-biz@kutana.test` | Test Business features |

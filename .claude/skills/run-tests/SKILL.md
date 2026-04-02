@@ -1,6 +1,6 @@
 ---
 name: run-tests
-description: Run the Convene AI test suite. TRIGGER on: run tests, pytest, test suite, check tests, run unit tests, vitest, frontend tests.
+description: Run the Kutana AI test suite. TRIGGER on: run tests, pytest, test suite, check tests, run unit tests, vitest, frontend tests.
 permissions:
   - Bash(ssh:*)
   - Bash(uv:*)
@@ -24,16 +24,16 @@ bash .claude/skills/run-tests/scripts/run-tests.sh --python
 bash .claude/skills/run-tests/scripts/run-tests.sh --frontend
 
 # Specific package
-bash .claude/skills/run-tests/scripts/run-tests.sh --package convene-core
+bash .claude/skills/run-tests/scripts/run-tests.sh --package kutana-core
 ```
 
 ## Test Locations
 
 | Scope | Command |
 |---|---|
-| convene-core | `uv run pytest packages/convene-core/tests/` |
-| convene-providers | `uv run pytest packages/convene-providers/tests/` |
-| convene-memory | `uv run pytest packages/convene-memory/tests/` |
+| kutana-core | `uv run pytest packages/kutana-core/tests/` |
+| kutana-providers | `uv run pytest packages/kutana-providers/tests/` |
+| kutana-memory | `uv run pytest packages/kutana-memory/tests/` |
 | api-server | `uv run pytest services/api-server/tests/` |
 | agent-gateway | `uv run pytest services/agent-gateway/tests/` |
 | frontend | `cd web && npx vitest run` |

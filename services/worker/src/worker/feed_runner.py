@@ -1,6 +1,6 @@
 """FeedRunner — consumes feed-run records and executes feed agents.
 
-Reads from the ``convene:feed-runs`` stream and launches a FeedAgent
+Reads from the ``kutana:feed-runs`` stream and launches a FeedAgent
 for each pending run. Handles retries with exponential backoff (max 3
 attempts per run).
 """
@@ -20,9 +20,9 @@ from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import ResponseError
 from sqlalchemy import select
 
-from convene_core.database.models import FeedORM, FeedRunORM, FeedSecretORM
-from convene_core.encryption import decrypt_value
-from convene_core.feeds.adapters import build_adapter
+from kutana_core.database.models import FeedORM, FeedRunORM, FeedSecretORM
+from kutana_core.encryption import decrypt_value
+from kutana_core.feeds.adapters import build_adapter
 from worker.feed_agent import run_feed
 
 if TYPE_CHECKING:
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-FEED_RUNS_STREAM = "convene:feed-runs"
+FEED_RUNS_STREAM = "kutana:feed-runs"
 DEFAULT_GROUP_NAME = "feed-runner"
 DEFAULT_BLOCK_MS = 5_000
 DEFAULT_BATCH_SIZE = 5
@@ -47,16 +47,16 @@ class FeedRunner:
     Attributes:
         _redis_url: Redis connection URL.
         _session_factory: SQLAlchemy async session factory.
-        _convene_mcp_url: URL of the Convene MCP server.
-        _convene_mcp_token: Bearer token for the Convene MCP server.
+        _kutana_mcp_url: URL of the Kutana MCP server.
+        _kutana_mcp_token: Bearer token for the Kutana MCP server.
     """
 
     def __init__(
         self,
         redis_url: str,
         session_factory: async_sessionmaker[AsyncSession],
-        convene_mcp_url: str = "http://localhost:3001/mcp",
-        convene_mcp_token: str = "",
+        kutana_mcp_url: str = "http://localhost:3001/mcp",
+        kutana_mcp_token: str = "",
         group_name: str = DEFAULT_GROUP_NAME,
         consumer_name: str | None = None,
         block_ms: int = DEFAULT_BLOCK_MS,
@@ -67,8 +67,8 @@ class FeedRunner:
         Args:
             redis_url: Redis connection URL.
             session_factory: SQLAlchemy async session factory.
-            convene_mcp_url: URL of the Convene MCP server.
-            convene_mcp_token: Bearer token for the Convene MCP server.
+            kutana_mcp_url: URL of the Kutana MCP server.
+            kutana_mcp_token: Bearer token for the Kutana MCP server.
             group_name: Consumer group name.
             consumer_name: Unique name for this consumer.
             block_ms: Milliseconds XREADGROUP blocks per call.
@@ -76,8 +76,8 @@ class FeedRunner:
         """
         self._redis_url = redis_url
         self._session_factory = session_factory
-        self._convene_mcp_url = convene_mcp_url
-        self._convene_mcp_token = convene_mcp_token
+        self._kutana_mcp_url = kutana_mcp_url
+        self._kutana_mcp_token = kutana_mcp_token
         self._group_name = group_name
         self._consumer_name = consumer_name or f"feed-runner-{socket.gethostname()}"
         self._block_ms = block_ms
@@ -264,8 +264,8 @@ class FeedRunner:
                         meeting_id=meeting_id,
                         direction=direction,
                         adapter=adapter,
-                        convene_mcp_url=self._convene_mcp_url,
-                        convene_mcp_token=self._convene_mcp_token,
+                        kutana_mcp_url=self._kutana_mcp_url,
+                        kutana_mcp_token=self._kutana_mcp_token,
                     )
                     # Success
                     run.status = "delivered"

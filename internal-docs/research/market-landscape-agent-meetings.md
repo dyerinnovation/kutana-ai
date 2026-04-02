@@ -4,7 +4,7 @@
 
 ## Overview
 
-The meeting AI market is fragmented across four distinct categories — none of which solve the core problem Convene addresses: open, multi-agent, first-class participation with turn management.
+The meeting AI market is fragmented across four distinct categories — none of which solve the core problem Kutana addresses: open, multi-agent, first-class participation with turn management.
 
 **Market size:** $3.5B in 2025, projected $21.5B by 2033 (CAGR ~25%).
 
@@ -45,7 +45,7 @@ These companies provide the plumbing — APIs and SDKs for building meeting bots
 - Supports Deepgram, OpenAI, ElevenLabs out of the box
 - **What it is:** Infrastructure for building voice AI apps, not a meeting platform
 - **What it lacks:** No meeting room abstraction. No turn management. No multi-agent coordination. You build everything yourself.
-- Convene uses LiveKit as its WebRTC SFU — we build the agent-native layer on top.
+- Kutana uses LiveKit as its WebRTC SFU — we build the agent-native layer on top.
 
 ### Daily.co
 - Embedded video SDK with bot/server-side participant support
@@ -90,14 +90,14 @@ Recent additions to the LLM ecosystem that enable voice/audio AI agents — but 
 ### Claude Agent SDK (Anthropic)
 - MCP-based tool use for agents
 - Supports persistent sessions, memory, tool integration
-- **What it enables:** Agents that use Convene's MCP server to join meetings as first-class participants
-- **What it lacks natively:** Audio I/O is not built in — Convene provides the audio bridge via agent-gateway
+- **What it enables:** Agents that use Kutana's MCP server to join meetings as first-class participants
+- **What it lacks natively:** Audio I/O is not built in — Kutana provides the audio bridge via agent-gateway
 
 ---
 
 ## The Gap Nobody Has Filled
 
-| Capability | Passive Recorders | Recall.ai | LiveKit Agents | Realtime APIs | **Convene** |
+| Capability | Passive Recorders | Recall.ai | LiveKit Agents | Realtime APIs | **Kutana** |
 |-----------|:-----------------:|:---------:|:--------------:|:-------------:|:-----------:|
 | Works across platforms | ✓ | ✓ | — | — | Native |
 | First-class participant | — | Partial | ✓ | ✓ | ✓ |
@@ -109,4 +109,4 @@ Recent additions to the LLM ecosystem that enable voice/audio AI agents — but 
 
 **Key finding:** No product on the market today offers an open platform where any AI agent from any provider joins as a first-class participant with built-in turn management and multi-agent coordination. The closest approaches either require reverse-engineering platform APIs (fragile) or building everything from scratch on raw WebRTC infrastructure (high effort, no meeting semantics).
 
-Convene is the first meeting platform designed with AI agents as first-class participants from day one.
+Kutana is the first meeting platform designed with AI agents as first-class participants from day one.

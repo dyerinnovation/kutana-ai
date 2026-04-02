@@ -1,11 +1,11 @@
 /**
- * Convene AI OpenClaw Plugin
+ * Kutana AI OpenClaw Plugin
  *
- * Registers native Convene meeting tools in the OpenClaw gateway,
+ * Registers native Kutana meeting tools in the OpenClaw gateway,
  * allowing agents to join meetings, read transcripts, and create tasks.
  */
 
-import { ConveneClient, type ConveneConfig } from "./convene-client.js";
+import { KutanaClient, type KutanaConfig } from "./kutana-client.js";
 
 /**
  * OpenClaw plugin interface (simplified — actual interface depends on OpenClaw SDK version).
@@ -28,12 +28,12 @@ type ToolHandler = (params: Record<string, unknown>) => Promise<string>;
  * Plugin entry point. Called by OpenClaw when the plugin is loaded.
  */
 export default function register(ctx: PluginContext): void {
-  const config: ConveneConfig = {
+  const config: KutanaConfig = {
     apiKey: ctx.config.apiKey,
-    mcpUrl: ctx.config.mcpUrl ?? "https://convene.spark-b0f2.local/mcp",
+    mcpUrl: ctx.config.mcpUrl ?? "https://kutana.spark-b0f2.local/mcp",
   };
 
-  const client = new ConveneClient(config);
+  const client = new KutanaClient(config);
 
   // Authenticate on first tool call
   let authenticated = false;
@@ -41,18 +41,18 @@ export default function register(ctx: PluginContext): void {
     if (!authenticated) {
       await client.authenticate();
       authenticated = true;
-      ctx.logger.info("Authenticated with Convene MCP server");
+      ctx.logger.info("Authenticated with Kutana MCP server");
     }
   }
 
   // Register tools
-  ctx.registerTool("convene_list_meetings", async () => {
+  ctx.registerTool("kutana_list_meetings", async () => {
     await ensureAuth();
     const meetings = await client.listMeetings();
     return JSON.stringify(meetings, null, 2);
   });
 
-  ctx.registerTool("convene_join_meeting", async (params) => {
+  ctx.registerTool("kutana_join_meeting", async (params) => {
     await ensureAuth();
     const meetingId = params.meeting_id as string;
     if (!meetingId) return "Error: meeting_id is required";
@@ -60,14 +60,14 @@ export default function register(ctx: PluginContext): void {
     return await client.joinMeeting(meetingId, capabilities);
   });
 
-  ctx.registerTool("convene_get_transcript", async (params) => {
+  ctx.registerTool("kutana_get_transcript", async (params) => {
     await ensureAuth();
     const lastN = (params.last_n as number) ?? 50;
     const segments = await client.getTranscript(lastN);
     return JSON.stringify(segments, null, 2);
   });
 
-  ctx.registerTool("convene_create_task", async (params) => {
+  ctx.registerTool("kutana_create_task", async (params) => {
     await ensureAuth();
     const meetingId = params.meeting_id as string;
     const description = params.description as string;
@@ -79,13 +79,13 @@ export default function register(ctx: PluginContext): void {
     return JSON.stringify(task, null, 2);
   });
 
-  ctx.registerTool("convene_get_participants", async () => {
+  ctx.registerTool("kutana_get_participants", async () => {
     await ensureAuth();
     const participants = await client.getParticipants();
     return JSON.stringify(participants, null, 2);
   });
 
-  ctx.registerTool("convene_create_meeting", async (params) => {
+  ctx.registerTool("kutana_create_meeting", async (params) => {
     await ensureAuth();
     const title = params.title as string;
     if (!title) return "Error: title is required";
@@ -94,14 +94,14 @@ export default function register(ctx: PluginContext): void {
   });
 
   // Turn Management Tools
-  ctx.registerTool("convene_start_speaking", async (params) => {
+  ctx.registerTool("kutana_start_speaking", async (params) => {
     await ensureAuth();
     const meetingId = params.meeting_id as string;
     if (!meetingId) return "Error: meeting_id is required";
     return await client.startSpeaking(meetingId);
   });
 
-  ctx.registerTool("convene_raise_hand", async (params) => {
+  ctx.registerTool("kutana_raise_hand", async (params) => {
     await ensureAuth();
     const meetingId = params.meeting_id as string;
     const priority = (params.priority as string) ?? "normal";
@@ -110,21 +110,21 @@ export default function register(ctx: PluginContext): void {
     return await client.raiseHand(meetingId, priority, topic);
   });
 
-  ctx.registerTool("convene_get_queue_status", async (params) => {
+  ctx.registerTool("kutana_get_queue_status", async (params) => {
     await ensureAuth();
     const meetingId = params.meeting_id as string;
     if (!meetingId) return "Error: meeting_id is required";
     return await client.getQueueStatus(meetingId);
   });
 
-  ctx.registerTool("convene_mark_finished_speaking", async (params) => {
+  ctx.registerTool("kutana_mark_finished_speaking", async (params) => {
     await ensureAuth();
     const meetingId = params.meeting_id as string;
     if (!meetingId) return "Error: meeting_id is required";
     return await client.markFinishedSpeaking(meetingId);
   });
 
-  ctx.registerTool("convene_cancel_hand_raise", async (params) => {
+  ctx.registerTool("kutana_cancel_hand_raise", async (params) => {
     await ensureAuth();
     const meetingId = params.meeting_id as string;
     if (!meetingId) return "Error: meeting_id is required";
@@ -133,7 +133,7 @@ export default function register(ctx: PluginContext): void {
   });
 
   // Chat Tools
-  ctx.registerTool("convene_send_chat_message", async (params) => {
+  ctx.registerTool("kutana_send_chat_message", async (params) => {
     await ensureAuth();
     const meetingId = params.meeting_id as string;
     const content = params.content as string;
@@ -144,7 +144,7 @@ export default function register(ctx: PluginContext): void {
     return await client.sendChatMessage(meetingId, content, messageType);
   });
 
-  ctx.registerTool("convene_get_chat_messages", async (params) => {
+  ctx.registerTool("kutana_get_chat_messages", async (params) => {
     await ensureAuth();
     const meetingId = params.meeting_id as string;
     if (!meetingId) return "Error: meeting_id is required";
@@ -153,5 +153,5 @@ export default function register(ctx: PluginContext): void {
     return await client.getChatMessages(meetingId, limit, messageType);
   });
 
-  ctx.logger.info("Convene AI plugin registered with 13 tools");
+  ctx.logger.info("Kutana AI plugin registered with 13 tools");
 }

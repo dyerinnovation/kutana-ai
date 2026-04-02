@@ -31,7 +31,7 @@ Deploy `openai/whisper-large-v3` as a self-hosted STT model on the DGX Spark (GB
 
 ### Step 4: Deploy STT Chart
 - [ ] Copy chart to Spark (scp)
-- [ ] `helm install stt` in convene namespace
+- [ ] `helm install stt` in kutana namespace
 
 ### Step 5: Verify
 - [ ] Pod is Running with GPU
@@ -44,4 +44,4 @@ Deploy `openai/whisper-large-v3` as a self-hosted STT model on the DGX Spark (GB
 - Helm path: `/home/jondyer3/.local/bin/helm`
 - HuggingFace cache: `/home/jondyer3/.cache/huggingface`
 - Ingress host: `spark-b0f2.local`
-- Ingress path: `/convene-stt(/|$)(.*)`
+- Ingress path: `/kutana-stt(/|$)(.*)`

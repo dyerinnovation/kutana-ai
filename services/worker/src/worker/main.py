@@ -1,4 +1,4 @@
-"""FastAPI application entry point for the Convene AI worker service."""
+"""FastAPI application entry point for the Kutana AI worker service."""
 
 from __future__ import annotations
 
@@ -23,11 +23,11 @@ logger = logging.getLogger(__name__)
 
 _DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql+asyncpg://convene:convene@localhost:5432/convene",
+    "postgresql+asyncpg://kutana:kutana@localhost:5432/kutana",
 )
 _REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-_CONVENE_MCP_URL = os.environ.get("CONVENE_MCP_URL", "http://localhost:3001/mcp")
-_CONVENE_MCP_TOKEN = os.environ.get("CONVENE_MCP_TOKEN", "")
+_KUTANA_MCP_URL = os.environ.get("CONVENE_MCP_URL", "http://localhost:3001/mcp")
+_KUTANA_MCP_TOKEN = os.environ.get("CONVENE_MCP_TOKEN", "")
 
 _engine = create_async_engine(_DATABASE_URL, pool_pre_ping=True)
 _session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
@@ -64,8 +64,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     runner = FeedRunner(
         redis_url=_REDIS_URL,
         session_factory=_session_factory,
-        convene_mcp_url=_CONVENE_MCP_URL,
-        convene_mcp_token=_CONVENE_MCP_TOKEN,
+        kutana_mcp_url=_KUTANA_MCP_URL,
+        kutana_mcp_token=_KUTANA_MCP_TOKEN,
     )
 
     dispatcher_task = asyncio.create_task(dispatcher.start(), name="feed-dispatcher")
@@ -91,7 +91,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(
-    title="Convene AI Worker",
+    title="Kutana AI Worker",
     description="Background worker for feed dispatch, notifications, and integrations",
     version="0.1.0",
     lifespan=lifespan,

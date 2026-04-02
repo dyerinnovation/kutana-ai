@@ -1,4 +1,4 @@
-"""Full-stack E2E integration test for the Convene AI platform.
+"""Full-stack E2E integration test for the Kutana AI platform.
 
 Tests the complete flow:
 1. Register user via API
@@ -189,7 +189,7 @@ async def run_e2e_test() -> TestResult:
                 f"{API_BASE}/api/v1/meetings",
                 headers=auth_headers,
                 json={
-                    "platform": "convene",
+                    "platform": "kutana",
                     "title": f"E2E Test Meeting {unique}",
                     "scheduled_at": datetime.now(tz=UTC).isoformat(),
                 },
@@ -275,7 +275,7 @@ async def run_e2e_test() -> TestResult:
 async def main() -> None:
     """Run the E2E test and print results."""
     logger.info("=" * 60)
-    logger.info("Convene AI Full-Stack E2E Test")
+    logger.info("Kutana AI Full-Stack E2E Test")
     logger.info("=" * 60)
 
     result = await run_e2e_test()

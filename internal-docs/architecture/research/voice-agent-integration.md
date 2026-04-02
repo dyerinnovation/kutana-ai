@@ -1,14 +1,14 @@
 # Voice Agent Integration Architecture
 
-> Research and design reference for bidirectional voice agents in Convene AI.
+> Research and design reference for bidirectional voice agents in Kutana AI.
 > Covers the WebSocket audio sidecar pattern, PCM16 format, VAD, mixed-minus audio,
-> the `convene_start_speaking` tool, and capability declaration on join.
+> the `kutana_start_speaking` tool, and capability declaration on join.
 
 ---
 
 ## Overview
 
-A voice agent participates in a Convene meeting with bidirectional audio: it listens to the room
+A voice agent participates in a Kutana meeting with bidirectional audio: it listens to the room
 and can speak into the meeting. The architecture uses a **WebSocket audio sidecar** — a persistent
 binary WebSocket connection alongside the MCP control channel — to stream raw PCM16 audio in both
 directions.
@@ -54,11 +54,11 @@ forwarded via the `AgentIdentity` WebSocket message:
 }
 ```
 
-For MCP-based agents, the capability is passed as a parameter to `convene_join_meeting`:
+For MCP-based agents, the capability is passed as a parameter to `kutana_join_meeting`:
 
 ```python
 # Via MCP tool call
-result = await mcp.call_tool("convene_join_meeting", {
+result = await mcp.call_tool("kutana_join_meeting", {
     "meeting_id": "abc123",
     "audio_capability": "voice_bidirectional"
 })
@@ -80,7 +80,7 @@ head-of-line blocking: a large audio frame delays a time-sensitive control messa
 ```
 Agent                     MCP Server              Agent Gateway
   │                           │                         │
-  │── convene_join_meeting ──►│                         │
+  │── kutana_join_meeting ──►│                         │
   │◄── {sidecar_ws_url} ──────│── JoinMeeting ─────────►│
   │                           │                         │
   │────── WebSocket connect ──────────────────────────►│
@@ -108,7 +108,7 @@ frames at real-time rate; the buffer is bounded at 5 seconds of audio (250 frame
 
 ## Audio Format: PCM16 16kHz Mono
 
-All audio in Convene uses a single canonical format: **PCM16, signed 16-bit little-endian, 16kHz,
+All audio in Kutana uses a single canonical format: **PCM16, signed 16-bit little-endian, 16kHz,
 mono**. This matches Deepgram Nova-2's native input and avoids transcoding in the hot path.
 
 ### Format Specification
@@ -201,14 +201,14 @@ agent and mixed the same way (agents do not receive their own TTS output).
 
 ## start_speaking Tool
 
-`convene_start_speaking` is the MCP tool agents call when they want to address the meeting. It
+`kutana_start_speaking` is the MCP tool agents call when they want to address the meeting. It
 coordinates with turn management so the agent speaks at the right moment.
 
 ### Tool Signature
 
 ```python
 {
-    "name": "convene_start_speaking",
+    "name": "kutana_start_speaking",
     "description": "Signal intent to speak in the meeting. For voice agents, opens the audio stream. For TTS-enabled agents, sends text that will be synthesized and played to the room.",
     "inputSchema": {
         "type": "object",
@@ -239,7 +239,7 @@ coordinates with turn management so the agent speaks at the right moment.
 ```
 Agent                       Gateway
   │                             │
-  │── convene_start_speaking ──►│ (enqueues in TurnManager)
+  │── kutana_start_speaking ──►│ (enqueues in TurnManager)
   │                             │
   │◄── {status: "queued",       │
   │     position: 2}            │
@@ -251,7 +251,7 @@ Agent                       Gateway
   │   [streams PCM16 via        │
   │    sidecar until done]      │
   │                             │
-  │── convene_mark_finished_speaking ──►│
+  │── kutana_mark_finished_speaking ──►│
 ```
 
 ### TTS Agent Flow
@@ -259,7 +259,7 @@ Agent                       Gateway
 ```
 Agent                       Gateway               TTS Provider
   │                             │                      │
-  │── convene_start_speaking ──►│                      │
+  │── kutana_start_speaking ──►│                      │
   │   {text: "Here are the      │                      │
   │    action items..."}        │── synthesize(text) ──►│
   │                             │◄── PCM16 stream ──────│
@@ -290,11 +290,11 @@ Agent                       Gateway               TTS Provider
 
 ## Implementation Checklist
 
-- [ ] Add `audio_capability` parameter to `convene_join_meeting` MCP tool
+- [ ] Add `audio_capability` parameter to `kutana_join_meeting` MCP tool
 - [ ] Add sidecar WebSocket endpoint to agent-gateway (`/v1/audio/{session_id}`)
 - [ ] Implement mixed-minus mixing in `AudioRouter`
 - [ ] Implement `VADFilter` wrapper for agent audio streams
-- [ ] Implement `convene_start_speaking` MCP tool (turn queue integration)
+- [ ] Implement `kutana_start_speaking` MCP tool (turn queue integration)
 - [ ] Implement TTS synthesis path in gateway (text → PCM16 → mix)
 - [ ] Write integration tests: voice agent joins, speaks, and leaves
 - [ ] Write integration tests: TTS agent produces audible speech in room
@@ -304,7 +304,7 @@ Agent                       Gateway               TTS Provider
 ## Related Files
 
 - `services/agent-gateway/` — Audio routing implementation
-- `packages/convene-providers/src/convene_providers/tts/` — TTS provider implementations
-- `services/mcp-server/` — MCP tool definitions including `convene_start_speaking`
+- `packages/kutana-providers/src/kutana_providers/tts/` — TTS provider implementations
+- `services/mcp-server/` — MCP tool definitions including `kutana_start_speaking`
 - `docs/research/tts-text-agents.md` — TTS pipeline for text-only agents
 - `docs/technical/ROADMAP.md` — Phase 9 (Voice Output & Dialogue)

@@ -177,11 +177,11 @@ export function AgentsPage() {
         )}
       </section>
 
-      {/* ── Convene Managed Agents ──────────────────────────── */}
+      {/* ── Kutana Managed Agents ──────────────────────────── */}
       <section className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold tracking-tight text-gray-50">
-            Convene Managed Agents
+            Kutana Managed Agents
           </h2>
           <p className="mt-0.5 text-sm text-gray-400">
             Prebuilt AI agents you can activate for any meeting

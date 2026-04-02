@@ -1,4 +1,4 @@
-# Convene AI — GCP Deployment (Cloud Run ready)
+# Kutana AI — GCP Deployment (Cloud Run ready)
 #
 # This compose file is designed to run on Google Cloud Run or GKE.
 # It uses GCP Pub/Sub as the message bus backend.
@@ -23,8 +23,8 @@ x-common-env: &common-env
   GCP_PROJECT_ID: ${GCP_PROJECT_ID}
   GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-/secrets/sa-key.json}
   PUBSUB_EMULATOR_HOST: ${PUBSUB_EMULATOR_HOST:-}
-  PUBSUB_TOPIC_PREFIX: ${PUBSUB_TOPIC_PREFIX:-convene-prod-}
-  DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://convene:convene@cloudsql.internal:5432/convene}
+  PUBSUB_TOPIC_PREFIX: ${PUBSUB_TOPIC_PREFIX:-kutana-prod-}
+  DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://kutana:kutana@cloudsql.internal:5432/kutana}
   REDIS_URL: ${REDIS_URL:-redis://memorystore.internal:6379/0}
   ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
   DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY}

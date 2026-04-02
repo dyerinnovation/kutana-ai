@@ -13,7 +13,7 @@ One-time environment setup required before running any milestone test. All subse
 ## Step 1 — Clone & Install Dependencies
 
 ```bash
-cd convene-ai
+cd kutana-ai
 
 # Python packages (all workspace members)
 UV_LINK_MODE=copy uv sync --all-packages
@@ -48,12 +48,12 @@ Key variables (edit `.env` as needed):
 
 | Variable | Default | Notes |
 |----------|---------|-------|
-| `DATABASE_URL` | `postgresql+asyncpg://convene:convene@localhost:5432/convene` | Local Postgres |
+| `DATABASE_URL` | `postgresql+asyncpg://kutana:kutana@localhost:5432/kutana` | Local Postgres |
 | `REDIS_URL` | `redis://localhost:6379/0` | Local Redis |
 | `AGENT_GATEWAY_PORT` | `8003` | WebSocket gateway |
 | `AGENT_GATEWAY_JWT_SECRET` | `change-me-in-production` | JWT signing secret |
 | `STT_PROVIDER` | `whisper-remote` | Speech-to-text backend |
-| `WHISPER_API_URL` | `http://spark-b0f2.local/convene-stt/v1` | Whisper endpoint |
+| `WHISPER_API_URL` | `http://spark-b0f2.local/kutana-stt/v1` | Whisper endpoint |
 
 ## Step 4 — Run Database Migrations
 
@@ -110,7 +110,7 @@ Expected: `200`
 curl -s -X POST http://localhost:8000/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "tester@convene.dev",
+    "email": "tester@kutana.dev",
     "password": "TestPass123!",
     "name": "Test User"
   }' | jq .
@@ -121,7 +121,7 @@ Save the token:
 export TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "tester@convene.dev",
+    "email": "tester@kutana.dev",
     "password": "TestPass123!",
     "name": "Test User"
   }' | jq -r '.token')
@@ -133,7 +133,7 @@ echo "TOKEN=$TOKEN"
 > ```bash
 > export TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/auth/login \
 >   -H "Content-Type: application/json" \
->   -d '{"email": "tester@convene.dev", "password": "TestPass123!"}' \
+>   -d '{"email": "tester@kutana.dev", "password": "TestPass123!"}' \
 >   | jq -r '.token')
 > ```
 

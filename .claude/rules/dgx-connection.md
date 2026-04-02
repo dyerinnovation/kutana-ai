@@ -7,15 +7,15 @@ Image builds run on the DGX Spark. kubectl/helm run locally — they are configu
 ```bash
 # Push locally, then pull on DGX
 git push
-ssh dgx 'cd ~/convene-ai && git pull'
+ssh dgx 'cd ~/kutana-ai && git pull'
 ```
 
 ## Build & Push Images
 
 Use the `/build-and-push` skill or run directly:
 ```bash
-ssh dgx 'cd ~/convene-ai && bash scripts/build_and_push.sh all'
-ssh dgx 'cd ~/convene-ai && bash scripts/build_and_push.sh api-server agent-gateway'
+ssh dgx 'cd ~/kutana-ai && bash scripts/build_and_push.sh all'
+ssh dgx 'cd ~/kutana-ai && bash scripts/build_and_push.sh api-server agent-gateway'
 ```
 
 ## Deploy (Helm — runs locally)
@@ -23,17 +23,17 @@ ssh dgx 'cd ~/convene-ai && bash scripts/build_and_push.sh api-server agent-gate
 kubectl and helm are configured locally to target the DGX K3s cluster. No SSH required:
 
 ```bash
-helm upgrade --install convene charts/convene -n convene --create-namespace
+helm upgrade --install kutana charts/kutana -n kutana --create-namespace
 ```
 
 ## Cluster Status & Logs (run locally)
 
 ```bash
 # Pod status
-kubectl get pods -n convene
+kubectl get pods -n kutana
 
 # Service logs
-kubectl logs -n convene deploy/agent-gateway
+kubectl logs -n kutana deploy/agent-gateway
 
 # Helm releases
 helm list -A
@@ -52,6 +52,6 @@ ssh dgx '<command>'
 - **kubectl/helm:** configured locally via `~/.kube/config` — run them directly, no SSH needed
 - **Image builds:** still happen on DGX via `ssh dgx 'bash scripts/build_and_push.sh ...'`
 - **Container runtime:** containerd (K3s) — local Docker registry at `localhost:30500`
-- **Cluster URLs:** `convene.spark-b0f2.local` — use `aiohttp` not `httpx` for mDNS
+- **Cluster URLs:** `kutana.spark-b0f2.local` — use `aiohttp` not `httpx` for mDNS
 - **Docker Compose:** can still be used for local dev but is NOT the production deployment method
 - See `internal-docs/architecture/patterns/dgx-spark-ssh.md` for full patterns.

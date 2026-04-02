@@ -1,4 +1,4 @@
-# Woodpecker CI pipeline for Convene AI
+# Woodpecker CI pipeline for Kutana AI
 # Stages: lint → (type-check ∥ test) → build → deploy
 #
 # Build and deploy only run on pushes to main.
@@ -12,9 +12,9 @@ services:
   - name: postgres
     image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_USER: convene
-      POSTGRES_PASSWORD: convene
-      POSTGRES_DB: convene
+      POSTGRES_USER: kutana
+      POSTGRES_PASSWORD: kutana
+      POSTGRES_DB: kutana
 
   - name: redis
     image: redis:7-alpine
@@ -37,14 +37,14 @@ steps:
     image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
     commands:
       - uv sync
-      - uv run mypy packages/convene-core/
+      - uv run mypy packages/kutana-core/
     depends_on: [lint]
 
   # ── test ──────────────────────────────────────────────────────────────────
   - name: test
     image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
     environment:
-      DATABASE_URL: postgresql+asyncpg://convene:convene@postgres:5432/convene
+      DATABASE_URL: postgresql+asyncpg://kutana:kutana@postgres:5432/kutana
       REDIS_URL: redis://redis:6379/0
     commands:
       - uv sync
@@ -62,7 +62,7 @@ steps:
       - |
         set -e
         SHORT_SHA=$(echo "$CI_COMMIT_SHA" | cut -c1-8)
-        REGISTRY="localhost:30500/convene"
+        REGISTRY="localhost:30500/kutana"
         echo "==> Building images for commit ${SHORT_SHA}"
         for svc in api-server agent-gateway audio-service task-engine mcp-server worker web; do
           if [ "$svc" = "web" ]; then
@@ -101,9 +101,9 @@ steps:
       - |
         set -e
         SHORT_SHA=$(echo "$CI_COMMIT_SHA" | cut -c1-8)
-        echo "==> Deploying convene with imageTag=${SHORT_SHA}"
-        helm upgrade --install convene charts/convene \
-          --namespace convene \
+        echo "==> Deploying kutana with imageTag=${SHORT_SHA}"
+        helm upgrade --install kutana charts/kutana \
+          --namespace kutana \
           --create-namespace \
           --set global.imageTag="${SHORT_SHA}" \
           --wait \

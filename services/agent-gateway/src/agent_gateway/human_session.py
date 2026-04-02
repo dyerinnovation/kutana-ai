@@ -432,7 +432,7 @@ class HumanSessionHandler:
         if self._manager.redis is None:
             return
 
-        from convene_core.events.definitions import ParticipantJoined, ParticipantLeft
+        from kutana_core.events.definitions import ParticipantJoined, ParticipantLeft
 
         if action == "joined":
             event: ParticipantJoined | ParticipantLeft = ParticipantJoined(
@@ -452,7 +452,7 @@ class HumanSessionHandler:
         payload = json.dumps(event.to_dict(), default=str)
         try:
             await self._manager.redis.xadd(
-                "convene:events",
+                "kutana:events",
                 {"event_type": event.event_type, "payload": payload},
                 maxlen=10_000,
                 approximate=True,

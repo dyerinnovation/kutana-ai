@@ -13,8 +13,8 @@ from audio_service.main import (
     app,
     lifespan,
 )
-from convene_providers.stt.whisper_remote_stt import WhisperRemoteSTT
-from convene_providers.stt.whisper_stt import WhisperSTT
+from kutana_providers.stt.whisper_remote_stt import WhisperRemoteSTT
+from kutana_providers.stt.whisper_stt import WhisperSTT
 
 # ---- Settings Tests ----
 
@@ -83,13 +83,13 @@ class TestCreateSTTProvider:
         """Creates WhisperRemoteSTT with API URL."""
         settings = AudioServiceSettings(
             stt_provider="whisper-remote",
-            whisper_api_url="http://spark-b0f2.local/convene-stt/v1",
+            whisper_api_url="http://spark-b0f2.local/kutana-stt/v1",
         )
         mid = uuid4()
         provider = _create_stt_provider(settings, mid)
         assert isinstance(provider, WhisperRemoteSTT)
         assert provider._meeting_id == mid
-        assert provider._api_url == "http://spark-b0f2.local/convene-stt/v1"
+        assert provider._api_url == "http://spark-b0f2.local/kutana-stt/v1"
 
     def test_whisper_remote_missing_url_raises(self) -> None:
         """whisper-remote without URL raises ValueError."""

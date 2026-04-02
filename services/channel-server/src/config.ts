@@ -1,5 +1,5 @@
 /**
- * Configuration for the Convene AI Channel Server.
+ * Configuration for the Kutana AI Channel Server.
  *
  * All settings are read from environment variables so the server can be
  * parameterised without code changes.
@@ -8,19 +8,19 @@
 import type { AgentMode, EntityType } from "./types.js";
 
 export interface ChannelServerConfig {
-  /** WebSocket URL of the Convene agent gateway (e.g. wss://convene.spark-b0f2.local/ws). */
-  conveneApiUrl: string;
-  /** HTTP base URL of the Convene API server. */
-  conveneHttpUrl: string;
+  /** WebSocket URL of the Kutana agent gateway (e.g. wss://kutana.spark-b0f2.local/ws). */
+  kutanaApiUrl: string;
+  /** HTTP base URL of the Kutana API server. */
+  kutanaHttpUrl: string;
   /** Agent API key used for authentication. */
-  conveneApiKey: string;
+  kutanaApiKey: string;
   /**
    * Optional pre-issued gateway JWT.  When set, the API-key → JWT exchange
    * step is skipped and this token is used directly.
    */
-  conveneBearerToken: string;
+  kutanaBearerToken: string;
   /** Display name shown in the meeting participant list (default: "Claude Code"). */
-  conveneAgentName: string;
+  kutanaAgentName: string;
   /** Controls which event types are forwarded to Claude. */
   agentMode: AgentMode;
   /** Entity types to forward when agentMode is "selective". */
@@ -33,7 +33,7 @@ export interface ChannelServerConfig {
  * Load configuration from environment variables.
  *
  * Logs a warning and applies defaults for optional variables.
- * Callers should validate that required fields (conveneApiKey)
+ * Callers should validate that required fields (kutanaApiKey)
  * are non-empty before starting the server.
  */
 export function loadConfig(): ChannelServerConfig {
@@ -53,11 +53,11 @@ export function loadConfig(): ChannelServerConfig {
   const tlsRejectUnauthorized = rawTls !== "0";
 
   return {
-    conveneApiUrl: rawApiUrl,
-    conveneHttpUrl: rawHttpUrl,
-    conveneApiKey: process.env["CONVENE_API_KEY"] ?? "",
-    conveneBearerToken: process.env["CONVENE_BEARER_TOKEN"] ?? "",
-    conveneAgentName: process.env["CONVENE_AGENT_NAME"] ?? "Claude Code",
+    kutanaApiUrl: rawApiUrl,
+    kutanaHttpUrl: rawHttpUrl,
+    kutanaApiKey: process.env["CONVENE_API_KEY"] ?? "",
+    kutanaBearerToken: process.env["CONVENE_BEARER_TOKEN"] ?? "",
+    kutanaAgentName: process.env["CONVENE_AGENT_NAME"] ?? "Claude Code",
     agentMode,
     entityFilter,
     tlsRejectUnauthorized,

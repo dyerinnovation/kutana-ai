@@ -116,9 +116,9 @@ export function AgentDetailPage() {
     return JSON.stringify(
       {
         mcpServers: {
-          convene: {
+          kutana: {
             type: "streamableHttp",
-            url: "https://convene.spark-b0f2.local/mcp",
+            url: "https://kutana.spark-b0f2.local/mcp",
             headers: {
               Authorization: `Bearer ${rawKey ?? "${CONVENE_API_KEY}"}`,
             },
@@ -323,9 +323,9 @@ export function AgentDetailPage() {
       {/* MCP Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle>Connect to Convene</CardTitle>
+          <CardTitle>Connect to Kutana</CardTitle>
           <p className="text-sm text-gray-400">
-            Add the Convene MCP server to your Claude Code or MCP client settings.
+            Add the Kutana MCP server to your Claude Code or MCP client settings.
             Your API key authenticates requests — no Docker or server setup required.
           </p>
         </CardHeader>
@@ -380,7 +380,7 @@ export function AgentDetailPage() {
           </div>
           <div className="rounded-lg border border-gray-800 bg-gray-900/50 px-4 py-3 text-sm text-gray-400">
             <p className="font-medium text-gray-300 mb-1">Then in Claude Code:</p>
-            <p>Open a new session and say <span className="font-mono text-blue-400">"Join the meeting on Convene"</span></p>
+            <p>Open a new session and say <span className="font-mono text-blue-400">"Join the meeting on Kutana"</span></p>
           </div>
         </CardContent>
       </Card>

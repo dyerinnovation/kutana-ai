@@ -4,7 +4,7 @@
 
 ## Work Completed
 
-- **Added workspace dependencies**: `convene-providers` and `audio-service` added to agent-gateway's pyproject.toml with workspace sources
+- **Added workspace dependencies**: `kutana-providers` and `audio-service` added to agent-gateway's pyproject.toml with workspace sources
 - **Extended settings**: Added `stt_provider`, `stt_api_key`, `whisper_model_size`, `whisper_api_url` fields to `AgentGatewaySettings`
 - **Created AudioBridge** (`audio_bridge.py`): Manages per-meeting `AudioPipeline` instances with background segment consumer tasks. Handles ensure/process/close lifecycle per meeting.
 - **Wired AudioBridge into AgentSession**:
@@ -24,7 +24,7 @@
 - `UV_LINK_MODE=copy uv sync --all-packages` — passed
 - `uv run pytest services/agent-gateway/tests/ -x -v` — **58 tests passed** (38 existing + 20 new)
 - `uv run ruff check services/agent-gateway/` — all checks passed
-- `uv run mypy packages/convene-core/` — pre-existing warnings only (comparison-overlap in test_models.py)
+- `uv run mypy packages/kutana-core/` — pre-existing warnings only (comparison-overlap in test_models.py)
 
 ## Work Remaining
 
@@ -37,6 +37,6 @@
 ## Lessons Learned
 
 - **macOS `UF_HIDDEN` flag**: The `.pth` files in `.venv` get the hidden flag set even when using `UV_LINK_MODE=copy`. Must run `chflags -R nohidden .venv` after `uv sync` for pytest to find workspace packages. This is a persistent issue that requires running the fix each time.
-- **AudioPipeline as library**: The `AudioPipeline` from `audio-service` works well as an embedded library — no circular dependency issues since it only imports from `convene-core` and `convene-providers`.
+- **AudioPipeline as library**: The `AudioPipeline` from `audio-service` works well as an embedded library — no circular dependency issues since it only imports from `kutana-core` and `kutana-providers`.
 - **Segment consumer pattern**: The `get_segments()` async iterator must be consumed in a background task to drive the STT pipeline and publish events. Without this consumer, segments would never be read and Redis events wouldn't fire.
 - **EventRelay transcript routing**: The key insight is that `transcript.segment.final` events should be unpacked into structured `TranscriptMessage` fields rather than relayed as generic `EventMessage` blobs. This gives agents typed data (speaker_id, text, timestamps, confidence) instead of nested JSON they'd have to parse themselves.

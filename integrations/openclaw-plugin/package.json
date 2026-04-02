@@ -1,7 +1,7 @@
 {
-  "name": "@convene/openclaw-plugin",
+  "name": "@kutana/openclaw-plugin",
   "version": "0.1.0",
-  "description": "Convene AI meeting tools for OpenClaw agents",
+  "description": "Kutana AI meeting tools for OpenClaw agents",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

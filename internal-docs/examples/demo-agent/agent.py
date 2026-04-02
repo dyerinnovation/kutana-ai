@@ -1,6 +1,6 @@
-"""Convene AI Demo Agent — minimal Claude-powered meeting agent.
+"""Kutana AI Demo Agent — minimal Claude-powered meeting agent.
 
-Connects directly to the Convene AI agent gateway via WebSocket, receives
+Connects directly to the Kutana AI agent gateway via WebSocket, receives
 live transcript segments and entity extraction events, and uses Claude Sonnet
 with tool use to respond intelligently.
 
@@ -20,7 +20,7 @@ import os
 import sys
 from typing import Any
 
-SYSTEM_PROMPT = """You are a demo AI agent connected to a Convene AI meeting via WebSocket.
+SYSTEM_PROMPT = """You are a demo AI agent connected to a Kutana AI meeting via WebSocket.
 You receive live transcript segments and entity extraction events from the meeting.
 
 Your role:
@@ -80,12 +80,12 @@ TOOLS: list[dict[str, Any]] = [
 
 
 class DemoAgent:
-    """Minimal Convene AI demo agent using the Anthropic SDK directly.
+    """Minimal Kutana AI demo agent using the Anthropic SDK directly.
 
     Attributes:
         meeting_id: UUID of the meeting to join.
-        convene_api_url: Base URL of the Convene AI API server.
-        convene_api_key: Agent API key (cvn_...) for token exchange.
+        kutana_api_url: Base URL of the Kutana AI API server.
+        kutana_api_key: Agent API key (cvn_...) for token exchange.
         gateway_url: WebSocket URL of the agent gateway.
         anthropic_api_key: Anthropic API key for Claude.
     """
@@ -93,8 +93,8 @@ class DemoAgent:
     def __init__(
         self,
         meeting_id: str,
-        convene_api_key: str,
-        convene_api_url: str,
+        kutana_api_key: str,
+        kutana_api_url: str,
         anthropic_api_key: str,
         gateway_url: str,
     ) -> None:
@@ -102,14 +102,14 @@ class DemoAgent:
 
         Args:
             meeting_id: UUID of the meeting to join.
-            convene_api_key: Agent API key for gateway token exchange.
-            convene_api_url: HTTP base URL of the Convene AI API server.
+            kutana_api_key: Agent API key for gateway token exchange.
+            kutana_api_url: HTTP base URL of the Kutana AI API server.
             anthropic_api_key: Anthropic API key.
             gateway_url: WebSocket base URL of the agent gateway.
         """
         self.meeting_id = meeting_id
-        self.convene_api_url = convene_api_url
-        self.convene_api_key = convene_api_key
+        self.kutana_api_url = kutana_api_url
+        self.kutana_api_key = kutana_api_key
         self.gateway_url = gateway_url
         self.event_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
         self.transcript_buffer: list[str] = []
@@ -133,8 +133,8 @@ class DemoAgent:
 
         async with httpx.AsyncClient(timeout=10.0) as http:
             resp = await http.post(
-                f"{self.convene_api_url}/api/v1/token/gateway",
-                headers={"X-API-Key": self.convene_api_key},
+                f"{self.kutana_api_url}/api/v1/token/gateway",
+                headers={"X-API-Key": self.kutana_api_key},
             )
             if resp.status_code != 200:
                 print(f"Token exchange failed ({resp.status_code}): {resp.text}")
@@ -347,7 +347,7 @@ class DemoAgent:
             print("websockets not installed. Run: pip install websockets")
             sys.exit(1)
 
-        print(f"Getting gateway token from {self.convene_api_url} ...")
+        print(f"Getting gateway token from {self.kutana_api_url} ...")
         token = await self._get_gateway_token()
 
         ws_url = f"{self.gateway_url}/agent/connect?token={token}"
@@ -388,7 +388,7 @@ class DemoAgent:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Convene AI demo agent — joins a meeting and monitors with Claude"
+        description="Kutana AI demo agent — joins a meeting and monitors with Claude"
     )
     parser.add_argument(
         "--meeting-id",
@@ -398,7 +398,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--api-url",
         default=os.environ.get("CONVENE_API_URL", "http://localhost:8000"),
-        help="Convene AI API server URL (default: $CONVENE_API_URL or http://localhost:8000)",
+        help="Kutana AI API server URL (default: $CONVENE_API_URL or http://localhost:8000)",
     )
     parser.add_argument(
         "--gateway-url",
@@ -413,12 +413,12 @@ async def main() -> None:
     args = _parse_args()
 
     anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    convene_api_key = os.environ.get("CONVENE_API_KEY", "")
+    kutana_api_key = os.environ.get("CONVENE_API_KEY", "")
 
     if not anthropic_api_key:
         print("ANTHROPIC_API_KEY is not set. Export it before running.")
         sys.exit(1)
-    if not convene_api_key:
+    if not kutana_api_key:
         print(
             "CONVENE_API_KEY is not set.\n"
             "Generate one via the dashboard or API:\n"
@@ -427,7 +427,7 @@ async def main() -> None:
         )
         sys.exit(1)
 
-    print(f"Convene AI Demo Agent")
+    print(f"Kutana AI Demo Agent")
     print(f"  Meeting ID : {args.meeting_id}")
     print(f"  API URL    : {args.api_url}")
     print(f"  Gateway URL: {args.gateway_url}")
@@ -435,8 +435,8 @@ async def main() -> None:
 
     agent = DemoAgent(
         meeting_id=args.meeting_id,
-        convene_api_key=convene_api_key,
-        convene_api_url=args.api_url,
+        kutana_api_key=kutana_api_key,
+        kutana_api_url=args.api_url,
         anthropic_api_key=anthropic_api_key,
         gateway_url=args.gateway_url,
     )

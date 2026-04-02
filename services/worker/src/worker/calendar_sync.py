@@ -7,13 +7,13 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
-from convene_core.models.meeting import Meeting, MeetingStatus
+from kutana_core.models.meeting import Meeting, MeetingStatus
 
 logger = logging.getLogger(__name__)
 
 
 class CalendarSync:
-    """Synchronises external calendar events into Convene meetings.
+    """Synchronises external calendar events into Kutana meetings.
 
     Provides a placeholder for calendar API integration (Google
     Calendar, Microsoft Graph, etc.).  The actual API calls will be

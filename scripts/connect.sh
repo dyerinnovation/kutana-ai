@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# connect.sh — Join a Convene meeting from the command line.
+# connect.sh — Join a Kutana meeting from the command line.
 #
 # Usage:
 #   ./scripts/connect.sh "Standup"              # join by title
 #   ./scripts/connect.sh --id <meeting_uuid>    # join by ID
 #
 # Required env vars:
-#   CONVENE_API_KEY   — API key from the Convene dashboard
-#   CONVENE_URL       — Base URL (default: https://convene.spark-b0f2.local)
+#   CONVENE_API_KEY   — API key from the Kutana dashboard
+#   CONVENE_URL       — Base URL (default: https://kutana.spark-b0f2.local)
 
 set -euo pipefail
 
-CONVENE_URL="${CONVENE_URL:-https://convene.spark-b0f2.local}"
+CONVENE_URL="${CONVENE_URL:-https://kutana.spark-b0f2.local}"
 MCP_URL="${CONVENE_URL}/mcp"
 
 if [[ -z "${CONVENE_API_KEY:-}" ]]; then
@@ -47,7 +47,7 @@ if [[ -z "$MEETING_TITLE" && -z "$MEETING_ID" ]]; then
 fi
 
 # ── Step 1: Exchange API key for MCP JWT ────────────────────────────────────
-echo "Authenticating with Convene API..."
+echo "Authenticating with Kutana API..."
 TOKEN_RESPONSE=$(curl -sf -X POST \
   "${CONVENE_URL}/api/v1/token/mcp" \
   -H "X-API-Key: ${CONVENE_API_KEY}" \

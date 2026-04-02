@@ -9,20 +9,20 @@
   - `values.yaml` — vLLM image, Whisper model config, resources (32Gi limit, 1 GPU), ingress
   - `templates/deployment.yaml` — vLLM deployment with `Recreate` strategy, health probes, HF cache mount
   - `templates/service.yaml` — ClusterIP on port 8080
-  - `templates/ingress.yaml` — NGINX ingress at `/convene-stt` with rewrite
+  - `templates/ingress.yaml` — NGINX ingress at `/kutana-stt` with rewrite
 - Uninstalled Qwen/TGI Helm release from DGX Spark to free GPU
 - Downloaded `openai/whisper-large-v3` model (~3GB) to HuggingFace cache on Spark
 - Deployed STT chart as Helm release `stt` in `convene` namespace (revision 3)
 - Verified:
   - Pod is Running (1/1 Ready) with GPU allocated
-  - `curl http://spark-b0f2.local/convene-stt/v1/models` returns `openai/whisper-large-v3`
+  - `curl http://spark-b0f2.local/kutana-stt/v1/models` returns `openai/whisper-large-v3`
   - Helm list shows `stt` release in `convene` namespace
 
 ## Work Remaining
 
 - Test audio transcription endpoint with a real `.wav` file (`/v1/audio/transcriptions`)
-- Integrate STT endpoint into Convene AI audio-service (update STT provider config)
-- Consider adding a WhisperSelfHosted provider in `convene-providers` that targets this endpoint
+- Integrate STT endpoint into Kutana AI audio-service (update STT provider config)
+- Consider adding a WhisperSelfHosted provider in `kutana-providers` that targets this endpoint
 - Set up monitoring/alerting for the STT pod
 - Git commit the new files (docs + Helm chart)
 

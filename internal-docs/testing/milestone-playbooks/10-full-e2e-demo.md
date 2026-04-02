@@ -52,7 +52,7 @@ The script returns a summary with the user ID, agent ID, meeting ID, and transcr
 ## Step 3: Verify Meeting Status in Database
 
 ```bash
-docker exec -it $(docker compose ps -q postgres) psql -U convene -d convene -c \
+docker exec -it $(docker compose ps -q postgres) psql -U kutana -d kutana -c \
   "SELECT id, title, status, started_at, ended_at
    FROM meetings
    ORDER BY created_at DESC
@@ -64,7 +64,7 @@ Expected: Most recent meeting shows `status = 'completed'` with both `started_at
 ## Step 4: Verify Task in Database
 
 ```bash
-docker exec -it $(docker compose ps -q postgres) psql -U convene -d convene -c \
+docker exec -it $(docker compose ps -q postgres) psql -U kutana -d kutana -c \
   "SELECT id, meeting_id, description, priority, created_at
    FROM tasks
    ORDER BY created_at DESC
@@ -76,7 +76,7 @@ Expected: Task created in Step 13 appears with the correct meeting ID and priori
 ## Step 5: Verify Redis Events
 
 ```bash
-docker exec -it $(docker compose ps -q redis) redis-cli XLEN convene:events
+docker exec -it $(docker compose ps -q redis) redis-cli XLEN kutana:events
 ```
 
 Expected: Non-zero count. The exact number depends on transcript segments and events generated.
@@ -84,7 +84,7 @@ Expected: Non-zero count. The exact number depends on transcript segments and ev
 ```bash
 # View recent events
 docker exec -it $(docker compose ps -q redis) redis-cli \
-  XREVRANGE convene:events + - COUNT 5
+  XREVRANGE kutana:events + - COUNT 5
 ```
 
 Expected: Events include `transcript.segment.final`, `meeting.started`, `meeting.ended`, etc.
@@ -135,7 +135,7 @@ Expected: Same 13 steps complete. Transcript count may differ from the FLAC file
 - [ ] Meeting left cleanly
 - [ ] Meeting ended (status → "completed")
 - [ ] Task created in database
-- [ ] Redis `convene:events` stream has events
+- [ ] Redis `kutana:events` stream has events
 - [ ] Silence test completes without errors
 - [ ] Alternative audio file test completes
 
@@ -158,5 +158,5 @@ Expected: Same 13 steps complete. Transcript count may differ from the FLAC file
 # The demo creates its own user/agent/meeting — no shared state to clean up
 # To reset for a fresh run, you can clear the database:
 # WARNING: This deletes ALL data
-# docker exec -it $(docker compose ps -q postgres) psql -U convene -d convene -c "TRUNCATE users, agents, meetings, tasks CASCADE;"
+# docker exec -it $(docker compose ps -q postgres) psql -U kutana -d kutana -c "TRUNCATE users, agents, meetings, tasks CASCADE;"
 ```

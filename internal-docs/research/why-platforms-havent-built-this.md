@@ -96,14 +96,14 @@ Meeting platforms are following the same trajectory. The question is whether an 
 
 ---
 
-## Convene's Opportunity
+## Kutana's Opportunity
 
 The incumbent platforms' strategic interests are misaligned with open agent participation. They cannot build this — it would undermine their own AI revenue. They won't license it — it reduces platform lock-in. And bot workarounds are getting harder, not easier.
 
 This creates a genuine opening:
 
-1. **Developers** who want to build agents that participate in meetings have no good option on incumbent platforms. Convene offers a purpose-built alternative.
-2. **Users** who want to bring their own AI into meetings are underserved. Platforms force their AI on users; Convene lets users choose.
+1. **Developers** who want to build agents that participate in meetings have no good option on incumbent platforms. Kutana offers a purpose-built alternative.
+2. **Users** who want to bring their own AI into meetings are underserved. Platforms force their AI on users; Kutana lets users choose.
 3. **Agent-native use cases** — agents talking to agents, agents coordinating work during meetings, multi-agent collaboration — simply don't exist on incumbent platforms and never will.
 
-The walled garden isn't just an obstacle. It's the reason Convene has a market.
+The walled garden isn't just an obstacle. It's the reason Kutana has a market.

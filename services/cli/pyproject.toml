@@ -1,7 +1,7 @@
 [project]
-name = "convene-cli"
+name = "kutana-cli"
 version = "0.1.0"
-description = "CLI tool for Convene AI platform"
+description = "CLI tool for Kutana AI platform"
 requires-python = ">=3.12"
 dependencies = [
     "typer>=0.12",
@@ -10,10 +10,10 @@ dependencies = [
 ]
 
 [project.scripts]
-convene = "convene_cli.main:app"
+kutana = "kutana_cli.main:app"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/convene_cli"]
+packages = ["src/kutana_cli"]
 
 [build-system]
 requires = ["hatchling"]

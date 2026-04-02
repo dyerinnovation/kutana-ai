@@ -89,7 +89,7 @@ When an agent joins a meeting with `tts_enabled=True`:
 
 After each successful synthesis:
 ```python
-await redis.xadd("convene:events", {
+await redis.xadd("kutana:events", {
     "event_type": "tts.usage",
     "payload": json.dumps({
         "user_id": str(user_id),

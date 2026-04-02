@@ -1,15 +1,15 @@
 #!/bin/bash
 set -e
 
-# Convene AI — Deploy to DGX Spark
+# Kutana AI — Deploy to DGX Spark
 # Usage: ./deploy/deploy-to-dgx.sh
 # Run this from your Mac. It will SSH into the DGX and set everything up.
 
 DGX_HOST="dgx"
-REPO_DIR="$HOME/convene-ai"
-REMOTE_URL="git@github.com:dyerinnovation/convene-ai.git"
+REPO_DIR="$HOME/kutana-ai"
+REMOTE_URL="git@github.com:dyerinnovation/kutana-ai.git"
 
-echo "=== Deploying Convene AI to DGX Spark ==="
+echo "=== Deploying Kutana AI to DGX Spark ==="
 
 # Step 1: Check if repo exists on DGX, if not clone it
 echo "[1/6] Setting up repo on DGX..."

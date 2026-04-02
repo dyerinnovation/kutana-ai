@@ -1,12 +1,12 @@
 # Archive Twilio Files and Refactor Audio Service
 
 ## Objective
-Remove Twilio-specific code from the Convene AI audio service, archive the files, and refactor the audio pipeline to accept PCM16 16kHz mono audio directly (no mulaw transcoding). This prepares the audio service for transport-agnostic adapters (e.g., LiveKit, WebSocket).
+Remove Twilio-specific code from the Kutana AI audio service, archive the files, and refactor the audio pipeline to accept PCM16 16kHz mono audio directly (no mulaw transcoding). This prepares the audio service for transport-agnostic adapters (e.g., LiveKit, WebSocket).
 
 ## Steps
 
 ### 1. Create archive directory and copy files
-- Create `~/Documents/Dyer_Innovation/archive/convene-twilio/`
+- Create `~/Documents/Dyer_Innovation/archive/kutana-twilio/`
 - Copy `twilio_handler.py`, `meeting_dialer.py`, `scripts/dial_test.py`, `docs/milestone-testing/M1_Live_Test.md`
 
 ### 2. Delete archived files from the repo
@@ -14,7 +14,7 @@ Remove Twilio-specific code from the Convene AI audio service, archive the files
 
 ### 3. Update audio-service/pyproject.toml
 - Remove `"twilio>=9.0"` from dependencies
-- Update description to "Audio pipeline and transport adapters for Convene AI"
+- Update description to "Audio pipeline and transport adapters for Kutana AI"
 
 ### 4. Refactor AudioPipeline (audio_pipeline.py)
 - Remove ALL mulaw transcoding code (decode table, _build_mulaw_table, _upsample_8k_to_16k, _transcode_mulaw_to_pcm16)

@@ -1,4 +1,4 @@
-"""WebSocket client for the Convene Agent Gateway.
+"""WebSocket client for the Kutana Agent Gateway.
 
 Reuses the battle-tested connection pattern from scripts/test_e2e_gateway.py.
 """
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class GatewayClient:
-    """WebSocket client that connects to the Convene Agent Gateway.
+    """WebSocket client that connects to the Kutana Agent Gateway.
 
     Manages the lifecycle of a gateway connection: connect, join meeting,
     buffer incoming transcript messages, and disconnect.

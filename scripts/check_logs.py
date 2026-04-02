@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Convene AI infrastructure and log health checker.
+"""Kutana AI infrastructure and log health checker.
 
 Checks Docker container health, PostgreSQL, Redis, and Redis Streams.
 Prints a summary report to stdout and optionally saves to a file.
@@ -71,7 +71,7 @@ def check_docker_compose() -> dict[str, str]:
 def check_postgres() -> tuple[str, str]:
     """Check PostgreSQL connectivity."""
     rc, out, err = run_cmd(
-        ["docker", "compose", "exec", "-T", "postgres", "pg_isready", "-U", "convene"]
+        ["docker", "compose", "exec", "-T", "postgres", "pg_isready", "-U", "kutana"]
     )
     if rc == 0:
         return "✅", "Accepting connections"
@@ -206,7 +206,7 @@ def generate_report(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Convene AI health checker")
+    parser = argparse.ArgumentParser(description="Kutana AI health checker")
     parser.add_argument(
         "--output",
         type=str,
@@ -214,7 +214,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    print("Checking Convene AI infrastructure health...\n")
+    print("Checking Kutana AI infrastructure health...\n")
 
     docker_status = check_docker_compose()
     pg_status = check_postgres()
