@@ -15,9 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api_server.auth_deps import CurrentUser
 from api_server.deps import get_db_session, get_event_publisher
 from api_server.event_publisher import EventPublisher
-from convene_core.database.models import TaskORM
-from convene_core.events.definitions import TaskCreated, TaskUpdated
-from convene_core.models.task import Task, TaskPriority, TaskStatus
+from kutana_core.database.models import TaskORM
+from kutana_core.events.definitions import TaskCreated, TaskUpdated
+from kutana_core.models.task import Task, TaskPriority, TaskStatus
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -124,7 +124,7 @@ def _orm_to_domain(task: TaskORM) -> Task:
         task: The ORM task row with all fields populated.
 
     Returns:
-        A :class:`~convene_core.models.task.Task` domain model.
+        A :class:`~kutana_core.models.task.Task` domain model.
     """
     dep_ids: list[UUID] = [
         UUID(dep) for dep in (task.dependencies or [])

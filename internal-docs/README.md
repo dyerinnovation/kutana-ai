@@ -1,6 +1,6 @@
 # Internal Docs
 
-Contributor and maintainer documentation for Convene AI. Not intended for end users.
+Contributor and maintainer documentation for Kutana AI. Not intended for end users.
 
 For user-facing documentation see [`external-docs/`](../external-docs/README.md).
 
@@ -9,7 +9,7 @@ For user-facing documentation see [`external-docs/`](../external-docs/README.md)
 Implementation patterns, design decisions, and research:
 
 - [`architecture/patterns/`](architecture/patterns/) — Claude Code / contributor reference patterns
-  - `convene-core.md` — domain models, events, interfaces, database
+  - `kutana-core.md` — domain models, events, interfaces, database
   - `provider-patterns.md` — ABC signatures, library conventions, registry
   - `message-bus.md` — MessageBus ABC, Redis Streams, MockMessageBus
   - `memory-architecture.md` — four-layer memory system

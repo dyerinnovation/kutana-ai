@@ -1,7 +1,7 @@
 /**
- * Convene AI Claude Code Channel Server
+ * Kutana AI Claude Code Channel Server
  *
- * MCP server that bridges Convene AI meetings to Claude Code. Provides
+ * MCP server that bridges Kutana AI meetings to Claude Code. Provides
  * tools for meeting discovery, joining, chat, turn management, and
  * real-time event forwarding via channel notifications.
  *
@@ -10,7 +10,7 @@
  *   bun src/server.ts
  *
  * Required environment variables:
- *   CONVENE_API_KEY      — agent API key (from Convene dashboard)
+ *   CONVENE_API_KEY      — agent API key (from Kutana dashboard)
  *
  * Optional:
  *   CONVENE_API_URL      — WebSocket URL of the agent gateway
@@ -23,7 +23,7 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import type { ServerCapabilities } from "@modelcontextprotocol/sdk/types.js";
-import { ConveneClient } from "./convene-client.js";
+import { KutanaClient } from "./kutana-client.js";
 import { loadConfig } from "./config.js";
 import { registerTools } from "./tools.js";
 import {
@@ -36,10 +36,10 @@ import type { ChannelMessage } from "./types.js";
 // Platform instructions (Layer 1 context — sent during MCP initialize)
 // ---------------------------------------------------------------------------
 
-const CHANNEL_INSTRUCTIONS = `Events from the convene-ai channel arrive as <channel source="convene-ai" topic="..." type="...">.
+const CHANNEL_INSTRUCTIONS = `Events from the kutana-ai channel arrive as <channel source="kutana-ai" topic="..." type="...">.
 They contain real-time meeting data: transcript segments, chat messages, speaker queue changes,
 and extracted insights (tasks, decisions, questions, blockers).
-Use the convene tools (list_meetings, join_meeting, reply, raise_hand, etc.) to interact.
+Use the kutana tools (list_meetings, join_meeting, reply, raise_hand, etc.) to interact.
 Reply with the reply tool when you want to send a message to the meeting chat.
 
 Start by listing available meetings with list_meetings, or join one with join_meeting.`;
@@ -56,10 +56,10 @@ type ExtendedCapabilities = ServerCapabilities & {
 // Main server factory — exported for testability
 // ---------------------------------------------------------------------------
 
-/** Create and return a configured MCP Server instance with a ConveneClient. */
+/** Create and return a configured MCP Server instance with a KutanaClient. */
 export function createServer(config: ReturnType<typeof loadConfig>): {
   server: Server;
-  client: ConveneClient;
+  client: KutanaClient;
 } {
   const capabilities: ExtendedCapabilities = {
     tools: {},
@@ -68,14 +68,14 @@ export function createServer(config: ReturnType<typeof loadConfig>): {
   };
 
   const server = new Server(
-    { name: "convene-ai", version: "0.2.0" },
+    { name: "kutana-ai", version: "0.2.0" },
     {
       capabilities,
       ...({ instructions: CHANNEL_INSTRUCTIONS } as object),
     },
   );
 
-  const client = new ConveneClient(config);
+  const client = new KutanaClient(config);
 
   // Callback for tools to notify resource changes on join/leave
   const onMeetingStateChange = async () => {
@@ -85,7 +85,7 @@ export function createServer(config: ReturnType<typeof loadConfig>): {
   registerTools(server, client, onMeetingStateChange);
   registerResources(server, client, config);
 
-  // Forward Convene events → Claude Code channel notifications
+  // Forward Kutana events → Claude Code channel notifications
   client.onChannelMessage(async (msg: ChannelMessage) => {
     try {
       await server.notification({
@@ -117,7 +117,7 @@ export function createServer(config: ReturnType<typeof loadConfig>): {
 async function main(): Promise<void> {
   const config = loadConfig();
 
-  if (!config.conveneApiKey) {
+  if (!config.kutanaApiKey) {
     process.stderr.write(
       "[channel-server] Error: CONVENE_API_KEY environment variable is required\n",
     );
@@ -142,7 +142,7 @@ async function main(): Promise<void> {
   // Authenticate so list_meetings and other API calls work immediately
   try {
     await client.authenticate();
-    process.stderr.write("[channel-server] Authenticated with Convene API\n");
+    process.stderr.write("[channel-server] Authenticated with Kutana API\n");
   } catch (err) {
     // Auth failure is logged but doesn't kill the server — tools will
     // attempt re-auth on first use.

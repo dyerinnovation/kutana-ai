@@ -39,17 +39,17 @@ kubectl and helm are configured locally to connect directly to the DGX Spark K3s
 ```bash
 # kubectl (runs locally, targets DGX K3s cluster)
 kubectl get pods -A
-kubectl -n convene get pods
+kubectl -n kutana get pods
 
 # helm (runs locally, targets DGX K3s cluster)
 helm list -A
-helm upgrade --install convene charts/convene -n convene --create-namespace
+helm upgrade --install kutana charts/kutana -n kutana --create-namespace
 ```
 
 Key facts:
 - **Local kubectl/helm:** configured via `~/.kube/config` to target the DGX Spark cluster directly
 - **Container runtime:** `containerd` (not Docker) — import images via `k3s ctr images import <file>` on the DGX
-- **Image builds still happen on DGX:** `ssh dgx 'cd ~/convene-ai && bash scripts/build_and_push.sh all'`
+- **Image builds still happen on DGX:** `ssh dgx 'cd ~/kutana-ai && bash scripts/build_and_push.sh all'`
 - **Old pattern (no longer needed):** the previous `ssh dgx 'echo PASSWORD | sudo -S env KUBECONFIG=... kubectl ...'` approach is retired
 
 ## PATH on Spark

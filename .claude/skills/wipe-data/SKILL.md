@@ -1,6 +1,6 @@
 ---
 name: wipe-data
-description: Wipe all Convene AI data — drop and recreate the database, flush Redis. TRIGGER on: wipe data, reset database, clean slate, flush redis, drop database, reset state.
+description: Wipe all Kutana AI data — drop and recreate the database, flush Redis. TRIGGER on: wipe data, reset database, clean slate, flush redis, drop database, reset state.
 permissions:
   - Bash(ssh:*)
 ---
@@ -24,7 +24,7 @@ Options:
 
 ## What it does
 
-1. Drops `convene` database on DGX postgres pod
+1. Drops `kutana` database on DGX postgres pod
 2. Recreates the database
 3. Runs `alembic upgrade head`
 4. Flushes all Redis keys with `FLUSHALL`

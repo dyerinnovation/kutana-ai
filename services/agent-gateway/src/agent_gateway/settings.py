@@ -32,7 +32,7 @@ class AgentGatewaySettings(BaseSettings):
         tts_default_voice: Default voice ID when the pool is exhausted or provider-specific.
     """
 
-    database_url: str = "postgresql+asyncpg://convene:convene@localhost:5432/convene"
+    database_url: str = "postgresql+asyncpg://kutana:kutana@localhost:5432/kutana"
     redis_url: str = "redis://localhost:6379/0"
     jwt_secret: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"

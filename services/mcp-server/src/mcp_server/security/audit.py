@@ -1,6 +1,6 @@
 """Structured audit logging for MCP auth events and tool calls.
 
-All audit records are emitted as JSON to the "convene.audit" logger.
+All audit records are emitted as JSON to the "kutana.audit" logger.
 In production this logger should be wired to a Redis Stream or a
 structured log sink (e.g. Loki, CloudWatch Logs).
 
@@ -36,7 +36,7 @@ import logging
 import time
 from uuid import UUID
 
-_audit_logger = logging.getLogger("convene.audit")
+_audit_logger = logging.getLogger("kutana.audit")
 
 
 # ---------------------------------------------------------------------------

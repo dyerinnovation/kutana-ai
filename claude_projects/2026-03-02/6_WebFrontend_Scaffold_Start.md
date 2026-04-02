@@ -3,7 +3,7 @@
 ## Date: 2026-03-02
 
 ## Objective
-Create the full React + TypeScript + Vite + Tailwind CSS v4 web frontend for Convene AI. This includes project configuration, API client layer, auth context, UI components, and all pages (Login, Register, Dashboard, Agent CRUD, Meetings).
+Create the full React + TypeScript + Vite + Tailwind CSS v4 web frontend for Kutana AI. This includes project configuration, API client layer, auth context, UI components, and all pages (Login, Register, Dashboard, Agent CRUD, Meetings).
 
 ## Scope
 - Project setup: package.json, vite.config.ts, tsconfig.json, index.html, Tailwind v4 CSS

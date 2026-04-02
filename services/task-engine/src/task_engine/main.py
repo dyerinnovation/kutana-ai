@@ -1,4 +1,4 @@
-"""FastAPI application entry point for the Convene AI task engine."""
+"""FastAPI application entry point for the Kutana AI task engine."""
 
 from __future__ import annotations
 
@@ -12,15 +12,15 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from convene_core.database.models import TaskORM
-from convene_core.database.session import create_engine, create_session_factory
-from convene_core.extraction.types import (
+from kutana_core.database.models import TaskORM
+from kutana_core.database.session import create_engine, create_session_factory
+from kutana_core.extraction.types import (
     AnyExtractedEntity,
     BatchSegment,
     ExtractionResult,
     TranscriptBatch,
 )
-from convene_providers.extraction.llm_extractor import LLMExtractor
+from kutana_providers.extraction.llm_extractor import LLMExtractor
 from task_engine.event_publisher import EventPublisher
 from task_engine.stream_consumer import StreamConsumer
 from task_engine.windower import DEFAULT_OVERLAP_SECONDS, DEFAULT_WINDOW_SECONDS, SegmentWindower
@@ -28,7 +28,7 @@ from task_engine.windower import DEFAULT_OVERLAP_SECONDS, DEFAULT_WINDOW_SECONDS
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from convene_core.models.transcript import TranscriptSegment
+    from kutana_core.models.transcript import TranscriptSegment
     from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
     from task_engine.windower import SegmentWindow
 
@@ -61,7 +61,7 @@ class TaskEngineSettings(BaseSettings):
         extra="ignore",
     )
 
-    database_url: str = "postgresql+asyncpg://convene:convene@localhost:5432/convene"
+    database_url: str = "postgresql+asyncpg://kutana:kutana@localhost:5432/kutana"
     redis_url: str = "redis://localhost:6379/0"
     anthropic_api_key: str = ""
     extraction_window_seconds: float = DEFAULT_WINDOW_SECONDS
@@ -362,7 +362,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(
-    title="Convene AI Task Engine",
+    title="Kutana AI Task Engine",
     description="LLM-powered task extraction from meeting transcripts",
     version="0.1.0",
     lifespan=lifespan,

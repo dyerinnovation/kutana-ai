@@ -18,7 +18,7 @@ Agent (WebSocket) → AgentSession._handle_audio() → AudioBridge.process_audio
 
 ## Implementation Steps
 
-1. **Add workspace deps** — `convene-providers` + `audio-service` to agent-gateway/pyproject.toml
+1. **Add workspace deps** — `kutana-providers` + `audio-service` to agent-gateway/pyproject.toml
 2. **Extend settings** — STT config fields (stt_provider, stt_api_key, whisper_model_size, whisper_api_url)
 3. **Create AudioBridge** — New `audio_bridge.py` managing per-meeting AudioPipeline instances
 4. **Wire into agent_session.py** — Replace TODO with AudioBridge calls

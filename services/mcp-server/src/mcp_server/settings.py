@@ -6,16 +6,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class MCPServerSettings(BaseSettings):
-    """Settings for the Convene MCP server.
+    """Settings for the Kutana MCP server.
 
     Loaded from environment variables. The MCP_API_KEY and
     MCP_AGENT_CONFIG_ID are configured by the user when they
     set up the MCP server in their Claude Desktop config.
 
     Attributes:
-        mcp_api_key: API key for authenticating with the Convene API.
+        mcp_api_key: API key for authenticating with the Kutana API.
         mcp_agent_config_id: UUID of the agent configuration.
-        api_base_url: Base URL of the Convene API server.
+        api_base_url: Base URL of the Kutana API server.
         gateway_ws_url: WebSocket URL of the agent gateway.
     """
 

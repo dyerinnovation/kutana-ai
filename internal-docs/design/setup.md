@@ -1,4 +1,4 @@
-# Convene AI Design System
+# Kutana AI Design System
 
 ## Palette — Signal Green + Charcoal
 
@@ -73,7 +73,7 @@ Defined in `web/src/index.css`:
 
 ### How it works
 
-1. `ThemeProvider` (`web/src/contexts/ThemeContext.tsx`) reads `localStorage("convene-theme")` and OS preference on first load.
+1. `ThemeProvider` (`web/src/contexts/ThemeContext.tsx`) reads `localStorage("kutana-theme")` and OS preference on first load.
 2. It sets `document.documentElement.setAttribute("data-theme", theme)`.
 3. `html[data-theme="light"]` in `index.css` flips the `--color-gray-*` and `--color-ink-*` CSS variables.
 4. Because `@layer theme` rules lose to unlayered rules in CSS cascade, the light mode overrides always take effect without specificity hacks.

@@ -6,7 +6,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-from convene_providers.stt.whisper_remote_stt import WhisperRemoteSTT
+from kutana_providers.stt.whisper_remote_stt import WhisperRemoteSTT
 
 
 def _make_provider(

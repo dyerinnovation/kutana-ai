@@ -1,7 +1,7 @@
 /**
- * TypeScript types for the Convene AI Channel Server.
+ * TypeScript types for the Kutana AI Channel Server.
  *
- * Mirrors the Python domain models from convene-core so both sides of the
+ * Mirrors the Python domain models from kutana-core so both sides of the
  * WebSocket boundary share the same vocabulary.
  */
 
@@ -23,7 +23,7 @@ export type EntityType =
   | "follow_up";
 
 // ---------------------------------------------------------------------------
-// Extracted entities (mirror of convene_core/extraction/types.py)
+// Extracted entities (mirror of kutana_core/extraction/types.py)
 // ---------------------------------------------------------------------------
 
 /** Fields shared by every extracted entity type. */

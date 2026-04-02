@@ -1,5 +1,5 @@
 apiVersion: v2
 name: registry
-description: Local Docker registry for Convene AI images
+description: Local Docker registry for Kutana AI images
 type: application
 version: 0.1.0

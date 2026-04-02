@@ -12,9 +12,9 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from convene_core.database.models import TaskORM
-from convene_core.models.task import Task, TaskPriority, TaskStatus
-from convene_core.models.transcript import TranscriptSegment
+from kutana_core.database.models import TaskORM
+from kutana_core.models.task import Task, TaskPriority, TaskStatus
+from kutana_core.models.transcript import TranscriptSegment
 from task_engine.extractor import TaskExtractor
 
 pytestmark = pytest.mark.asyncio
@@ -330,7 +330,7 @@ class TestEventEmission:
 
     async def test_event_type_is_task_created(self) -> None:
         """Published event has event_type 'task.created'."""
-        from convene_core.events.definitions import TaskCreated
+        from kutana_core.events.definitions import TaskCreated
 
         meeting_id = uuid4()
         segment = _make_segment(meeting_id)

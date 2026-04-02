@@ -1,11 +1,11 @@
-# @convene/openclaw-plugin
+# @kutana/openclaw-plugin
 
-OpenClaw plugin that provides native Convene AI meeting tools for agents.
+OpenClaw plugin that provides native Kutana AI meeting tools for agents.
 
 ## Installation
 
 ```bash
-openclaw plugins install @convene/openclaw-plugin
+openclaw plugins install @kutana/openclaw-plugin
 ```
 
 ## Configuration
@@ -15,24 +15,24 @@ Add to your OpenClaw `config.yaml`:
 ```yaml
 plugins:
   entries:
-    convene:
+    kutana:
       config:
         apiKey: "cvn_your_api_key_here"
-        mcpUrl: "https://convene.spark-b0f2.local/mcp"  # Optional, defaults to hosted server
+        mcpUrl: "https://kutana.spark-b0f2.local/mcp"  # Optional, defaults to hosted server
 ```
 
-Get your API key from the [Convene dashboard](https://convene.spark-b0f2.local) → your agent → API Keys → Generate Key.
+Get your API key from the [Kutana dashboard](https://kutana.spark-b0f2.local) → your agent → API Keys → Generate Key.
 
 ## Available Tools
 
 | Tool | Description |
 |------|-------------|
-| `convene_list_meetings` | List available meetings |
-| `convene_join_meeting` | Join a meeting by ID |
-| `convene_get_transcript` | Get recent transcript segments |
-| `convene_create_task` | Create a task from meeting context |
-| `convene_get_participants` | List meeting participants |
-| `convene_create_meeting` | Create a new meeting |
+| `kutana_list_meetings` | List available meetings |
+| `kutana_join_meeting` | Join a meeting by ID |
+| `kutana_get_transcript` | Get recent transcript segments |
+| `kutana_create_task` | Create a task from meeting context |
+| `kutana_get_participants` | List meeting participants |
+| `kutana_create_meeting` | Create a new meeting |
 
 ## Development
 
@@ -44,7 +44,7 @@ npm test
 
 ## How It Works
 
-The plugin communicates with the Convene MCP server (Streamable HTTP) using OAuth 2.1 Bearer token authentication. On first tool call, it exchanges the configured API key for a short-lived JWT, then uses that token for all subsequent requests.
+The plugin communicates with the Kutana MCP server (Streamable HTTP) using OAuth 2.1 Bearer token authentication. On first tool call, it exchanges the configured API key for a short-lived JWT, then uses that token for all subsequent requests.
 
 ## See Also
 

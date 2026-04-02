@@ -6,8 +6,8 @@
 # Must run on the DGX Spark (hostname contains "spark").
 set -euo pipefail
 
-REGISTRY="localhost:30500/convene"
-REPO_DIR="$HOME/convene-ai"
+REGISTRY="localhost:30500/kutana"
+REPO_DIR="$HOME/kutana-ai"
 
 ALL_SERVICES=(api-server agent-gateway audio-service task-engine mcp-server worker web)
 

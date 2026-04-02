@@ -1,9 +1,9 @@
 """FeedDispatcher — consumes meeting events and creates feed runs.
 
-Subscribes to ``convene:events`` on the ``feed-dispatcher`` consumer group.
+Subscribes to ``kutana:events`` on the ``feed-dispatcher`` consumer group.
 When a ``meeting.started`` or ``meeting.ended`` event arrives, queries the
 database for matching feeds and enqueues ``FeedRun`` records to the
-``convene:feed-runs`` stream for the FeedRunner to pick up.
+``kutana:feed-runs`` stream for the FeedRunner to pick up.
 """
 
 from __future__ import annotations
@@ -20,16 +20,16 @@ from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import ResponseError
 from sqlalchemy import select
 
-from convene_core.database.models import FeedORM, FeedRunORM
+from kutana_core.database.models import FeedORM, FeedRunORM
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_STREAM_KEY = "convene:events"
+DEFAULT_STREAM_KEY = "kutana:events"
 DEFAULT_GROUP_NAME = "feed-dispatcher"
-FEED_RUNS_STREAM = "convene:feed-runs"
+FEED_RUNS_STREAM = "kutana:feed-runs"
 DEFAULT_BLOCK_MS = 5_000
 DEFAULT_BATCH_SIZE = 10
 _MAX_BACKOFF_SECONDS = 30

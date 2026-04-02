@@ -252,7 +252,7 @@ To verify the phantom words are resolved:
 
 To confirm the filters are working, check DGX logs:
 ```bash
-ssh dgx 'docker compose -f ~/convene-ai/docker-compose.yml logs agent-gateway | grep "dropped"'
+ssh dgx 'docker compose -f ~/kutana-ai/docker-compose.yml logs agent-gateway | grep "dropped"'
 ```
 Should show lines like: `"Whisper yielded 0 segments, dropped 36 — reasons: {'too_short': 36}"`
 

@@ -15,11 +15,11 @@ import pytest
 import mcp_server.main as main_module
 from mcp_server.auth import MCPIdentity
 from mcp_server.main import (
-    convene_get_chat_messages as get_chat_messages,
-    convene_get_meeting_status as get_meeting_status,
-    convene_send_chat_message as send_chat_message,
+    kutana_get_chat_messages as get_chat_messages,
+    kutana_get_meeting_status as get_meeting_status,
+    kutana_send_chat_message as send_chat_message,
 )
-from convene_core.models.chat import ChatMessage, ChatMessageType
+from kutana_core.models.chat import ChatMessage, ChatMessageType
 
 # ---------------------------------------------------------------------------
 # Shared test fixtures

@@ -1,6 +1,6 @@
-# Convene AI — CoWork Scheduled Tasks Setup Guide
+# Kutana AI — CoWork Scheduled Tasks Setup Guide
 
-> This guide walks you through setting up automated daily development sprints for Convene AI using Claude CoWork's scheduled tasks feature. The pattern enables incremental, token-efficient development where CoWork builds one feature per day and you review the work each morning.
+> This guide walks you through setting up automated daily development sprints for Kutana AI using Claude CoWork's scheduled tasks feature. The pattern enables incremental, token-efficient development where CoWork builds one feature per day and you review the work each morning.
 
 ---
 
@@ -8,7 +8,7 @@
 
 - [ ] Claude Desktop app installed and open
 - [ ] Claude Max subscription (CoWork requires this)
-- [ ] Convene AI repo cloned locally (e.g., `~/projects/convene-ai/`)
+- [ ] Kutana AI repo cloned locally (e.g., `~/projects/kutana-ai/`)
 - [ ] Git configured with SSH or HTTPS push access to your remote
 - [ ] Docker Desktop running (for Postgres + Redis)
 - [ ] `uv` installed (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
@@ -17,10 +17,10 @@
 
 ## Step 1: Add the coordination files to your repo
 
-Copy the following files from this package into your Convene AI repo:
+Copy the following files from this package into your Kutana AI repo:
 
 ```
-convene-ai/
+kutana-ai/
 ├── docs/
 │   ├── TASKLIST.md                          # Ordered task checklist (your task queue)
 │   ├── PROGRESS.md                         # Running log of completed work
@@ -46,7 +46,7 @@ convene-ai/
 After copying, commit and push:
 
 ```bash
-cd ~/projects/convene-ai
+cd ~/projects/kutana-ai
 git add docs/
 git commit -m "Add CoWork scheduled task coordination files"
 git push origin main
@@ -63,12 +63,12 @@ git push origin main
 
 | Field | Value |
 |---|---|
-| **Name** | `Convene AI — Daily Build Sprint` |
-| **Description** | `Implements the next uncompleted roadmap item for Convene AI. One feature per session.` |
+| **Name** | `Kutana AI — Daily Build Sprint` |
+| **Description** | `Implements the next uncompleted roadmap item for Kutana AI. One feature per session.` |
 | **Frequency** | `Weekdays` |
 | **Time** | `7:00 AM` (or whenever you want work done before you wake up) |
 | **Model** | `Claude Sonnet` (good balance of speed/cost for code generation — use Opus for complex architecture work) |
-| **Working Folder** | `~/projects/convene-ai` |
+| **Working Folder** | `~/projects/kutana-ai` |
 
 5. In the **Prompt Instructions** field, paste this exact text:
 
@@ -90,12 +90,12 @@ Read CLAUDE.md first for project conventions.
 
 | Field | Value |
 |---|---|
-| **Name** | `Convene AI — Daily Review Brief` |
+| **Name** | `Kutana AI — Daily Review Brief` |
 | **Description** | `Generates a morning briefing summarizing the daily build sprint results.` |
 | **Frequency** | `Weekdays` |
 | **Time** | `8:30 AM` (90 minutes after the build sprint) |
 | **Model** | `Claude Haiku` (this is a lightweight summarization task) |
-| **Working Folder** | `~/projects/convene-ai` |
+| **Working Folder** | `~/projects/kutana-ai` |
 
 2. Prompt Instructions:
 
@@ -112,12 +112,12 @@ Read CLAUDE.md first for project conventions.
 
 | Field | Value |
 |---|---|
-| **Name** | `Convene AI — Weekly Architecture Review` |
+| **Name** | `Kutana AI — Weekly Architecture Review` |
 | **Description** | `Reviews full codebase against design principles. Identifies drift, gaps, and refactoring priorities.` |
 | **Frequency** | `Weekly (Fridays)` |
 | **Time** | `4:00 PM` |
 | **Model** | `Claude Opus` (deep analysis benefits from the strongest model) |
-| **Working Folder** | `~/projects/convene-ai` |
+| **Working Folder** | `~/projects/kutana-ai` |
 
 2. Prompt Instructions:
 
@@ -133,7 +133,7 @@ Read CLAUDE.md first for project conventions.
 Here's what a typical day looks like once everything is running:
 
 ### The night before (you)
-1. Finish your Claude Code session working on Convene AI
+1. Finish your Claude Code session working on Kutana AI
 2. Update `docs/HANDOFF.md` with what you did and any warnings for the next session
 3. If you worked on something in TASKLIST.md, check it off
 4. Commit and push to `main`
@@ -208,7 +208,7 @@ Think of this as shift change notes. Both you and CoWork write to it:
 AudioPipeline is scaffolded but transcoding logic is incomplete — DO NOT
 implement yet, I have a specific approach I want to try tomorrow.
 **Warnings:** The twilio_handler.py imports are temporary — I'm going to
-refactor the audio format constants into convene-core tomorrow.
+refactor the audio format constants into kutana-core tomorrow.
 ```
 
 ---

@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent, CardFooter } from "@/components/ui/Card";
-import { ConveneLogoMark } from "@/components/Logo";
+import { KutanaLogoMark } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export function RegisterPage() {
@@ -51,11 +51,11 @@ export function RegisterPage() {
         {/* Logo + wordmark */}
         <div className="mb-8 flex flex-col items-center gap-3">
           <div className="shadow-glow-brand rounded-xl">
-            <ConveneLogoMark size={48} />
+            <KutanaLogoMark size={48} />
           </div>
           <div className="text-center">
             <h1 className="text-lg font-semibold tracking-tight text-gray-50">
-              Convene <span className="text-blue-400">AI</span>
+              Kutana <span className="text-blue-400">AI</span>
             </h1>
             <p className="mt-0.5 text-sm text-gray-400">
               Create your workspace

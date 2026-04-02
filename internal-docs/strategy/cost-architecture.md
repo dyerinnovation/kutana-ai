@@ -1,4 +1,4 @@
-# Convene AI Cost Architecture & Subscription Model
+# Kutana AI Cost Architecture & Subscription Model
 
 ## Subscription Tiers
 

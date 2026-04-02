@@ -1,19 +1,19 @@
 /**
- * Tests for ConveneClient event forwarding and agent mode filtering.
+ * Tests for KutanaClient event forwarding and agent mode filtering.
  *
- * A capturing MockWebSocket class is used so that the ConveneClient's
+ * A capturing MockWebSocket class is used so that the KutanaClient's
  * internal WebSocket instance (created via `new this.WS(url)`) is the same
  * object that the test drives with `simulateMessage()`.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EventEmitter } from "node:events";
-import { ConveneClient } from "../src/convene-client.js";
+import { KutanaClient } from "../src/kutana-client.js";
 import type { ChannelServerConfig } from "../src/config.js";
 import type { ChannelMessage, TaskEntity, DecisionEntity } from "../src/types.js";
 
 // ---------------------------------------------------------------------------
-// MockWebSocket — captures the instance created by ConveneClient
+// MockWebSocket — captures the instance created by KutanaClient
 // ---------------------------------------------------------------------------
 
 let lastMockWs: MockWebSocket | null = null;
@@ -60,11 +60,11 @@ function makeConfig(
   overrides: Partial<ChannelServerConfig> = {},
 ): ChannelServerConfig {
   return {
-    conveneApiUrl: "ws://localhost:8003",
-    conveneHttpUrl: "http://localhost:8000",
-    conveneApiKey: "test-key",
-    conveneBearerToken: "",
-    conveneAgentName: "Claude Code",
+    kutanaApiUrl: "ws://localhost:8003",
+    kutanaHttpUrl: "http://localhost:8000",
+    kutanaApiKey: "test-key",
+    kutanaBearerToken: "",
+    kutanaAgentName: "Claude Code",
     agentMode: "both",
     entityFilter: [],
     tlsRejectUnauthorized: true,
@@ -106,21 +106,21 @@ function buildDecisionEntity(id = "d1"): DecisionEntity {
 }
 
 /**
- * Create a ConveneClient backed by MockWebSocket, authenticate, and
+ * Create a KutanaClient backed by MockWebSocket, authenticate, and
  * join a meeting. Returns the connected client and the WS instance.
  */
 async function setupConnectedClient(
   config: ChannelServerConfig,
-): Promise<{ client: ConveneClient; mockWs: MockWebSocket }> {
+): Promise<{ client: KutanaClient; mockWs: MockWebSocket }> {
   // Stub fetch for the auth token exchange
   const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
     ok: true,
     json: async () => ({ token: "test-jwt-token" }),
   } as Response);
 
-  const client = new ConveneClient(
+  const client = new KutanaClient(
     config,
-    MockWebSocket as unknown as ConstructorParameters<typeof ConveneClient>[1],
+    MockWebSocket as unknown as ConstructorParameters<typeof KutanaClient>[1],
   );
 
   // joinMeeting will: (1) authenticate, (2) construct WS, (3) wait for joined
@@ -149,7 +149,7 @@ async function setupConnectedClient(
 // Connection behaviour
 // ---------------------------------------------------------------------------
 
-describe("ConveneClient connection", () => {
+describe("KutanaClient connection", () => {
   it("sends join_meeting after WebSocket open", async () => {
     const { mockWs } = await setupConnectedClient(makeConfig());
     const joinMsg = mockWs.sentMessages
@@ -570,13 +570,13 @@ describe("participant tracking", () => {
 
 describe("bearer token auth", () => {
   it("skips API key exchange when CONVENE_BEARER_TOKEN is set", async () => {
-    const config = makeConfig({ conveneBearerToken: "pre-issued-jwt" });
+    const config = makeConfig({ kutanaBearerToken: "pre-issued-jwt" });
 
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
-    const client = new ConveneClient(
+    const client = new KutanaClient(
       config,
-      MockWebSocket as unknown as ConstructorParameters<typeof ConveneClient>[1],
+      MockWebSocket as unknown as ConstructorParameters<typeof KutanaClient>[1],
     );
 
     const joinPromise = client.joinMeeting(MEETING_ID);

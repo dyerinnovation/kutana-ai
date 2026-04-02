@@ -8,7 +8,7 @@
 
 Scheduled agent participation lets users configure their AI agent to automatically join recurring meetings, participate on their behalf, and report back. The agent behaves as a first-class participant — the user doesn't need to be present.
 
-This builds directly on the existing Convene MCP tools and the CoWork scheduled task system. A scheduled task calls `join_meeting` at the right time, runs the configured autonomy behavior, then posts a summary when the meeting ends.
+This builds directly on the existing Kutana MCP tools and the CoWork scheduled task system. A scheduled task calls `join_meeting` at the right time, runs the configured autonomy behavior, then posts a summary when the meeting ends.
 
 ---
 
@@ -85,7 +85,7 @@ Full proxy for the user. The agent can make commitments, accept action items, an
 
 ---
 
-## Integration with Convene MCP Tools
+## Integration with Kutana MCP Tools
 
 The agent uses the existing MCP tool suite. No new protocol is needed — scheduled participation is a behavior layer on top of existing tools.
 
@@ -128,7 +128,7 @@ Prompt: |
 
 ### Meeting ID Resolution
 Two approaches:
-1. **Static**: user provides the Convene meeting ID directly (for recurring Convene-native meetings)
+1. **Static**: user provides the Kutana meeting ID directly (for recurring Kutana-native meetings)
 2. **Calendar-driven**: agent checks calendar integration for upcoming meetings matching a title/series pattern, resolves the meeting ID dynamically (requires Phase 10 calendar sync)
 
 ### Post-Meeting Reporting
@@ -179,7 +179,7 @@ After `leave_meeting`, the agent:
 ## Key Design Decisions
 
 ### Agent Identity
-The scheduled agent joins as the user's named agent (not as "Convene Bot"). Participants see it as "[User]'s Agent" in the participant list. This is intentional — transparency about AI presence.
+The scheduled agent joins as the user's named agent (not as "Kutana Bot"). Participants see it as "[User]'s Agent" in the participant list. This is intentional — transparency about AI presence.
 
 ### Consent & Transparency
 All participants are notified on join that an AI agent is present. This is a platform-level guarantee, not delegated to the user configuring the schedule.

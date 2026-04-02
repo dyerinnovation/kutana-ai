@@ -79,7 +79,7 @@ export MEETING_ID=$(curl -s -X POST http://localhost:8000/api/v1/meetings \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "title": "Template Activation Test",
-    "platform": "convene",
+    "platform": "kutana",
     "scheduled_at": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"
   }' | jq -r '.id')
 echo "MEETING_ID=$MEETING_ID"

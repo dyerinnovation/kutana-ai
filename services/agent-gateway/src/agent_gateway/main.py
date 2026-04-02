@@ -1,4 +1,4 @@
-"""FastAPI application entry point for the Convene AI Agent Gateway."""
+"""FastAPI application entry point for the Kutana AI Agent Gateway."""
 
 from __future__ import annotations
 
@@ -104,7 +104,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
 
     # Initialise TurnBridge (Redis-backed turn management)
-    from convene_providers.turn_management.redis_turn_manager import RedisTurnManager
+    from kutana_providers.turn_management.redis_turn_manager import RedisTurnManager
 
     _turn_manager = RedisTurnManager(
         redis_url=_settings.redis_url,
@@ -119,7 +119,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     _turn_bridge.start()
 
     # Initialise ChatBridge (Redis Streams storage + Pub/Sub broadcast)
-    from convene_providers.chat.redis_chat_store import RedisChatStore
+    from kutana_providers.chat.redis_chat_store import RedisChatStore
 
     _chat_store = RedisChatStore(redis_url=_settings.redis_url)
     _chat_bridge = ChatBridge(
@@ -135,17 +135,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     _tts_provider_name = _settings.tts_provider.lower()
     if _tts_provider_name == "cartesia" and _settings.tts_cartesia_api_key:
-        from convene_providers.tts.cartesia_tts import CartesiaTTS
+        from kutana_providers.tts.cartesia_tts import CartesiaTTS
 
         _raw_tts_provider = CartesiaTTS(api_key=_settings.tts_cartesia_api_key)
         logger.info("TTS provider: Cartesia")
     elif _tts_provider_name == "elevenlabs" and _settings.tts_elevenlabs_api_key:
-        from convene_providers.tts.elevenlabs_tts import ElevenLabsTTS
+        from kutana_providers.tts.elevenlabs_tts import ElevenLabsTTS
 
         _raw_tts_provider = ElevenLabsTTS(api_key=_settings.tts_elevenlabs_api_key)
         logger.info("TTS provider: ElevenLabs")
     else:
-        from convene_providers.tts.piper_tts import PiperTTS
+        from kutana_providers.tts.piper_tts import PiperTTS
 
         _raw_tts_provider = PiperTTS(voice_name=_settings.tts_default_voice)
         logger.info(
@@ -190,8 +190,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(
-    title="Convene AI Agent Gateway",
-    description="WebSocket gateway for AI agent connections to Convene meetings",
+    title="Kutana AI Agent Gateway",
+    description="WebSocket gateway for AI agent connections to Kutana meetings",
     version="0.1.0",
     lifespan=lifespan,
 )

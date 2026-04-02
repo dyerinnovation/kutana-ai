@@ -1,19 +1,19 @@
-# Convene AI Meeting Assistant Agent
+# Kutana AI Meeting Assistant Agent
 
-Example agents built with the Claude Agent SDK that join Convene AI meetings, monitor transcripts, and take automated actions. Includes multiple agent templates for different use cases.
+Example agents built with the Claude Agent SDK that join Kutana AI meetings, monitor transcripts, and take automated actions. Includes multiple agent templates for different use cases.
 
 ## How It Works
 
-Each agent uses the **hosted Convene MCP Server** as its interface to the meeting platform. The MCP server authenticates via your API key and provides tools for joining meetings, reading transcripts, and creating tasks. The agent's **system prompt** determines its behavior.
+Each agent uses the **hosted Kutana MCP Server** as its interface to the meeting platform. The MCP server authenticates via your API key and provides tools for joining meetings, reading transcripts, and creating tasks. The agent's **system prompt** determines its behavior.
 
 ## Architecture
 
 ```
 Claude Agent SDK Agent
     │
-    │  Streamable HTTP + API Key (https://convene.spark-b0f2.local/mcp)
+    │  Streamable HTTP + API Key (https://kutana.spark-b0f2.local/mcp)
     ▼
-Convene MCP Server (hosted)
+Kutana MCP Server (hosted)
     │
     │  Authenticated API calls          WebSocket (transcripts)
     ▼                                    ▼
@@ -24,12 +24,12 @@ API Server                           Agent Gateway
 
 ### 1. Prerequisites
 - Python 3.12+
-- A Convene account and agent API key
+- A Kutana account and agent API key
 - An Anthropic API key
 
 ### 2. Register an Agent and Get an API Key
 
-In the Convene web UI at [https://convene.spark-b0f2.local](https://convene.spark-b0f2.local):
+In the Kutana web UI at [https://kutana.spark-b0f2.local](https://kutana.spark-b0f2.local):
 1. Go to Dashboard → **Create Agent**
 2. Enter a name and system prompt
 3. Configure **capabilities** (listen, transcribe, text_only, voice, etc.) — these control what the agent can do
@@ -38,11 +38,11 @@ In the Convene web UI at [https://convene.spark-b0f2.local](https://convene.spar
 
 > **Note:** Capabilities are set in the UI when creating the agent. The API key is what you use in your code to connect.
 
-Or via the **Convene CLI**:
+Or via the **Kutana CLI**:
 ```bash
-convene login --api-url https://convene.spark-b0f2.local
-convene agents create "Meeting Assistant" --prompt "You are a helpful meeting assistant."
-convene keys generate <AGENT_ID>
+kutana login --api-url https://kutana.spark-b0f2.local
+kutana agents create "Meeting Assistant" --prompt "You are a helpful meeting assistant."
+kutana keys generate <AGENT_ID>
 ```
 
 ### 3. Run the Agent
@@ -95,14 +95,14 @@ uv run python agent.py --system-prompt "You are a code review discussion tracker
 
 ## MCP Server Configuration
 
-For Claude Desktop or Claude Code, add the Convene MCP server to your settings:
+For Claude Desktop or Claude Code, add the Kutana MCP server to your settings:
 
 ```json
 {
   "mcpServers": {
-    "convene": {
+    "kutana": {
       "type": "streamableHttp",
-      "url": "https://convene.spark-b0f2.local/mcp",
+      "url": "https://kutana.spark-b0f2.local/mcp",
       "headers": {
         "Authorization": "Bearer ${CONVENE_API_KEY}"
       }
@@ -111,20 +111,20 @@ For Claude Desktop or Claude Code, add the Convene MCP server to your settings:
 }
 ```
 
-Set `CONVENE_API_KEY=cvn_...` in your environment, then open Claude Code and say "Join the meeting on Convene".
+Set `CONVENE_API_KEY=cvn_...` in your environment, then open Claude Code and say "Join the meeting on Kutana".
 
 ## Other Integration Options
 
-### Convene CLI
+### Kutana CLI
 Manage agents, meetings, and API keys from the terminal:
 ```bash
-uv run convene --help
+uv run kutana --help
 ```
 See `services/cli/` for the CLI source.
 
 ### OpenClaw Plugin
-For OpenClaw-based agents, install the Convene plugin:
+For OpenClaw-based agents, install the Kutana plugin:
 ```bash
-openclaw plugins install @convene/openclaw-plugin
+openclaw plugins install @kutana/openclaw-plugin
 ```
 See `integrations/openclaw-plugin/` for details.

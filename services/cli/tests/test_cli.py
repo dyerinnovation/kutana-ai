@@ -1,10 +1,10 @@
-"""Basic tests for the Convene CLI."""
+"""Basic tests for the Kutana CLI."""
 
 from __future__ import annotations
 
 from typer.testing import CliRunner
 
-from convene_cli.main import app
+from kutana_cli.main import app
 
 runner = CliRunner()
 
@@ -13,7 +13,7 @@ def test_help() -> None:
     """CLI shows help without errors."""
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "Convene AI" in result.output
+    assert "Kutana AI" in result.output
 
 
 def test_agents_help() -> None:
@@ -49,7 +49,7 @@ def test_status_not_authenticated() -> None:
 def test_agents_list_requires_auth(tmp_path: object, monkeypatch: object) -> None:
     """Agents list requires login."""
     # Ensure no token is configured
-    import convene_cli.config as cfg
+    import kutana_cli.config as cfg
 
     monkeypatch.setattr(cfg, "CONFIG_FILE", tmp_path / "config.json")  # type: ignore[operator]
     result = runner.invoke(app, ["agents", "list"])

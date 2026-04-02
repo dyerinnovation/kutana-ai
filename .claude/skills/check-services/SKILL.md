@@ -1,6 +1,6 @@
 ---
 name: check-services
-description: Health check all Convene AI services. TRIGGER on: check services, service status, health check, are services up, is the app running, ping services.
+description: Health check all Kutana AI services. TRIGGER on: check services, service status, health check, are services up, is the app running, ping services.
 permissions:
   - Bash(curl:*)
   - Bash(ssh:*)
@@ -8,7 +8,7 @@ permissions:
 
 # Check Services
 
-Health-checks all Convene AI services and prints a status table.
+Health-checks all Kutana AI services and prints a status table.
 
 ## Usage
 
@@ -20,9 +20,9 @@ bash .claude/skills/check-services/scripts/check-services.sh
 
 | Service | URL | Expected |
 |---|---|---|
-| API Server | `https://convene.spark-b0f2.local/api/health` | `{"status":"ok"}` |
-| MCP Server | `https://convene.spark-b0f2.local/mcp/health` | 200 |
-| Frontend | `https://convene.spark-b0f2.local/` | 200 |
-| Agent Gateway | `wss://convene.spark-b0f2.local/ws` | WebSocket upgrade |
-| Postgres | `kubectl -n convene exec statefulset/postgres -- pg_isready` | `accepting connections` |
-| Redis | `kubectl -n convene exec statefulset/redis -- redis-cli ping` | `PONG` |
+| API Server | `https://kutana.spark-b0f2.local/api/health` | `{"status":"ok"}` |
+| MCP Server | `https://kutana.spark-b0f2.local/mcp/health` | 200 |
+| Frontend | `https://kutana.spark-b0f2.local/` | 200 |
+| Agent Gateway | `wss://kutana.spark-b0f2.local/ws` | WebSocket upgrade |
+| Postgres | `kubectl -n kutana exec statefulset/postgres -- pg_isready` | `accepting connections` |
+| Redis | `kubectl -n kutana exec statefulset/redis -- redis-cli ping` | `PONG` |

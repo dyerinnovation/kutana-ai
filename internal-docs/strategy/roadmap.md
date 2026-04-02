@@ -1,26 +1,26 @@
-# Convene AI — Feature Roadmap
+# Kutana AI — Feature Roadmap
 
-> This document is structured for Claude Code to pick up individual features and implement them. Each feature includes context, acceptance criteria, and technical notes. The roadmap reflects Convene's pivot from a phone-dial-in meeting bot to an agent-first meeting platform with multiple meeting access methods, extensible agent architecture, and marketplace potential.
+> This document is structured for Claude Code to pick up individual features and implement them. Each feature includes context, acceptance criteria, and technical notes. The roadmap reflects Kutana's pivot from a phone-dial-in meeting bot to an agent-first meeting platform with multiple meeting access methods, extensible agent architecture, and marketplace potential.
 
 ---
 
 ## Architecture Overview
 
 ```
-convene-ai/
+kutana-ai/
 ├── docs/                          # Product docs
 │   ├── VISION.md                  # Product vision & business case
 │   └── ROADMAP.md                 # This file
 ├── packages/
-│   ├── convene-core/              # Domain models, events, interfaces
+│   ├── kutana-core/              # Domain models, events, interfaces
 │   │   ├── models/                # Pydantic models for tasks, meetings, agents
 │   │   ├── events/                # Event definitions (Redis Streams)
 │   │   └── interfaces/            # Abstract base classes for providers
-│   ├── convene-providers/         # STT, TTS, LLM provider implementations
+│   ├── kutana-providers/         # STT, TTS, LLM provider implementations
 │   │   ├── stt/                   # AssemblyAI, Deepgram, Whisper
 │   │   ├── tts/                   # Cartesia, ElevenLabs
 │   │   └── llm/                   # Anthropic, OpenAI, local models
-│   └── convene-memory/            # Persistent memory layers
+│   └── kutana-memory/            # Persistent memory layers
 │       ├── working.py             # In-memory / Redis current meeting state
 │       ├── short_term.py          # Recent meetings (PostgreSQL)
 │       ├── long_term.py           # Vectorized summaries (pgvector)
@@ -53,7 +53,7 @@ convene-ai/
 | WebRTC Server | LiveKit | Open-source SFU for browser conferencing |
 | Meeting Client | React + LiveKit SDK | Real-time video/audio in browser |
 | Agent Gateway | FastAPI WebSocket + gRPC | Agent connection endpoint |
-| MCP Server | Python MCP SDK | Expose Convene as MCP server for Claude Desktop |
+| MCP Server | Python MCP SDK | Expose Kutana as MCP server for Claude Desktop |
 | STT (Primary) | AssemblyAI Universal-Streaming | $0.0025/min, built-in diarization |
 | STT (Fallback) | Deepgram Nova-3 | $0.0077/min, lowest latency |
 | TTS (Phase 5) | Cartesia Sonic-3 | 40-90ms TTFA, fastest available |
@@ -74,7 +74,7 @@ convene-ai/
 **Context**: Set up the monorepo with uv workspaces, package structure, and local dev environment.
 
 **Completed**:
-- uv workspace with convene-core, convene-providers, convene-memory packages
+- uv workspace with kutana-core, kutana-providers, kutana-memory packages
 - services/api-server, audio-service, task-engine, worker
 - docker-compose.yml with PostgreSQL 16 + pgvector, Redis 7
 - pyproject.toml with shared dev dependencies (ruff, mypy, pytest)
@@ -228,7 +228,7 @@ convene-ai/
 
 ## Phase 2 — Agent Gateway & MCP (NEW — THE CORE DIFFERENTIATOR)
 
-> Goal: Build the agent-first architecture. Allow any AI agent to join meetings and access Convene's capabilities. Make agents composable and discoverable.
+> Goal: Build the agent-first architecture. Allow any AI agent to join meetings and access Kutana's capabilities. Make agents composable and discoverable.
 
 ### F2.1 — Agent Gateway Service
 **Status**: Pending
@@ -261,7 +261,7 @@ convene-ai/
 ### F2.2 — MCP Server for Meeting Access
 **Status**: Pending
 
-**Context**: Expose Convene as an MCP server so any MCP-compatible AI assistant (Claude, custom clients) can join meetings.
+**Context**: Expose Kutana as an MCP server so any MCP-compatible AI assistant (Claude, custom clients) can join meetings.
 
 **Acceptance Criteria**:
 - [ ] MCP server implementation using Python MCP SDK
@@ -298,9 +298,9 @@ convene-ai/
 **Context**: Package the agent connection protocol into a pip-installable SDK.
 
 **Acceptance Criteria**:
-- [ ] Published to PyPI as `convene-ai`
+- [ ] Published to PyPI as `kutana-ai`
 - [ ] Async-first API (asyncio)
-- [ ] `ConveneAgent` class with:
+- [ ] `KutanaAgent` class with:
   - `connect(meeting_url, api_key)` — establish gateway connection
   - `join_meeting(meeting_id)` — join active meeting
   - `on_transcript(callback)` — listen for transcript segments
@@ -359,7 +359,7 @@ convene-ai/
 **Context**: Structured turn-taking so multiple agents and humans can coordinate who is speaking. Required for coherent multi-agent meetings.
 
 **Acceptance Criteria**:
-- [ ] TurnManager ABC in convene-core (`raise_turn`, `release_turn`, `get_queue`, `get_active_speaker`)
+- [ ] TurnManager ABC in kutana-core (`raise_turn`, `release_turn`, `get_queue`, `get_active_speaker`)
 - [ ] RedisTurnManager provider (ordered queue using Redis sorted sets, atomic operations)
 - [ ] Registered in provider registry
 - [ ] WebSocket events broadcast to all participants: `speaker.queue.updated`, `speaker.changed`
@@ -381,7 +381,7 @@ convene-ai/
 **Context**: Text chat separate from the audio transcript. Agents and humans can send/read messages in real time. This gives agents a way to communicate without needing to speak.
 
 **Acceptance Criteria**:
-- [ ] ChatStore ABC in convene-core (`send_message`, `get_messages`, `subscribe`)
+- [ ] ChatStore ABC in kutana-core (`send_message`, `get_messages`, `subscribe`)
 - [ ] RedisChatStore provider (message persistence in Redis Streams + pub/sub delivery)
 - [ ] Registered in provider registry
 - [ ] WebSocket event delivery: `chat.message.received` broadcast to all participants
@@ -400,7 +400,7 @@ convene-ai/
 ### F2.7 — Claude Code Channel Integration
 **Status**: Complete (April Release — Week 2)
 
-**Context**: Claude Code sessions (running in a terminal/IDE) connect to Convene meetings via a channel, giving them full meeting participation: turn management, chat, transcript access, and task tools — all through MCP.
+**Context**: Claude Code sessions (running in a terminal/IDE) connect to Kutana meetings via a channel, giving them full meeting participation: turn management, chat, transcript access, and task tools — all through MCP.
 
 **Completed**:
 - Channel server endpoint for Claude Code session connections (`source: "claude-code"` propagated)
@@ -411,9 +411,9 @@ convene-ai/
 - Integration tests: subscribe flow, event buffering, source claim, channel routing
 
 **Pending** (April Release P0 additions):
-- [ ] `audio_capability` parameter on `convene_join_meeting` (`text_only`, `tts_enabled`, `voice_bidirectional`)
-- [ ] `convene_start_speaking` tool with TTS path for `tts_enabled` agents
-- [ ] `convene_` prefix standardization across all MCP tools
+- [ ] `audio_capability` parameter on `kutana_join_meeting` (`text_only`, `tts_enabled`, `voice_bidirectional`)
+- [ ] `kutana_start_speaking` tool with TTS path for `tts_enabled` agents
+- [ ] `kutana_` prefix standardization across all MCP tools
 - [ ] Developer onboarding guide: `docs/integrations/CLAUDE_CODE_CHANNEL.md`
 
 **Technical Notes**:
@@ -431,9 +431,9 @@ convene-ai/
 **Context**: Agents declare their audio mode on join. This drives gateway routing and enables three new participant classes: voice agents (bidirectional audio sidecar), TTS agents (text → synthesized speech), and voice-in agents (audio listener without speaking). These are the prerequisite for Phase 9 (Voice Output & Dialogue).
 
 **Acceptance Criteria**:
-- [ ] `audio_capability` parameter on `convene_join_meeting`: `text_only`, `voice_in`, `voice_out`, `voice_bidirectional`, `tts_enabled`
-- [ ] `tts_voice_id` optional parameter on `convene_join_meeting` for per-session voice override
-- [ ] `convene_start_speaking` MCP tool: text parameter (TTS agents), no text (voice agents), `wait_for_turn`, `priority`
+- [ ] `audio_capability` parameter on `kutana_join_meeting`: `text_only`, `voice_in`, `voice_out`, `voice_bidirectional`, `tts_enabled`
+- [ ] `tts_voice_id` optional parameter on `kutana_join_meeting` for per-session voice override
+- [ ] `kutana_start_speaking` MCP tool: text parameter (TTS agents), no text (voice agents), `wait_for_turn`, `priority`
 - [ ] Gateway audio sidecar endpoint: `/v1/audio/{session_id}` (PCM16 16kHz mono, 20ms frames)
 - [ ] Mixed-minus audio mixing: voice agents receive room audio minus their own stream
 - [ ] TTS Engine in gateway: text → TTSProvider → PCM16 → AudioRouter → room broadcast
@@ -454,10 +454,10 @@ convene-ai/
 ### F2.10 — MCP Tool Prefix Standardization (P0 — April Release)
 **Status**: Planned
 
-**Context**: Bare tool names (e.g., `join_meeting`) conflict when multiple MCP servers are active in Claude Code or other clients. All Convene tools must use the `convene_` prefix.
+**Context**: Bare tool names (e.g., `join_meeting`) conflict when multiple MCP servers are active in Claude Code or other clients. All Kutana tools must use the `kutana_` prefix.
 
 **Acceptance Criteria**:
-- [ ] All MCP tools renamed: `join_meeting` → `convene_join_meeting`, etc. (20 tools total)
+- [ ] All MCP tools renamed: `join_meeting` → `kutana_join_meeting`, etc. (20 tools total)
 - [ ] OpenClaw plugin updated with new tool names
 - [ ] `examples/meeting-assistant-agent/` templates updated
 - [ ] All integration tests updated
@@ -466,7 +466,7 @@ convene-ai/
 **Technical Notes**:
 - This is a breaking change for existing integrations — announce via CHANGELOG
 - Both old and new names can coexist during a 2-week deprecation window if needed
-- See `docs/research/channel-plugin.md` for the complete `convene_` tool table
+- See `docs/research/channel-plugin.md` for the complete `kutana_` tool table
 
 ---
 
@@ -505,7 +505,7 @@ convene-ai/
 - [ ] Transcript access controls: MCP `get_transcript` tool enforces that the requesting agent has an active session in the requested meeting_id. Deny with 403 if not
 
 **Technical Notes**:
-- Prompt injection sanitization lives in a shared `convene-core/security/sanitizer.py` utility — all services import it, never roll their own
+- Prompt injection sanitization lives in a shared `kutana-core/security/sanitizer.py` utility — all services import it, never roll their own
 - Data isolation is enforced at the query layer: all SQL queries for transcript/task data JOIN against `meeting_participants` and filter by `agent_id = current_session.agent_id`
 - Rate limiting middleware: FastAPI `Depends()` on all WebSocket connect handlers and MCP tool routes; Redis `INCR` + `EXPIRE` per `{agent_id}:{window}` key
 - API key audit log: append-only PostgreSQL table `api_key_events(key_id, event_type, actor_id, meeting_id, timestamp, metadata)`
@@ -517,7 +517,7 @@ convene-ai/
 ### F2.9 — Scheduled Agent Participation
 **Status**: Planned (post-April Release)
 
-**Context**: Users configure a scheduled task that has their AI agent automatically join recurring meetings, participate on their behalf, and report back. The agent is a first-class meeting participant — the user doesn't need to attend. Autonomy levels range from silent observer (just listen and summarize) to full delegate (make decisions, commit to action items). Built entirely on the existing Convene MCP tool suite; no new protocol is needed — scheduling is a behavior layer on top of existing tools.
+**Context**: Users configure a scheduled task that has their AI agent automatically join recurring meetings, participate on their behalf, and report back. The agent is a first-class meeting participant — the user doesn't need to attend. Autonomy levels range from silent observer (just listen and summarize) to full delegate (make decisions, commit to action items). Built entirely on the existing Kutana MCP tool suite; no new protocol is needed — scheduling is a behavior layer on top of existing tools.
 
 See `docs/research/scheduled-agent-participation.md` for full use-case research, tool mapping, and implementation phases.
 
@@ -872,12 +872,12 @@ See `docs/research/scheduled-agent-participation.md` for full use-case research,
 **Acceptance Criteria**:
 - [ ] Scheduled speaking (designated times: start of standup, end of meeting)
 - [ ] Cued speaking (when directly addressed)
-- [ ] Wake word detection ("Convene" or "Hey Convene" in transcript)
+- [ ] Wake word detection ("Kutana" or "Hey Kutana" in transcript)
 - [ ] Silence detection (only speak during pauses >2 seconds)
 - [ ] Interruption handling (stop if someone starts talking)
-- [ ] Speaking indicator ("This is Convene" before first utterance)
+- [ ] Speaking indicator ("This is Kutana" before first utterance)
 - [ ] Brevity mode (all unprompted speech <30 seconds)
-- [ ] Mute option ("Convene, mute" or "Convene, be quiet")
+- [ ] Mute option ("Kutana, mute" or "Kutana, be quiet")
 
 **Technical Notes**:
 - VAD (Voice Activity Detection) on inbound stream
@@ -955,7 +955,7 @@ See `docs/research/scheduled-agent-participation.md` for full use-case research,
 
 ## Phase 6 — Ecosystem & Integrations
 
-> Goal: Expand Convene's capabilities through integrations and a marketplace for agents.
+> Goal: Expand Kutana's capabilities through integrations and a marketplace for agents.
 
 ### F6.1 — Agent Marketplace
 **Context**: Discover, install, and configure pre-built agent personas.
@@ -994,8 +994,8 @@ See `docs/research/scheduled-agent-participation.md` for full use-case research,
 
 **Technical Notes**:
 - Each integration as separate module in services/worker/
-- Bidirectional sync: Convene → tool and tool → Convene
-- Task mapping: Convene task_id linked to external issue_id
+- Bidirectional sync: Kutana → tool and tool → Kutana
+- Task mapping: Kutana task_id linked to external issue_id
 - Webhook: `task.created`, `task.updated`, `task.completed` events
 - OAuth for SaaS integrations, API key for self-hosted
 
@@ -1042,13 +1042,13 @@ See `docs/research/scheduled-agent-participation.md` for full use-case research,
 ---
 
 ### F6.5 — Slack Integration
-**Context**: Push updates to Slack. This is where most teams interact with Convene.
+**Context**: Push updates to Slack. This is where most teams interact with Kutana.
 
 **Acceptance Criteria**:
 - [ ] Slack bot posts meeting summaries to configured channel
 - [ ] Task notifications (new, overdue, status change)
-- [ ] `/convene tasks` — show open tasks
-- [ ] `/convene meetings` — show upcoming meetings
+- [ ] `/kutana tasks` — show open tasks
+- [ ] `/kutana meetings` — show upcoming meetings
 - [ ] Thread-based updates (one Slack thread per meeting)
 - [ ] Interactive buttons (mark done, snooze, reassign)
 - [ ] DM notifications for assigned tasks
@@ -1063,22 +1063,22 @@ See `docs/research/scheduled-agent-participation.md` for full use-case research,
 ---
 
 ### F6.6 — Existing Meeting Platform Integration (Adoption Accelerator — Post-April)
-**Context**: Reach teams where they already meet. A Convene bot joins Zoom/Meet/Teams as a transcription participant and uses that moment to show the value of native Convene, gradually migrating teams. This is not the core product — it's an adoption funnel.
+**Context**: Reach teams where they already meet. A Kutana bot joins Zoom/Meet/Teams as a transcription participant and uses that moment to show the value of native Kutana, gradually migrating teams. This is not the core product — it's an adoption funnel.
 
-**Strategy**: Start as a transcription/task bot → show value → invite team to try native Convene meeting → graduated adoption.
+**Strategy**: Start as a transcription/task bot → show value → invite team to try native Kutana meeting → graduated adoption.
 
 **Acceptance Criteria**:
 - [ ] MeetingPlatformAdapter ABC (`join`, `leave`, `receive_audio`, `send_audio`, `get_participants`)
 - [ ] ZoomAdapter via Zoom Meeting SDK (bot joins call, receives audio, provides transcription + tasks)
 - [ ] GoogleMeetAdapter (browser automation or Google Meet API when available)
 - [ ] TeamsAdapter via Teams Bot Framework SDK
-- [ ] Dashboard prompt: "Join this meeting in Convene instead" for users with existing integrations
-- [ ] Migration flow: external meeting → Convene meeting (invite link generation)
+- [ ] Dashboard prompt: "Join this meeting in Kutana instead" for users with existing integrations
+- [ ] Migration flow: external meeting → Kutana meeting (invite link generation)
 
 **Technical Notes**:
 - All adapters implement MeetingPlatformAdapter ABC and register in provider registry
 - Audio from external meetings is routed through the same STT pipeline as native meetings
-- Bot identity: "Convene (tasks)" as the bot name on external platforms
+- Bot identity: "Kutana (tasks)" as the bot name on external platforms
 - Zoom: requires Zoom Meeting SDK and app marketplace approval
 - Google Meet: limited API surface, browser automation (Playwright headless) as fallback until Meet API matures
 - Teams: Teams Bot Framework is well-documented and allows audio access
@@ -1206,7 +1206,7 @@ The Agent Gateway is the key architectural innovation. Instead of each agent nee
 
 ### Why MCP?
 
-MCP exposes Convene's capabilities to Claude and other AI systems that already understand the protocol. This is instant integration with Claude Desktop, Claude Code, and any future MCP client. It's a force multiplier for adoption.
+MCP exposes Kutana's capabilities to Claude and other AI systems that already understand the protocol. This is instant integration with Claude Desktop, Claude Code, and any future MCP client. It's a force multiplier for adoption.
 
 ### Why separate Agent SDK vs. MCP?
 

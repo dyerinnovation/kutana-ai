@@ -8,7 +8,7 @@ permissions:
 
 # Build and Push
 
-Builds Docker images for Convene AI services and pushes them to the local K3s registry on the DGX Spark.
+Builds Docker images for Kutana AI services and pushes them to the local K3s registry on the DGX Spark.
 
 ## Steps
 
@@ -19,7 +19,7 @@ Builds Docker images for Convene AI services and pushes them to the local K3s re
 
 2. **SSH to DGX and run the build script:**
    ```bash
-   ssh dgx 'cd ~/convene-ai && bash scripts/build_and_push.sh <args>'
+   ssh dgx 'cd ~/kutana-ai && bash scripts/build_and_push.sh <args>'
    ```
    Where `<args>` is either `all` or the specific service names provided by the user.
 

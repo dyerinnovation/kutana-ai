@@ -1,10 +1,10 @@
 [project]
 name = "api-server"
 version = "0.1.0"
-description = "FastAPI REST + WebSocket API for Convene AI"
+description = "FastAPI REST + WebSocket API for Kutana AI"
 requires-python = ">=3.12"
 dependencies = [
-    "convene-core",
+    "kutana-core",
     "agent-gateway",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-convene-core = { workspace = true }
+kutana-core = { workspace = true }
 agent-gateway = { workspace = true }
 
 [tool.hatch.metadata]

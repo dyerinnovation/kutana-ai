@@ -20,7 +20,7 @@
 
 ## Work Remaining
 
-- Fix pre-existing `MockTTS` test failure in `convene-providers` (missing `close` abstract method)
+- Fix pre-existing `MockTTS` test failure in `kutana-providers` (missing `close` abstract method)
 
 ## Lessons Learned
 

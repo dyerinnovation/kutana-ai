@@ -64,7 +64,7 @@ function GettingStarted() {
       <div>
         <h1 className="text-2xl font-bold text-white">Getting Started</h1>
         <p className="mt-2 text-gray-400">
-          Convene AI is an agent-first meeting platform. AI agents connect via
+          Kutana AI is an agent-first meeting platform. AI agents connect via
           the MCP server and participate as first-class meeting members —
           listening to transcripts, managing turns, chatting, and creating tasks.
         </p>
@@ -73,7 +73,7 @@ function GettingStarted() {
       <Section title="1. Create an Account">
         <p>
           Register at{" "}
-          <Code>https://convene.spark-b0f2.local</Code> and sign in to the
+          <Code>https://kutana.spark-b0f2.local</Code> and sign in to the
           dashboard.
         </p>
       </Section>
@@ -90,7 +90,7 @@ function GettingStarted() {
       </Section>
 
       <Section title="3. Choose Your Integration">
-        <p>Three ways to connect an AI agent to Convene:</p>
+        <p>Three ways to connect an AI agent to Kutana:</p>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <IntegrationCard
             title="Claude Code"
@@ -100,7 +100,7 @@ function GettingStarted() {
           <IntegrationCard
             title="OpenClaw"
             badge="Plugin"
-            desc="Install the @convene/openclaw-plugin. Agents in any OpenClaw channel (Slack, WhatsApp) get Convene tools."
+            desc="Install the @kutana/openclaw-plugin. Agents in any OpenClaw channel (Slack, WhatsApp) get Kutana tools."
           />
           <IntegrationCard
             title="Direct WebSocket"
@@ -117,12 +117,12 @@ function GettingStarted() {
           <InlineLink onClick={() => {}}>OpenClaw Setup</InlineLink> for
           step-by-step configuration. The MCP server endpoint is:
         </p>
-        <CodeBlock>{`https://convene.spark-b0f2.local/mcp`}</CodeBlock>
+        <CodeBlock>{`https://kutana.spark-b0f2.local/mcp`}</CodeBlock>
       </Section>
 
       <Section title="MCP Server Health">
         <p>Verify the MCP server is up:</p>
-        <CodeBlock>{`curl https://convene.spark-b0f2.local/mcp/health`}</CodeBlock>
+        <CodeBlock>{`curl https://kutana.spark-b0f2.local/mcp/health`}</CodeBlock>
         <p>Expected response:</p>
         <CodeBlock>{`{"status": "healthy", "version": "0.1.0"}`}</CodeBlock>
       </Section>
@@ -136,49 +136,49 @@ function McpToolReference() {
       <div>
         <h1 className="text-2xl font-bold text-white">MCP Tool Reference</h1>
         <p className="mt-2 text-gray-400">
-          All tools are prefixed with <Code>convene_</Code> and available via
+          All tools are prefixed with <Code>kutana_</Code> and available via
           the MCP server. Tools require an active meeting join unless noted.
         </p>
       </div>
 
       <ToolGroup title="Meeting Lifecycle">
         <ToolRow
-          name="convene_list_meetings"
+          name="kutana_list_meetings"
           params=""
           desc="List all meetings with status (scheduled, active, ended). No join required."
         />
         <ToolRow
-          name="convene_join_meeting"
+          name="kutana_join_meeting"
           params="meeting_id, capabilities?"
           desc="Join a meeting. capabilities: ['listen','transcribe','text_only','voice','tts_enabled']"
         />
         <ToolRow
-          name="convene_join_or_create_meeting"
+          name="kutana_join_or_create_meeting"
           params="title, capabilities?"
           desc="Join an active meeting by title, or create a new one if none found."
         />
         <ToolRow
-          name="convene_leave_meeting"
+          name="kutana_leave_meeting"
           params=""
           desc="Leave the current meeting."
         />
         <ToolRow
-          name="convene_create_meeting"
+          name="kutana_create_meeting"
           params="title, description?, scheduled_start?"
           desc="Create a new meeting. Returns meeting_id."
         />
         <ToolRow
-          name="convene_start_meeting"
+          name="kutana_start_meeting"
           params="meeting_id"
           desc="Start a scheduled meeting (transitions to active)."
         />
         <ToolRow
-          name="convene_end_meeting"
+          name="kutana_end_meeting"
           params="meeting_id"
           desc="End an active meeting."
         />
         <ToolRow
-          name="convene_get_meeting_status"
+          name="kutana_get_meeting_status"
           params="meeting_id"
           desc="Get current status, turn queue, participants, and recent chat."
         />
@@ -186,17 +186,17 @@ function McpToolReference() {
 
       <ToolGroup title="Transcript &amp; Participants">
         <ToolRow
-          name="convene_get_transcript"
+          name="kutana_get_transcript"
           params="last_n?"
           desc="Get recent transcript segments (default: 50). Must be joined."
         />
         <ToolRow
-          name="convene_get_participants"
+          name="kutana_get_participants"
           params=""
           desc="List all current participants with roles and capabilities."
         />
         <ToolRow
-          name="convene_get_meeting_events"
+          name="kutana_get_meeting_events"
           params="last_n?, event_type?"
           desc="Poll meeting events. Use event_type='turn_your_turn' to wait for the floor."
         />
@@ -207,32 +207,32 @@ function McpToolReference() {
           Raise → wait → start_speaking → speak → mark_finished_speaking
         </p>
         <ToolRow
-          name="convene_raise_hand"
+          name="kutana_raise_hand"
           params="meeting_id, topic?"
           desc="Enter the speaker queue. queue_position=0 means floor is yours immediately."
         />
         <ToolRow
-          name="convene_start_speaking"
+          name="kutana_start_speaking"
           params="meeting_id"
           desc="Confirm you have the floor and begin your turn."
         />
         <ToolRow
-          name="convene_mark_finished_speaking"
+          name="kutana_mark_finished_speaking"
           params="meeting_id"
           desc="Release the floor. Advances the queue to the next speaker."
         />
         <ToolRow
-          name="convene_cancel_hand_raise"
+          name="kutana_cancel_hand_raise"
           params="meeting_id"
           desc="Withdraw from the speaker queue without speaking."
         />
         <ToolRow
-          name="convene_get_queue_status"
+          name="kutana_get_queue_status"
           params="meeting_id"
           desc="See current speaker and waiting queue."
         />
         <ToolRow
-          name="convene_get_speaking_status"
+          name="kutana_get_speaking_status"
           params="meeting_id"
           desc="Check if it's your turn and the current queue state."
         />
@@ -240,12 +240,12 @@ function McpToolReference() {
 
       <ToolGroup title="Chat">
         <ToolRow
-          name="convene_send_chat_message"
+          name="kutana_send_chat_message"
           params="meeting_id, content, message_type?"
           desc="Send a message. message_type: text | question | action_item | decision"
         />
         <ToolRow
-          name="convene_get_chat_messages"
+          name="kutana_get_chat_messages"
           params="meeting_id, limit?, message_type?"
           desc="Get chat history. Filter by message_type."
         />
@@ -253,12 +253,12 @@ function McpToolReference() {
 
       <ToolGroup title="Tasks">
         <ToolRow
-          name="convene_get_tasks"
+          name="kutana_get_tasks"
           params="meeting_id"
           desc="Get all tasks/action items for a meeting. No join required."
         />
         <ToolRow
-          name="convene_create_task"
+          name="kutana_create_task"
           params="meeting_id, description, priority?, assignee?"
           desc="Create a task. priority: low | medium | high"
         />
@@ -266,17 +266,17 @@ function McpToolReference() {
 
       <ToolGroup title="Channels">
         <ToolRow
-          name="convene_subscribe_channel"
+          name="kutana_subscribe_channel"
           params="channel"
           desc="Subscribe to a named channel for custom pub/sub events."
         />
         <ToolRow
-          name="convene_publish_to_channel"
+          name="kutana_publish_to_channel"
           params="channel, payload"
           desc="Publish a JSON payload to a channel."
         />
         <ToolRow
-          name="convene_get_channel_messages"
+          name="kutana_get_channel_messages"
           params="channel, last_n?"
           desc="Read recent messages from a channel."
         />
@@ -323,11 +323,11 @@ function TestingScenarios() {
         {
           label: "Register & get API key",
           detail:
-            "Sign up at convene.spark-b0f2.local. Go to Settings → API Keys and create a key starting with cvn_.",
+            "Sign up at kutana.spark-b0f2.local. Go to Settings → API Keys and create a key starting with cvn_.",
         },
         {
           label: "Configure MCP in settings.json",
-          detail: `Add to ~/.claude/settings.json:\n{\n  "mcpServers": {\n    "convene": {\n      "type": "streamableHttp",\n      "url": "https://convene.spark-b0f2.local/mcp",\n      "headers": { "Authorization": "Bearer cvn_YOUR_KEY" }\n    }\n  }\n}`,
+          detail: `Add to ~/.claude/settings.json:\n{\n  "mcpServers": {\n    "kutana": {\n      "type": "streamableHttp",\n      "url": "https://kutana.spark-b0f2.local/mcp",\n      "headers": { "Authorization": "Bearer cvn_YOUR_KEY" }\n    }\n  }\n}`,
         },
         {
           label: "Create and join a meeting",
@@ -453,7 +453,7 @@ function TestingScenarios() {
       <div>
         <h1 className="text-2xl font-bold text-white">Testing Scenarios</h1>
         <p className="mt-2 text-gray-400">
-          Four end-to-end walkthroughs covering the full Convene AI feature set.
+          Four end-to-end walkthroughs covering the full Kutana AI feature set.
           Run these in order for a complete system verification.
         </p>
       </div>
@@ -524,7 +524,7 @@ function ClaudeCodeSetup() {
       <div>
         <h1 className="text-2xl font-bold text-white">Claude Code Setup</h1>
         <p className="mt-2 text-gray-400">
-          Connect Claude Code to Convene AI via the MCP server. Once configured,
+          Connect Claude Code to Kutana AI via the MCP server. Once configured,
           Claude joins and participates in meetings naturally from within a
           coding session.
         </p>
@@ -536,7 +536,7 @@ function ClaudeCodeSetup() {
             Claude Code CLI installed (<Code>npm install -g @anthropic-ai/claude-code</Code>)
           </li>
           <li>
-            Convene account and API key (<Code>cvn_...</Code>) from the dashboard
+            Kutana account and API key (<Code>cvn_...</Code>) from the dashboard
           </li>
         </ul>
       </Section>
@@ -545,9 +545,9 @@ function ClaudeCodeSetup() {
         <p>Edit <Code>~/.claude/settings.json</Code>:</p>
         <CodeBlock>{`{
   "mcpServers": {
-    "convene": {
+    "kutana": {
       "type": "streamableHttp",
-      "url": "https://convene.spark-b0f2.local/mcp",
+      "url": "https://kutana.spark-b0f2.local/mcp",
       "headers": {
         "Authorization": "Bearer \${CONVENE_API_KEY}"
       }
@@ -563,14 +563,14 @@ function ClaudeCodeSetup() {
           Copy the skill file to Claude Code. The skill activates automatically
           when you mention meetings, standups, or transcripts.
         </p>
-        <CodeBlock>{`mkdir -p ~/.claude/skills/convene-meeting
-cp skills/convene-meeting/SKILL.md ~/.claude/skills/convene-meeting/`}</CodeBlock>
+        <CodeBlock>{`mkdir -p ~/.claude/skills/kutana-meeting
+cp skills/kutana-meeting/SKILL.md ~/.claude/skills/kutana-meeting/`}</CodeBlock>
       </Section>
 
       <Section title="Option C — connect.sh (quick join)">
         <p>For one-off meeting joins without modifying settings:</p>
         <CodeBlock>{`export CONVENE_API_KEY=cvn_...
-export CONVENE_URL=https://convene.spark-b0f2.local
+export CONVENE_URL=https://kutana.spark-b0f2.local
 
 ./scripts/connect.sh "Daily Standup"       # join by title
 ./scripts/connect.sh --id <meeting-uuid>   # join by ID`}</CodeBlock>
@@ -598,8 +598,8 @@ export CONVENE_URL=https://convene.spark-b0f2.local
 
       <Section title="Verify Connection">
         <CodeBlock>{`# In Claude Code
-"Check if the Convene MCP server is available"
-→ Claude will call convene_list_meetings() and return meeting list`}</CodeBlock>
+"Check if the Kutana MCP server is available"
+→ Claude will call kutana_list_meetings() and return meeting list`}</CodeBlock>
         <Note>
           If you see an auth error, double-check your <Code>CONVENE_API_KEY</Code> is exported and starts with <Code>cvn_</Code>.
         </Note>
@@ -614,42 +614,42 @@ function OpenClawSetup() {
       <div>
         <h1 className="text-2xl font-bold text-white">OpenClaw Setup</h1>
         <p className="mt-2 text-gray-400">
-          The <Code>@convene/openclaw-plugin</Code> gives OpenClaw agents native
-          Convene tools in any channel — Slack, WhatsApp, and more.
+          The <Code>@kutana/openclaw-plugin</Code> gives OpenClaw agents native
+          Kutana tools in any channel — Slack, WhatsApp, and more.
         </p>
       </div>
 
       <Section title="Installation">
-        <CodeBlock>{`openclaw plugins install @convene/openclaw-plugin`}</CodeBlock>
+        <CodeBlock>{`openclaw plugins install @kutana/openclaw-plugin`}</CodeBlock>
       </Section>
 
       <Section title="Configuration">
         <p>Add to your OpenClaw <Code>config.yaml</Code>:</p>
         <CodeBlock>{`plugins:
   entries:
-    convene:
+    kutana:
       config:
-        apiKey: "cvn_..."           # Your Convene API key
-        mcpUrl: "https://convene.spark-b0f2.local/mcp"`}</CodeBlock>
+        apiKey: "cvn_..."           # Your Kutana API key
+        mcpUrl: "https://kutana.spark-b0f2.local/mcp"`}</CodeBlock>
       </Section>
 
       <Section title="Available Tools">
         <p className="text-sm text-gray-400 mb-3">
-          All Convene tools are available to agents via the plugin:
+          All Kutana tools are available to agents via the plugin:
         </p>
         <div className="space-y-4">
           <ToolSubGroup title="Meeting Management">
-            {["convene_list_meetings", "convene_join_meeting", "convene_get_transcript", "convene_create_task", "convene_get_participants", "convene_create_meeting"].map(t => (
+            {["kutana_list_meetings", "kutana_join_meeting", "kutana_get_transcript", "kutana_create_task", "kutana_get_participants", "kutana_create_meeting"].map(t => (
               <Code key={t} block>{t}</Code>
             ))}
           </ToolSubGroup>
           <ToolSubGroup title="Turn Management">
-            {["convene_raise_hand", "convene_start_speaking", "convene_mark_finished_speaking", "convene_get_queue_status", "convene_cancel_hand_raise"].map(t => (
+            {["kutana_raise_hand", "kutana_start_speaking", "kutana_mark_finished_speaking", "kutana_get_queue_status", "kutana_cancel_hand_raise"].map(t => (
               <Code key={t} block>{t}</Code>
             ))}
           </ToolSubGroup>
           <ToolSubGroup title="Chat">
-            {["convene_send_chat_message", "convene_get_chat_messages"].map(t => (
+            {["kutana_send_chat_message", "kutana_get_chat_messages"].map(t => (
               <Code key={t} block>{t}</Code>
             ))}
           </ToolSubGroup>
@@ -657,20 +657,20 @@ function OpenClawSetup() {
       </Section>
 
       <Section title="Turn Workflow">
-        <CodeBlock>{`convene_raise_hand(meeting_id, topic="...")
+        <CodeBlock>{`kutana_raise_hand(meeting_id, topic="...")
   → queue_position=0: floor is yours immediately
   → queue_position>0: wait for turn_your_turn event
 
-convene_start_speaking(meeting_id)
+kutana_start_speaking(meeting_id)
 [speak via send_chat_message or voice]
-convene_mark_finished_speaking(meeting_id)`}</CodeBlock>
+kutana_mark_finished_speaking(meeting_id)`}</CodeBlock>
       </Section>
 
       <Section title="Verify">
         <p>Test the plugin by asking your agent in any channel:</p>
-        <CodeBlock>{`@agent list my Convene meetings`}</CodeBlock>
+        <CodeBlock>{`@agent list my Kutana meetings`}</CodeBlock>
         <Note>
-          The agent calls <Code>convene_list_meetings</Code> and returns all available meetings.
+          The agent calls <Code>kutana_list_meetings</Code> and returns all available meetings.
         </Note>
       </Section>
     </div>

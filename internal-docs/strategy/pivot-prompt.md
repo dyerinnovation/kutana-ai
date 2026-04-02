@@ -1,4 +1,4 @@
-# Convene AI — Pivot to Agent-First Meeting Platform
+# Kutana AI — Pivot to Agent-First Meeting Platform
 
 ## Prompt for Claude Code Planning Session
 
@@ -6,7 +6,7 @@ Copy everything below the line and paste it into Claude Code to trigger a planni
 
 ---
 
-I want to pivot Convene AI from a "phone-dial-in meeting bot" to an **agent-first meeting platform** — a meeting service built from the ground up where AI agents are first-class participants, not bolted-on bots.
+I want to pivot Kutana AI from a "phone-dial-in meeting bot" to an **agent-first meeting platform** — a meeting service built from the ground up where AI agents are first-class participants, not bolted-on bots.
 
 ### The Problem
 
@@ -14,7 +14,7 @@ Today's meeting platforms (Zoom, Teams, Google Meet) were built for humans. Gett
 
 ### The Vision
 
-Convene becomes the meeting platform where:
+Kutana becomes the meeting platform where:
 1. **AI agents connect via a native Agent API** — direct audio/data streams, no phone lines or browser hacking
 2. **Humans join via browser** — standard WebRTC-based video/audio meeting experience
 3. **Agents are visible participants** — shown in the participant list with their capabilities and current status
@@ -22,12 +22,12 @@ Convene becomes the meeting platform where:
 5. **Real-time collaboration surfaces** — agents can push live updates (extracted tasks, decisions, summaries) into a shared sidebar that all participants see
 6. **Multi-agent support** — multiple AI agents can join a single meeting, each with different roles (note-taker, fact-checker, project tracker)
 
-### What We Keep from Current Convene
+### What We Keep from Current Kutana
 
 The existing codebase has significant value that carries forward:
-- **convene-core**: Domain models (Meeting, Task, Decision, Participant, TranscriptSegment), event definitions, database models — all still relevant
-- **convene-providers**: STT, TTS, and LLM provider abstractions and implementations — these become the processing backbone
-- **convene-memory**: Four-layer memory system — this is a differentiator, agents that remember across meetings
+- **kutana-core**: Domain models (Meeting, Task, Decision, Participant, TranscriptSegment), event definitions, database models — all still relevant
+- **kutana-providers**: STT, TTS, and LLM provider abstractions and implementations — these become the processing backbone
+- **kutana-memory**: Four-layer memory system — this is a differentiator, agents that remember across meetings
 - **task-engine**: Redis Streams consumer infrastructure, event-driven architecture — this pattern stays
 - **Audio pipeline expertise**: μ-law transcoding, STT streaming, audio buffering — reusable for the new audio infrastructure
 
@@ -89,13 +89,13 @@ Human (Browser)                    AI Agent (any framework)
 
 ### Phased Approach
 
-**Phase A: Agent Gateway MVP** — Build the Agent Gateway service so AI agents can connect, send audio, and receive transcripts/events. Test with our existing Convene task extraction agent as the first client. No human-facing UI yet — use existing meeting audio piped through the gateway.
+**Phase A: Agent Gateway MVP** — Build the Agent Gateway service so AI agents can connect, send audio, and receive transcripts/events. Test with our existing Kutana task extraction agent as the first client. No human-facing UI yet — use existing meeting audio piped through the gateway.
 
 **Phase B: WebRTC Integration** — Add LiveKit (or similar) for browser-based human participants. Humans can create and join meetings. Audio from human participants flows through the same pipeline.
 
 **Phase C: Meeting Web Client** — Build the React-based meeting UI with video, participant list, and the agent sidebar showing real-time extracted tasks/decisions.
 
-**Phase D: Agent SDK** — Package the agent connection protocol into a Python SDK that any developer can use to build agents that join Convene meetings. Publish documentation and examples.
+**Phase D: Agent SDK** — Package the agent connection protocol into a Python SDK that any developer can use to build agents that join Kutana meetings. Publish documentation and examples.
 
 ### Constraints
 

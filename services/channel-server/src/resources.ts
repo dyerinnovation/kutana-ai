@@ -1,11 +1,11 @@
 /**
- * MCP resource registrations for the Convene AI Channel Server.
+ * MCP resource registrations for the Kutana AI Channel Server.
  *
  * Resources:
- *   - convene://platform/context         — static platform context (Layer 1)
- *   - convene://meeting/{id}             — meeting info + connection status
- *   - convene://meeting/{id}/context     — detailed meeting context (Layer 2)
- *   - convene://meeting/{id}/transcript  — buffered transcript segments
+ *   - kutana://platform/context         — static platform context (Layer 1)
+ *   - kutana://meeting/{id}             — meeting info + connection status
+ *   - kutana://meeting/{id}/context     — detailed meeting context (Layer 2)
+ *   - kutana://meeting/{id}/transcript  — buffered transcript segments
  *
  * The meetings resource template uses a `list` callback so clients can
  * browse available meetings. The list updates when meetings are joined
@@ -18,22 +18,22 @@ import {
   ListResourceTemplatesRequestSchema,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import type { ConveneClient } from "./convene-client.js";
+import type { KutanaClient } from "./kutana-client.js";
 import type { ChannelServerConfig } from "./config.js";
 
 // ---------------------------------------------------------------------------
 // Layer 1: Static platform context
 // ---------------------------------------------------------------------------
 
-export const PLATFORM_CONTEXT_DOC = `# Convene AI — Platform Context
+export const PLATFORM_CONTEXT_DOC = `# Kutana AI — Platform Context
 
-## What is Convene AI?
-Convene AI is an agent-first meeting platform where AI agents connect as first-class
+## What is Kutana AI?
+Kutana AI is an agent-first meeting platform where AI agents connect as first-class
 participants via a native WebSocket API. Humans join via browser (WebRTC); agents join
 via the Agent Gateway. You are a live participant in an active meeting.
 
 ## Your Role
-You are an AI agent participating in a Convene AI meeting. You receive two streams:
+You are an AI agent participating in a Kutana AI meeting. You receive two streams:
 - **Transcript segments** — real-time speech-to-text from meeting participants
 - **Meeting insights** — structured entities extracted from the conversation
 
@@ -106,17 +106,17 @@ Insight types: **task**, **decision**, **question**, **entity_mention**, **key_p
 /** Register platform context and meeting resources on the MCP server. */
 export function registerResources(
   server: Server,
-  client: ConveneClient,
+  client: KutanaClient,
   config: ChannelServerConfig,
 ): void {
   // Static resources
   server.setRequestHandler(ListResourcesRequestSchema, async () => ({
     resources: [
       {
-        uri: "convene://platform/context",
-        name: "Convene AI Platform Context",
+        uri: "kutana://platform/context",
+        name: "Kutana AI Platform Context",
         description:
-          "Platform context: what Convene AI is, message formats, tools, and behaviour guidelines.",
+          "Platform context: what Kutana AI is, message formats, tools, and behaviour guidelines.",
         mimeType: "text/markdown",
       },
     ],
@@ -126,21 +126,21 @@ export function registerResources(
   server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({
     resourceTemplates: [
       {
-        uriTemplate: "convene://meeting/{meeting_id}",
+        uriTemplate: "kutana://meeting/{meeting_id}",
         name: "Meeting",
         description:
           "Meeting info with connection status. Browse available meetings by listing this template.",
         mimeType: "application/json",
       },
       {
-        uriTemplate: "convene://meeting/{meeting_id}/context",
+        uriTemplate: "kutana://meeting/{meeting_id}/context",
         name: "Meeting Context",
         description:
           "Dynamic context: connection status, agent mode, entity summary, and transcript preview.",
         mimeType: "text/markdown",
       },
       {
-        uriTemplate: "convene://meeting/{meeting_id}/transcript",
+        uriTemplate: "kutana://meeting/{meeting_id}/transcript",
         name: "Meeting Transcript",
         description:
           "Session-scoped transcript segments received since joining the meeting.",
@@ -154,7 +154,7 @@ export function registerResources(
     const { uri } = request.params;
 
     // Static: platform context
-    if (uri === "convene://platform/context") {
+    if (uri === "kutana://platform/context") {
       return {
         contents: [
           {
@@ -168,7 +168,7 @@ export function registerResources(
 
     // Dynamic: meeting transcript
     const transcriptMatch =
-      /^convene:\/\/meeting\/([^/]+)\/transcript$/.exec(uri);
+      /^kutana:\/\/meeting\/([^/]+)\/transcript$/.exec(uri);
     if (transcriptMatch) {
       const meetingId = transcriptMatch[1] ?? "";
       if (client.getCurrentMeetingId() !== meetingId) {
@@ -198,7 +198,7 @@ export function registerResources(
 
     // Dynamic: meeting context
     const contextMatch =
-      /^convene:\/\/meeting\/([^/]+)\/context$/.exec(uri);
+      /^kutana:\/\/meeting\/([^/]+)\/context$/.exec(uri);
     if (contextMatch) {
       const meetingId = contextMatch[1] ?? "";
       return {
@@ -213,7 +213,7 @@ export function registerResources(
     }
 
     // Dynamic: meeting info
-    const meetingMatch = /^convene:\/\/meeting\/([^/]+)$/.exec(uri);
+    const meetingMatch = /^kutana:\/\/meeting\/([^/]+)$/.exec(uri);
     if (meetingMatch) {
       const meetingId = meetingMatch[1] ?? "";
       const isConnected = client.getCurrentMeetingId() === meetingId;
@@ -264,7 +264,7 @@ export async function notifyResourcesChanged(server: Server): Promise<void> {
 
 function buildMeetingContext(
   meetingId: string,
-  client: ConveneClient,
+  client: KutanaClient,
   config: ChannelServerConfig,
 ): string {
   const isCurrentMeeting = client.getCurrentMeetingId() === meetingId;
@@ -313,7 +313,7 @@ _This resource is generated dynamically from the in-process buffer. Use \`get_me
 `;
 }
 
-function summariseEntities(client: ConveneClient): string {
+function summariseEntities(client: KutanaClient): string {
   const types = [
     "task",
     "decision",

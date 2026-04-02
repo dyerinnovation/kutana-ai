@@ -25,13 +25,13 @@ find .venv/lib/python3.13/site-packages -maxdepth 1 -name "*.pth" -print0 | xarg
 ### Option 2: Set PYTHONPATH explicitly (reliable, no system flag changes)
 
 ```bash
-export PYTHONPATH=services/agent-gateway/src:services/audio-service/src:packages/convene-core/src:packages/convene-providers/src:packages/convene-memory/src:services/api-server/src:services/task-engine/src:services/worker/src
+export PYTHONPATH=services/agent-gateway/src:services/audio-service/src:packages/kutana-core/src:packages/kutana-providers/src:packages/kutana-memory/src:services/api-server/src:services/task-engine/src:services/worker/src
 ```
 
 Use this prefix when running services:
 
 ```bash
-PYTHONPATH=services/agent-gateway/src:services/audio-service/src:packages/convene-core/src:packages/convene-providers/src:packages/convene-memory/src:services/api-server/src:services/task-engine/src:services/worker/src .venv/bin/python -m pytest services/agent-gateway/tests/ -v
+PYTHONPATH=services/agent-gateway/src:services/audio-service/src:packages/kutana-core/src:packages/kutana-providers/src:packages/kutana-memory/src:services/api-server/src:services/task-engine/src:services/worker/src .venv/bin/python -m pytest services/agent-gateway/tests/ -v
 ```
 
 ### Option 3: Use UV_LINK_MODE=copy (avoids .pth files entirely)

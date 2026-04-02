@@ -14,8 +14,8 @@ import redis.asyncio as redis
 
 from audio_service.audio_pipeline import AudioPipeline
 from audio_service.event_publisher import STREAM_KEY, EventPublisher
-from convene_core.models.transcript import TranscriptSegment
-from convene_providers.testing import MockSTT
+from kutana_core.models.transcript import TranscriptSegment
+from kutana_providers.testing import MockSTT
 
 REDIS_URL = "redis://localhost:6379/0"
 

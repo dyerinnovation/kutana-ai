@@ -173,7 +173,7 @@ Expected (when rate limited):
 
 ```bash
 # Connect to the database and query audit entries
-docker exec -it $(docker compose ps -q postgres) psql -U convene -d convene -c \
+docker exec -it $(docker compose ps -q postgres) psql -U kutana -d kutana -c \
   "SELECT event_type, key_prefix, ip_address, created_at
    FROM api_key_audit_log
    ORDER BY created_at DESC
@@ -188,7 +188,7 @@ Expected entries include:
 ### Step 14: Verify IP and User-Agent Logging
 
 ```bash
-docker exec -it $(docker compose ps -q postgres) psql -U convene -d convene -c \
+docker exec -it $(docker compose ps -q postgres) psql -U kutana -d kutana -c \
   "SELECT event_type, ip_address, user_agent
    FROM api_key_audit_log
    WHERE event_type = 'used'
@@ -221,7 +221,7 @@ Expected: `ip_address` is `127.0.0.1` (or `::1`), `user_agent` contains `curl/..
 | Rate limiting not triggering at 60 | Check `RateLimitMiddleware` config. Default is 60/minute |
 | Rate limiting never triggers | Verify Redis is running — rate limiting degrades gracefully (allows all) without Redis |
 | Audit log table doesn't exist | Run `uv run alembic upgrade head` to apply migrations |
-| `psql: FATAL: role "convene" does not exist` | Check docker-compose postgres config |
+| `psql: FATAL: role "kutana" does not exist` | Check docker-compose postgres config |
 | Key expires too fast/slow | Verify system clock is UTC-synchronized |
 
 ## Cleanup

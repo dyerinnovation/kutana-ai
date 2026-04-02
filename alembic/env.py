@@ -10,9 +10,9 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 # Import all ORM models so they register with Base.metadata
-import convene_core.database.models  # noqa: F401
+import kutana_core.database.models  # noqa: F401
 from alembic import context
-from convene_core.database.base import Base
+from kutana_core.database.base import Base
 
 config = context.config
 

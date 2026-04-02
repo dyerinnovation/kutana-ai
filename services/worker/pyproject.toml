@@ -1,11 +1,11 @@
 [project]
 name = "worker"
 version = "0.1.0"
-description = "Background worker service for Convene AI"
+description = "Background worker service for Kutana AI"
 requires-python = ">=3.12"
 dependencies = [
-    "convene-core",
-    "convene-memory",
+    "kutana-core",
+    "kutana-memory",
     "fastapi>=0.134",
     "uvicorn[standard]>=0.41",
     "redis>=5.0",
@@ -17,8 +17,8 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-convene-core = { workspace = true }
-convene-memory = { workspace = true }
+kutana-core = { workspace = true }
+kutana-memory = { workspace = true }
 
 [tool.hatch.metadata]
 allow-direct-references = true

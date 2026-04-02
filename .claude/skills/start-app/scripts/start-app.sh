@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Start all Convene AI services on the DGX Spark K3s cluster
+# Start all Kutana AI services on the DGX Spark K3s cluster
 set -euo pipefail
 
-NAMESPACE=convene
+NAMESPACE=kutana
 
 echo "==> Checking K3s cluster health..."
 kubectl get nodes
@@ -17,7 +17,7 @@ kubectl -n $NAMESPACE wait --for=condition=ready pod -l app.kubernetes.io/name=r
 
 echo ""
 DEPLOYMENTS="api-server agent-gateway audio-service task-engine mcp-server web"
-echo "==> Scaling up Convene deployments: $DEPLOYMENTS..."
+echo "==> Scaling up Kutana deployments: $DEPLOYMENTS..."
 kubectl -n $NAMESPACE scale deployment $DEPLOYMENTS --replicas=1
 
 echo ""
@@ -30,7 +30,7 @@ kubectl -n $NAMESPACE get pods
 
 echo ""
 echo "==> Health checks..."
-BASE="https://convene.spark-b0f2.local"
+BASE="https://kutana.spark-b0f2.local"
 curl -sk "$BASE/api/health" && echo "  API: OK" || echo "  API: FAIL"
 curl -sk -o /dev/null -w "  Frontend: %{http_code}\n" "$BASE/"
 
@@ -38,4 +38,4 @@ echo ""
 echo "==> Services are up!"
 echo "    Frontend/API: $BASE"
 echo "    MCP server:   $BASE/mcp"
-echo "    Agent gateway: wss://convene.spark-b0f2.local/ws"
+echo "    Agent gateway: wss://kutana.spark-b0f2.local/ws"

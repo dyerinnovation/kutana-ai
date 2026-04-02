@@ -1,8 +1,8 @@
-# Writing Standards for Convene External Docs
+# Writing Standards for Kutana External Docs
 
 These standards apply to every page in `docs/external/`. The goal is docs that
 match Anthropic and OpenAI quality: high-fidelity, agent-searchable, and useful
-to a developer who has never seen Convene before.
+to a developer who has never seen Kutana before.
 
 ---
 
@@ -52,7 +52,7 @@ Model your writing on Anthropic's Claude documentation and Stripe's API docs.
 
 ## Agent-Readable Structure
 
-AI agents searching for how to use Convene read these docs too. Structure every
+AI agents searching for how to use Kutana read these docs too. Structure every
 page so an agent can find the answer without reading the whole page.
 
 ### Heading hygiene
@@ -107,9 +107,9 @@ response = client.create_meeting(title="Standup")
 **Complete:**
 ```python
 import os
-from convene import ConveneClient
+from kutana import KutanaClient
 
-client = ConveneClient(api_key=os.environ["CONVENE_API_KEY"])
+client = KutanaClient(api_key=os.environ["CONVENE_API_KEY"])
 
 meeting = client.meetings.create(
     title="Weekly Standup",
@@ -169,8 +169,8 @@ Send follow-up to investors → james@example.com
 - Implementation patterns for Claude Code sessions
 - DGX Spark deployment details
 
-**The test:** Would a developer using Convene need this to build something?
-If yes → external docs. If it's about how Convene is built internally → internal.
+**The test:** Would a developer using Kutana need this to build something?
+If yes → external docs. If it's about how Kutana is built internally → internal.
 
 ---
 
@@ -265,5 +265,5 @@ Run through this for every page before committing:
 
 **Agent-readability**
 - [ ] A scan of headings reveals the page's content without reading the body
-- [ ] Terminology matches the canonical Convene glossary in this file
+- [ ] Terminology matches the canonical Kutana glossary in this file
 - [ ] Code blocks have language tags

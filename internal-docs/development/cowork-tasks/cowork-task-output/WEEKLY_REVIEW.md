@@ -7,18 +7,18 @@ No new code has landed since the last progress entry on 2026-03-03 (transcript s
 
 ### Provider Abstraction
 - **Status:** ✅ Compliant
-- **Details:** All 10 providers (4 STT, 3 TTS, 3 LLM) correctly extend their ABCs in `packages/convene-core/src/convene_core/interfaces/`. All are registered in `packages/convene-providers/src/convene_providers/registry.py` (lines 140-153). No direct imports of concrete providers found in service code — services exclusively use the registry factory pattern. **Carried forward (3 weeks):** `LLMProvider` ABC still lacks an abstract `close()` method, though all 3 concrete implementations (AnthropicLLM:322, GroqLLM:268, OllamaLLM:259) define one. `STTProvider` and `TTSProvider` ABCs both define `close()` — this inconsistency should be resolved.
+- **Details:** All 10 providers (4 STT, 3 TTS, 3 LLM) correctly extend their ABCs in `packages/kutana-core/src/kutana_core/interfaces/`. All are registered in `packages/kutana-providers/src/kutana_providers/registry.py` (lines 140-153). No direct imports of concrete providers found in service code — services exclusively use the registry factory pattern. **Carried forward (3 weeks):** `LLMProvider` ABC still lacks an abstract `close()` method, though all 3 concrete implementations (AnthropicLLM:322, GroqLLM:268, OllamaLLM:259) define one. `STTProvider` and `TTSProvider` ABCs both define `close()` — this inconsistency should be resolved.
 
 ### Event-Driven Communication
 - **Status:** 🛑 Violations found (unchanged from last week)
 - **Details:** Two violations persist:
   1. **Cross-service import:** `services/agent-gateway/src/agent_gateway/audio_bridge.py` (lines 10-12) directly imports `AudioPipeline`, `EventPublisher`, and `_create_stt_provider` from `audio-service`. The `agent-gateway/pyproject.toml` also declares `audio-service` as a workspace dependency — a service-to-service coupling that violates the event-driven principle.
-  2. **Ad-hoc event publishing:** `services/agent-gateway/src/agent_gateway/agent_session.py` (lines 218-224) publishes raw `data.channel.{name}` events via direct XADD instead of using the `AgentData` event class from `convene_core/events/definitions.py`.
+  2. **Ad-hoc event publishing:** `services/agent-gateway/src/agent_gateway/agent_session.py` (lines 218-224) publishes raw `data.channel.{name}` events via direct XADD instead of using the `AgentData` event class from `kutana_core/events/definitions.py`.
   The audio-service → task-engine path is correctly wired via EventPublisher and StreamConsumer with proper XREADGROUP/XACK semantics. 13 event types are defined; only 3 are actively published (`meeting.started`, `meeting.ended`, `transcript.segment.final`). The remaining 10 have no publishers or consumers yet.
 
 ### Async Correctness
 - **Status:** ⚠️ Minor issues (unchanged)
-- **Details:** No `time.sleep()` or synchronous HTTP usage found. All database operations use async SQLAlchemy with `await db.execute()`. **Persistent issue (3 weeks):** `packages/convene-providers/src/convene_providers/stt/whisper_remote_stt.py` (lines 101-108) performs synchronous file I/O (`wave.open`, `open/read`) inside `async def get_transcript()`, blocking the event loop. The sibling `whisper_stt.py` correctly uses `asyncio.to_thread()` at line 128 — the fix pattern already exists in the codebase. Minor: `services/api-server/src/api_server/rate_limit.py` (line 74) uses `time.time()` in an async dispatch method — functionally harmless.
+- **Details:** No `time.sleep()` or synchronous HTTP usage found. All database operations use async SQLAlchemy with `await db.execute()`. **Persistent issue (3 weeks):** `packages/kutana-providers/src/kutana_providers/stt/whisper_remote_stt.py` (lines 101-108) performs synchronous file I/O (`wave.open`, `open/read`) inside `async def get_transcript()`, blocking the event loop. The sibling `whisper_stt.py` correctly uses `asyncio.to_thread()` at line 128 — the fix pattern already exists in the codebase. Minor: `services/api-server/src/api_server/rate_limit.py` (line 74) uses `time.time()` in an async dispatch method — functionally harmless.
 
 ### Type Safety
 - **mypy results:** Cannot run — CoWork Linux VM has Python 3.10; project requires 3.12+ and `.venv` contains macOS ARM64 binaries.
@@ -27,7 +27,7 @@ No new code has landed since the last progress entry on 2026-03-03 (transcript s
 ### Test Coverage
 - **Overall:** 16 test files, ~313 test functions across the codebase. Last confirmed run (2026-03-02): 96+ tests passing (58 gateway + 38 audio-service). Additional test files cover core models/events (2), providers (2), task-engine (2), and CLI (1).
 - **Gaps:**
-  - `packages/convene-memory/` — **0 test files** (4 memory layer implementations untested)
+  - `packages/kutana-memory/` — **0 test files** (4 memory layer implementations untested)
   - `services/api-server/` — **0 test files** (routes, deps, auth, rate limiter untested)
   - `services/worker/` — **0 test files** (notifications, slack_bot, calendar_sync untested)
   - `services/mcp-server/` — **0 test files** (MCP tools, gateway client untested)
@@ -35,19 +35,19 @@ No new code has landed since the last progress entry on 2026-03-03 (transcript s
 
 ### Code Organization
 - **Status:** ✅ Clean
-- **Details:** Pydantic domain models correctly in `convene-core/models/` (10 model files). ORM models in `convene-core/database/models.py` with additional structured memory models alongside `convene-memory`. API route handlers are thin CRUD stubs — no business logic leaks detected. All Python files follow snake_case naming. Google-style docstrings present on public methods. No circular dependencies between packages. All workspace packages use `{ workspace = true }` references with `>=` version constraints for externals.
+- **Details:** Pydantic domain models correctly in `kutana-core/models/` (10 model files). ORM models in `kutana-core/database/models.py` with additional structured memory models alongside `kutana-memory`. API route handlers are thin CRUD stubs — no business logic leaks detected. All Python files follow snake_case naming. Google-style docstrings present on public methods. No circular dependencies between packages. All workspace packages use `{ workspace = true }` references with `>=` version constraints for externals.
 
 ## Technical Debt Identified
 
-1. **Cross-service import + dependency: agent-gateway → audio-service** — **Severity:** High — **Suggested fix:** Extract shared audio pipeline logic into `convene-core` or a new `convene-audio` shared package. Remove `audio-service` from `agent-gateway/pyproject.toml`. Files: `services/agent-gateway/src/agent_gateway/audio_bridge.py:10-12`, `services/agent-gateway/pyproject.toml`. **Carried forward 3 weeks — this is now the longest-standing architectural violation.**
+1. **Cross-service import + dependency: agent-gateway → audio-service** — **Severity:** High — **Suggested fix:** Extract shared audio pipeline logic into `kutana-core` or a new `kutana-audio` shared package. Remove `audio-service` from `agent-gateway/pyproject.toml`. Files: `services/agent-gateway/src/agent_gateway/audio_bridge.py:10-12`, `services/agent-gateway/pyproject.toml`. **Carried forward 3 weeks — this is now the longest-standing architectural violation.**
 
-2. **LLMProvider ABC missing `close()` method** — **Severity:** Medium — **Suggested fix:** Add `@abstractmethod async def close(self) -> None` to `packages/convene-core/src/convene_core/interfaces/llm.py`, then add `close()` to `MockLLM` in `convene_providers/testing.py`. **Carried forward 3 weeks.**
+2. **LLMProvider ABC missing `close()` method** — **Severity:** Medium — **Suggested fix:** Add `@abstractmethod async def close(self) -> None` to `packages/kutana-core/src/kutana_core/interfaces/llm.py`, then add `close()` to `MockLLM` in `kutana_providers/testing.py`. **Carried forward 3 weeks.**
 
-3. **Blocking file I/O in WhisperRemoteSTT** — **Severity:** Medium — **Suggested fix:** Wrap `wave.open()` and file read/write in `asyncio.to_thread()` at `packages/convene-providers/src/convene_providers/stt/whisper_remote_stt.py:101-108`. Fix pattern exists in `whisper_stt.py:128`. **Carried forward 3 weeks.**
+3. **Blocking file I/O in WhisperRemoteSTT** — **Severity:** Medium — **Suggested fix:** Wrap `wave.open()` and file read/write in `asyncio.to_thread()` at `packages/kutana-providers/src/kutana_providers/stt/whisper_remote_stt.py:101-108`. Fix pattern exists in `whisper_stt.py:128`. **Carried forward 3 weeks.**
 
-4. **Ad-hoc event publishing in agent_session.py** — **Severity:** Medium — **Suggested fix:** Use the `AgentData` event class from `convene_core/events/definitions.py` instead of raw XADD with `data.channel.{name}` at `services/agent-gateway/src/agent_gateway/agent_session.py:221`. **Carried forward 2 weeks.**
+4. **Ad-hoc event publishing in agent_session.py** — **Severity:** Medium — **Suggested fix:** Use the `AgentData` event class from `kutana_core/events/definitions.py` instead of raw XADD with `data.channel.{name}` at `services/agent-gateway/src/agent_gateway/agent_session.py:221`. **Carried forward 2 weeks.**
 
-5. **Zero test coverage for memory, api-server, worker, mcp-server** — **Severity:** Medium — **Suggested fix:** Prioritize `convene-memory` unit tests before Phase 6 memory tasks. API server and worker tests should be added as those services get real implementations.
+5. **Zero test coverage for memory, api-server, worker, mcp-server** — **Severity:** Medium — **Suggested fix:** Prioritize `kutana-memory` unit tests before Phase 6 memory tasks. API server and worker tests should be added as those services get real implementations.
 
 6. **5 pytest fixtures missing type hints** — **Severity:** Low — **Suggested fix:** Add return type annotations to fixtures in `test_audio_bridge.py` (lines 13, 21, 36) and `test_event_relay_transcript.py` (lines 14, 20).
 
@@ -77,7 +77,7 @@ No new code has landed since the last progress entry on 2026-03-03 (transcript s
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Cross-service import creates hidden coupling; audio-service changes break agent-gateway silently | High | High | Extract shared pipeline into convene-core or new shared package. **3 weeks unresolved — escalating likelihood.** |
+| Cross-service import creates hidden coupling; audio-service changes break agent-gateway silently | High | High | Extract shared pipeline into kutana-core or new shared package. **3 weeks unresolved — escalating likelihood.** |
 | CoWork PRs merge without quality checks (ruff, mypy, pytest can't run in VM) | High | Med | Add CI auto-check on `scheduled/*` branches; block merge until green |
 | Phase 1 stalls indefinitely due to locked extraction pipeline task | High | High | Unlock task for CoWork if Jonathan's work is paused. **Now 2+ weeks with no progress on this item.** |
 | Memory layer implementation begins (Phase 6) without test foundation | Med | Med | Write memory layer unit tests proactively |

@@ -15,7 +15,7 @@ import pytest
 from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import ResponseError
 
-from convene_core.models.transcript import TranscriptSegment
+from kutana_core.models.transcript import TranscriptSegment
 from task_engine.stream_consumer import (
     DEFAULT_GROUP_NAME,
     DEFAULT_STREAM_KEY,
@@ -43,7 +43,7 @@ def _make_segment(meeting_id: Any = None) -> TranscriptSegment:
 
 def _segment_event_entry(segment: TranscriptSegment) -> tuple[str, dict[str, str]]:
     """Build a Redis stream entry tuple for a transcript.segment.final event."""
-    from convene_core.events.definitions import TranscriptSegmentFinal
+    from kutana_core.events.definitions import TranscriptSegmentFinal
 
     event = TranscriptSegmentFinal(
         meeting_id=segment.meeting_id,

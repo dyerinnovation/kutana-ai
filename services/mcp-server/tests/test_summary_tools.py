@@ -1,4 +1,4 @@
-"""Tests for convene_get_summary and convene_set_context MCP tools."""
+"""Tests for kutana_get_summary and kutana_set_context MCP tools."""
 
 from __future__ import annotations
 
@@ -34,12 +34,12 @@ def _mock_identity(
 
 
 # ---------------------------------------------------------------------------
-# convene_get_summary tests
+# kutana_get_summary tests
 # ---------------------------------------------------------------------------
 
 
-class TestConveneGetSummary:
-    """Tests for the convene_get_summary MCP tool."""
+class TestKutanaGetSummary:
+    """Tests for the kutana_get_summary MCP tool."""
 
     async def test_get_summary_success(self) -> None:
         """get_summary returns structured summary JSON."""
@@ -68,7 +68,7 @@ class TestConveneGetSummary:
             patch.object(mcp_main, "_get_api_client", return_value=mock_client),
             patch.object(mcp_main, "log_tool_call"),
         ):
-            result = await mcp_main.convene_get_summary(MOCK_MEETING_ID)
+            result = await mcp_main.kutana_get_summary(MOCK_MEETING_ID)
 
         data = json.loads(result)
         assert data["meeting_id"] == MOCK_MEETING_ID
@@ -80,7 +80,7 @@ class TestConveneGetSummary:
         """get_summary returns error for invalid meeting ID."""
         from mcp_server import main as mcp_main
 
-        result = await mcp_main.convene_get_summary("not-a-uuid")
+        result = await mcp_main.kutana_get_summary("not-a-uuid")
         data = json.loads(result)
         assert "error" in data
 
@@ -95,7 +95,7 @@ class TestConveneGetSummary:
             patch.object(mcp_main, "_ensure_authenticated", return_value=identity),
             patch.object(mcp_main, "_security_check", return_value=scope_error),
         ):
-            result = await mcp_main.convene_get_summary(MOCK_MEETING_ID)
+            result = await mcp_main.kutana_get_summary(MOCK_MEETING_ID)
 
         data = json.loads(result)
         assert data["error"] == "insufficient_scope"
@@ -116,7 +116,7 @@ class TestConveneGetSummary:
             patch.object(mcp_main, "_security_check", return_value=None),
             patch.object(mcp_main, "_get_api_client", return_value=mock_client),
         ):
-            result = await mcp_main.convene_get_summary(MOCK_MEETING_ID)
+            result = await mcp_main.kutana_get_summary(MOCK_MEETING_ID)
 
         data = json.loads(result)
         assert "error" in data
@@ -124,12 +124,12 @@ class TestConveneGetSummary:
 
 
 # ---------------------------------------------------------------------------
-# convene_set_context tests
+# kutana_set_context tests
 # ---------------------------------------------------------------------------
 
 
-class TestConveneSetContext:
-    """Tests for the convene_set_context MCP tool."""
+class TestKutanaSetContext:
+    """Tests for the kutana_set_context MCP tool."""
 
     async def test_set_context_success(self) -> None:
         """set_context publishes context to the meeting data channel."""
@@ -147,7 +147,7 @@ class TestConveneSetContext:
             patch.object(mcp_main, "_gateway_client", mock_gw),
             patch.object(mcp_main, "log_tool_call"),
         ):
-            result = await mcp_main.convene_set_context(
+            result = await mcp_main.kutana_set_context(
                 MOCK_MEETING_ID,
                 "Previous sprint: completed 15 story points.",
             )
@@ -169,7 +169,7 @@ class TestConveneSetContext:
             patch.object(mcp_main, "_security_check", return_value=None),
             patch.object(mcp_main, "_gateway_client", None),
         ):
-            result = await mcp_main.convene_set_context(
+            result = await mcp_main.kutana_set_context(
                 MOCK_MEETING_ID,
                 "Some context",
             )
@@ -196,7 +196,7 @@ class TestConveneSetContext:
             patch.object(mcp_main, "_gateway_client", mock_gw),
             patch.object(mcp_main, "log_tool_call"),
         ):
-            result = await mcp_main.convene_set_context(
+            result = await mcp_main.kutana_set_context(
                 MOCK_MEETING_ID,
                 long_context,
             )
@@ -217,7 +217,7 @@ class TestConveneSetContext:
             patch.object(mcp_main, "_ensure_authenticated", return_value=identity),
             patch.object(mcp_main, "_security_check", return_value=scope_error),
         ):
-            result = await mcp_main.convene_set_context(
+            result = await mcp_main.kutana_set_context(
                 MOCK_MEETING_ID,
                 "Some context",
             )
@@ -229,7 +229,7 @@ class TestConveneSetContext:
         """set_context returns error for invalid meeting ID."""
         from mcp_server import main as mcp_main
 
-        result = await mcp_main.convene_set_context("bad-id", "Some context")
+        result = await mcp_main.kutana_set_context("bad-id", "Some context")
         data = json.loads(result)
         assert "error" in data
 

@@ -7,7 +7,7 @@ Wire STT provider creation into the audio service so Twilio audio actually gets 
 
 ## Steps
 
-1. **Create `WhisperRemoteSTT` provider** — `packages/convene-providers/src/convene_providers/stt/whisper_remote_stt.py`
+1. **Create `WhisperRemoteSTT` provider** — `packages/kutana-providers/src/kutana_providers/stt/whisper_remote_stt.py`
    - Remote Whisper STT that calls DGX Spark vLLM OpenAI-compatible API
    - Buffers PCM16 audio, writes temp WAV, POSTs to `/v1/audio/transcriptions`
    - Register `whisper-remote` in `registry.py`, export from `stt/__init__.py`
@@ -34,8 +34,8 @@ Wire STT provider creation into the audio service so Twilio audio actually gets 
 
 ## Key Files
 - `services/audio-service/src/audio_service/main.py`
-- `packages/convene-providers/src/convene_providers/stt/whisper_remote_stt.py` (new)
-- `packages/convene-providers/src/convene_providers/registry.py`
-- `packages/convene-providers/src/convene_providers/stt/__init__.py`
+- `packages/kutana-providers/src/kutana_providers/stt/whisper_remote_stt.py` (new)
+- `packages/kutana-providers/src/kutana_providers/registry.py`
+- `packages/kutana-providers/src/kutana_providers/stt/__init__.py`
 - `services/audio-service/tests/test_stt_wiring.py` (new)
 - `services/audio-service/tests/test_redis_integration.py` (new)

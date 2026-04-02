@@ -1,20 +1,20 @@
 # Claude Code Standup Agent Demo
 
-A step-by-step demo showing Claude Code joining a Convene AI standup meeting as a first-class participant — appearing in the participant grid, monitoring the transcript, and delivering a standup update when called on.
+A step-by-step demo showing Claude Code joining a Kutana AI standup meeting as a first-class participant — appearing in the participant grid, monitoring the transcript, and delivering a standup update when called on.
 
 ---
 
 ## Prerequisites
 
 - Claude Code (latest)
-- Access to a running Convene AI instance
-- A Convene API key (Agent scope)
+- Access to a running Kutana AI instance
+- A Kutana API key (Agent scope)
 
 ---
 
 ## 1. Get an API Key
 
-1. Sign in to your Convene instance
+1. Sign in to your Kutana instance
 2. Go to **Settings → API Keys**
 3. Click **Generate Key** and select the **Agent** scope
 4. Copy the key — it starts with `cvn_`
@@ -39,14 +39,14 @@ source ~/.zshrc
 
 ### Add the MCP server
 
-Edit `~/.claude/settings.json` and add the `convene` entry under `mcpServers`:
+Edit `~/.claude/settings.json` and add the `kutana` entry under `mcpServers`:
 
 ```json
 {
   "mcpServers": {
-    "convene": {
+    "kutana": {
       "type": "http",
-      "url": "http://convene.spark-b0f2.local/mcp",
+      "url": "http://kutana.spark-b0f2.local/mcp",
       "headers": {
         "Authorization": "Bearer ${CONVENE_API_KEY}"
       }
@@ -55,7 +55,7 @@ Edit `~/.claude/settings.json` and add the `convene` entry under `mcpServers`:
 }
 ```
 
-> **Note:** Replace `convene.spark-b0f2.local` with your Convene instance hostname if different.
+> **Note:** Replace `kutana.spark-b0f2.local` with your Kutana instance hostname if different.
 
 ### Verify the connection
 
@@ -65,7 +65,7 @@ Restart Claude Code, then run:
 /mcp
 ```
 
-You should see `convene` listed with 20+ available tools.
+You should see `kutana` listed with 20+ available tools.
 
 ---
 
@@ -76,7 +76,7 @@ The full standup demo runs through seven steps. You can run these as prompts in 
 ### Step 1 — List available meetings
 
 ```
-convene_list_meetings()
+kutana_list_meetings()
 ```
 
 **Example response:**
@@ -105,7 +105,7 @@ Pick the active standup meeting and copy its `id`.
 Join with `tts_enabled` so Claude Code can speak when it gets the floor. This is the step that makes Claude Code appear in the participant grid.
 
 ```
-convene_join_meeting(
+kutana_join_meeting(
   meeting_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   capabilities=["text_only", "tts_enabled"]
 )
@@ -130,7 +130,7 @@ At this point Claude Code appears as **"Claude Code"** (role: agent) in the part
 Poll the recent transcript to understand the meeting context before speaking.
 
 ```
-convene_get_transcript(
+kutana_get_transcript(
   meeting_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   last_n=20
 )
@@ -163,10 +163,10 @@ convene_get_transcript(
 
 ### Step 4 — Poll for the cue
 
-Watch the transcript for the trigger phrase (e.g., `"let's hear from Claude"`). Use `convene_get_meeting_events` to poll for new events without reading the full transcript every time.
+Watch the transcript for the trigger phrase (e.g., `"let's hear from Claude"`). Use `kutana_get_meeting_events` to poll for new events without reading the full transcript every time.
 
 ```
-convene_get_meeting_events(
+kutana_get_meeting_events(
   meeting_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   event_types=["transcript.segment"]
 )
@@ -197,7 +197,7 @@ When the transcript contains your trigger phrase, proceed to Step 5.
 Enter the speaker queue to signal readiness to speak.
 
 ```
-convene_raise_hand(
+kutana_raise_hand(
   meeting_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   priority="normal",
   topic="standup update"
@@ -218,10 +218,10 @@ convene_raise_hand(
 
 ### Step 6 — Wait for the floor
 
-Poll `convene_get_meeting_events` for a `speaker.changed` event that names Claude Code as the active speaker, or call `convene_get_queue_status` to check position.
+Poll `kutana_get_meeting_events` for a `speaker.changed` event that names Claude Code as the active speaker, or call `kutana_get_queue_status` to check position.
 
 ```
-convene_get_queue_status(
+kutana_get_queue_status(
   meeting_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 )
 ```
@@ -245,10 +245,10 @@ When `current_speaker.name` is `"Claude Code"`, proceed to speak.
 
 ### Step 7 — Deliver the standup update
 
-Call `convene_start_speaking` with the standup text. The text is synthesized via TTS and mixed into the room audio.
+Call `kutana_start_speaking` with the standup text. The text is synthesized via TTS and mixed into the room audio.
 
 ```
-convene_start_speaking(
+kutana_start_speaking(
   meeting_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   text="Yesterday I reviewed the transcript pipeline and identified three edge cases in the speaker diarization logic. Today I'll be monitoring the meeting for action items and flagging any commitments I detect. No blockers."
 )
@@ -269,7 +269,7 @@ convene_start_speaking(
 When finished, hand the floor back so the next speaker can go.
 
 ```
-convene_mark_finished_speaking(
+kutana_mark_finished_speaking(
   meeting_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 )
 ```
@@ -292,18 +292,18 @@ Paste this into a Claude Code session after completing the setup above:
 ```
 You are a standup agent participating in today's Daily Standup meeting.
 
-1. Call convene_list_meetings and find the active "Daily Standup" meeting.
+1. Call kutana_list_meetings and find the active "Daily Standup" meeting.
 2. Join it with capabilities=["text_only", "tts_enabled"].
-3. Read the transcript with convene_get_transcript (last 20 segments).
-4. Poll convene_get_meeting_events every 10 seconds, watching for any segment
+3. Read the transcript with kutana_get_transcript (last 20 segments).
+4. Poll kutana_get_meeting_events every 10 seconds, watching for any segment
    where someone says "let's hear from Claude" or "Claude, your turn" or similar.
 5. When you see that cue, raise your hand with topic="standup update".
-6. Poll convene_get_queue_status until you are the current speaker.
-7. Deliver your standup using convene_start_speaking with this text:
+6. Poll kutana_get_queue_status until you are the current speaker.
+7. Deliver your standup using kutana_start_speaking with this text:
    "Yesterday I joined the meeting platform and verified the participant grid.
     Today I'll be monitoring transcripts and flagging action items.
     No blockers."
-8. Call convene_mark_finished_speaking to release the floor.
+8. Call kutana_mark_finished_speaking to release the floor.
 9. Continue monitoring the transcript for action items until the meeting ends
    or someone says "that's a wrap".
 ```
@@ -312,7 +312,7 @@ You are a standup agent participating in today's Daily Standup meeting.
 
 ## How Agents Appear in the Participant Grid
 
-When an agent calls `convene_join_meeting`, the agent gateway broadcasts a `participant_update` event to all connected browser sessions. The meeting room UI adds the agent to the participant grid with:
+When an agent calls `kutana_join_meeting`, the agent gateway broadcasts a `participant_update` event to all connected browser sessions. The meeting room UI adds the agent to the participant grid with:
 
 - **Name:** the agent's configured display name (e.g., "Claude Code")
 - **Role:** `agent` (shown as a label under the name)
@@ -326,9 +326,9 @@ The agent tile updates in real time — a green pulse ring appears when the agen
 
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
-| `convene` not listed in `/mcp` | Settings not saved or Claude Code not restarted | Save `settings.json` and restart |
+| `kutana` not listed in `/mcp` | Settings not saved or Claude Code not restarted | Save `settings.json` and restart |
 | `401 Unauthorized` on tool calls | API key not set or expired | Re-export `CONVENE_API_KEY` |
-| Agent not visible in participant grid | Agent gateway not running | Check `kubectl logs -n convene deploy/agent-gateway` |
+| Agent not visible in participant grid | Agent gateway not running | Check `kubectl logs -n kutana deploy/agent-gateway` |
 | `tts_not_enabled` error on start_speaking | Joined without `tts_enabled` capability | Leave and rejoin with `capabilities=["text_only", "tts_enabled"]` |
 | Cue never detected | Transcript polling too slow | Decrease poll interval; check STT pipeline is running |
 

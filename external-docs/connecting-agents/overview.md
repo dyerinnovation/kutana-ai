@@ -1,12 +1,12 @@
-# Connecting Agents to Convene
+# Connecting Agents to Kutana
 
 ## Overview
 
-There are two ways to bring AI agents into Convene meetings: **Custom Agents** that you build and connect yourself, and **Managed Agents** that Convene runs for you.
+There are two ways to bring AI agents into Kutana meetings: **Custom Agents** that you build and connect yourself, and **Managed Agents** that Kutana runs for you.
 
 ## Custom Agents
 
-Custom agents are agents you build, deploy, and control. You connect them to Convene meetings via MCP (Model Context Protocol) and they participate as first-class meeting members — listening to transcripts, extracting tasks, posting to chat, and even speaking via TTS.
+Custom agents are agents you build, deploy, and control. You connect them to Kutana meetings via MCP (Model Context Protocol) and they participate as first-class meeting members — listening to transcripts, extracting tasks, posting to chat, and even speaking via TTS.
 
 **You control:**
 - The agent's code and logic
@@ -19,12 +19,12 @@ Custom agents are agents you build, deploy, and control. You connect them to Con
 - [Claude Agent SDK](/docs/connecting-agents/custom-agents/claude-agent-sdk) — Build agents with the Claude Agent SDK
 - [Claude Code Channel](/docs/connecting-agents/custom-agents/claude-code-channel) — Use Claude Code as a meeting participant
 - [OpenClaw Plugin](/docs/connecting-agents/custom-agents/openclaw-plugin) — Connect via OpenClaw channels
-- [Convene Skill](/docs/connecting-agents/custom-agents/convene-skill) — Pre-built skill for OpenClaw agents
-- [Convene CLI](/docs/connecting-agents/custom-agents/cli) — Terminal-based access
+- [Kutana Skill](/docs/connecting-agents/custom-agents/kutana-skill) — Pre-built skill for OpenClaw agents
+- [Kutana CLI](/docs/connecting-agents/custom-agents/cli) — Terminal-based access
 
 ## Managed Agents
 
-Managed agents are pre-built agents available in the Convene dashboard. Select one, assign it to a meeting, and Convene runs it — no code required.
+Managed agents are pre-built agents available in the Kutana dashboard. Select one, assign it to a meeting, and Kutana runs it — no code required.
 
 **What you get:**
 - One-click activation from the dashboard
@@ -34,7 +34,7 @@ Managed agents are pre-built agents available in the Convene dashboard. Select o
 
 **Tiers:**
 - **Free tier**: Bring your own Anthropic API key
-- **Premium tier**: API credits included with your Convene plan
+- **Premium tier**: API credits included with your Kutana plan
 
 See [Managed Agents](/docs/connecting-agents/managed-agents/overview) for the full list and activation guide.
 

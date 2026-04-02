@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Stop Convene AI services on the DGX Spark K3s cluster
+# Stop Kutana AI services on the DGX Spark K3s cluster
 set -euo pipefail
 
-NAMESPACE=convene
+NAMESPACE=kutana
 FULL=${1:-}
 
 DEPLOYMENTS="api-server agent-gateway audio-service task-engine mcp-server web"
-echo "==> Scaling down Convene service deployments..."
+echo "==> Scaling down Kutana service deployments..."
 kubectl -n $NAMESPACE scale deployment $DEPLOYMENTS --replicas=0
 
 echo ""

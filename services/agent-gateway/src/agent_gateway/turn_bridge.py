@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 if TYPE_CHECKING:
-    from convene_core.interfaces.turn_manager import TurnManager
+    from kutana_core.interfaces.turn_manager import TurnManager
     from agent_gateway.connection_manager import ConnectionManager
 
 logger = logging.getLogger(__name__)

@@ -16,7 +16,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from convene_core.interfaces.tts import TTSProvider, Voice
+from kutana_core.interfaces.tts import TTSProvider, Voice
 
 if TYPE_CHECKING:
     from agent_gateway.connection_manager import ConnectionManager

@@ -1,9 +1,9 @@
-"""Convene AI MCP Server — FastMCP server exposing meeting tools.
+"""Kutana AI MCP Server — FastMCP server exposing meeting tools.
 
-Hosted endpoint: https://convene.spark-b0f2.local/mcp
+Hosted endpoint: https://kutana.spark-b0f2.local/mcp
 Run locally for development: uv run python -m mcp_server.main
 
-All tools use the ``convene_`` prefix for namespace safety when mixed with
+All tools use the ``kutana_`` prefix for namespace safety when mixed with
 tools from other MCP servers in multi-server configurations.
 
 Security
@@ -18,7 +18,7 @@ Every tool call goes through a three-layer security pipeline:
    Exceeding the limit returns a JSON ``rate_limit_exceeded`` response.
 
 All auth events, scope violations, and tool calls are emitted as structured
-JSON to the ``convene.audit`` logger (see ``security/audit.py``).
+JSON to the ``kutana.audit`` logger (see ``security/audit.py``).
 """
 
 from __future__ import annotations
@@ -31,8 +31,8 @@ from uuid import UUID
 
 from mcp.server.fastmcp import FastMCP
 
-from convene_providers.chat.redis_chat_store import RedisChatStore
-from convene_providers.turn_management.redis_turn_manager import RedisTurnManager
+from kutana_providers.chat.redis_chat_store import RedisChatStore
+from kutana_providers.turn_management.redis_turn_manager import RedisTurnManager
 from mcp_server.api_client import ApiClient
 from mcp_server.auth import MCPAuthError, MCPIdentity, validate_mcp_token
 from mcp_server.gateway_client import GatewayClient
@@ -64,8 +64,8 @@ settings = MCPServerSettings()
 
 # Stateless HTTP mode with JSON responses — optimal for Docker / production
 mcp = FastMCP(
-    "Convene AI",
-    instructions="Tools for joining and participating in Convene AI meetings.",
+    "Kutana AI",
+    instructions="Tools for joining and participating in Kutana AI meetings.",
     stateless_http=True,
     json_response=True,
     streamable_http_path="/",
@@ -145,7 +145,7 @@ def _get_api_client() -> ApiClient:
     global _api_client
     if _api_client is None:
         if not settings.mcp_api_key:
-            raise RuntimeError("MCP_API_KEY not set. Generate an API key in the Convene dashboard.")
+            raise RuntimeError("MCP_API_KEY not set. Generate an API key in the Kutana dashboard.")
         _api_client = ApiClient(settings.api_base_url, settings.mcp_api_key)
     return _api_client
 
@@ -265,7 +265,7 @@ async def _security_check(
 
 
 @mcp.tool()
-async def convene_list_meetings() -> str:
+async def kutana_list_meetings() -> str:
     """List available meetings.
 
     Returns a JSON array of meetings with their IDs, titles, and status.
@@ -282,11 +282,11 @@ async def convene_list_meetings() -> str:
 
 
 @mcp.tool()
-async def convene_join_meeting(
+async def kutana_join_meeting(
     meeting_id: str,
     capabilities: list[str] | None = None,
 ) -> str:
-    """Join a meeting via the Convene Agent Gateway.
+    """Join a meeting via the Kutana Agent Gateway.
 
     This exchanges the API key for a gateway token, connects via WebSocket,
     and joins the specified meeting. Transcript segments will be buffered
@@ -320,7 +320,7 @@ async def convene_join_meeting(
     if _gateway_client is not None and _gateway_client.meeting_id is not None:
         return json.dumps(
             {
-                "error": "Already in a meeting. Call convene_leave_meeting() first.",
+                "error": "Already in a meeting. Call kutana_leave_meeting() first.",
                 "current_meeting_id": _gateway_client.meeting_id,
             }
         )
@@ -356,7 +356,7 @@ async def convene_join_meeting(
 
 
 @mcp.tool()
-async def convene_leave_meeting() -> str:
+async def kutana_leave_meeting() -> str:
     """Leave the current meeting and disconnect from the gateway.
 
     Returns:
@@ -380,7 +380,7 @@ async def convene_leave_meeting() -> str:
 
 
 @mcp.tool()
-async def convene_get_transcript(last_n: int = 50) -> str:
+async def kutana_get_transcript(last_n: int = 50) -> str:
     """Get recent transcript segments from the current meeting.
 
     Transcript is session-scoped — only segments received after you joined
@@ -394,7 +394,7 @@ async def convene_get_transcript(last_n: int = 50) -> str:
         JSON array of transcript segments with text, speaker, timestamps.
     """
     if _gateway_client is None or _gateway_client.meeting_id is None:
-        return json.dumps({"error": "Not in a meeting. Call convene_join_meeting() first."})
+        return json.dumps({"error": "Not in a meeting. Call kutana_join_meeting() first."})
 
     identity = await _ensure_authenticated()
     if err := await _security_check(
@@ -413,7 +413,7 @@ async def convene_get_transcript(last_n: int = 50) -> str:
 
 
 @mcp.tool()
-async def convene_get_tasks(meeting_id: str) -> str:
+async def kutana_get_tasks(meeting_id: str) -> str:
     """Get tasks for a specific meeting.
 
     Args:
@@ -438,7 +438,7 @@ async def convene_get_tasks(meeting_id: str) -> str:
 
 
 @mcp.tool()
-async def convene_create_task(
+async def kutana_create_task(
     meeting_id: str,
     description: str,
     priority: str = "medium",
@@ -473,7 +473,7 @@ async def convene_create_task(
 
 
 @mcp.tool()
-async def convene_get_summary(meeting_id: str) -> str:
+async def kutana_get_summary(meeting_id: str) -> str:
     """Get a structured summary for a meeting.
 
     Returns title, duration, participant count, key discussion points,
@@ -510,7 +510,7 @@ async def convene_get_summary(meeting_id: str) -> str:
 
 
 @mcp.tool()
-async def convene_set_context(meeting_id: str, context: str) -> str:
+async def kutana_set_context(meeting_id: str, context: str) -> str:
     """Inject context into a meeting for participants to see.
 
     Use this to provide pre-meeting context (e.g. agenda, linked
@@ -536,7 +536,7 @@ async def convene_set_context(meeting_id: str, context: str) -> str:
 
     # Publish context to the meeting's data channel via the gateway
     if _gateway_client is None or _gateway_client.meeting_id is None:
-        return json.dumps({"error": "Not in a meeting. Call convene_join_meeting() first."})
+        return json.dumps({"error": "Not in a meeting. Call kutana_join_meeting() first."})
 
     # Publish as a channel message on the "context" channel
     payload = {
@@ -564,14 +564,14 @@ async def convene_set_context(meeting_id: str, context: str) -> str:
 
 
 @mcp.tool()
-async def convene_get_participants() -> str:
+async def kutana_get_participants() -> str:
     """Get the list of participants in the current meeting.
 
     Returns:
         JSON array of participant information.
     """
     if _gateway_client is None or _gateway_client.meeting_id is None:
-        return json.dumps({"error": "Not in a meeting. Call convene_join_meeting() first."})
+        return json.dumps({"error": "Not in a meeting. Call kutana_join_meeting() first."})
 
     identity = await _ensure_authenticated()
     if err := await _security_check(
@@ -589,9 +589,9 @@ async def convene_get_participants() -> str:
 
 
 @mcp.tool()
-async def convene_create_meeting(
+async def kutana_create_meeting(
     title: str,
-    platform: str = "convene",
+    platform: str = "kutana",
 ) -> str:
     """Create a new meeting.
 
@@ -600,7 +600,7 @@ async def convene_create_meeting(
 
     Args:
         title: Human-readable meeting title (max 200 chars).
-        platform: Meeting platform (default: "convene").
+        platform: Meeting platform (default: "kutana").
 
     Returns:
         JSON object of the created meeting.
@@ -621,7 +621,7 @@ async def convene_create_meeting(
 
 
 @mcp.tool()
-async def convene_start_meeting(meeting_id: str) -> str:
+async def kutana_start_meeting(meeting_id: str) -> str:
     """Start a meeting (transition from scheduled to active).
 
     The meeting must be in 'scheduled' status. This sets the status to 'active'
@@ -663,7 +663,7 @@ async def convene_start_meeting(meeting_id: str) -> str:
 
 
 @mcp.tool()
-async def convene_end_meeting(meeting_id: str) -> str:
+async def kutana_end_meeting(meeting_id: str) -> str:
     """End a meeting (transition from active to completed).
 
     The meeting must be in 'active' status. This sets the status to 'completed'
@@ -705,7 +705,7 @@ async def convene_end_meeting(meeting_id: str) -> str:
 
 
 @mcp.tool()
-async def convene_join_or_create_meeting(
+async def kutana_join_or_create_meeting(
     title: str,
     capabilities: list[str] | None = None,
 ) -> str:
@@ -721,7 +721,7 @@ async def convene_join_or_create_meeting(
     Args:
         title: Meeting title to search for or create (max 200 chars).
         capabilities: Optional capabilities to request when joining.
-                      See convene_join_meeting for valid values.
+                      See kutana_join_meeting for valid values.
 
     Returns:
         JSON object with meeting details and join status.
@@ -809,7 +809,7 @@ async def convene_join_or_create_meeting(
 
 
 @mcp.tool()
-async def convene_subscribe_channel(channel: str) -> str:
+async def kutana_subscribe_channel(channel: str) -> str:
     """Subscribe to a data channel in the current meeting.
 
     Data channels allow agents to exchange structured messages.
@@ -829,7 +829,7 @@ async def convene_subscribe_channel(channel: str) -> str:
         return json.dumps({"error": str(e)})
 
     if _gateway_client is None or _gateway_client.meeting_id is None:
-        return json.dumps({"error": "Not in a meeting. Call convene_join_meeting() first."})
+        return json.dumps({"error": "Not in a meeting. Call kutana_join_meeting() first."})
 
     identity = await _ensure_authenticated()
     if err := await _security_check(
@@ -853,7 +853,7 @@ async def convene_subscribe_channel(channel: str) -> str:
 
 
 @mcp.tool()
-async def convene_publish_to_channel(channel: str, payload: dict[str, Any]) -> str:
+async def kutana_publish_to_channel(channel: str, payload: dict[str, Any]) -> str:
     """Publish a message to a data channel in the current meeting.
 
     Other agents subscribed to this channel will receive the message.
@@ -872,7 +872,7 @@ async def convene_publish_to_channel(channel: str, payload: dict[str, Any]) -> s
         return json.dumps({"error": str(e)})
 
     if _gateway_client is None or _gateway_client.meeting_id is None:
-        return json.dumps({"error": "Not in a meeting. Call convene_join_meeting() first."})
+        return json.dumps({"error": "Not in a meeting. Call kutana_join_meeting() first."})
 
     identity = await _ensure_authenticated()
     if err := await _security_check(
@@ -890,11 +890,11 @@ async def convene_publish_to_channel(channel: str, payload: dict[str, Any]) -> s
 
 
 @mcp.tool()
-async def convene_get_channel_messages(channel: str, last_n: int = 50) -> str:
+async def kutana_get_channel_messages(channel: str, last_n: int = 50) -> str:
     """Get buffered messages received on a data channel.
 
     Returns messages that arrived on the channel since you subscribed.
-    Call convene_subscribe_channel(channel) first to start receiving messages.
+    Call kutana_subscribe_channel(channel) first to start receiving messages.
 
     Args:
         channel: Channel name to read from.
@@ -909,7 +909,7 @@ async def convene_get_channel_messages(channel: str, last_n: int = 50) -> str:
         return json.dumps({"error": str(e)})
 
     if _gateway_client is None or _gateway_client.meeting_id is None:
-        return json.dumps({"error": "Not in a meeting. Call convene_join_meeting() first."})
+        return json.dumps({"error": "Not in a meeting. Call kutana_join_meeting() first."})
 
     identity = await _ensure_authenticated()
     if err := await _security_check(
@@ -928,7 +928,7 @@ async def convene_get_channel_messages(channel: str, last_n: int = 50) -> str:
 
 
 @mcp.tool()
-async def convene_get_meeting_events(last_n: int = 50, event_type: str | None = None) -> str:
+async def kutana_get_meeting_events(last_n: int = 50, event_type: str | None = None) -> str:
     """Get recent meeting events pushed by the gateway WebSocket connection.
 
     Returns real-time events buffered since you joined: turn queue changes,
@@ -950,7 +950,7 @@ async def convene_get_meeting_events(last_n: int = 50, event_type: str | None = 
         JSON array of event objects in order received.
     """
     if _gateway_client is None or _gateway_client.meeting_id is None:
-        return json.dumps({"error": "Not in a meeting. Call convene_join_meeting() first."})
+        return json.dumps({"error": "Not in a meeting. Call kutana_join_meeting() first."})
 
     identity = await _ensure_authenticated()
     if err := await _security_check(
@@ -1019,7 +1019,7 @@ async def start_speaking(meeting_id: str) -> str:
 
 
 @mcp.tool()
-async def convene_raise_hand(
+async def kutana_raise_hand(
     meeting_id: str,
     priority: str = "normal",
     topic: str | None = None,
@@ -1067,7 +1067,7 @@ async def convene_raise_hand(
 
 
 @mcp.tool()
-async def convene_get_queue_status(meeting_id: str) -> str:
+async def kutana_get_queue_status(meeting_id: str) -> str:
     """Get the current speaker queue status for a meeting.
 
     Shows who is currently speaking, who is waiting, and your position.
@@ -1120,7 +1120,7 @@ async def convene_get_queue_status(meeting_id: str) -> str:
 
 
 @mcp.tool()
-async def convene_start_speaking(meeting_id: str) -> str:
+async def kutana_start_speaking(meeting_id: str) -> str:
     """Signal that you have started actively speaking.
 
     Call this after receiving turn_your_turn to indicate you have begun
@@ -1164,7 +1164,7 @@ async def convene_start_speaking(meeting_id: str) -> str:
 
 
 @mcp.tool()
-async def convene_mark_finished_speaking(meeting_id: str) -> str:
+async def kutana_mark_finished_speaking(meeting_id: str) -> str:
     """Signal that you have finished speaking, advancing the queue.
 
     Removes you as the active speaker and promotes the next participant
@@ -1208,7 +1208,7 @@ async def convene_mark_finished_speaking(meeting_id: str) -> str:
 
 
 @mcp.tool()
-async def convene_speak(meeting_id: str, text: str) -> str:
+async def kutana_speak(meeting_id: str, text: str) -> str:
     """Speak aloud in the meeting using text-to-speech synthesis.
 
     Sends the provided text through the gateway's TTS engine, which synthesizes
@@ -1221,9 +1221,9 @@ async def convene_speak(meeting_id: str, text: str) -> str:
 
     Workflow:
         1. Join the meeting with ``capabilities=["tts_enabled"]``
-        2. Optionally call ``convene_raise_hand()`` to request the floor
-        3. Wait for ``turn_your_turn`` event via ``convene_get_meeting_events()``
-        4. Call ``convene_speak()`` with your message
+        2. Optionally call ``kutana_raise_hand()`` to request the floor
+        3. Wait for ``turn_your_turn`` event via ``kutana_get_meeting_events()``
+        4. Call ``kutana_speak()`` with your message
         5. The gateway synthesizes and broadcasts audio automatically
 
     Args:
@@ -1245,7 +1245,7 @@ async def convene_speak(meeting_id: str, text: str) -> str:
     if _gateway_client is None or _gateway_client.meeting_id is None:
         return json.dumps(
             {
-                "error": "Not in a meeting. Call convene_join_meeting() with tts_enabled capability first.",
+                "error": "Not in a meeting. Call kutana_join_meeting() with tts_enabled capability first.",
             }
         )
 
@@ -1267,7 +1267,7 @@ async def convene_speak(meeting_id: str, text: str) -> str:
         await tm.mark_finished_speaking(mid, pid)
     except Exception:
         # Turn manager failure is non-fatal — audio was already synthesized
-        logger.warning("Failed to mark_finished_speaking after convene_speak")
+        logger.warning("Failed to mark_finished_speaking after kutana_speak")
 
     log_tool_call("speak", agent_id=identity.agent_config_id, meeting_id=str(mid))
     return json.dumps(
@@ -1280,7 +1280,7 @@ async def convene_speak(meeting_id: str, text: str) -> str:
 
 
 @mcp.tool()
-async def convene_cancel_hand_raise(
+async def kutana_cancel_hand_raise(
     meeting_id: str,
     hand_raise_id: str | None = None,
 ) -> str:
@@ -1326,7 +1326,7 @@ async def convene_cancel_hand_raise(
 
 
 @mcp.tool()
-async def convene_get_speaking_status(meeting_id: str) -> str:
+async def kutana_get_speaking_status(meeting_id: str) -> str:
     """Check your current speaking status in a meeting.
 
     Returns whether you are the active speaker, in the queue,
@@ -1376,7 +1376,7 @@ async def convene_get_speaking_status(meeting_id: str) -> str:
 
 
 @mcp.tool()
-async def convene_send_chat_message(
+async def kutana_send_chat_message(
     meeting_id: str,
     content: str,
     message_type: str = "text",
@@ -1396,7 +1396,7 @@ async def convene_send_chat_message(
     Returns:
         JSON object with the stored message details including message_id and sent_at.
     """
-    from convene_core.models.chat import ChatMessageType
+    from kutana_core.models.chat import ChatMessageType
 
     try:
         mid = validate_meeting_id(meeting_id)
@@ -1444,7 +1444,7 @@ async def convene_send_chat_message(
 
 
 @mcp.tool()
-async def convene_get_chat_messages(
+async def kutana_get_chat_messages(
     meeting_id: str,
     limit: int = 50,
     message_type: str | None = None,
@@ -1468,7 +1468,7 @@ async def convene_get_chat_messages(
     """
     from datetime import datetime as _datetime
 
-    from convene_core.models.chat import ChatMessageType
+    from kutana_core.models.chat import ChatMessageType
 
     try:
         mid = validate_meeting_id(meeting_id)
@@ -1524,7 +1524,7 @@ async def convene_get_chat_messages(
 
 
 @mcp.tool()
-async def convene_get_meeting_status(meeting_id: str) -> str:
+async def kutana_get_meeting_status(meeting_id: str) -> str:
     """Get a comprehensive status snapshot for a meeting.
 
     Returns the current state of the meeting including:
@@ -1671,7 +1671,7 @@ async def health_check(request: object) -> object:
 
 if __name__ == "__main__":
     logger.info(
-        "Starting Convene MCP Server (Streamable HTTP) on %s:%d",
+        "Starting Kutana MCP Server (Streamable HTTP) on %s:%d",
         settings.mcp_host,
         settings.mcp_port,
     )
