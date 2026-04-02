@@ -1,7 +1,7 @@
 # Phase D: Cloud Message Bus Providers & Custom Extractor SDK
 
 ## Objective
-Implement Phase D of Convene AI:
+Implement Phase D of Kutana AI:
 - Cloud message bus providers: AWS SNS/SQS, GCP Pub/Sub, NATS JetStream
 - Custom extractor SDK (loader + decorator/base class)
 - Example compliance extractor
@@ -11,18 +11,18 @@ Implement Phase D of Convene AI:
 ## Files to Create
 
 ### Cloud Message Bus Providers
-- `packages/convene-providers/src/convene_providers/messaging/aws_sns_sqs.py` — SQSMessageBus (aioboto3)
-- `packages/convene-providers/src/convene_providers/messaging/gcp_pubsub.py` — PubSubMessageBus (google-cloud-pubsub async)
-- `packages/convene-providers/src/convene_providers/messaging/nats_jetstream.py` — NATSMessageBus (nats-py JetStream)
+- `packages/kutana-providers/src/kutana_providers/messaging/aws_sns_sqs.py` — SQSMessageBus (aioboto3)
+- `packages/kutana-providers/src/kutana_providers/messaging/gcp_pubsub.py` — PubSubMessageBus (google-cloud-pubsub async)
+- `packages/kutana-providers/src/kutana_providers/messaging/nats_jetstream.py` — NATSMessageBus (nats-py JetStream)
 
 ### Registry Updates
-- `packages/convene-providers/src/convene_providers/registry.py` — register aws-sns-sqs, gcp-pubsub, nats
-- `packages/convene-providers/src/convene_providers/messaging/redis_streams.py` — update create_message_bus_from_env() for all backends
-- `packages/convene-providers/pyproject.toml` — add optional deps: aws, gcp, nats
+- `packages/kutana-providers/src/kutana_providers/registry.py` — register aws-sns-sqs, gcp-pubsub, nats
+- `packages/kutana-providers/src/kutana_providers/messaging/redis_streams.py` — update create_message_bus_from_env() for all backends
+- `packages/kutana-providers/pyproject.toml` — add optional deps: aws, gcp, nats
 
-### Custom Extractor SDK (in convene-core)
-- `packages/convene-core/src/convene_core/extraction/loader.py` — ExtractorLoader class
-- `packages/convene-core/src/convene_core/extraction/sdk.py` — @extractor decorator, SimpleExtractor
+### Custom Extractor SDK (in kutana-core)
+- `packages/kutana-core/src/kutana_core/extraction/loader.py` — ExtractorLoader class
+- `packages/kutana-core/src/kutana_core/extraction/sdk.py` — @extractor decorator, SimpleExtractor
 
 ### Examples
 - `examples/custom-extractors/compliance_extractor.py`
@@ -34,10 +34,10 @@ Implement Phase D of Convene AI:
 - `deploy/README.md`
 
 ### Tests
-- `packages/convene-providers/tests/test_aws_sns_sqs.py`
-- `packages/convene-providers/tests/test_gcp_pubsub.py`
-- `packages/convene-providers/tests/test_nats_jetstream.py`
-- `packages/convene-core/tests/test_extractor_sdk.py`
+- `packages/kutana-providers/tests/test_aws_sns_sqs.py`
+- `packages/kutana-providers/tests/test_gcp_pubsub.py`
+- `packages/kutana-providers/tests/test_nats_jetstream.py`
+- `packages/kutana-core/tests/test_extractor_sdk.py`
 
 ## Key Conventions
 - Python 3.12+, strict mypy types, Pydantic v2, async/await, ruff

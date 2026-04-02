@@ -2,7 +2,7 @@
 
 ## Work Completed
 
-- **AWS SNS/SQS message bus provider** (`convene_providers/messaging/aws_sns_sqs.py`)
+- **AWS SNS/SQS message bus provider** (`kutana_providers/messaging/aws_sns_sqs.py`)
   - `SQSMessageBus` using aioboto3 with lazy import guard
   - publish/subscribe/ack/unsubscribe/close fully implemented
   - Consumer groups via separate SQS queues per (topic, group)
@@ -11,7 +11,7 @@
   - SNS→SQS subscription wiring with policy
   - Topic pattern matching via SNS topic list + fnmatch
 
-- **GCP Pub/Sub message bus provider** (`convene_providers/messaging/gcp_pubsub.py`)
+- **GCP Pub/Sub message bus provider** (`kutana_providers/messaging/gcp_pubsub.py`)
   - `PubSubMessageBus` using google-cloud-pubsub async client
   - Topic/subscription auto-creation with `AlreadyExists` handling
   - Consumer groups via separate subscriptions per (topic, group)
@@ -19,7 +19,7 @@
   - Resource path caching for topics and subscriptions
   - Requires `GCP_PROJECT_ID` env var — raises `ValueError` if absent
 
-- **NATS JetStream message bus provider** (`convene_providers/messaging/nats_jetstream.py`)
+- **NATS JetStream message bus provider** (`kutana_providers/messaging/nats_jetstream.py`)
   - `NATSMessageBus` using nats-py with JetStream
   - JetStream stream auto-creation (CONVENE stream)
   - Consumer groups via durable push consumers with `queue=` parameter
@@ -28,7 +28,7 @@
   - Native subject wildcard support (`*`, `>`)
   - `contextlib.suppress` for clean shutdown
 
-- **Provider registry updated** (`convene_providers/registry.py`)
+- **Provider registry updated** (`kutana_providers/registry.py`)
   - Registered: `aws-sns-sqs`, `gcp-pubsub`, `nats` message bus providers
 
 - **`create_message_bus_from_env()` updated** (`redis_streams.py`)
@@ -41,15 +41,15 @@
   - `[gcp]` → google-cloud-pubsub>=2.0
   - `[nats]` → nats-py>=2.7
 
-- **ExtractorLoader** (`convene_core/extraction/loader.py`)
-  - Discovery from installed package entry points (`convene.extractors` group)
+- **ExtractorLoader** (`kutana_core/extraction/loader.py`)
+  - Discovery from installed package entry points (`kutana.extractors` group)
   - Loading from local Python files (module isolation via importlib)
   - Hot-loading via `register_or_replace()`
   - Full ABC validation before registration
   - `load_from_module()` for dotted path imports
   - `create()` factory with kwarg forwarding
 
-- **Extractor SDK** (`convene_core/extraction/sdk.py`)
+- **Extractor SDK** (`kutana_core/extraction/sdk.py`)
   - `SimpleExtractor` base class with ClassVar name/entity_types
   - `@extractor` decorator for function-based extractors
   - Factory functions: `make_task`, `make_decision`, `make_question`, `make_key_point`, `make_blocker`, `make_follow_up`, `make_entity_mention`

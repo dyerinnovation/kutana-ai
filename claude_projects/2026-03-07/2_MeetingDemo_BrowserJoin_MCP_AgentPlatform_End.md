@@ -15,12 +15,12 @@
 - **A7: Demo Script** — `scripts/demo_meeting_flow.py` — full 13-step E2E demo (register → create → start → connect → audio → transcripts → end)
 
 ### Part B: Agent Platform
-- **B1: Convene CLI Tool** — `services/cli/` package with typer, rich tables, commands: login, logout, status, agents list/create, meetings list/create, keys generate
+- **B1: Kutana CLI Tool** — `services/cli/` package with typer, rich tables, commands: login, logout, status, agents list/create, meetings list/create, keys generate
 - **B2: OpenClaw Plugin + Skill** — `integrations/openclaw-plugin/` TypeScript package with 6 tools, SKILL.md, plugin manifest, HTTP client with MCP auth
 - **B3: Claude Agent SDK Integration Guide** — Updated `examples/meeting-assistant-agent/` with OAuth 2.1 Bearer token auth, 4 agent templates (assistant, summarizer, action-tracker, decision-logger), argparse CLI, `.env.example`
 - **B4: Prebuilt Agent Templates** — `AgentTemplateORM`, `HostedAgentSessionORM` models, API routes (`agent_templates.py`), `AgentTemplatePage.tsx` frontend with browse/filter/activate UI
 - **B5: API Key Security** — `expires_at` column, Redis rate limiting middleware (`rate_limit.py`), API key audit log table, Fernet encrypted storage for Anthropic API keys (`encryption.py`)
-- **B6: Claude Code Skill** — `.claude/skills/convene-meeting/SKILL.md` with MCP tool instructions, workflows, trigger conditions
+- **B6: Claude Code Skill** — `.claude/skills/kutana-meeting/SKILL.md` with MCP tool instructions, workflows, trigger conditions
 - **B7: Capability-Based Channel Routing** — `_handle_data()` publishes to Redis with channel info, `EventRelay._should_relay()` filters by subscribed channels, MCP tools `subscribe_channel()` and `publish_to_channel()`, GatewayClient channel buffering
 - **B8: Log Monitoring** — `docs/cowork-tasks/cowork-task-descriptions/daily-log-monitor.md` CoWork task, `scripts/check_logs.py` health checker
 
@@ -36,7 +36,7 @@
 - **End-to-end testing** — Run demo script against live services, verify browser audio→transcript flow
 - **Database migration** — Generate Alembic migration for new ORM models (AgentSessionORM, AgentTemplateORM, HostedAgentSessionORM, ApiKeyAuditLogORM, expires_at column)
 - **Agent worker** — `services/worker/src/worker/agent_runner.py` for actually spawning hosted agent processes (stubbed in B4)
-- **CLI meeting join** — `convene meetings join <id>` with live mic audio (requires sounddevice, complex)
+- **CLI meeting join** — `kutana meetings join <id>` with live mic audio (requires sounddevice, complex)
 - **iPhone app** — Future: same WebSocket/REST API, native audio capture
 - **Rate limit configuration** — Configurable rate limits per API key tier
 - **Token refresh** — MCP tokens expire after 1h; need refresh flow for long-running agents
@@ -55,5 +55,5 @@
 |-------|-------|-----------|
 | backend-auth | A1, A2, A4, A5, B5 | OAuth 2.1, lifecycle endpoints, MCP tools, session persistence, security |
 | frontend-audio | A3, A6, B4 | MeetingRoomPage, meeting buttons, agent template UI |
-| agent-channels | B1 | Convene CLI tool |
+| agent-channels | B1 | Kutana CLI tool |
 | team-lead | A7, B2, B3, B6, B7, B8, docs | Demo script, OpenClaw plugin, SDK guide, skill, channel routing, monitoring, all docs |

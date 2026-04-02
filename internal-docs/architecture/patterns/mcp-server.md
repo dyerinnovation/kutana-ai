@@ -1,7 +1,7 @@
 # MCP Server Architecture
 
 ## Overview
-The MCP server (`services/mcp-server/`) exposes Convene AI tools to Claude and MCP-compatible clients via Streamable HTTP transport. It runs as a Docker container.
+The MCP server (`services/mcp-server/`) exposes Kutana AI tools to Claude and MCP-compatible clients via Streamable HTTP transport. It runs as a Docker container.
 
 ## Transport
 - **Streamable HTTP** (not STDIO) — production-ready, Docker-compatible
@@ -38,7 +38,7 @@ The MCP server (`services/mcp-server/`) exposes Convene AI tools to Claude and M
 ```json
 {
   "mcpServers": {
-    "convene": {
+    "kutana": {
       "url": "http://localhost:3001/mcp"
     }
   }

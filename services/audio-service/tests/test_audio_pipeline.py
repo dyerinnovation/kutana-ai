@@ -9,8 +9,8 @@ from uuid import uuid4
 import pytest
 
 from audio_service.audio_pipeline import AudioPipeline
-from convene_core.models.transcript import TranscriptSegment
-from convene_providers.testing import MockSTT
+from kutana_core.models.transcript import TranscriptSegment
+from kutana_providers.testing import MockSTT
 
 # ---- Helpers ----
 

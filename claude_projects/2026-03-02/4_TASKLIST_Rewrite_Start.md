@@ -6,7 +6,7 @@
 
 ## Context
 
-The Convene AI project has pivoted from a Twilio dial-in bot to an agent-first meeting platform. Significant implementation has landed (Agent Gateway M3 verified, 58 gateway + 38 audio-service tests), but `docs/TASKLIST.md` still reflects the old architecture with obsolete phases. Several Phase 1C items were checked off despite files being intentionally deleted. The CoWork daily-build system is limited to one task per session, which is too slow for blocks of related work.
+The Kutana AI project has pivoted from a Twilio dial-in bot to an agent-first meeting platform. Significant implementation has landed (Agent Gateway M3 verified, 58 gateway + 38 audio-service tests), but `docs/TASKLIST.md` still reflects the old architecture with obsolete phases. Several Phase 1C items were checked off despite files being intentionally deleted. The CoWork daily-build system is limited to one task per session, which is too slow for blocks of related work.
 
 ## Objectives
 

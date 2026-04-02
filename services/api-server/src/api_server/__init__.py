@@ -1,3 +1,3 @@
-"""Convene AI API server."""
+"""Kutana AI API server."""
 
 from __future__ import annotations

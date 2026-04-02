@@ -31,5 +31,5 @@ All `/api/v1/*` routes:
 
 ## Verification
 
-1. `curl -sk -X POST "https://convene.spark-b0f2.local/api/v1/auth/register" -H "Content-Type: application/json" -d '{"email":"test@example.com","password":"testpass123","name":"Test"}'` should return 201
-2. `curl -sk "https://convene.spark-b0f2.local/api/health"` should still return 200
+1. `curl -sk -X POST "https://kutana.spark-b0f2.local/api/v1/auth/register" -H "Content-Type: application/json" -d '{"email":"test@example.com","password":"testpass123","name":"Test"}'` should return 201
+2. `curl -sk "https://kutana.spark-b0f2.local/api/health"` should still return 200

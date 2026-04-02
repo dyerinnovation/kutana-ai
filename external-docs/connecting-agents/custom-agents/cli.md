@@ -1,24 +1,24 @@
-# Convene CLI Reference
+# Kutana CLI Reference
 
 ## Overview
 
-The `convene` CLI tool wraps the Convene REST API for terminal-based access to meetings, agents, and tasks.
+The `kutana` CLI tool wraps the Kutana REST API for terminal-based access to meetings, agents, and tasks.
 
 ## Quick Install
 
 ```bash
-curl -LsSf https://convene.ai/install.sh | bash
+curl -LsSf https://kutana.ai/install.sh | bash
 ```
 
-This will install `git` and `uv` if needed, clone the Convene repository, and install the CLI to your PATH.
+This will install `git` and `uv` if needed, clone the Kutana repository, and install the CLI to your PATH.
 
 ## Install from Source
 
 If you prefer to install manually:
 
 ```bash
-git clone https://github.com/dyerinnovation/convene-ai.git
-cd convene-ai
+git clone https://github.com/dyerinnovation/kutana-ai.git
+cd kutana-ai
 uv tool install -e services/cli
 ```
 
@@ -26,9 +26,9 @@ uv tool install -e services/cli
 
 ```bash
 # Login with email/password
-convene login
+kutana login
 
-# Credentials stored in ~/.convene/config.json
+# Credentials stored in ~/.kutana/config.json
 ```
 
 ## Commands
@@ -37,48 +37,48 @@ convene login
 
 ```bash
 # List meetings
-convene meetings list
+kutana meetings list
 
 # Create a meeting
-convene meetings create "Sprint Planning"
+kutana meetings create "Sprint Planning"
 
 # Start a meeting
-convene meetings start <meeting-id>
+kutana meetings start <meeting-id>
 
 # End a meeting
-convene meetings end <meeting-id>
+kutana meetings end <meeting-id>
 ```
 
 ### Agents
 
 ```bash
 # List your agents
-convene agents list
+kutana agents list
 
 # Create an agent
-convene agents create "My Assistant" --capabilities listen,transcribe
+kutana agents create "My Assistant" --capabilities listen,transcribe
 ```
 
 ### API Keys
 
 ```bash
 # Generate an API key for an agent
-convene keys generate <agent-id> --name "my-key"
+kutana keys generate <agent-id> --name "my-key"
 ```
 
 ### Configuration
 
 ```bash
 # Show current config
-convene config show
+kutana config show
 
 # Set API URL
-convene config set api_url http://localhost:8000
+kutana config set api_url http://localhost:8000
 ```
 
 ## Configuration File
 
-Stored at `~/.convene/config.json`:
+Stored at `~/.kutana/config.json`:
 
 ```json
 {

@@ -9,12 +9,12 @@ apply to the specific page.
 ## Template: overview.md
 
 The platform overview is the entry point for every new reader. It must explain
-what Convene is, who it is for, and where to go next. Keep it concise.
+what Kutana is, who it is for, and where to go next. Keep it concise.
 
 ```markdown
-# Convene AI
+# Kutana AI
 
-Convene AI is an agent-first meeting platform. AI agents connect via MCP and
+Kutana AI is an agent-first meeting platform. AI agents connect via MCP and
 participate as first-class meeting members — not bots bolted on the side.
 Humans join via browser. Agents listen for commitments, extract tasks, and
 maintain persistent memory across meetings.
@@ -23,7 +23,7 @@ maintain persistent memory across meetings.
 
 - **Meeting participants** — join a meeting, see real-time transcription and tasks
 - **Agent developers** — connect an AI agent via MCP to listen, speak, and act
-- **Developers** — build on the Convene REST API and WebSocket protocol
+- **Developers** — build on the Kutana REST API and WebSocket protocol
 
 ## Core Concepts
 
@@ -84,7 +84,7 @@ from claude_agent_sdk import ClaudeAgent
 
 async def main():
     agent = ClaudeAgent(
-        mcp_url="https://convene.example.com/mcp",
+        mcp_url="https://kutana.example.com/mcp",
         api_key="cvn_live_abc123",
     )
     async with agent.meeting("quarterly-review") as meeting:
@@ -170,7 +170,7 @@ Show how to interact with the concept via the API or MCP tools:
 
 \`\`\`python
 # Create a meeting via MCP
-result = await convene.create_meeting(
+result = await kutana.create_meeting(
     title="Weekly Standup",
     scheduled_at="2026-04-01T09:00:00Z",
 )
@@ -192,7 +192,7 @@ Use for `docs/external/api-reference/<resource>.md`.
 ```markdown
 # <Resource> API
 
-Base URL: `https://convene.example.com/api/v1`
+Base URL: `https://kutana.example.com/api/v1`
 
 Authentication: `Authorization: Bearer <token>` — see [Authentication](overview.md#authentication).
 
@@ -215,7 +215,7 @@ Returns a paginated list of meetings the authenticated user has access to.
 **Example request**
 
 \`\`\`bash
-curl https://convene.example.com/api/v1/meetings \
+curl https://kutana.example.com/api/v1/meetings \
   -H "Authorization: Bearer cvn_live_abc123" \
   -G --data-urlencode "status=active"
 \`\`\`
@@ -253,7 +253,7 @@ curl https://convene.example.com/api/v1/meetings \
 **Example request**
 
 \`\`\`bash
-curl https://convene.example.com/api/v1/meetings/mtg_01HXN4B7KXYZ \
+curl https://kutana.example.com/api/v1/meetings/mtg_01HXN4B7KXYZ \
   -H "Authorization: Bearer cvn_live_abc123"
 \`\`\`
 
@@ -302,7 +302,7 @@ One line: what this integration is and why you'd use it.
 
 ## Prerequisites
 
-- Convene account with API access
+- Kutana account with API access
 - [Any other requirement with a link]
 
 ## Installation
@@ -314,9 +314,9 @@ pip install claude-agent-sdk
 ## Configuration
 
 \`\`\`python
-# ~/.convene/config.json  or  environment variable
+# ~/.kutana/config.json  or  environment variable
 CONVENE_API_KEY=cvn_live_abc123
-CONVENE_MCP_URL=https://convene.example.com/mcp
+CONVENE_MCP_URL=https://kutana.example.com/mcp
 \`\`\`
 
 ## Quickstart
@@ -328,7 +328,7 @@ import asyncio
 from claude_agent_sdk import ClaudeAgent, MCPServerConfig
 
 mcp_config = MCPServerConfig(
-    url="https://convene.example.com/mcp",
+    url="https://kutana.example.com/mcp",
     headers={"Authorization": "Bearer cvn_live_abc123"},
 )
 
@@ -389,7 +389,7 @@ from claude_agent_sdk import ClaudeAgent, MCPServerConfig
 API_KEY = os.environ["CONVENE_API_KEY"]
 
 mcp = MCPServerConfig(
-    url="https://convene.example.com/mcp",
+    url="https://kutana.example.com/mcp",
     headers={"Authorization": f"Bearer {API_KEY}"},
 )
 

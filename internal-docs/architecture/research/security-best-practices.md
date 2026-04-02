@@ -1,6 +1,6 @@
 # Security Best Practices
 
-> Threat model, defensive controls, and implementation guidance for Convene AI.
+> Threat model, defensive controls, and implementation guidance for Kutana AI.
 > Covers prompt injection, data isolation, JWT scopes, input sanitization, rate limiting,
 > audit logging, and secure defaults. Maps directly to the April Release security tasks.
 
@@ -8,7 +8,7 @@
 
 ## Threat Model
 
-Convene AI's attack surface is distinct from a typical web app because **agents are first-class
+Kutana AI's attack surface is distinct from a typical web app because **agents are first-class
 participants**. Threats come from three directions:
 
 | Actor | Threat | Consequence |
@@ -36,7 +36,7 @@ agent. Examples:
 
 ### Controls
 
-**Sanitizer utility** — `convene-core/security/sanitizer.py`
+**Sanitizer utility** — `kutana-core/security/sanitizer.py`
 
 ```python
 import re
@@ -133,7 +133,7 @@ async def get_transcript(
 
 ```python
 @mcp_server.tool()
-async def convene_get_transcript(
+async def kutana_get_transcript(
     meeting_id: str,
     ctx: RequestContext,
 ) -> list[TranscriptSegmentResponse]:
@@ -274,10 +274,10 @@ async def check_rate_limit(
 | Action | Limit | Window | Applies To |
 |--------|-------|--------|------------|
 | WebSocket connect | 10 | 60s | Per agent_id |
-| `convene_join_meeting` | 5 | 60s | Per agent_id |
-| `convene_send_chat_message` | 60 | 60s | Per session |
-| `convene_start_speaking` | 10 | 60s | Per session |
-| `convene_get_transcript` | 30 | 60s | Per session |
+| `kutana_join_meeting` | 5 | 60s | Per agent_id |
+| `kutana_send_chat_message` | 60 | 60s | Per session |
+| `kutana_start_speaking` | 10 | 60s | Per session |
+| `kutana_get_transcript` | 30 | 60s | Per session |
 | Any MCP tool call | 300 | 60s | Per agent_id |
 | Token exchange (`POST /token/*`) | 20 | 60s | Per IP |
 
@@ -341,7 +341,7 @@ def require_scope(required: str):
     return check
 
 @mcp_server.tool()
-async def convene_send_chat_message(
+async def kutana_send_chat_message(
     ...,
     _: None = Depends(require_scope("write:chat")),
 ) -> ...:
@@ -451,7 +451,7 @@ The following scenarios must be covered by integration tests before the April Re
 
 ## Related Files
 
-- `convene-core/security/sanitizer.py` — Input sanitization utility (to be created)
+- `kutana-core/security/sanitizer.py` — Input sanitization utility (to be created)
 - `services/api-server/src/api_server/middleware/rate_limit.py` — Rate limiting middleware
 - `services/mcp-server/src/mcp_server/auth.py` — JWT scope enforcement
 - `docs/technical/MCP_AUTH.md` — MCP OAuth 2.1 authorization flow

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Health check all Convene AI services
+# Health check all Kutana AI services
 set -uo pipefail
 
-BASE="https://convene.spark-b0f2.local"
+BASE="https://kutana.spark-b0f2.local"
 PASS=0
 FAIL=0
 
@@ -45,10 +45,10 @@ check_http "Frontend"     "$BASE/"            200
 echo ""
 echo "==> Checking infrastructure..."
 check_exec "Postgres" \
-  "kubectl -n convene exec -i statefulset/postgres -- pg_isready -U convene" \
+  "kubectl -n kutana exec -i statefulset/postgres -- pg_isready -U kutana" \
   "accepting connections"
 check_exec "Redis" \
-  "kubectl -n convene exec -i statefulset/redis -- redis-cli ping" \
+  "kubectl -n kutana exec -i statefulset/redis -- redis-cli ping" \
   "PONG"
 
 echo ""

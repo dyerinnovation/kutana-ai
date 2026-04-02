@@ -12,17 +12,17 @@ import redis.asyncio as redis
 from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import ResponseError
 
-from convene_core.events.definitions import TranscriptSegmentFinal
+from kutana_core.events.definitions import TranscriptSegmentFinal
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
-    from convene_core.models.transcript import TranscriptSegment
+    from kutana_core.models.transcript import TranscriptSegment
 
 logger = logging.getLogger(__name__)
 
 # Stream and group defaults — must match EventPublisher in audio-service.
-DEFAULT_STREAM_KEY = "convene:events"
+DEFAULT_STREAM_KEY = "kutana:events"
 DEFAULT_GROUP_NAME = "task-engine"
 DEFAULT_BLOCK_MS = 5_000  # How long XREADGROUP blocks waiting for new entries
 DEFAULT_BATCH_SIZE = 10  # Max entries per XREADGROUP call

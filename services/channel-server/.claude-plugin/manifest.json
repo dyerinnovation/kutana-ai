@@ -1,9 +1,9 @@
 {
-  "name": "convene-ai",
-  "displayName": "Convene AI Meeting Integration",
+  "name": "kutana-ai",
+  "displayName": "Kutana AI Meeting Integration",
   "version": "0.2.0",
-  "description": "Connect Claude Code to a Convene AI meeting as a first-class participant. Raise your hand, chat, read the transcript, and receive live insights via the claude/channel protocol.",
-  "author": "Convene AI",
+  "description": "Connect Claude Code to a Kutana AI meeting as a first-class participant. Raise your hand, chat, read the transcript, and receive live insights via the claude/channel protocol.",
+  "author": "Kutana AI",
   "type": "mcp-server",
   "server": {
     "command": "bun",
@@ -36,9 +36,9 @@
     "get_entity_history"
   ],
   "resources": [
-    "convene://platform/context",
-    "convene://meeting/{meeting_id}/context"
+    "kutana://platform/context",
+    "kutana://meeting/{meeting_id}/context"
   ],
   "readme": "See services/channel-server/README.md for setup and usage instructions.",
-  "keywords": ["meeting", "transcript", "ai-agent", "convene", "channel", "turn-management", "chat"]
+  "keywords": ["meeting", "transcript", "ai-agent", "kutana", "channel", "turn-management", "chat"]
 }

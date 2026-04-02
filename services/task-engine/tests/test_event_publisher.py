@@ -49,8 +49,8 @@ class TestEventPublisherPublish:
 
     async def test_publish_calls_xadd(self) -> None:
         """publish() calls redis.xadd with the correct stream key."""
-        from convene_core.events.definitions import TaskCreated
-        from convene_core.models.task import Task, TaskPriority, TaskStatus
+        from kutana_core.events.definitions import TaskCreated
+        from kutana_core.models.task import Task, TaskPriority, TaskStatus
         from datetime import UTC, datetime
 
         publisher, mock_redis = _make_publisher()
@@ -74,8 +74,8 @@ class TestEventPublisherPublish:
 
     async def test_publish_includes_event_type_field(self) -> None:
         """Stream entry includes the correct event_type field."""
-        from convene_core.events.definitions import TaskCreated
-        from convene_core.models.task import Task, TaskPriority, TaskStatus
+        from kutana_core.events.definitions import TaskCreated
+        from kutana_core.models.task import Task, TaskPriority, TaskStatus
         from datetime import UTC, datetime
 
         publisher, mock_redis = _make_publisher()
@@ -98,8 +98,8 @@ class TestEventPublisherPublish:
 
     async def test_publish_payload_is_valid_json(self) -> None:
         """The payload field is valid JSON containing event data."""
-        from convene_core.events.definitions import TaskCreated
-        from convene_core.models.task import Task, TaskPriority, TaskStatus
+        from kutana_core.events.definitions import TaskCreated
+        from kutana_core.models.task import Task, TaskPriority, TaskStatus
         from datetime import UTC, datetime
 
         publisher, mock_redis = _make_publisher()
@@ -125,8 +125,8 @@ class TestEventPublisherPublish:
 
     async def test_publish_returns_entry_id(self) -> None:
         """publish() returns the Redis entry ID from xadd."""
-        from convene_core.events.definitions import TaskCreated
-        from convene_core.models.task import Task, TaskPriority, TaskStatus
+        from kutana_core.events.definitions import TaskCreated
+        from kutana_core.models.task import Task, TaskPriority, TaskStatus
         from datetime import UTC, datetime
 
         publisher, mock_redis = _make_publisher()
@@ -148,8 +148,8 @@ class TestEventPublisherPublish:
 
     async def test_publish_task_updated_event(self) -> None:
         """publish() works correctly for task.updated events."""
-        from convene_core.events.definitions import TaskUpdated
-        from convene_core.models.task import Task, TaskPriority, TaskStatus
+        from kutana_core.events.definitions import TaskUpdated
+        from kutana_core.models.task import Task, TaskPriority, TaskStatus
         from datetime import UTC, datetime
 
         publisher, mock_redis = _make_publisher()

@@ -25,7 +25,7 @@
 ### 1. PostgreSQL
 
 ```bash
-docker compose exec -T postgres pg_isready -U convene
+docker compose exec -T postgres pg_isready -U kutana
 ```
 
 If unhealthy:

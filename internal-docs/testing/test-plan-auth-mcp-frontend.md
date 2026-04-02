@@ -20,11 +20,11 @@ uv run alembic upgrade head
 ### Services
 ```bash
 # Terminal 1: API Server
-PYTHONPATH=services/api-server/src:services/agent-gateway/src:packages/convene-core/src \
+PYTHONPATH=services/api-server/src:services/agent-gateway/src:packages/kutana-core/src \
   .venv/bin/uvicorn api_server.main:app --reload --port 8000
 
 # Terminal 2: Agent Gateway
-PYTHONPATH=services/agent-gateway/src:services/audio-service/src:packages/convene-core/src:packages/convene-providers/src:packages/convene-memory/src \
+PYTHONPATH=services/agent-gateway/src:services/audio-service/src:packages/kutana-core/src:packages/kutana-providers/src:packages/kutana-memory/src \
   .venv/bin/uvicorn agent_gateway.main:app --reload --port 8003
 
 # Terminal 3: MCP Server (Docker)
@@ -249,7 +249,7 @@ curl -s -X POST http://localhost:8000/api/v1/token/gateway \
 curl -s -X POST http://localhost:8000/api/v1/meetings \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
-  -d '{"platform":"convene","title":"Test Meeting","scheduled_at":"2026-03-02T10:00:00Z"}'
+  -d '{"platform":"kutana","title":"Test Meeting","scheduled_at":"2026-03-02T10:00:00Z"}'
 ```
 
 | Check | Expected |

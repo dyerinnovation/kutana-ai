@@ -10,7 +10,7 @@ import httpx
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from convene_core.models.task import Task
+    from kutana_core.models.task import Task
 
 logger = logging.getLogger(__name__)
 

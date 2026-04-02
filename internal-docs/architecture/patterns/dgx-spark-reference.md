@@ -33,7 +33,7 @@ sshpass -p "$DGX_PASSWORD" ssh jondyer3@spark-b0f2.local \
 See `claude_docs/DGX_Spark_SSH_Connection.md` for full SSH patterns, sshpass usage, and gotchas.
 
 ### Namespaces
-- `convene` — Convene AI services (STT, future LLM)
+- `kutana` — Kutana AI services (STT, future LLM)
 - `default` — K3s system components
 
 ## Model Serving
@@ -43,8 +43,8 @@ See `claude_docs/DGX_Spark_SSH_Connection.md` for full SSH patterns, sshpass usa
 
 ### Current Deployment
 - **Model:** `openai/whisper-large-v3` (~3GB) via vLLM
-- **Helm Release:** `stt` in `convene` namespace
-- **API:** OpenAI-compatible at `http://spark-b0f2.local/convene-stt/v1/`
+- **Helm Release:** `stt` in `kutana` namespace
+- **API:** OpenAI-compatible at `http://spark-b0f2.local/kutana-stt/v1/`
 
 ### Previous Deployments
 - Qwen3-30B-A3B via TGI (uninstalled to free GPU for Whisper)
@@ -61,11 +61,11 @@ spec:
     - host: spark-b0f2.local
       http:
         paths:
-          - path: /convene-stt(/|$)(.*)
+          - path: /kutana-stt(/|$)(.*)
             pathType: ImplementationSpecific
 ```
 
-Access: `http://spark-b0f2.local/convene-stt/v1/models`
+Access: `http://spark-b0f2.local/kutana-stt/v1/models`
 
 ## Tools on Spark
 - `uv`/`uvx` — at `~/.local/bin/uv` (NOT in default PATH, use full path)

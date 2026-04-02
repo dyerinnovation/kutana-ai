@@ -386,7 +386,7 @@ export function FeedsPage() {
             Available Integrations
           </h2>
           <p className="mt-0.5 text-sm text-gray-400">
-            Connect Convene to your favorite platforms
+            Connect Kutana to your favorite platforms
           </p>
         </div>
 

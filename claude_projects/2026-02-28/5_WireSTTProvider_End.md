@@ -4,7 +4,7 @@
 
 ## Work Completed
 
-- Created `WhisperRemoteSTT` provider (`packages/convene-providers/src/convene_providers/stt/whisper_remote_stt.py`)
+- Created `WhisperRemoteSTT` provider (`packages/kutana-providers/src/kutana_providers/stt/whisper_remote_stt.py`)
   - Remote Whisper STT that POSTs WAV files to vLLM OpenAI-compatible API
   - Handles both `verbose_json` (with segments) and plain text responses
   - Properly converts `avg_logprob` to 0.0-1.0 confidence range via `math.exp()`
@@ -35,4 +35,4 @@
 - **TranscriptSegment confidence validator requires 0.0-1.0:** Whisper's `avg_logprob` is negative, so it must be converted (e.g. `math.exp()`) before passing to `TranscriptSegment`
 - **Per-connection STT is critical:** STT providers maintain per-connection state (WebSocket connections, audio buffers), so a shared global instance would break with concurrent meetings
 - **Never use `uv pip` subcommands:** `uv pip list`, `uv pip install` operate in a different resolver context than `uv add`/`uv sync` and give incorrect results
-- **httpx already a dependency:** `convene-providers` already has `httpx>=0.27` in its dependencies, so no additional `uv add` was needed for the remote Whisper provider
+- **httpx already a dependency:** `kutana-providers` already has `httpx>=0.27` in its dependencies, so no additional `uv add` was needed for the remote Whisper provider

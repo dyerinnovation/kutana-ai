@@ -8,7 +8,7 @@ Execute all 11 milestone testing playbooks (00-SETUP through 10-full-e2e-demo) a
 - Phase 1: Meeting Lifecycle (CRUD + state machine, UI testing)
 - Phase 2: Browser Meeting Room (mic capture, transcripts, mute/unmute)
 - Phase 3: MCP Auth Flow (token exchange, JWT claims, revocation)
-- Phase 4: Convene CLI (all commands end-to-end)
+- Phase 4: Kutana CLI (all commands end-to-end)
 - Phase 5: API Key Security (expiry, revocation, rate limiting, audit log)
 - Phase 6: OpenClaw Plugin (build, install, test 6 tools)
 - Phase 7: Claude Agent SDK (4 templates, custom prompt, alt model)

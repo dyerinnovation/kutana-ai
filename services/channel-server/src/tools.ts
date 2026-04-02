@@ -1,5 +1,5 @@
 /**
- * MCP tool registrations for the Convene AI Channel Server.
+ * MCP tool registrations for the Kutana AI Channel Server.
  *
  * Tools are grouped into two categories:
  *
@@ -18,7 +18,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import type { ConveneClient } from "./convene-client.js";
+import type { KutanaClient } from "./kutana-client.js";
 import type {
   BlockerEntity,
   DecisionEntity,
@@ -32,10 +32,10 @@ import type {
 /** Callback invoked when meeting state changes (join/leave) so the server can notify Claude. */
 export type MeetingStateChangeCallback = () => Promise<void> | void;
 
-/** Register all Convene AI tools on the MCP server. */
+/** Register all Kutana AI tools on the MCP server. */
 export function registerTools(
   server: Server,
-  client: ConveneClient,
+  client: KutanaClient,
   onMeetingStateChange?: MeetingStateChangeCallback,
 ): void {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -463,7 +463,7 @@ export function registerTools(
 // Meeting guard
 // ---------------------------------------------------------------------------
 
-function requireMeeting(client: ConveneClient) {
+function requireMeeting(client: KutanaClient) {
   if (!client.getCurrentMeetingId()) {
     return error("Not in a meeting. Use join_meeting or join_or_create_meeting first.");
   }
@@ -474,7 +474,7 @@ function requireMeeting(client: ConveneClient) {
 // Handler implementations — Meeting lifecycle
 // ---------------------------------------------------------------------------
 
-async function handleListMeetings(client: ConveneClient) {
+async function handleListMeetings(client: KutanaClient) {
   try {
     const meetings = await client.listMeetings();
     return ok(JSON.stringify(meetings, null, 2));
@@ -484,7 +484,7 @@ async function handleListMeetings(client: ConveneClient) {
 }
 
 async function handleJoinMeeting(
-  client: ConveneClient,
+  client: KutanaClient,
   args: Record<string, unknown>,
   onMeetingStateChange?: MeetingStateChangeCallback,
 ) {
@@ -513,7 +513,7 @@ async function handleJoinMeeting(
 }
 
 async function handleCreateMeeting(
-  client: ConveneClient,
+  client: KutanaClient,
   args: Record<string, unknown>,
 ) {
   const title = args["title"];
@@ -530,7 +530,7 @@ async function handleCreateMeeting(
 }
 
 async function handleJoinOrCreateMeeting(
-  client: ConveneClient,
+  client: KutanaClient,
   args: Record<string, unknown>,
   onMeetingStateChange?: MeetingStateChangeCallback,
 ) {
@@ -580,7 +580,7 @@ async function handleJoinOrCreateMeeting(
 }
 
 async function handleLeaveMeeting(
-  client: ConveneClient,
+  client: KutanaClient,
   onMeetingStateChange?: MeetingStateChangeCallback,
 ) {
   const g = requireMeeting(client);
@@ -603,7 +603,7 @@ async function handleLeaveMeeting(
 // ---------------------------------------------------------------------------
 
 async function handleReply(
-  client: ConveneClient,
+  client: KutanaClient,
   args: Record<string, unknown>,
 ) {
   const text = args["text"];
@@ -616,7 +616,7 @@ async function handleReply(
 }
 
 function handleGetChatMessages(
-  client: ConveneClient,
+  client: KutanaClient,
   args: Record<string, unknown>,
 ) {
   const limit =
@@ -633,7 +633,7 @@ function handleGetChatMessages(
 // ---------------------------------------------------------------------------
 
 async function handleAcceptTask(
-  client: ConveneClient,
+  client: KutanaClient,
   args: Record<string, unknown>,
 ) {
   const taskId = args["task_id"];
@@ -646,7 +646,7 @@ async function handleAcceptTask(
 }
 
 async function handleUpdateStatus(
-  client: ConveneClient,
+  client: KutanaClient,
   args: Record<string, unknown>,
 ) {
   const taskId = args["task_id"];
@@ -676,7 +676,7 @@ async function handleUpdateStatus(
 // ---------------------------------------------------------------------------
 
 async function handleRaiseHand(
-  client: ConveneClient,
+  client: KutanaClient,
   args: Record<string, unknown>,
 ) {
   const priority = args["priority"] === "urgent" ? "urgent" : "normal";
@@ -696,7 +696,7 @@ async function handleRaiseHand(
   );
 }
 
-async function handleGetQueueStatus(client: ConveneClient) {
+async function handleGetQueueStatus(client: KutanaClient) {
   await client.requestQueueStatus();
   const status = client.getLastQueueStatus();
   if (status === null) {
@@ -709,13 +709,13 @@ async function handleGetQueueStatus(client: ConveneClient) {
   return ok(JSON.stringify(status, null, 2));
 }
 
-async function handleMarkFinishedSpeaking(client: ConveneClient) {
+async function handleMarkFinishedSpeaking(client: KutanaClient) {
   await client.finishedSpeaking();
   return ok(JSON.stringify({ status: "finished_speaking" }));
 }
 
 async function handleCancelHandRaise(
-  client: ConveneClient,
+  client: KutanaClient,
   args: Record<string, unknown>,
 ) {
   const handRaiseId =
@@ -732,7 +732,7 @@ async function handleCancelHandRaise(
   );
 }
 
-function handleGetSpeakingStatus(client: ConveneClient) {
+function handleGetSpeakingStatus(client: KutanaClient) {
   const { isSpeaking, isInQueue } = client.getSpeakingStatus();
   const queueStatus = client.getLastQueueStatus();
 
@@ -753,7 +753,7 @@ function handleGetSpeakingStatus(client: ConveneClient) {
 // Handler implementations — Participants
 // ---------------------------------------------------------------------------
 
-function handleGetParticipants(client: ConveneClient) {
+function handleGetParticipants(client: KutanaClient) {
   const participants = client.getParticipants();
   return ok(JSON.stringify(participants, null, 2));
 }
@@ -763,7 +763,7 @@ function handleGetParticipants(client: ConveneClient) {
 // ---------------------------------------------------------------------------
 
 function handleRequestContext(
-  client: ConveneClient,
+  client: KutanaClient,
   args: Record<string, unknown>,
 ) {
   const query = args["query"];
@@ -785,7 +785,7 @@ function handleRequestContext(
   return ok(JSON.stringify(relevant, null, 2));
 }
 
-function handleGetMeetingRecap(client: ConveneClient) {
+function handleGetMeetingRecap(client: KutanaClient) {
   const allEntities = client.getEntities(undefined, 1000);
 
   const tasks = allEntities
@@ -849,7 +849,7 @@ function handleGetMeetingRecap(client: ConveneClient) {
 }
 
 function handleGetEntityHistory(
-  client: ConveneClient,
+  client: KutanaClient,
   args: Record<string, unknown>,
 ) {
   const entityType = args["entity_type"];

@@ -20,9 +20,9 @@ ignore = [
 
 [lint.isort]
 known-first-party = [
-    "convene_core",
-    "convene_providers",
-    "convene_memory",
+    "kutana_core",
+    "kutana_providers",
+    "kutana_memory",
     "api_server",
     "audio_service",
     "task_engine",

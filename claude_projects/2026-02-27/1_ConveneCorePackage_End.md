@@ -1,9 +1,9 @@
-# Summary: Create `packages/convene-core/` Package
+# Summary: Create `packages/kutana-core/` Package
 
 ## Work Completed
 
-- Created `packages/convene-core/pyproject.toml` with all required dependencies (pydantic, sqlalchemy[asyncio], asyncpg, pgvector, alembic)
-- Created `packages/convene-core/src/convene_core/__init__.py` with package docstring
+- Created `packages/kutana-core/pyproject.toml` with all required dependencies (pydantic, sqlalchemy[asyncio], asyncpg, pgvector, alembic)
+- Created `packages/kutana-core/src/kutana_core/__init__.py` with package docstring
 - Created 6 Pydantic v2 domain models in `models/`:
   - `meeting.py` - Meeting model with MeetingStatus enum, timezone-aware datetime validation, started_at <= ended_at validation
   - `participant.py` - Participant model with ParticipantRole enum (HOST, PARTICIPANT, AGENT)
@@ -39,9 +39,9 @@
 ## Work Remaining
 
 - Run `uv sync` to install dependencies (requires shell permission)
-- Run `pytest packages/convene-core/tests/` to verify all tests pass
+- Run `pytest packages/kutana-core/tests/` to verify all tests pass
 - Run `ruff check` and `ruff format` to verify lint/format compliance
-- Run `mypy packages/convene-core/` to verify type checking
+- Run `mypy packages/kutana-core/` to verify type checking
 - Generate initial Alembic migration with `alembic revision --autogenerate -m "initial"`
 - Consider adding `conftest.py` with shared fixtures if test suite grows
 

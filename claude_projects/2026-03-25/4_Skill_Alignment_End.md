@@ -19,7 +19,7 @@
 - **Made start-app/stop-app target named deployments** — replaced `deployment --all` with explicit list `api-server agent-gateway audio-service task-engine mcp-server web` to avoid scaling up stale deployments.
 - **Cleaned up stale K8s resources on DGX:**
   - Killed orphaned vLLM Whisper processes (PID 2118521/2117720) — ~2.2GB freed
-  - `helm uninstall stt -n convene` (stale Helm release from March 2)
+  - `helm uninstall stt -n kutana` (stale Helm release from March 2)
   - `helm uninstall acclimate-api acclimate-postgresql acclimate-redis -n acclimate`
   - `helm uninstall langfuse -n acclimate`
   - `helm uninstall openclaw -n openclaw`

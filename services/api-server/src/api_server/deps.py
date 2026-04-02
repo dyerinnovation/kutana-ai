@@ -40,7 +40,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    database_url: str = "postgresql+asyncpg://convene:convene@localhost:5432/convene"
+    database_url: str = "postgresql+asyncpg://kutana:kutana@localhost:5432/kutana"
     redis_url: str = "redis://localhost:6379/0"
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
     debug: bool = False

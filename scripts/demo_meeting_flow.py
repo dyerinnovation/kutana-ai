@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Demo: Full meeting lifecycle with audio transcription.
 
-Demonstrates the complete Convene AI meeting flow:
+Demonstrates the complete Kutana AI meeting flow:
 1. Register user + login
 2. Create agent + generate API key
 3. Create meeting + start it
@@ -145,7 +145,7 @@ async def demo_meeting_flow(audio_path: Path | None = None) -> bool:
             f"{API_BASE}/api/v1/meetings",
             headers=auth_headers,
             json={
-                "platform": "convene",
+                "platform": "kutana",
                 "title": f"Demo Meeting {unique}",
                 "scheduled_at": datetime.now(tz=UTC).isoformat(),
             },
@@ -363,7 +363,7 @@ async def demo_meeting_flow(audio_path: Path | None = None) -> bool:
 
 async def main() -> None:
     """Run the demo."""
-    parser = argparse.ArgumentParser(description="Convene AI meeting demo")
+    parser = argparse.ArgumentParser(description="Kutana AI meeting demo")
     parser.add_argument(
         "--audio",
         type=str,
@@ -375,7 +375,7 @@ async def main() -> None:
     audio_path = Path(args.audio)
 
     logger.info("=" * 60)
-    logger.info("Convene AI Meeting Demo")
+    logger.info("Kutana AI Meeting Demo")
     logger.info("=" * 60)
     logger.info("API: %s", API_BASE)
     logger.info("Gateway: %s", GATEWAY_WS)

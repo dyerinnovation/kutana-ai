@@ -12,11 +12,11 @@ import type { ChannelServerConfig } from "../src/config.js";
 
 function makeConfig(overrides: Partial<ChannelServerConfig> = {}): ChannelServerConfig {
   return {
-    conveneApiUrl: "ws://localhost:8003",
-    conveneHttpUrl: "http://localhost:8000",
-    conveneApiKey: "test-api-key",
-    conveneBearerToken: "",
-    conveneAgentName: "Claude Code",
+    kutanaApiUrl: "ws://localhost:8003",
+    kutanaHttpUrl: "http://localhost:8000",
+    kutanaApiKey: "test-api-key",
+    kutanaBearerToken: "",
+    kutanaAgentName: "Claude Code",
     agentMode: "both",
     entityFilter: [],
     tlsRejectUnauthorized: true,
@@ -29,7 +29,7 @@ function makeConfig(overrides: Partial<ChannelServerConfig> = {}): ChannelServer
 // ---------------------------------------------------------------------------
 
 describe("createServer", () => {
-  it("returns a Server and ConveneClient", () => {
+  it("returns a Server and KutanaClient", () => {
     const { server, client } = createServer(makeConfig());
     expect(server).toBeDefined();
     expect(client).toBeDefined();
@@ -50,11 +50,11 @@ describe("createServer", () => {
   it("does not throw for minimal valid config", () => {
     expect(() =>
       createServer({
-        conveneApiUrl: "ws://localhost:8003",
-        conveneHttpUrl: "http://localhost:8000",
-        conveneApiKey: "key",
-        conveneBearerToken: "",
-        conveneAgentName: "Claude Code",
+        kutanaApiUrl: "ws://localhost:8003",
+        kutanaHttpUrl: "http://localhost:8000",
+        kutanaApiKey: "key",
+        kutanaBearerToken: "",
+        kutanaAgentName: "Claude Code",
         agentMode: "both",
         entityFilter: [],
         tlsRejectUnauthorized: true,
@@ -63,7 +63,7 @@ describe("createServer", () => {
   });
 });
 
-describe("ConveneClient initial state", () => {
+describe("KutanaClient initial state", () => {
   let config: ChannelServerConfig;
 
   beforeEach(() => {

@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Show or create test user credentials for Convene AI
+# Show or create test user credentials for Kutana AI
 set -euo pipefail
 
-BASE="https://convene.spark-b0f2.local"
+BASE="https://kutana.spark-b0f2.local"
 MODE=${1:-}  # --create
 
 if [[ "$MODE" == "--create" ]]; then
   echo "==> Creating test users..."
   for TIER in free pro biz; do
-    EMAIL="test-${TIER}@convene.test"
+    EMAIL="test-${TIER}@kutana.test"
     PASS="TestPass123!"
     curl -sk -X POST "$BASE/api/v1/auth/register" \
       -H "Content-Type: application/json" \
@@ -21,7 +21,7 @@ fi
 echo ""
 echo "==> Getting JWT tokens..."
 for TIER in free pro biz; do
-  EMAIL="test-${TIER}@convene.test"
+  EMAIL="test-${TIER}@kutana.test"
   PASS="TestPass123!"
   echo "--- $EMAIL ---"
   TOKEN=$(curl -sk -X POST "$BASE/api/v1/auth/login" \

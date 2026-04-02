@@ -13,7 +13,7 @@ import {
   registerResources,
   PLATFORM_CONTEXT_DOC,
 } from "../src/resources.js";
-import type { ConveneClient } from "../src/convene-client.js";
+import type { KutanaClient } from "../src/kutana-client.js";
 import type { ChannelServerConfig } from "../src/config.js";
 
 // Helper to retrieve an internal request handler from the MCP Server.
@@ -28,7 +28,7 @@ function getHandler(server: Server, methodName: string) {
 // Fixtures
 // ---------------------------------------------------------------------------
 
-function makeMockClient(overrides: Partial<ConveneClient> = {}): ConveneClient {
+function makeMockClient(overrides: Partial<KutanaClient> = {}): KutanaClient {
   return {
     isConnected: vi.fn(() => true),
     getCurrentMeetingId: vi.fn(() => "meeting-123"),
@@ -45,16 +45,16 @@ function makeMockClient(overrides: Partial<ConveneClient> = {}): ConveneClient {
     acceptTask: vi.fn(),
     updateTaskStatus: vi.fn(),
     ...overrides,
-  } as unknown as ConveneClient;
+  } as unknown as KutanaClient;
 }
 
 function makeConfig(overrides: Partial<ChannelServerConfig> = {}): ChannelServerConfig {
   return {
-    conveneApiUrl: "ws://localhost:8003",
-    conveneHttpUrl: "http://localhost:8000",
-    conveneApiKey: "key",
-    conveneBearerToken: "",
-    conveneAgentName: "Claude Code",
+    kutanaApiUrl: "ws://localhost:8003",
+    kutanaHttpUrl: "http://localhost:8000",
+    kutanaApiKey: "key",
+    kutanaBearerToken: "",
+    kutanaAgentName: "Claude Code",
     agentMode: "both",
     entityFilter: [],
     tlsRejectUnauthorized: true,
@@ -63,7 +63,7 @@ function makeConfig(overrides: Partial<ChannelServerConfig> = {}): ChannelServer
 }
 
 function makeServer(
-  client: ConveneClient,
+  client: KutanaClient,
   config: ChannelServerConfig,
 ): Server {
   const server = new Server(
@@ -79,7 +79,7 @@ function makeServer(
 // ---------------------------------------------------------------------------
 
 describe("list resources", () => {
-  it("includes convene://platform/context", async () => {
+  it("includes kutana://platform/context", async () => {
     const server = makeServer(makeMockClient(), makeConfig());
     const handler = getHandler(server, ListResourcesRequestSchema.shape.method.value);
 
@@ -89,7 +89,7 @@ describe("list resources", () => {
     );
     const res = result as { resources: Array<{ uri: string }> };
     const uris = res.resources.map((r) => r.uri);
-    expect(uris).toContain("convene://platform/context");
+    expect(uris).toContain("kutana://platform/context");
   });
 });
 
@@ -104,9 +104,9 @@ describe("list resource templates", () => {
     );
     const res = result as { resourceTemplates: Array<{ uriTemplate: string }> };
     const templates = res.resourceTemplates.map((t) => t.uriTemplate);
-    expect(templates).toContain("convene://meeting/{meeting_id}");
-    expect(templates).toContain("convene://meeting/{meeting_id}/context");
-    expect(templates).toContain("convene://meeting/{meeting_id}/transcript");
+    expect(templates).toContain("kutana://meeting/{meeting_id}");
+    expect(templates).toContain("kutana://meeting/{meeting_id}/context");
+    expect(templates).toContain("kutana://meeting/{meeting_id}/transcript");
   });
 });
 
@@ -114,13 +114,13 @@ describe("list resource templates", () => {
 // Read platform context
 // ---------------------------------------------------------------------------
 
-describe("read convene://platform/context", () => {
+describe("read kutana://platform/context", () => {
   it("returns the platform context document", async () => {
     const server = makeServer(makeMockClient(), makeConfig());
     const handler = getHandler(server, ReadResourceRequestSchema.shape.method.value);
 
     const result = await handler!(
-      { method: "resources/read", params: { uri: "convene://platform/context" } },
+      { method: "resources/read", params: { uri: "kutana://platform/context" } },
       {},
     );
     const res = result as { contents: Array<{ text: string; mimeType?: string }> };
@@ -163,13 +163,13 @@ describe("read convene://platform/context", () => {
 // Read meeting context resource template
 // ---------------------------------------------------------------------------
 
-describe("read convene://meeting/{id}/context", () => {
+describe("read kutana://meeting/{id}/context", () => {
   it("returns markdown for the given meeting ID", async () => {
     const server = makeServer(makeMockClient(), makeConfig());
     const handler = getHandler(server, ReadResourceRequestSchema.shape.method.value);
 
     const result = await handler!(
-      { method: "resources/read", params: { uri: "convene://meeting/meeting-123/context" } },
+      { method: "resources/read", params: { uri: "kutana://meeting/meeting-123/context" } },
       {},
     );
     const res = result as { contents: Array<{ text: string }> };
@@ -182,7 +182,7 @@ describe("read convene://meeting/{id}/context", () => {
     const handler = getHandler(server, ReadResourceRequestSchema.shape.method.value);
 
     const result = await handler!(
-      { method: "resources/read", params: { uri: "convene://meeting/m1/context" } },
+      { method: "resources/read", params: { uri: "kutana://meeting/m1/context" } },
       {},
     );
     const res = result as { contents: Array<{ text: string }> };
@@ -195,7 +195,7 @@ describe("read convene://meeting/{id}/context", () => {
     const handler = getHandler(server, ReadResourceRequestSchema.shape.method.value);
 
     const result = await handler!(
-      { method: "resources/read", params: { uri: "convene://meeting/m1/context" } },
+      { method: "resources/read", params: { uri: "kutana://meeting/m1/context" } },
       {},
     );
     const res = result as { contents: Array<{ text: string }> };
@@ -203,7 +203,7 @@ describe("read convene://meeting/{id}/context", () => {
   });
 });
 
-describe("read convene://meeting/{id}/transcript", () => {
+describe("read kutana://meeting/{id}/transcript", () => {
   it("returns transcript when connected", async () => {
     const segments = [
       {
@@ -226,7 +226,7 @@ describe("read convene://meeting/{id}/transcript", () => {
     const handler = getHandler(server, ReadResourceRequestSchema.shape.method.value);
 
     const result = await handler!(
-      { method: "resources/read", params: { uri: "convene://meeting/m1/transcript" } },
+      { method: "resources/read", params: { uri: "kutana://meeting/m1/transcript" } },
       {},
     );
     const res = result as { contents: Array<{ text: string }> };
@@ -239,7 +239,7 @@ describe("read convene://meeting/{id}/transcript", () => {
     const handler = getHandler(server, ReadResourceRequestSchema.shape.method.value);
 
     const result = await handler!(
-      { method: "resources/read", params: { uri: "convene://meeting/m1/transcript" } },
+      { method: "resources/read", params: { uri: "kutana://meeting/m1/transcript" } },
       {},
     );
     const res = result as { contents: Array<{ text: string }> };
@@ -254,7 +254,7 @@ describe("unknown resource URI", () => {
 
     await expect(
       handler!(
-        { method: "resources/read", params: { uri: "convene://unknown/resource" } },
+        { method: "resources/read", params: { uri: "kutana://unknown/resource" } },
         {},
       ),
     ).rejects.toThrow(/Unknown resource URI/);

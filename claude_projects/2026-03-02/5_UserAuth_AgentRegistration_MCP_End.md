@@ -9,7 +9,7 @@
 - Added `AgentApiKeyORM` table (id, key_prefix, key_hash, agent_config_id, user_id, name, revoked_at, timestamps)
 - Added `owner_id` FK to `AgentConfigORM` (nullable for backward compat)
 - Created Alembic migration `b3c4d5e6f7a8_user_auth_and_api_keys.py`
-- Created `User` Pydantic model in `convene_core.models.user`
+- Created `User` Pydantic model in `kutana_core.models.user`
 
 ### Block 2: Auth Utilities
 - Added `passlib[bcrypt]`, `PyJWT`, `python-multipart` deps to api-server

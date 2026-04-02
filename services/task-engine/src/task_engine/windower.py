@@ -15,7 +15,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
-from convene_core.models.transcript import TranscriptSegment
+from kutana_core.models.transcript import TranscriptSegment
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable

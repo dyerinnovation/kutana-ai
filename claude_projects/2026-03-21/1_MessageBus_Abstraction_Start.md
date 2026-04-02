@@ -1,27 +1,27 @@
 # Phase A: Portable Message Bus Abstraction
 
 ## Objective
-Implement a portable MessageBus abstraction layer for Convene AI. Services currently use Redis Streams directly; this phase decouples them behind an ABC so the bus can be swapped (Redis → AWS SNS/SQS → GCP Pub/Sub → NATS) without touching service code.
+Implement a portable MessageBus abstraction layer for Kutana AI. Services currently use Redis Streams directly; this phase decouples them behind an ABC so the bus can be swapped (Redis → AWS SNS/SQS → GCP Pub/Sub → NATS) without touching service code.
 
 ## Files to Create
 
-### convene-core (ABC layer)
-- `packages/convene-core/src/convene_core/messaging/__init__.py`
-- `packages/convene-core/src/convene_core/messaging/types.py`
-- `packages/convene-core/src/convene_core/messaging/abc.py`
+### kutana-core (ABC layer)
+- `packages/kutana-core/src/kutana_core/messaging/__init__.py`
+- `packages/kutana-core/src/kutana_core/messaging/types.py`
+- `packages/kutana-core/src/kutana_core/messaging/abc.py`
 
-### convene-providers (Redis implementation)
-- `packages/convene-providers/src/convene_providers/messaging/__init__.py`
-- `packages/convene-providers/src/convene_providers/messaging/redis_streams.py`
+### kutana-providers (Redis implementation)
+- `packages/kutana-providers/src/kutana_providers/messaging/__init__.py`
+- `packages/kutana-providers/src/kutana_providers/messaging/redis_streams.py`
 
 ### Tests
-- `packages/convene-core/tests/test_messaging.py`
-- `packages/convene-providers/tests/test_redis_message_bus.py`
+- `packages/kutana-core/tests/test_messaging.py`
+- `packages/kutana-providers/tests/test_redis_message_bus.py`
 
 ## Files to Modify
-- `packages/convene-providers/src/convene_providers/testing.py` — add MockMessageBus
-- `packages/convene-providers/src/convene_providers/registry.py` — add ProviderType.MESSAGE_BUS, register "redis"
-- `packages/convene-providers/pyproject.toml` — add `redis[asyncio]>=5.0` core dependency
+- `packages/kutana-providers/src/kutana_providers/testing.py` — add MockMessageBus
+- `packages/kutana-providers/src/kutana_providers/registry.py` — add ProviderType.MESSAGE_BUS, register "redis"
+- `packages/kutana-providers/pyproject.toml` — add `redis[asyncio]>=5.0` core dependency
 
 ## Design Decisions
 
@@ -71,7 +71,7 @@ class Subscription:
 - Helper `create_message_bus_from_env()` reads `CONVENE_MESSAGE_BUS` (default: `"redis"`) and `REDIS_URL` to instantiate the correct provider from the registry.
 
 ## Recovery Notes
-- Project root: `/Users/jonathandyer/Documents/Dyer_Innovation/dev/convene-ai`
+- Project root: `/Users/jonathandyer/Documents/Dyer_Innovation/dev/kutana-ai`
 - Python 3.12+, mypy strict, ruff formatting, pytest asyncio_mode=auto
 - All providers follow the ABC-in-core / impl-in-providers pattern
 - Tests use AsyncMock for Redis client; no actual Redis required for unit tests

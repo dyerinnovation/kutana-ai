@@ -4,7 +4,7 @@
 
 - **`services/channel-server/`** — new TypeScript service directory, Bun-compatible
 
-- **`src/types.ts`** — TypeScript types mirroring Python convene-core models: 7 entity types
+- **`src/types.ts`** — TypeScript types mirroring Python kutana-core models: 7 entity types
   (`TaskEntity`, `DecisionEntity`, `QuestionEntity`, `EntityMentionEntity`, `KeyPointEntity`,
   `BlockerEntity`, `FollowUpEntity`) plus `AnyExtractedEntity` union, `TranscriptSegment`,
   `GatewayMessage`, `ChannelMessage`, `AgentMode`, `EntityType`.
@@ -13,7 +13,7 @@
   (`CONVENE_API_URL`, `CONVENE_HTTP_URL`, `CONVENE_API_KEY`, `CONVENE_MEETING_ID`,
   `CONVENE_AGENT_MODE`, `CONVENE_ENTITY_FILTER`). HTTP URL derived from WS URL (port 8003→8000).
 
-- **`src/convene-client.ts`** — `ConveneClient` WebSocket client:
+- **`src/kutana-client.ts`** — `KutanaClient` WebSocket client:
   - Authenticates via `POST /api/v1/token/gateway` with `X-API-Key`
   - Connects to `{API_URL}/agent/connect?token={jwt}`
   - Sends `join_meeting` on WS open; subscribes to 9 insight data channels
@@ -32,15 +32,15 @@
   - `get_entity_history` — retrieve entities by type
 
 - **`src/resources.ts`** — MCP resources + `PLATFORM_CONTEXT_DOC` (Layer 1 context):
-  - `convene://platform/context` — static markdown explaining the platform, message formats, tools
-  - `convene://meeting/{meeting_id}/context` — dynamic context: connection status, agent mode, entity
+  - `kutana://platform/context` — static markdown explaining the platform, message formats, tools
+  - `kutana://meeting/{meeting_id}/context` — dynamic context: connection status, agent mode, entity
     counts, and 5-segment transcript preview
 
 - **`src/server.ts`** — Main MCP server:
   - `createServer()` factory exported for tests
   - `claude/channel` declared in capabilities (type-extended `ServerCapabilities`)
   - `instructions` field passed via spread into `Server` options (MCP 2024-11-05+)
-  - Convene events → `notifications/message` (level=info, logger=`convene/{topic}`)
+  - Kutana events → `notifications/message` (level=info, logger=`convene/{topic}`)
   - `isEntryPoint` guard using `(import.meta as unknown as { main?: boolean }).main`
     to prevent `main()` running when imported by Vitest
   - Graceful shutdown on SIGINT/SIGTERM
@@ -77,7 +77,7 @@
   `setRequestHandler`; handler retrieval requires a cast. Confirmed with `bun -e` REPL.
 
 - **MockWebSocket instance capture** — when injecting a WebSocket constructor for tests,
-  the ConveneClient creates a NEW instance internally. The test must use a capturing pattern
+  the KutanaClient creates a NEW instance internally. The test must use a capturing pattern
   (`let lastMockWs; class MockWS { constructor() { lastMockWs = this; } }`) to get a reference
   to the actual instance driven by the client, not a separate one created by the test.
 

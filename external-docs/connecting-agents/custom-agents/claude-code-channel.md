@@ -1,23 +1,23 @@
 # Claude Code Channel
 
-Connect Claude Code to Convene AI meetings as a first-class participant. The Convene channel plugin runs as a local stdio MCP server — it pushes real-time meeting events into your Claude Code session and provides tools for interacting with the meeting.
+Connect Claude Code to Kutana AI meetings as a first-class participant. The Kutana channel plugin runs as a local stdio MCP server — it pushes real-time meeting events into your Claude Code session and provides tools for interacting with the meeting.
 
 ## How it works
 
-The Convene channel plugin is an MCP server that Claude Code spawns as a subprocess. It:
+The Kutana channel plugin is an MCP server that Claude Code spawns as a subprocess. It:
 
-1. **Authenticates** with the Convene API using your agent API key
+1. **Authenticates** with the Kutana API using your agent API key
 2. **Exposes tools** for listing, joining, and interacting with meetings
 3. **Pushes events** — transcript segments, chat messages, speaker changes, and extracted insights arrive in Claude's context as `<channel>` tags in real time
 
 Events arrive as XML tags like this:
 
 ```xml
-<channel source="convene-ai" topic="transcript" type="transcript_segment">
+<channel source="kutana-ai" topic="transcript" type="transcript_segment">
 [2.0s-4.5s] Alice: We should finalize the API spec by Thursday.
 </channel>
 
-<channel source="convene-ai" topic="chat" type="chat_message">
+<channel source="kutana-ai" topic="chat" type="chat_message">
 [2026-03-31T23:33:25Z] Bob: Sounds good, I'll handle the review.
 </channel>
 ```
@@ -28,13 +28,13 @@ Claude reads these and can respond using the meeting tools — sending chat mess
 
 - **Claude Code** (latest version)
 - **Bun** runtime v1.0+ ([bun.sh](https://bun.sh))
-- A **Convene API key**
+- A **Kutana API key**
 
 ## Setup
 
 ### 1. Create an agent and get an API key
 
-1. Sign in to your Convene instance (e.g. `https://convene.spark-b0f2.local`)
+1. Sign in to your Kutana instance (e.g. `https://kutana.spark-b0f2.local`)
 2. Navigate to **Agents**
 3. Click **Create New Agent** — give it a name like "Claude Code"
 4. Select the capabilities your agent needs (listen, voice, text chat, etc.)
@@ -46,42 +46,42 @@ Claude reads these and can respond using the meeting tools — sending chat mess
 ### 2. Install dependencies
 
 ```bash
-cd /path/to/convene-ai/services/channel-server
+cd /path/to/kutana-ai/services/channel-server
 bun install
 ```
 
 ### 3. Configure Claude Code
 
-Register the Convene channel as an MCP server using the Claude Code CLI:
+Register the Kutana channel as an MCP server using the Claude Code CLI:
 
 ```bash
-claude mcp add-json --scope user convene '{
+claude mcp add-json --scope user kutana '{
   "type": "stdio",
   "command": "bun",
-  "args": ["/path/to/convene-ai/services/channel-server/src/server.ts"],
+  "args": ["/path/to/kutana-ai/services/channel-server/src/server.ts"],
   "env": {
     "CONVENE_API_KEY": "cvn_your_key_here",
-    "CONVENE_API_URL": "wss://convene.spark-b0f2.local/ws",
-    "CONVENE_HTTP_URL": "https://convene.spark-b0f2.local",
+    "CONVENE_API_URL": "wss://kutana.spark-b0f2.local/ws",
+    "CONVENE_HTTP_URL": "https://kutana.spark-b0f2.local",
     "CONVENE_TLS_REJECT_UNAUTHORIZED": "0",
     "CONVENE_AGENT_NAME": "Claude Code"
   }
 }'
 ```
 
-Replace `/path/to/convene-ai` with the actual path to your repository, and paste your API key.
+Replace `/path/to/kutana-ai` with the actual path to your repository, and paste your API key.
 
-`--scope user` makes the server available across all your projects. You can verify registration with `claude mcp get convene`.
+`--scope user` makes the server available across all your projects. You can verify registration with `claude mcp get kutana`.
 
 ### 4. Launch Claude Code with the channel enabled
 
-The Convene channel is a custom (non-plugin) channel, so during the research preview you need to explicitly enable it at launch:
+The Kutana channel is a custom (non-plugin) channel, so during the research preview you need to explicitly enable it at launch:
 
 ```bash
-claude --dangerously-load-development-channels server:convene
+claude --dangerously-load-development-channels server:kutana
 ```
 
-`server:convene` references the server you registered with `claude mcp add-json`. This flag activates the push event flow — without it, tools work but real-time events (transcript, chat, insights) are silently dropped.
+`server:kutana` references the server you registered with `claude mcp add-json`. This flag activates the push event flow — without it, tools work but real-time events (transcript, chat, insights) are silently dropped.
 
 > **Note:** Published channel plugins (Discord, Telegram) use `--channels plugin:name@publisher` instead. The `--dangerously-load-development-channels` flag is specific to custom channels during the research preview and may change when channels graduate from preview.
 
@@ -91,7 +91,7 @@ Verify the plugin loaded:
 /mcp
 ```
 
-You should see `convene` listed with 18 tools available.
+You should see `kutana` listed with 18 tools available.
 
 ## Environment variables
 
@@ -212,10 +212,10 @@ The channel plugin exposes MCP resources for browsing meeting state:
 
 | Resource | Type | Description |
 |----------|------|-------------|
-| `convene://platform/context` | Static | Platform context and behavior guidelines |
-| `convene://meeting/{id}` | Template | Meeting info with connection status |
-| `convene://meeting/{id}/context` | Template | Detailed meeting context with transcript preview |
-| `convene://meeting/{id}/transcript` | Template | Buffered transcript segments (JSON) |
+| `kutana://platform/context` | Static | Platform context and behavior guidelines |
+| `kutana://meeting/{id}` | Template | Meeting info with connection status |
+| `kutana://meeting/{id}/context` | Template | Detailed meeting context with transcript preview |
+| `kutana://meeting/{id}/transcript` | Template | Buffered transcript segments (JSON) |
 
 ## Real-time events
 
@@ -223,12 +223,12 @@ Once you join a meeting, events arrive in Claude's context as `<channel>` tags:
 
 | Topic | Description | Example |
 |-------|-------------|---------|
-| `transcript` | Speech-to-text segments | `<channel source="convene-ai" topic="transcript">[1.0s-3.5s] Alice: Let's review the timeline.</channel>` |
-| `chat` | Chat messages | `<channel source="convene-ai" topic="chat">[timestamp] Bob: Agreed.</channel>` |
-| `insight` | Extracted entities | `<channel source="convene-ai" topic="insight" type="task">{"title": "Update docs", ...}</channel>` |
-| `turn` | Speaker queue changes | `<channel source="convene-ai" topic="turn" type="your_turn">It's your turn to speak.</channel>` |
-| `participant` | Join/leave events | `<channel source="convene-ai" topic="participant" type="joined">Dave (human) joined.</channel>` |
-| `meeting_lifecycle` | Meeting join/leave | `<channel source="convene-ai" topic="meeting_lifecycle">Joined meeting abc-123.</channel>` |
+| `transcript` | Speech-to-text segments | `<channel source="kutana-ai" topic="transcript">[1.0s-3.5s] Alice: Let's review the timeline.</channel>` |
+| `chat` | Chat messages | `<channel source="kutana-ai" topic="chat">[timestamp] Bob: Agreed.</channel>` |
+| `insight` | Extracted entities | `<channel source="kutana-ai" topic="insight" type="task">{"title": "Update docs", ...}</channel>` |
+| `turn` | Speaker queue changes | `<channel source="kutana-ai" topic="turn" type="your_turn">It's your turn to speak.</channel>` |
+| `participant` | Join/leave events | `<channel source="kutana-ai" topic="participant" type="joined">Dave (human) joined.</channel>` |
+| `meeting_lifecycle` | Meeting join/leave | `<channel source="kutana-ai" topic="meeting_lifecycle">Joined meeting abc-123.</channel>` |
 
 ## Agent modes
 
@@ -259,13 +259,13 @@ Available entity types: `task`, `decision`, `question`, `entity_mention`, `key_p
 ```
 Claude Code
     │
-    └── stdio MCP ──→ Convene Channel Plugin (bun)
+    └── stdio MCP ──→ Kutana Channel Plugin (bun)
                           │
                           ├── HTTP (fetch) ──→ API Server   (list/create meetings)
                           └── WebSocket    ──→ Agent Gateway (join, events, chat, turn)
 ```
 
-The channel plugin authenticates on startup, exposes tools for meeting discovery, and opens a WebSocket to the agent gateway when you join a meeting. Gateway events are translated into `notifications/claude/channel` messages that arrive in Claude's context as `<channel source="convene-ai">` tags.
+The channel plugin authenticates on startup, exposes tools for meeting discovery, and opens a WebSocket to the agent gateway when you join a meeting. Gateway events are translated into `notifications/claude/channel` messages that arrive in Claude's context as `<channel source="kutana-ai">` tags.
 
 ## See also
 

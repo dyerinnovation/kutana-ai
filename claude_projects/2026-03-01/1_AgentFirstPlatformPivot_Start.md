@@ -1,13 +1,13 @@
-# Plan: Pivot Convene AI to Agent-First Meeting Platform
+# Plan: Pivot Kutana AI to Agent-First Meeting Platform
 
 **Date:** 2026-03-01
 **Status:** Planning
 
 ## Context
 
-Convene AI is currently built as a "phone-dial-in meeting bot" — an AI agent that dials into meetings via Twilio, transcribes, and extracts tasks. The pivot transforms it into an **agent-first meeting platform** where AI agents are first-class participants connecting via native APIs, and humans join via browser WebRTC.
+Kutana AI is currently built as a "phone-dial-in meeting bot" — an AI agent that dials into meetings via Twilio, transcribes, and extracts tasks. The pivot transforms it into an **agent-first meeting platform** where AI agents are first-class participants connecting via native APIs, and humans join via browser WebRTC.
 
-**Why pivot:** Today's meeting platforms (Zoom, Teams, Meet) were built for humans. Getting AI agents into meetings requires hacks — Twilio dial-in, headless browser bots, or third-party APIs. As AI agents proliferate, Convene can become the meeting infrastructure layer where agents connect natively.
+**Why pivot:** Today's meeting platforms (Zoom, Teams, Meet) were built for humans. Getting AI agents into meetings requires hacks — Twilio dial-in, headless browser bots, or third-party APIs. As AI agents proliferate, Kutana can become the meeting infrastructure layer where agents connect natively.
 
 **What's built (Phases 1A-1C complete, 149 tests passing):**
 - Domain models, events, provider abstractions (9 providers), Twilio audio pipeline, Redis Streams event publishing, StreamConsumer, memory system scaffold
@@ -20,9 +20,9 @@ Convene AI is currently built as a "phone-dial-in meeting bot" — an AI agent t
 
 | Package | Verdict | Details |
 |---------|---------|---------|
-| **convene-core** | EXTEND | Add `Room`, `AgentSession` models. Make `Meeting.dial_in_number/meeting_code` optional. Add 6 new events. Add ORM models. |
-| **convene-providers** | NO CHANGE | All 9 providers work as-is. STT receives PCM16 bytes regardless of transport. |
-| **convene-memory** | NO CHANGE | All 4 layers operate on domain models, not transport protocols. |
+| **kutana-core** | EXTEND | Add `Room`, `AgentSession` models. Make `Meeting.dial_in_number/meeting_code` optional. Add 6 new events. Add ORM models. |
+| **kutana-providers** | NO CHANGE | All 9 providers work as-is. STT receives PCM16 bytes regardless of transport. |
+| **kutana-memory** | NO CHANGE | All 4 layers operate on domain models, not transport protocols. |
 
 ### Services
 
@@ -39,7 +39,7 @@ Convene AI is currently built as a "phone-dial-in meeting bot" — an AI agent t
 |-----------|------|-------------|
 | **agent-gateway** | Service (`services/agent-gateway/`) | WebSocket gateway for AI agent connections. Auth, bidirectional audio/data, LiveKit bridge. |
 | **meeting-client** | React app (`clients/meeting-client/`) | Browser meeting UI with WebRTC via LiveKit. |
-| **convene-sdk** | Package (`packages/convene-sdk/`) | Python SDK for building agents that connect to Convene meetings. |
+| **kutana-sdk** | Package (`packages/kutana-sdk/`) | Python SDK for building agents that connect to Kutana meetings. |
 
 ### Deprecated (soft)
 
@@ -161,7 +161,7 @@ services/agent-gateway/
 - Keep `process_audio()` as wrapper for Twilio backward compat
 
 **A.4: Event Relay (1-2 days)**
-- `event_relay.py` — consumer group `agent-gateway` on `convene:events`
+- `event_relay.py` — consumer group `agent-gateway` on `kutana:events`
 - Routes events to agent sessions by meeting_id + capabilities
 
 **A.5: Integration Tests (2 days)**
@@ -223,10 +223,10 @@ services/agent-gateway/
 ### Phase P-D: Agent SDK (5-8 dev-days, Low risk)
 
 **D.1: Package Structure (1-2 days)**
-- `packages/convene-sdk/` with minimal deps (websockets, pydantic, PyJWT)
+- `packages/kutana-sdk/` with minimal deps (websockets, pydantic, PyJWT)
 
 **D.2: Core Classes (2-3 days)**
-- `ConveneClient` — main entry (async context manager)
+- `KutanaClient` — main entry (async context manager)
 - `MeetingSession` — send/receive audio and data, event iterator
 
 **D.3: Examples (1-2 days)**
@@ -285,4 +285,4 @@ services/agent-gateway/
 1. Should remaining Phase 1D items (task extraction, memory wiring) be completed in parallel with Phase P-A, or paused?
 2. LiveKit Cloud for dev vs self-hosted from day 1?
 3. Keep Twilio as a supported fallback path, or fully deprecate?
-4. Phase P-A first target: test with existing Convene task extraction agent, or build a simple test agent?
+4. Phase P-A first target: test with existing Kutana task extraction agent, or build a simple test agent?

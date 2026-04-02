@@ -1,7 +1,7 @@
 # Phase C: Claude Code Channel Server — Implementation Plan
 
 ## Objective
-Create `services/channel-server/` — a TypeScript MCP server that bridges Convene AI's internal
+Create `services/channel-server/` — a TypeScript MCP server that bridges Kutana AI's internal
 message bus to Claude Code's channel protocol. Claude Code connects to this server as an MCP
 client and receives live meeting events (transcript segments, extracted entities) as channel
 notifications. It can also take action via MCP tools.
@@ -16,9 +16,9 @@ services/channel-server/
 ├── tsconfig.json              # strict mode, ES2022, bundler resolution (Bun-compatible)
 ├── .mcp.json                  # MCP server registration for Claude Code
 ├── src/
-│   ├── types.ts               # TypeScript types (mirrors Python convene-core types)
+│   ├── types.ts               # TypeScript types (mirrors Python kutana-core types)
 │   ├── config.ts              # Config from env vars (CONVENE_API_URL, API_KEY, etc.)
-│   ├── convene-client.ts      # WebSocket client → agent gateway (auth, join, listen)
+│   ├── kutana-client.ts      # WebSocket client → agent gateway (auth, join, listen)
 │   ├── tools.ts               # MCP tools: reply, accept_task, update_status, etc.
 │   ├── resources.ts           # MCP resources: platform context, meeting context
 │   └── server.ts              # Main MCP server: claude/channel capability, notifications
@@ -26,7 +26,7 @@ services/channel-server/
 │   ├── server.test.ts         # Server initialization, capability declaration
 │   ├── tools.test.ts          # Tool schemas and handlers with mock client
 │   ├── resources.test.ts      # Resource registration and content
-│   └── event-forwarding.test.ts  # ConveneClient event filtering by agent mode
+│   └── event-forwarding.test.ts  # KutanaClient event filtering by agent mode
 └── .claude-plugin/
     └── manifest.json          # Plugin distribution manifest
 ```
@@ -34,15 +34,15 @@ services/channel-server/
 ## Connection Flow
 1. Claude Code starts channel-server via `bun src/server.ts`
 2. Server declares `claude/channel` capability in MCP initialize response
-3. Server connects to Convene agent gateway (WebSocket) using API key → JWT exchange
+3. Server connects to Kutana agent gateway (WebSocket) using API key → JWT exchange
 4. Server sends `join_meeting` for the configured meeting ID
 5. Incoming `transcript` + `event/data.channel.insights` messages → `notifications/message`
 6. Claude receives notifications as channel context
 7. Claude calls MCP tools (`reply`, `accept_task`, etc.) for two-way communication
 
 ## Context Seeding (Three Layers)
-- **Layer 1 (Platform context)**: MCP `instructions` field + `convene://platform/context` resource
-- **Layer 2 (Meeting context)**: `convene://meeting/{id}/context` resource template
+- **Layer 1 (Platform context)**: MCP `instructions` field + `kutana://platform/context` resource
+- **Layer 2 (Meeting context)**: `kutana://meeting/{id}/context` resource template
 - **Layer 3 (Recap)**: `get_meeting_recap` tool + buffered entity history
 
 ## Agent Modes
@@ -76,12 +76,12 @@ services/channel-server/
 ## MCP Resources
 | URI | Description |
 |-----|-------------|
-| `convene://platform/context` | Static platform context document |
-| `convene://meeting/{meeting_id}/context` | Dynamic per-meeting context |
+| `kutana://platform/context` | Static platform context document |
+| `kutana://meeting/{meeting_id}/context` | Dynamic per-meeting context |
 
 ## Recovery Notes (if Claude disconnects)
 - Recreate `services/channel-server/` directory
-- Follow architecture above: types → config → convene-client → tools → resources → server
+- Follow architecture above: types → config → kutana-client → tools → resources → server
 - Key protocol: WebSocket to `{CONVENE_API_URL}/agent/connect?token={jwt}`, send `join_meeting`
 - Tools use `server.setRequestHandler(ListToolsRequestSchema/CallToolRequestSchema, ...)`
 - Resources use `server.setRequestHandler(ListResourcesRequestSchema/ReadResourceRequestSchema, ...)`

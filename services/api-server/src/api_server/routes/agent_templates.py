@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api_server.auth_deps import CurrentUser
 from api_server.deps import get_db_session
-from convene_core.database.models import (
+from kutana_core.database.models import (
     AgentTemplateORM,
     HostedAgentSessionORM,
     MeetingORM,

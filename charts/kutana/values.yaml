@@ -1,0 +1,158 @@
+global:
+  domain: spark-b0f2.local
+  registryPrefix: localhost:30500/kutana
+  # Override all service image tags at once (e.g., set by CI: --set global.imageTag=abc12345)
+  # When empty, each service uses its own image.tag value.
+  imageTag: ""
+
+# ---------------------------------------------------------------------------
+# PostgreSQL
+# ---------------------------------------------------------------------------
+postgres:
+  image:
+    repository: pgvector/pgvector
+    tag: pg16
+  persistence:
+    size: 10Gi
+  credentials:
+    database: kutana
+    username: kutana
+    password: kutana
+
+# ---------------------------------------------------------------------------
+# Redis
+# ---------------------------------------------------------------------------
+redis:
+  image:
+    repository: redis
+    tag: 7-alpine
+  persistence:
+    size: 5Gi
+
+# ---------------------------------------------------------------------------
+# Services
+# ---------------------------------------------------------------------------
+apiServer:
+  enabled: true
+  replicas: 1
+  image:
+    tag: latest
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env: {}
+
+agentGateway:
+  enabled: true
+  replicas: 1
+  image:
+    tag: latest
+  ttsProvider: cartesia
+  ttsCartesiaApiKey: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env: {}
+
+audioService:
+  enabled: true
+  replicas: 1
+  image:
+    tag: latest
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env: {}
+
+taskEngine:
+  enabled: true
+  replicas: 1
+  image:
+    tag: latest
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env: {}
+
+mcpServer:
+  enabled: true
+  replicas: 1
+  image:
+    tag: latest
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env: {}
+
+worker:
+  enabled: true
+  replicas: 1
+  image:
+    tag: latest
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env: {}
+
+# discord-mcp: RETIRED — Discord feeds now use the official Claude channel
+# plugin spawned as a stdio subprocess by the worker. See
+# internal-docs/integrations/discord-bot-setup.md for setup.
+
+# ---------------------------------------------------------------------------
+# Web Frontend
+# ---------------------------------------------------------------------------
+web:
+  enabled: true
+  replicas: 1
+  image:
+    tag: latest
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# ---------------------------------------------------------------------------
+# Secrets (base64-encoded values — override at install time)
+# ---------------------------------------------------------------------------
+secrets:
+  jwtSecret: Y2hhbmdlLW1lLWluLXByb2R1Y3Rpb24=
+  deepgramApiKey: "MmU5YmVlYzRhY2EzY2ZlMmVmMDA0Nzc2OTQzY2UzMTExZjg4NjE4Mg=="
+  anthropicApiKey: ""
+  discordBotToken: ""
+
+# ---------------------------------------------------------------------------
+# Ingress
+# ---------------------------------------------------------------------------
+ingress:
+  enabled: true
+  className: nginx
+  host: kutana.spark-b0f2.local
+  tls:
+    secretName: kutana-tls

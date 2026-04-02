@@ -61,20 +61,20 @@ echo "==> Applying woodpecker-secrets ..."
 kubectl apply -f "$SECRETS_FILE"
 
 # ---------------------------------------------------------------------------
-# Create the woodpecker database in the convene postgres instance (if missing)
+# Create the woodpecker database in the kutana postgres instance (if missing)
 # ---------------------------------------------------------------------------
 echo "==> Ensuring 'woodpecker' database exists in postgres ..."
-if kubectl get pod -n convene -l app.kubernetes.io/name=postgres -o name 2>/dev/null | grep -q pod; then
-  POSTGRES_POD=$(kubectl get pod -n convene -l app.kubernetes.io/name=postgres -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+if kubectl get pod -n kutana -l app.kubernetes.io/name=postgres -o name 2>/dev/null | grep -q pod; then
+  POSTGRES_POD=$(kubectl get pod -n kutana -l app.kubernetes.io/name=postgres -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
   if [[ -n "$POSTGRES_POD" ]]; then
-    kubectl exec -n convene "$POSTGRES_POD" -- \
-      psql -U convene -tc "SELECT 1 FROM pg_database WHERE datname='woodpecker'" \
+    kubectl exec -n kutana "$POSTGRES_POD" -- \
+      psql -U kutana -tc "SELECT 1 FROM pg_database WHERE datname='woodpecker'" \
       | grep -q 1 \
-      || kubectl exec -n convene "$POSTGRES_POD" -- \
-           psql -U convene -c "CREATE DATABASE woodpecker"
+      || kubectl exec -n kutana "$POSTGRES_POD" -- \
+           psql -U kutana -c "CREATE DATABASE woodpecker"
     echo "    OK — woodpecker database ready"
   else
-    echo "    WARN: postgres pod not found in convene namespace — skipping DB create."
+    echo "    WARN: postgres pod not found in kutana namespace — skipping DB create."
     echo "          Create the database manually: CREATE DATABASE woodpecker;"
   fi
 else
@@ -112,6 +112,6 @@ echo "        (or your public Cloudflare Tunnel hostname)"
 echo ""
 echo "  Next steps:"
 echo "    1. Open the Woodpecker UI and log in with your GitHub account"
-echo "    2. Enable the dyerinnovation/convene-ai repository"
+echo "    2. Enable the dyerinnovation/kutana-ai repository"
 echo "    3. Push a commit to main to trigger the first pipeline run"
 echo ""

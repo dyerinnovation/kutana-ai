@@ -10,15 +10,15 @@
 1. **Deepgram fix**: KeepAlive task, reconnection logic, provider recreation in AudioBridge
 2. **Frontend reshuffle**: Participant grid as main panel, transcript as compact sidebar, avatar cards with speaking indicators
 3. **Roadmap update**: Video tiles, screen sharing, layout modes added to Phase 3
-4. **K8s migration**: Local Docker registry, per-service Dockerfiles (uv base + Python 3.13), Convene Helm chart, /build-and-push skill, rule updates
+4. **K8s migration**: Local Docker registry, per-service Dockerfiles (uv base + Python 3.13), Kutana Helm chart, /build-and-push skill, rule updates
 
 ## Key Files
-- `packages/convene-providers/src/convene_providers/stt/deepgram_stt.py`
+- `packages/kutana-providers/src/kutana_providers/stt/deepgram_stt.py`
 - `services/agent-gateway/src/agent_gateway/audio_bridge.py`
 - `services/audio-service/src/audio_service/audio_pipeline.py`
 - `web/src/pages/MeetingRoomPage.tsx`
 - `web/src/types/index.ts`
-- `charts/convene/` (new Helm chart)
+- `charts/kutana/` (new Helm chart)
 - `charts/registry/` (new Helm chart)
 - `scripts/build_and_push.sh` (new)
 - `.claude/skills/build-and-push/` (new skill)

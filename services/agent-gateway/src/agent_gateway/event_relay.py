@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-STREAM_KEY = "convene:events"
+STREAM_KEY = "kutana:events"
 GROUP_NAME = "agent-gateway"
 CONSUMER_NAME = "gateway-0"
 
@@ -24,7 +24,7 @@ CONSUMER_NAME = "gateway-0"
 class EventRelay:
     """Consumes events from Redis Streams and forwards them to agents.
 
-    Creates a consumer group on the convene:events stream and routes
+    Creates a consumer group on the kutana:events stream and routes
     events to connected agent sessions based on meeting_id and
     capabilities.
 

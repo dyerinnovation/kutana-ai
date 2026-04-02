@@ -26,14 +26,14 @@
 4. Analyze the codebase:
 
    **a. Provider abstraction consistency**
-   - Check every file in `packages/convene-providers/` — do all implementations correctly extend the ABCs in `packages/convene-core/src/convene_core/interfaces/`?
+   - Check every file in `packages/kutana-providers/` — do all implementations correctly extend the ABCs in `packages/kutana-core/src/kutana_core/interfaces/`?
    - Are there any direct imports of concrete providers in service code? (There shouldn't be — services should use the registry)
    - Are new providers registered in `registry.py`?
 
    **b. Event-driven architecture**
    - Check all inter-service communication — is it going through Redis Streams?
    - Are there any direct function calls between services? (Violation)
-   - Are event definitions in `packages/convene-core/src/convene_core/events/definitions.py` up to date?
+   - Are event definitions in `packages/kutana-core/src/kutana_core/events/definitions.py` up to date?
 
    **c. Async correctness**
    - Search for blocking calls in async code paths (`time.sleep`, synchronous DB calls, synchronous HTTP)
@@ -52,7 +52,7 @@
    Identify modules with no test files.
 
    **f. Code organization**
-   - Are Pydantic models in convene-core and ORM models alongside their owning service?
+   - Are Pydantic models in kutana-core and ORM models alongside their owning service?
    - Are there any business logic leaks into API route handlers?
    - File naming conventions (snake_case, proper module structure)
 

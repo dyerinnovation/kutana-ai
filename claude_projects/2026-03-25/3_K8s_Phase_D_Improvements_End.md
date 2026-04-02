@@ -7,7 +7,7 @@
 - **Deployed web frontend to K8s**:
   - Created `web/Dockerfile` (multi-stage: node:22-slim build + nginx:1.27-alpine serve)
   - Created `web/nginx.conf` (SPA fallback, gzip, cache headers for hashed assets)
-  - Created `charts/convene/templates/deployment-web.yaml` and `service-web.yaml`
+  - Created `charts/kutana/templates/deployment-web.yaml` and `service-web.yaml`
   - Added separate catch-all `/` Ingress in `ingress.yaml` (Prefix type, no rewrite — avoids conflict with regex rewrite on API routes)
   - Added `web:` section to `values.yaml` (50m/64Mi requests, 200m/128Mi limits)
   - Updated `scripts/build_and_push.sh` — added `web` to ALL_SERVICES with special-case Dockerfile path
@@ -29,7 +29,7 @@
 - **Ingress rewrite conflict**: The existing Ingress uses `rewrite-target: /$2` with regex capture groups. A catch-all `/` route can't use the same rewrite. Solution: create a separate Ingress resource with `pathType: Prefix` (no rewrite annotation) — Prefix matches have lower specificity than regex matches.
 - **Migration Job sync vs async URL**: alembic `env.py` can use either sync or async engines, but ours is configured for async only. The configmap has both URLs — make sure to use the correct one.
 - **SigNoz OpAmp**: The SigNoz custom collector binary uses OpAmp for remote configuration management. If the OpAmp server (signoz-0 pod) can't deliver config, the collector may not start its receivers. This is different from a vanilla OTel collector which just reads config.yaml.
-- **Helm chart path on DGX**: When running helm via SSH, use full path to the chart directory (`~/convene-ai/charts/convene`), not relative paths.
+- **Helm chart path on DGX**: When running helm via SSH, use full path to the chart directory (`~/kutana-ai/charts/kutana`), not relative paths.
 
 ## Commits
 

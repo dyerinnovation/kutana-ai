@@ -15,9 +15,9 @@ This document covers implementation-level details for the agent platform. For th
 
 | Channel | Transport | How It Connects |
 |---------|-----------|-----------------|
-| CLI (`convene` CLI) | REST API + WebSocket | `convene login`, `convene meeting join <id>` |
+| CLI (`kutana` CLI) | REST API + WebSocket | `kutana login`, `kutana meeting join <id>` |
 | MCP (Streamable HTTP) | HTTP to MCP server | Any MCP client → `http://mcp:3001/mcp` with Bearer token |
-| Claude Code skill | MCP (via configured remote server) | `/convene` skill uses MCP server |
+| Claude Code skill | MCP (via configured remote server) | `/kutana` skill uses MCP server |
 | OpenClaw skill | MCP or direct API | OpenClaw plugin registers native tools |
 | Claude Agent SDK | MCP | `MCPServerConfig(url=...)` in agent config |
 | Arbitrary agents | MCP or direct WebSocket | Any platform that speaks MCP or raw gateway WebSocket |

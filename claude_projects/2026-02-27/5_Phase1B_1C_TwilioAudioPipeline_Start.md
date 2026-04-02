@@ -6,7 +6,7 @@ Complete the remaining Phase 1B item (provider registry integration tests) and i
 ## Work Items
 
 ### 1. Provider Registry Integration Tests
-- **Create:** `packages/convene-providers/tests/test_registry_integration.py`
+- **Create:** `packages/kutana-providers/tests/test_registry_integration.py`
 - 8 tests covering full lifecycle, isolation, kwargs pass-through, error cases, default registry smoke test
 
 ### 2. Redis Streams Event Publisher

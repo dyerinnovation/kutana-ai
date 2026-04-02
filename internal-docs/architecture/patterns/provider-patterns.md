@@ -18,6 +18,6 @@
 - `pgvector`: use `pgvector.sqlalchemy.Vector` column type with `cosine_distance()` for similarity search
 
 ## Provider Registry
-- Located at `packages/convene-providers/src/convene_providers/registry.py`
+- Located at `packages/kutana-providers/src/kutana_providers/registry.py`
 - `default_registry` singleton has all built-in providers pre-registered
 - Use lazy imports inside `_build_default_registry()` to avoid circular imports

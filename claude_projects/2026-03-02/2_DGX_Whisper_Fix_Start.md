@@ -2,7 +2,7 @@
 
 ## Context
 
-The E2E gateway test (`scripts/test_e2e_gateway.py`) successfully connects, joins a meeting, and sends 5.86s of LibriSpeech audio through the agent gateway to the DGX Spark Whisper API. However, the Whisper endpoint at `http://spark-b0f2.local/convene-stt/v1/audio/transcriptions` returns HTTP 500:
+The E2E gateway test (`scripts/test_e2e_gateway.py`) successfully connects, joins a meeting, and sends 5.86s of LibriSpeech audio through the agent gateway to the DGX Spark Whisper API. However, the Whisper endpoint at `http://spark-b0f2.local/kutana-stt/v1/audio/transcriptions` returns HTTP 500:
 
 ```json
 {"error": {"message": "Please install vllm[audio] for audio support", "type": "Internal Server Error"}}
@@ -48,7 +48,7 @@ Also bump liveness probe `initialDelaySeconds` from 120 to 180 to account for ex
 
 ### Step 3: Verify Whisper API directly
 ```bash
-curl -X POST http://spark-b0f2.local/convene-stt/v1/audio/transcriptions \
+curl -X POST http://spark-b0f2.local/kutana-stt/v1/audio/transcriptions \
   -F "file=@data/input/test-speech.wav" \
   -F "model=openai/whisper-large-v3" \
   -F "response_format=verbose_json"

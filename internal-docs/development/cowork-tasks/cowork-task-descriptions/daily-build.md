@@ -115,9 +115,9 @@ When the selected item is a `🔗 BLOCK:`, work through all sub-tasks as a unit:
    **Author:** CoWork (scheduled)
 
    ### Changes
-   - Created `packages/convene-providers/src/convene_providers/stt/assemblyai_stt.py`
-   - Created `packages/convene-providers/tests/test_assemblyai_stt.py`
-   - Updated `packages/convene-providers/src/convene_providers/registry.py`
+   - Created `packages/kutana-providers/src/kutana_providers/stt/assemblyai_stt.py`
+   - Created `packages/kutana-providers/tests/test_assemblyai_stt.py`
+   - Updated `packages/kutana-providers/src/kutana_providers/registry.py`
 
    ### Quality Check Results
    - ruff: ✅ No issues

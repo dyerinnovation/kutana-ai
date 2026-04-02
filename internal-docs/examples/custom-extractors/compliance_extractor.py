@@ -1,6 +1,6 @@
 """Example custom extractor: Compliance Mention Detector.
 
-This file demonstrates how to build a custom Convene AI extractor using
+This file demonstrates how to build a custom Kutana AI extractor using
 the SDK helpers.  The ``ComplianceExtractor`` scans meeting transcripts for
 regulatory and compliance-related language and emits ``key_point`` entities
 for each mention found.
@@ -10,7 +10,7 @@ How to use this extractor
 
 1. **Register at startup** (standalone / service integration)::
 
-       from convene_core.extraction.loader import ExtractorLoader
+       from kutana_core.extraction.loader import ExtractorLoader
 
        loader = ExtractorLoader()
        loader.load_from_file("examples/custom-extractors/compliance_extractor.py")
@@ -18,14 +18,14 @@ How to use this extractor
 
 2. **Install as a package entry point** — add to your ``pyproject.toml``::
 
-       [project.entry-points."convene.extractors"]
+       [project.entry-points."kutana.extractors"]
        compliance = "my_package.compliance_extractor:ComplianceExtractor"
 
    Then run ``loader.load_from_entry_points()`` at startup.
 
 3. **Register directly** (in tests or notebook environments)::
 
-       from convene_core.extraction.loader import ExtractorLoader
+       from kutana_core.extraction.loader import ExtractorLoader
        loader = ExtractorLoader()
        loader.register(ComplianceExtractor)
 
@@ -33,7 +33,7 @@ How to call the extractor
 -------------------------
 ::
 
-    from convene_core.extraction.types import BatchSegment, TranscriptBatch
+    from kutana_core.extraction.types import BatchSegment, TranscriptBatch
 
     batch = TranscriptBatch(
         meeting_id="meet-123",
@@ -59,11 +59,11 @@ import re
 import time
 from typing import TYPE_CHECKING, ClassVar
 
-from convene_core.extraction.sdk import SimpleExtractor, make_key_point
-from convene_core.extraction.types import ExtractionResult, TranscriptBatch
+from kutana_core.extraction.sdk import SimpleExtractor, make_key_point
+from kutana_core.extraction.types import ExtractionResult, TranscriptBatch
 
 if TYPE_CHECKING:
-    from convene_core.extraction.abc import Extractor
+    from kutana_core.extraction.abc import Extractor
 
 # ---------------------------------------------------------------------------
 # Compliance keyword patterns
@@ -274,7 +274,7 @@ class ComplianceExtractor(SimpleExtractor):
 # The decorator approach is useful when you want a quick one-off extractor
 # without creating a full class.
 
-from convene_core.extraction.sdk import extractor  # noqa: E402
+from kutana_core.extraction.sdk import extractor  # noqa: E402
 
 
 @extractor(name="compliance-regex-only", entity_types=["key_point"])
@@ -292,7 +292,7 @@ async def regex_compliance_extractor(batch: TranscriptBatch) -> ExtractionResult
         An :class:`ExtractionResult` with key_point entities for regulation
         name mentions.
     """
-    from convene_core.extraction.sdk import make_key_point
+    from kutana_core.extraction.sdk import make_key_point
 
     start = time.monotonic()
     entities = []
@@ -335,12 +335,12 @@ def register_all(loader: object) -> None:
     registration entry point.  Typically called at application startup.
 
     Args:
-        loader: An :class:`~convene_core.extraction.loader.ExtractorLoader`
+        loader: An :class:`~kutana_core.extraction.loader.ExtractorLoader`
             instance to register into.
 
     Example::
 
-        from convene_core.extraction.loader import ExtractorLoader
+        from kutana_core.extraction.loader import ExtractorLoader
         from examples.custom_extractors.compliance_extractor import register_all
 
         loader = ExtractorLoader()

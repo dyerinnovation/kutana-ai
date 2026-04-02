@@ -1,4 +1,4 @@
-# Convene AI — Handoff Notes
+# Kutana AI — Handoff Notes
 
 > This file is the shift-change log between Jonathan and CoWork scheduled tasks.
 > Before starting any work, READ THIS FILE to understand the current state.

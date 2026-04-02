@@ -1,13 +1,13 @@
-# Convene AI Skill Architecture
+# Kutana AI Skill Architecture
 
-> Proposal for the `convene-meeting` skill design.
+> Proposal for the `kutana-meeting` skill design.
 > Based on research in `docs/research/openclaw-skills-research.md`.
 
 ---
 
 ## Overview
 
-The `convene-meeting` skill enables AI agents to participate in Convene AI meetings as first-class participants. It wraps the Convene MCP server tools in an OpenClaw-compatible skill package, making Convene accessible to any agent framework (Claude Agent SDK, OpenClaw, generic LLM frameworks).
+The `kutana-meeting` skill enables AI agents to participate in Kutana AI meetings as first-class participants. It wraps the Kutana MCP server tools in an OpenClaw-compatible skill package, making Kutana accessible to any agent framework (Claude Agent SDK, OpenClaw, generic LLM frameworks).
 
 **Primary target:** OpenClaw agent ecosystem (ClawHub distribution)
 **Secondary targets:** Claude Agent SDK, generic MCP-compatible frameworks
@@ -67,7 +67,7 @@ The skill bundles four capability areas, each mapping to a group of MCP tools:
 ## Directory Layout
 
 ```
-integrations/convene-meeting-skill/
+integrations/kutana-meeting-skill/
 ├── SKILL.md                  # OpenClaw skill definition (frontmatter + instructions)
 ├── README.md                 # Human-facing setup guide
 ├── scripts/
@@ -84,9 +84,9 @@ integrations/convene-meeting-skill/
 
 ```yaml
 ---
-name: convene-meeting
+name: kutana-meeting
 version: 1.0.0
-description: Join and participate in Convene AI meetings — transcripts, chat, turn management, and task tracking
+description: Join and participate in Kutana AI meetings — transcripts, chat, turn management, and task tracking
 author: Dyer Innovation
 category: productivity
 tags:
@@ -104,13 +104,13 @@ capabilities:
   - context
 requires:
   - env: CONVENE_API_KEY
-    description: API key from your Convene dashboard (Settings → API Keys)
+    description: API key from your Kutana dashboard (Settings → API Keys)
   - env: CONVENE_API_URL
-    description: Base URL of your Convene API server (default: https://api.convene.ai)
+    description: Base URL of your Kutana API server (default: https://api.kutana.ai)
   - env: CONVENE_GATEWAY_WS_URL
-    description: WebSocket URL for the agent gateway (default: ws://api.convene.ai/gateway)
-  - service: convene-mcp-server
-    description: Convene MCP server must be running and reachable
+    description: WebSocket URL for the agent gateway (default: ws://api.kutana.ai/gateway)
+  - service: kutana-mcp-server
+    description: Kutana MCP server must be running and reachable
 mcp_compatible: true
 mcp_server_url: "${CONVENE_MCP_URL:-http://localhost:3001/mcp}"
 frameworks:
@@ -128,9 +128,9 @@ license: MIT
 The body follows a consistent structure that optimizes for agent comprehension:
 
 ```markdown
-# Convene Meeting Skill
+# Kutana Meeting Skill
 
-You are participating in a Convene AI meeting. Convene is an agent-first meeting
+You are participating in a Kutana AI meeting. Kutana is an agent-first meeting
 platform where AI agents are first-class participants alongside humans.
 
 ## Quick Start
@@ -171,7 +171,7 @@ Claude Agent SDK / OpenClaw Agent
          │
          │  MCP protocol (Streamable HTTP)
          ▼
-convene-mcp-server (FastMCP, port 3001)
+kutana-mcp-server (FastMCP, port 3001)
          │
          ├── REST API calls ──────► api-server (port 8000)
          │                               │
@@ -197,7 +197,7 @@ convene-mcp-server (FastMCP, port 3001)
 
 ```bash
 #!/usr/bin/env bash
-# Start the Convene MCP server with your API key configured.
+# Start the Kutana MCP server with your API key configured.
 # Usage: ./connect.sh
 
 set -euo pipefail
@@ -208,14 +208,14 @@ set -euo pipefail
 : "${CONVENE_MCP_PORT:=3001}"
 
 docker run --rm -d \
-  --name convene-mcp \
+  --name kutana-mcp \
   -p "${CONVENE_MCP_PORT}:3001" \
   -e MCP_API_KEY="${CONVENE_API_KEY}" \
   -e API_BASE_URL="${CONVENE_API_URL}" \
   -e GATEWAY_WS_URL="${CONVENE_GATEWAY_WS_URL}" \
-  ghcr.io/dyerinnovation/convene-mcp-server:latest
+  ghcr.io/dyerinnovation/kutana-mcp-server:latest
 
-echo "Convene MCP server started on port ${CONVENE_MCP_PORT}"
+echo "Kutana MCP server started on port ${CONVENE_MCP_PORT}"
 echo "MCP endpoint: http://localhost:${CONVENE_MCP_PORT}/mcp"
 ```
 
@@ -268,7 +268,7 @@ The frontmatter `capabilities` field allows future selective loading if needed, 
 
 ### Skill vs. direct API calls?
 
-The MCP server provides type-safe, authenticated, properly-scoped access to the Convene APIs. Skills wrap MCP, not the raw REST API. This ensures:
+The MCP server provides type-safe, authenticated, properly-scoped access to the Kutana APIs. Skills wrap MCP, not the raw REST API. This ensures:
 - Auth is handled consistently
 - Rate limiting is enforced server-side
 - API contracts are versioned

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 
-from convene_core.database.models import TaskORM
+from kutana_core.database.models import TaskORM
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
         async_sessionmaker,
     )
 
-    from convene_core.models.task import Task
+    from kutana_core.models.task import Task
 
 logger = logging.getLogger(__name__)
 

@@ -14,7 +14,7 @@ const ThemeContext = createContext<ThemeContextValue>({
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem("convene-theme") as Theme | null;
+    const saved = localStorage.getItem("kutana-theme") as Theme | null;
     if (saved === "light" || saved === "dark") return saved;
     // Respect OS preference on first visit
     return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
@@ -22,7 +22,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("convene-theme", theme);
+    localStorage.setItem("kutana-theme", theme);
   }, [theme]);
 
   function toggleTheme() {

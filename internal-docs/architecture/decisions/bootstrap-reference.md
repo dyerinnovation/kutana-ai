@@ -1,4 +1,4 @@
-# Convene AI — Bootstrap Reference
+# Kutana AI — Bootstrap Reference
 
 > This file preserves the original bootstrap prompt used to scaffold the project.
 > It is kept for historical reference only. See CLAUDE.md at the repo root for
@@ -12,20 +12,20 @@ When pasting this into Claude Code, ask it to:
 
 ### Step 1: Create the monorepo structure
 
-Create the Convene AI monorepo with the following structure. Use uv workspaces.
+Create the Kutana AI monorepo with the following structure. Use uv workspaces.
 Initialize all packages with pyproject.toml files and proper dependency declarations.
 Set up docker-compose.yml with PostgreSQL 16 (pgvector) and Redis 7.
 Create the CLAUDE.md file at the root from the spec above.
 
 ### Step 2: Implement core domain models
 
-Implement all Pydantic v2 models in packages/convene-core/src/convene_core/models/.
+Implement all Pydantic v2 models in packages/kutana-core/src/kutana_core/models/.
 Then implement the corresponding SQLAlchemy 2.0 ORM models.
 Create the initial Alembic migration.
 
 ### Step 3: Implement provider interfaces and first providers
 
-Implement the abstract base classes in packages/convene-core/src/convene_core/interfaces/.
+Implement the abstract base classes in packages/kutana-core/src/kutana_core/interfaces/.
 Then implement AssemblyAI STT, Anthropic LLM, and the provider registry.
 
 ### Step 4: Implement Twilio phone integration

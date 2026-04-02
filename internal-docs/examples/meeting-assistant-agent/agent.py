@@ -1,6 +1,6 @@
-"""Convene AI Meeting Agent — Claude Agent SDK example.
+"""Kutana AI Meeting Agent — Claude Agent SDK example.
 
-Connects to the remote Convene MCP server using a Convene API key.
+Connects to the remote Kutana MCP server using a Kutana API key.
 Multiple agent templates available: assistant, summarizer, action-tracker, decision-logger.
 
 Usage:
@@ -20,12 +20,12 @@ import sys
 
 # Agent template system prompts
 TEMPLATES: dict[str, str] = {
-    "assistant": """You are a meeting assistant for Convene AI. Your job is to:
+    "assistant": """You are a meeting assistant for Kutana AI. Your job is to:
 
 1. List available meetings and join one when asked (or join automatically if there's an active meeting).
 2. Monitor the transcript continuously using get_transcript().
 3. Extract action items, decisions, and follow-ups from the conversation.
-4. Create tasks in Convene for each action item using create_task().
+4. Create tasks in Kutana for each action item using create_task().
 5. Periodically summarize what's been discussed.
 
 ## Guidelines
@@ -36,7 +36,7 @@ TEMPLATES: dict[str, str] = {
 - Check transcript every 10-15 seconds for new content.
 - When the meeting seems to wind down, provide a final summary of all action items created.
 
-## Available Tools (via Convene MCP Server)
+## Available Tools (via Kutana MCP Server)
 - list_meetings() — Find meetings to join
 - join_meeting(meeting_id) — Connect to a meeting
 - join_or_create_meeting(title) — Join active meeting or create new
@@ -49,7 +49,7 @@ TEMPLATES: dict[str, str] = {
 - start_meeting(meeting_id) — Start a scheduled meeting
 - end_meeting(meeting_id) — End an active meeting
 """,
-    "summarizer": """You are a meeting summarizer for Convene AI. Your job is to produce
+    "summarizer": """You are a meeting summarizer for Kutana AI. Your job is to produce
 concise, well-structured meeting minutes.
 
 ## Behavior
@@ -70,7 +70,7 @@ concise, well-structured meeting minutes.
 Use markdown formatting. Keep summaries concise — aim for bullet points, not paragraphs.
 Create tasks for each action item identified.
 """,
-    "action-tracker": """You are an action item tracker for Convene AI. You focus exclusively
+    "action-tracker": """You are an action item tracker for Kutana AI. You focus exclusively
 on identifying and recording tasks, assignments, and deadlines.
 
 ## Behavior
@@ -91,7 +91,7 @@ on identifying and recording tasks, assignments, and deadlines.
 - Include deadline if mentioned: "Submit report (due: Friday Mar 14)"
 - Set priority based on urgency signals in conversation
 """,
-    "decision-logger": """You are a decision logger for Convene AI. You capture decisions
+    "decision-logger": """You are a decision logger for Kutana AI. You capture decisions
 made during meetings with full context.
 
 ## Behavior
@@ -116,7 +116,7 @@ made during meetings with full context.
 
 async def main() -> None:
     """Run the meeting agent with selected template."""
-    parser = argparse.ArgumentParser(description="Convene AI Meeting Agent")
+    parser = argparse.ArgumentParser(description="Kutana AI Meeting Agent")
     parser.add_argument(
         "--template",
         choices=list(TEMPLATES.keys()),
@@ -152,23 +152,23 @@ async def main() -> None:
         sys.exit(1)
 
     mcp_url = os.environ.get(
-        "CONVENE_MCP_URL", "http://convene.spark-b0f2.local/mcp"
+        "CONVENE_MCP_URL", "http://kutana.spark-b0f2.local/mcp"
     )
     api_key = os.environ.get("CONVENE_API_KEY", "")
 
     if not api_key:
         print(
             "CONVENE_API_KEY not set.\n\n"
-            "Get a key from your Convene instance:\n"
+            "Get a key from your Kutana instance:\n"
             "  Settings → API Keys → Generate Key (scope: Agent)\n\n"
             "Then:\n"
             "  export CONVENE_API_KEY=cvn_..."
         )
         sys.exit(1)
 
-    # Configure the remote Convene MCP server with Bearer token auth
-    convene_mcp = MCPServerConfig(
-        name="convene",
+    # Configure the remote Kutana MCP server with Bearer token auth
+    kutana_mcp = MCPServerConfig(
+        name="kutana",
         url=mcp_url,
         headers={"Authorization": f"Bearer {api_key}"},
     )
@@ -179,14 +179,14 @@ async def main() -> None:
     config = AgentConfig(
         model=args.model,
         system_prompt=system_prompt,
-        mcp_servers=[convene_mcp],
+        mcp_servers=[kutana_mcp],
         max_turns=args.max_turns,
     )
 
     agent = Agent(config)
 
     template_name = "custom" if args.system_prompt else args.template
-    print(f"Starting Convene Meeting Agent (template: {template_name})...")
+    print(f"Starting Kutana Meeting Agent (template: {template_name})...")
     print(f"Model: {args.model}")
     print(f"MCP Server: {mcp_url}")
     print("Press Ctrl+C to stop.\n")

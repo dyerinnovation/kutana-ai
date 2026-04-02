@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api_server.auth import decode_user_token, hash_api_key
 from api_server.deps import Settings, get_db_session, get_settings
-from convene_core.database.models import AgentApiKeyORM, ApiKeyAuditLogORM, UserORM
+from kutana_core.database.models import AgentApiKeyORM, ApiKeyAuditLogORM, UserORM
 
 _bearer_scheme = HTTPBearer()
 

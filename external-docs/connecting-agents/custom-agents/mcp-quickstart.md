@@ -1,15 +1,15 @@
 # Connecting via MCP
 
-Connect any MCP-compatible agent to Convene AI. Agents authenticate with a Bearer token and get access to 20+ tools for joining meetings, reading transcripts, managing tasks, speaking via TTS, and coordinating with other agents.
+Connect any MCP-compatible agent to Kutana AI. Agents authenticate with a Bearer token and get access to 20+ tools for joining meetings, reading transcripts, managing tasks, speaking via TTS, and coordinating with other agents.
 
 ## Prerequisites
 
-- A Convene API key — see [Get an API key](#get-an-api-key)
+- A Kutana API key — see [Get an API key](#get-an-api-key)
 - An MCP client (Claude Agent SDK, Claude Code, Claude Desktop, or any MCP-compatible framework)
 
 ## Get an API key
 
-1. Sign in to your Convene instance
+1. Sign in to your Kutana instance
 2. Go to **Settings → API Keys**
 3. Click **Generate Key** — select the **Agent** scope
 4. Copy the key — it starts with `cvn_`
@@ -19,10 +19,10 @@ Connect any MCP-compatible agent to Convene AI. Agents authenticate with a Beare
 | Parameter | Value |
 |-----------|-------|
 | Transport | Streamable HTTP |
-| MCP URL | `http://convene.spark-b0f2.local/mcp` |
+| MCP URL | `http://kutana.spark-b0f2.local/mcp` |
 | Auth header | `Authorization: Bearer <your-api-key>` |
 
-If your Convene instance is at a different address, set `CONVENE_MCP_URL` to override the default.
+If your Kutana instance is at a different address, set `CONVENE_MCP_URL` to override the default.
 
 ## Quick start: Python agent
 
@@ -39,9 +39,9 @@ import asyncio
 import os
 from claude_agent_sdk import Agent, AgentConfig, MCPServerConfig
 
-convene_mcp = MCPServerConfig(
-    name="convene",
-    url=os.environ.get("CONVENE_MCP_URL", "http://convene.spark-b0f2.local/mcp"),
+kutana_mcp = MCPServerConfig(
+    name="kutana",
+    url=os.environ.get("CONVENE_MCP_URL", "http://kutana.spark-b0f2.local/mcp"),
     headers={"Authorization": f"Bearer {os.environ['CONVENE_API_KEY']}"},
 )
 
@@ -49,7 +49,7 @@ config = AgentConfig(
     model="claude-sonnet-4-6",
     system_prompt="""You are a meeting assistant. Join the active meeting,
 monitor the transcript, and create tasks for every action item you hear.""",
-    mcp_servers=[convene_mcp],
+    mcp_servers=[kutana_mcp],
     max_turns=100,
 )
 
@@ -75,9 +75,9 @@ Configure your MCP client with:
 ```json
 {
   "mcpServers": {
-    "convene": {
+    "kutana": {
       "type": "http",
-      "url": "http://convene.spark-b0f2.local/mcp",
+      "url": "http://kutana.spark-b0f2.local/mcp",
       "headers": {
         "Authorization": "Bearer <your-api-key>"
       }
@@ -86,62 +86,62 @@ Configure your MCP client with:
 }
 ```
 
-The Convene MCP server accepts any client that speaks the MCP Streamable HTTP protocol.
+The Kutana MCP server accepts any client that speaks the MCP Streamable HTTP protocol.
 
 ## Available MCP tools
 
-All tools use the `convene_` prefix.
+All tools use the `kutana_` prefix.
 
 ### Meeting
 
 | Tool | Parameters | Description |
 |------|------------|-------------|
-| `convene_list_meetings` | — | List upcoming and active meetings |
-| `convene_create_meeting` | `title`, `platform` | Create a new meeting |
-| `convene_join_meeting` | `meeting_id`, `capabilities` | Join a meeting via the gateway |
-| `convene_join_or_create_meeting` | `title` | Join active meeting or create one |
-| `convene_leave_meeting` | — | Leave the current meeting |
-| `convene_start_meeting` | `meeting_id` | Start a scheduled meeting |
-| `convene_end_meeting` | `meeting_id` | End an active meeting |
+| `kutana_list_meetings` | — | List upcoming and active meetings |
+| `kutana_create_meeting` | `title`, `platform` | Create a new meeting |
+| `kutana_join_meeting` | `meeting_id`, `capabilities` | Join a meeting via the gateway |
+| `kutana_join_or_create_meeting` | `title` | Join active meeting or create one |
+| `kutana_leave_meeting` | — | Leave the current meeting |
+| `kutana_start_meeting` | `meeting_id` | Start a scheduled meeting |
+| `kutana_end_meeting` | `meeting_id` | End an active meeting |
 
 ### Transcript & Tasks
 
 | Tool | Parameters | Description |
 |------|------------|-------------|
-| `convene_get_transcript` | `last_n` | Get recent transcript segments |
-| `convene_get_tasks` | `meeting_id` | List tasks for a meeting |
-| `convene_create_task` | `meeting_id`, `description`, `priority` | Create a task |
-| `convene_get_participants` | — | List current participants |
+| `kutana_get_transcript` | `last_n` | Get recent transcript segments |
+| `kutana_get_tasks` | `meeting_id` | List tasks for a meeting |
+| `kutana_create_task` | `meeting_id`, `description`, `priority` | Create a task |
+| `kutana_get_participants` | — | List current participants |
 
 ### Turn Management
 
 | Tool | Parameters | Description |
 |------|------------|-------------|
-| `convene_raise_hand` | `priority`, `topic` | Request to speak |
-| `convene_get_queue_status` | — | Check the speaker queue |
-| `convene_start_speaking` | `text` | Speak — text is synthesized via TTS |
-| `convene_mark_finished_speaking` | — | Release the floor |
-| `convene_cancel_hand_raise` | — | Withdraw from the queue |
+| `kutana_raise_hand` | `priority`, `topic` | Request to speak |
+| `kutana_get_queue_status` | — | Check the speaker queue |
+| `kutana_start_speaking` | `text` | Speak — text is synthesized via TTS |
+| `kutana_mark_finished_speaking` | — | Release the floor |
+| `kutana_cancel_hand_raise` | — | Withdraw from the queue |
 
 ### Chat
 
 | Tool | Parameters | Description |
 |------|------------|-------------|
-| `convene_send_chat_message` | `content`, `message_type` | Post to meeting chat |
-| `convene_get_chat_messages` | `message_type`, `last_n` | Read chat history |
+| `kutana_send_chat_message` | `content`, `message_type` | Post to meeting chat |
+| `kutana_get_chat_messages` | `message_type`, `last_n` | Read chat history |
 
 ### Events & Channels
 
 | Tool | Parameters | Description |
 |------|------------|-------------|
-| `convene_get_meeting_events` | `last_n`, `event_type` | Poll buffered meeting events |
-| `convene_subscribe_channel` | `channel` | Subscribe to a named data channel |
-| `convene_publish_to_channel` | `channel`, `payload` | Publish to a channel |
-| `convene_get_channel_messages` | `channel`, `last_n` | Read buffered channel messages |
+| `kutana_get_meeting_events` | `last_n`, `event_type` | Poll buffered meeting events |
+| `kutana_subscribe_channel` | `channel` | Subscribe to a named data channel |
+| `kutana_publish_to_channel` | `channel`, `payload` | Publish to a channel |
+| `kutana_get_channel_messages` | `channel`, `last_n` | Read buffered channel messages |
 
 ## See Also
 
 - [MCP Authentication](/docs/connecting-agents/custom-agents/mcp-auth) — OAuth 2.1 token exchange details
 - [Claude Code Channel](/docs/connecting-agents/custom-agents/claude-code-channel) — Claude Code as a meeting participant
 - [OpenClaw Plugin](/docs/connecting-agents/custom-agents/openclaw-plugin) — Connect via OpenClaw channels
-- [Convene CLI](/docs/connecting-agents/custom-agents/cli) — Terminal-based access
+- [Kutana CLI](/docs/connecting-agents/custom-agents/cli) — Terminal-based access

@@ -2,17 +2,17 @@
 
 ## Location
 
-- **ABC + types**: `packages/convene-core/src/convene_core/messaging/` (NOT under `interfaces/`)
-- **Redis implementation**: `packages/convene-providers/src/convene_providers/messaging/redis_streams.py`
-- **Mock for testing**: `packages/convene-providers/src/convene_providers/testing.MockMessageBus`
+- **ABC + types**: `packages/kutana-core/src/kutana_core/messaging/` (NOT under `interfaces/`)
+- **Redis implementation**: `packages/kutana-providers/src/kutana_providers/messaging/redis_streams.py`
+- **Mock for testing**: `packages/kutana-providers/src/kutana_providers/testing.MockMessageBus`
 - **Registry key**: `ProviderType.MESSAGE_BUS` → `"redis"`
-- **Env helper**: `create_message_bus_from_env()` in `convene_providers.messaging`
+- **Env helper**: `create_message_bus_from_env()` in `kutana_providers.messaging`
 
 ## Usage in Services
 
 ```python
-from convene_core.messaging import MessageBus, Message
-from convene_providers.messaging import create_message_bus_from_env
+from kutana_core.messaging import MessageBus, Message
+from kutana_providers.messaging import create_message_bus_from_env
 
 # At startup
 bus = create_message_bus_from_env()  # reads CONVENE_MESSAGE_BUS + REDIS_URL
@@ -43,7 +43,7 @@ await bus.close()
 ## Testing Pattern
 
 ```python
-from convene_providers.testing import MockMessageBus
+from kutana_providers.testing import MockMessageBus
 
 bus = MockMessageBus()
 sub = await bus.subscribe("events", handler)
