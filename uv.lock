@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.13"
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -11,11 +11,11 @@ members = [
     "agent-gateway",
     "api-server",
     "audio-service",
-    "convene-ai",
-    "convene-cli",
-    "convene-core",
-    "convene-memory",
-    "convene-providers",
+    "kutana-ai",
+    "kutana-cli",
+    "kutana-core",
+    "kutana-memory",
+    "kutana-providers",
     "mcp-server",
     "task-engine",
     "worker",
@@ -27,9 +27,9 @@ version = "0.1.0"
 source = { editable = "services/agent-gateway" }
 dependencies = [
     { name = "audio-service" },
-    { name = "convene-core" },
-    { name = "convene-providers" },
     { name = "fastapi" },
+    { name = "kutana-core" },
+    { name = "kutana-providers" },
     { name = "pydantic-settings" },
     { name = "pyjwt" },
     { name = "redis" },
@@ -40,9 +40,9 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "audio-service", editable = "services/audio-service" },
-    { name = "convene-core", editable = "packages/convene-core" },
-    { name = "convene-providers", editable = "packages/convene-providers" },
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "kutana-core", editable = "packages/kutana-core" },
+    { name = "kutana-providers", editable = "packages/kutana-providers" },
     { name = "pydantic-settings", specifier = ">=2.0" },
     { name = "pyjwt", specifier = ">=2.8" },
     { name = "redis", specifier = ">=5.0" },
@@ -264,9 +264,9 @@ dependencies = [
     { name = "agent-gateway" },
     { name = "asyncpg" },
     { name = "bcrypt" },
-    { name = "convene-core" },
     { name = "email-validator" },
     { name = "fastapi" },
+    { name = "kutana-core" },
     { name = "pydantic-settings" },
     { name = "pyjwt" },
     { name = "python-multipart" },
@@ -280,9 +280,9 @@ requires-dist = [
     { name = "agent-gateway", editable = "services/agent-gateway" },
     { name = "asyncpg", specifier = ">=0.29" },
     { name = "bcrypt", specifier = ">=4.0" },
-    { name = "convene-core", editable = "packages/convene-core" },
     { name = "email-validator", specifier = ">=2.0" },
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "kutana-core", editable = "packages/kutana-core" },
     { name = "pydantic-settings", specifier = ">=2.0" },
     { name = "pyjwt", specifier = ">=2.8" },
     { name = "python-multipart", specifier = ">=0.0.9" },
@@ -353,9 +353,9 @@ name = "audio-service"
 version = "0.1.0"
 source = { editable = "services/audio-service" }
 dependencies = [
-    { name = "convene-core" },
-    { name = "convene-providers" },
     { name = "fastapi" },
+    { name = "kutana-core" },
+    { name = "kutana-providers" },
     { name = "pydantic-settings" },
     { name = "redis" },
     { name = "uvicorn", extra = ["standard"] },
@@ -363,9 +363,9 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "convene-core", editable = "packages/convene-core" },
-    { name = "convene-providers", editable = "packages/convene-providers" },
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "kutana-core", editable = "packages/kutana-core" },
+    { name = "kutana-providers", editable = "packages/kutana-providers" },
     { name = "pydantic-settings", specifier = ">=2.0" },
     { name = "redis", specifier = ">=5.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32" },
@@ -633,164 +633,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/d8/53/6f443c9a4a8358a93
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6", size = 25335, upload-time = "2022-10-25T02:36:20.889Z" },
 ]
-
-[[package]]
-name = "convene-ai"
-version = "0.1.0"
-source = { virtual = "." }
-
-[package.dev-dependencies]
-dev = [
-    { name = "groq" },
-    { name = "mypy" },
-    { name = "pydantic" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-    { name = "sqlalchemy" },
-]
-
-[package.metadata]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "groq", specifier = ">=0.11" },
-    { name = "mypy", specifier = ">=1.19.1" },
-    { name = "pydantic", specifier = ">=2.12.5" },
-    { name = "pytest", specifier = ">=8.0" },
-    { name = "pytest-asyncio", specifier = ">=0.24" },
-    { name = "pytest-cov", specifier = ">=5.0" },
-    { name = "ruff", specifier = ">=0.15.4" },
-    { name = "sqlalchemy", specifier = ">=2.0.47" },
-]
-
-[[package]]
-name = "convene-cli"
-version = "0.1.0"
-source = { editable = "services/cli" }
-dependencies = [
-    { name = "aiohttp" },
-    { name = "rich" },
-    { name = "typer" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiohttp", specifier = ">=3.9" },
-    { name = "rich", specifier = ">=13.0" },
-    { name = "typer", specifier = ">=0.12" },
-]
-
-[[package]]
-name = "convene-core"
-version = "0.1.0"
-source = { editable = "packages/convene-core" }
-dependencies = [
-    { name = "alembic" },
-    { name = "asyncpg" },
-    { name = "cryptography" },
-    { name = "pgvector" },
-    { name = "pydantic" },
-    { name = "sqlalchemy", extra = ["asyncio"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "alembic", specifier = ">=1.13" },
-    { name = "asyncpg", specifier = ">=0.29" },
-    { name = "cryptography", specifier = ">=44.0" },
-    { name = "pgvector", specifier = ">=0.3" },
-    { name = "pydantic", specifier = ">=2.7" },
-    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0" },
-]
-
-[[package]]
-name = "convene-memory"
-version = "0.1.0"
-source = { editable = "packages/convene-memory" }
-dependencies = [
-    { name = "asyncpg" },
-    { name = "convene-core" },
-    { name = "pgvector" },
-    { name = "redis" },
-    { name = "sqlalchemy", extra = ["asyncio"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "asyncpg", specifier = ">=0.29" },
-    { name = "convene-core", editable = "packages/convene-core" },
-    { name = "pgvector", specifier = ">=0.3" },
-    { name = "redis", specifier = ">=5.0" },
-    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0" },
-]
-
-[[package]]
-name = "convene-providers"
-version = "0.1.0"
-source = { editable = "packages/convene-providers" }
-dependencies = [
-    { name = "aiohttp" },
-    { name = "anthropic" },
-    { name = "convene-core" },
-    { name = "httpx" },
-    { name = "redis" },
-    { name = "websockets" },
-]
-
-[package.optional-dependencies]
-assemblyai = [
-    { name = "assemblyai" },
-]
-aws = [
-    { name = "aioboto3" },
-]
-cartesia = [
-    { name = "cartesia" },
-]
-deepgram = [
-    { name = "deepgram-sdk" },
-]
-elevenlabs = [
-    { name = "elevenlabs" },
-]
-gcp = [
-    { name = "google-cloud-pubsub" },
-]
-groq = [
-    { name = "groq" },
-]
-nats = [
-    { name = "nats-py" },
-]
-piper = [
-    { name = "piper-tts" },
-]
-whisper = [
-    { name = "faster-whisper" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aioboto3", marker = "extra == 'aws'", specifier = ">=13.0" },
-    { name = "aiohttp", specifier = ">=3.13.3" },
-    { name = "anthropic", specifier = ">=0.39" },
-    { name = "assemblyai", marker = "extra == 'assemblyai'", specifier = ">=0.30" },
-    { name = "cartesia", marker = "extra == 'cartesia'", specifier = ">=1.0" },
-    { name = "convene-core", editable = "packages/convene-core" },
-    { name = "deepgram-sdk", marker = "extra == 'deepgram'", specifier = ">=3.0" },
-    { name = "elevenlabs", marker = "extra == 'elevenlabs'", specifier = ">=1.0" },
-    { name = "faster-whisper", marker = "extra == 'whisper'", specifier = ">=1.0" },
-    { name = "google-cloud-pubsub", marker = "extra == 'gcp'", specifier = ">=2.0" },
-    { name = "groq", marker = "extra == 'groq'", specifier = ">=0.11" },
-    { name = "httpx", specifier = ">=0.27" },
-    { name = "nats-py", marker = "extra == 'nats'", specifier = ">=2.7" },
-    { name = "piper-tts", marker = "extra == 'piper'", specifier = ">=1.2" },
-    { name = "redis", extras = ["asyncio"], specifier = ">=5.0" },
-    { name = "websockets", specifier = ">=13.0" },
-]
-provides-extras = ["assemblyai", "deepgram", "elevenlabs", "cartesia", "whisper", "piper", "groq", "aws", "gcp", "nats"]
 
 [[package]]
 name = "coverage"
@@ -1565,6 +1407,164 @@ wheels = [
 ]
 
 [[package]]
+name = "kutana-ai"
+version = "0.1.0"
+source = { virtual = "." }
+
+[package.dev-dependencies]
+dev = [
+    { name = "groq" },
+    { name = "mypy" },
+    { name = "pydantic" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+    { name = "sqlalchemy" },
+]
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "groq", specifier = ">=0.11" },
+    { name = "mypy", specifier = ">=1.19.1" },
+    { name = "pydantic", specifier = ">=2.12.5" },
+    { name = "pytest", specifier = ">=8.0" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "pytest-cov", specifier = ">=5.0" },
+    { name = "ruff", specifier = ">=0.15.4" },
+    { name = "sqlalchemy", specifier = ">=2.0.47" },
+]
+
+[[package]]
+name = "kutana-cli"
+version = "0.1.0"
+source = { editable = "services/cli" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "rich" },
+    { name = "typer" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiohttp", specifier = ">=3.9" },
+    { name = "rich", specifier = ">=13.0" },
+    { name = "typer", specifier = ">=0.12" },
+]
+
+[[package]]
+name = "kutana-core"
+version = "0.1.0"
+source = { editable = "packages/kutana-core" }
+dependencies = [
+    { name = "alembic" },
+    { name = "asyncpg" },
+    { name = "cryptography" },
+    { name = "pgvector" },
+    { name = "pydantic" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "alembic", specifier = ">=1.13" },
+    { name = "asyncpg", specifier = ">=0.29" },
+    { name = "cryptography", specifier = ">=44.0" },
+    { name = "pgvector", specifier = ">=0.3" },
+    { name = "pydantic", specifier = ">=2.7" },
+    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0" },
+]
+
+[[package]]
+name = "kutana-memory"
+version = "0.1.0"
+source = { editable = "packages/kutana-memory" }
+dependencies = [
+    { name = "asyncpg" },
+    { name = "kutana-core" },
+    { name = "pgvector" },
+    { name = "redis" },
+    { name = "sqlalchemy", extra = ["asyncio"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "asyncpg", specifier = ">=0.29" },
+    { name = "kutana-core", editable = "packages/kutana-core" },
+    { name = "pgvector", specifier = ">=0.3" },
+    { name = "redis", specifier = ">=5.0" },
+    { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0" },
+]
+
+[[package]]
+name = "kutana-providers"
+version = "0.1.0"
+source = { editable = "packages/kutana-providers" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "anthropic" },
+    { name = "httpx" },
+    { name = "kutana-core" },
+    { name = "redis" },
+    { name = "websockets" },
+]
+
+[package.optional-dependencies]
+assemblyai = [
+    { name = "assemblyai" },
+]
+aws = [
+    { name = "aioboto3" },
+]
+cartesia = [
+    { name = "cartesia" },
+]
+deepgram = [
+    { name = "deepgram-sdk" },
+]
+elevenlabs = [
+    { name = "elevenlabs" },
+]
+gcp = [
+    { name = "google-cloud-pubsub" },
+]
+groq = [
+    { name = "groq" },
+]
+nats = [
+    { name = "nats-py" },
+]
+piper = [
+    { name = "piper-tts" },
+]
+whisper = [
+    { name = "faster-whisper" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aioboto3", marker = "extra == 'aws'", specifier = ">=13.0" },
+    { name = "aiohttp", specifier = ">=3.13.3" },
+    { name = "anthropic", specifier = ">=0.39" },
+    { name = "assemblyai", marker = "extra == 'assemblyai'", specifier = ">=0.30" },
+    { name = "cartesia", marker = "extra == 'cartesia'", specifier = ">=1.0" },
+    { name = "deepgram-sdk", marker = "extra == 'deepgram'", specifier = ">=3.0" },
+    { name = "elevenlabs", marker = "extra == 'elevenlabs'", specifier = ">=1.0" },
+    { name = "faster-whisper", marker = "extra == 'whisper'", specifier = ">=1.0" },
+    { name = "google-cloud-pubsub", marker = "extra == 'gcp'", specifier = ">=2.0" },
+    { name = "groq", marker = "extra == 'groq'", specifier = ">=0.11" },
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "kutana-core", editable = "packages/kutana-core" },
+    { name = "nats-py", marker = "extra == 'nats'", specifier = ">=2.7" },
+    { name = "piper-tts", marker = "extra == 'piper'", specifier = ">=1.2" },
+    { name = "redis", extras = ["asyncio"], specifier = ">=5.0" },
+    { name = "websockets", specifier = ">=13.0" },
+]
+provides-extras = ["assemblyai", "deepgram", "elevenlabs", "cartesia", "whisper", "piper", "groq", "aws", "gcp", "nats"]
+
+[[package]]
 name = "librt"
 version = "0.8.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1724,7 +1724,7 @@ version = "0.1.0"
 source = { editable = "services/mcp-server" }
 dependencies = [
     { name = "aiohttp" },
-    { name = "convene-providers" },
+    { name = "kutana-providers" },
     { name = "mcp", extra = ["cli"] },
     { name = "pydantic-settings" },
     { name = "redis" },
@@ -1734,7 +1734,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.9" },
-    { name = "convene-providers", editable = "packages/convene-providers" },
+    { name = "kutana-providers", editable = "packages/kutana-providers" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.0" },
     { name = "pydantic-settings", specifier = ">=2.0" },
     { name = "redis", extras = ["asyncio"], specifier = ">=5.0" },
@@ -2686,10 +2686,10 @@ version = "0.1.0"
 source = { editable = "services/task-engine" }
 dependencies = [
     { name = "asyncpg" },
-    { name = "convene-core" },
-    { name = "convene-memory" },
-    { name = "convene-providers" },
     { name = "fastapi" },
+    { name = "kutana-core" },
+    { name = "kutana-memory" },
+    { name = "kutana-providers" },
     { name = "pydantic-settings" },
     { name = "redis" },
     { name = "sqlalchemy", extra = ["asyncio"] },
@@ -2699,10 +2699,10 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "asyncpg", specifier = ">=0.29" },
-    { name = "convene-core", editable = "packages/convene-core" },
-    { name = "convene-memory", editable = "packages/convene-memory" },
-    { name = "convene-providers", editable = "packages/convene-providers" },
     { name = "fastapi", specifier = ">=0.110" },
+    { name = "kutana-core", editable = "packages/kutana-core" },
+    { name = "kutana-memory", editable = "packages/kutana-memory" },
+    { name = "kutana-providers", editable = "packages/kutana-providers" },
     { name = "pydantic-settings", specifier = ">=2.0" },
     { name = "redis", specifier = ">=5.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0" },
@@ -2942,10 +2942,10 @@ source = { editable = "services/worker" }
 dependencies = [
     { name = "anthropic" },
     { name = "asyncpg" },
-    { name = "convene-core" },
-    { name = "convene-memory" },
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "kutana-core" },
+    { name = "kutana-memory" },
     { name = "pydantic-settings" },
     { name = "redis" },
     { name = "sqlalchemy", extra = ["asyncio"] },
@@ -2956,10 +2956,10 @@ dependencies = [
 requires-dist = [
     { name = "anthropic", specifier = ">=0.84.0" },
     { name = "asyncpg", specifier = ">=0.29" },
-    { name = "convene-core", editable = "packages/convene-core" },
-    { name = "convene-memory", editable = "packages/convene-memory" },
     { name = "fastapi", specifier = ">=0.134" },
     { name = "httpx", specifier = ">=0.27" },
+    { name = "kutana-core", editable = "packages/kutana-core" },
+    { name = "kutana-memory", editable = "packages/kutana-memory" },
     { name = "pydantic-settings", specifier = ">=2.0" },
     { name = "redis", specifier = ">=5.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0" },
