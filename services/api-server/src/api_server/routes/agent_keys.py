@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api_server.auth import generate_api_key
 from api_server.auth_deps import CurrentUser
 from api_server.deps import get_db_session
-from convene_core.database.models import AgentApiKeyORM, AgentConfigORM, ApiKeyAuditLogORM
+from kutana_core.database.models import AgentApiKeyORM, AgentConfigORM, ApiKeyAuditLogORM
 
 router = APIRouter(prefix="/agents/{agent_id}/keys", tags=["agent-keys"])
 

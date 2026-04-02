@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "convene-ai": {
+    "kutana-ai": {
       "command": "bun",
       "args": ["./src/server.ts"],
       "env": {

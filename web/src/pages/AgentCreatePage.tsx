@@ -80,7 +80,7 @@ export function AgentCreatePage() {
         <CardHeader>
           <CardTitle className="text-xl">Create New Agent</CardTitle>
           <p className="text-sm text-gray-400">
-            Register a custom agent that connects to meetings via MCP. Declare what it can do — Convene handles the rest.
+            Register a custom agent that connects to meetings via MCP. Declare what it can do — Kutana handles the rest.
           </p>
         </CardHeader>
 

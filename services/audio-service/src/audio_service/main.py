@@ -1,4 +1,4 @@
-"""FastAPI application entry point for the Convene AI audio service."""
+"""FastAPI application entry point for the Kutana AI audio service."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from pydantic_settings import BaseSettings
 
 from audio_service.audio_pipeline import AudioPipeline
 from audio_service.event_publisher import EventPublisher
-from convene_providers.registry import ProviderType, default_registry
+from kutana_providers.registry import ProviderType, default_registry
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -165,8 +165,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(
-    title="Convene AI Audio Service",
-    description="Audio pipeline and transport adapters for Convene AI",
+    title="Kutana AI Audio Service",
+    description="Audio pipeline and transport adapters for Kutana AI",
     version="0.2.0",
     lifespan=lifespan,
 )

@@ -1,4 +1,4 @@
-# Convene AI
+# Kutana AI
 
 Agent-first meeting platform. AI agents connect via WebSocket; humans join via browser WebRTC. Agents are first-class participants — they listen for commitments, extract tasks, and maintain persistent memory across meetings.
 
@@ -6,7 +6,7 @@ Agent-first meeting platform. AI agents connect via WebSocket; humans join via b
 
 Python monorepo (`uv` workspaces) + React 19 frontend.
 
-**Packages:** `convene-core` (domain models) · `convene-providers` (STT/TTS/LLM) · `convene-memory` (4-layer memory)
+**Packages:** `kutana-core` (domain models) · `kutana-providers` (STT/TTS/LLM) · `kutana-memory` (4-layer memory)
 
 **Services:** `api-server` · `audio-service` · `agent-gateway` · `mcp-server` · `task-engine` · `worker` · `cli` · `channel-server`
 
@@ -35,7 +35,7 @@ See `internal-docs/development/TASKLIST.md` for the task queue.
 ## Key References
 
 - **Architecture patterns:** `internal-docs/architecture/patterns/` (core, providers, message-bus, memory, service-patterns, auth, mcp-server, uv, git)
-- `internal-docs/architecture/patterns/claude-code-channels.md` — Claude Code channels spec and Convene integration plan
+- `internal-docs/architecture/patterns/claude-code-channels.md` — Claude Code channels spec and Kutana integration plan
 - **Task queue:** `internal-docs/development/TASKLIST.md`
 - **Roadmap & strategy:** `internal-docs/strategy/roadmap.md` · `internal-docs/strategy/cost-architecture.md`
 - **Agent platform docs:** `external-docs/agent-platform/`
@@ -46,16 +46,16 @@ See `internal-docs/development/TASKLIST.md` for the task queue.
 
 ```bash
 # Run tests (on DGX)
-ssh dgx 'cd ~/convene-ai && uv run pytest services/api-server/tests/'
+ssh dgx 'cd ~/kutana-ai && uv run pytest services/api-server/tests/'
 
 # Build & push images
-ssh dgx 'cd ~/convene-ai && bash scripts/build_and_push.sh all'
+ssh dgx 'cd ~/kutana-ai && bash scripts/build_and_push.sh all'
 
 # Deploy (kubectl/helm run locally, configured to target DGX K3s cluster)
-helm upgrade --install convene charts/convene -n convene --create-namespace
+helm upgrade --install kutana charts/kutana -n kutana --create-namespace
 
 # Pod status
-kubectl get pods -n convene
+kubectl get pods -n kutana
 
 # Frontend dev (local)
 cd web && pnpm dev
@@ -68,10 +68,10 @@ Woodpecker CI runs inside the DGX Spark K3s cluster. It replaces GitHub Actions 
 **Pipeline** (`.woodpecker.yml`):
 - `lint` → `type-check` ∥ `test` → `build` → `deploy`
 - Build and deploy run on `main` branch pushes only.
-- Build uses the host Docker socket (`/var/run/docker.sock`) to push to `localhost:30500/convene`.
+- Build uses the host Docker socket (`/var/run/docker.sock`) to push to `localhost:30500/kutana`.
 - Deploy runs `helm upgrade --set global.imageTag=<SHORT_SHA>`.
 
-**Helm imageTag override** (`charts/convene`):
+**Helm imageTag override** (`charts/kutana`):
 - `global.imageTag` in `values.yaml` overrides every service image tag at once.
 - CI sets it to the 8-char commit SHA. Leave empty for per-service `image.tag` values.
 

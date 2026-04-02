@@ -1,4 +1,4 @@
-# uv Best Practices for Convene AI
+# uv Best Practices for Kutana AI
 
 ## Package Management Commands
 

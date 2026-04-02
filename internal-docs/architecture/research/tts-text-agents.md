@@ -13,28 +13,28 @@ The `tts_enabled` capability lets a text-only agent send a text string and have 
 synthesize it into PCM16 audio, mix it into the meeting, and broadcast it to all participants.
 
 This keeps agent logic simple: no audio capture, no VAD, no sidecar streaming. The agent calls
-`convene_start_speaking` with a `text` argument and the gateway handles everything else.
+`kutana_start_speaking` with a `text` argument and the gateway handles everything else.
 
 ---
 
 ## Opt-In Design
 
 TTS is opt-in — agents must declare `tts_enabled` in their capability at join time. Agents that
-do not declare this capability cannot call `convene_start_speaking` with a `text` argument.
+do not declare this capability cannot call `kutana_start_speaking` with a `text` argument.
 
 This prevents accidental cost runup (TTS API calls are metered) and makes capabilities explicit
 in participant logs.
 
 ```python
 # Agent declares TTS capability when joining
-result = await mcp.call_tool("convene_join_meeting", {
+result = await mcp.call_tool("kutana_join_meeting", {
     "meeting_id": "abc123",
     "audio_capability": "tts_enabled",
     "tts_voice_id": "a0e99841-438c-4a64-b679-ae501e7d6091"  # optional override
 })
 ```
 
-If `tts_voice_id` is omitted, the gateway uses the voice assigned to the agent in the Convene
+If `tts_voice_id` is omitted, the gateway uses the voice assigned to the agent in the Kutana
 dashboard (Settings → Agents → Voice). If no voice is configured, the provider default is used.
 
 ---
@@ -47,7 +47,7 @@ streams the resulting chunks into the meeting audio mix.
 ```python
 from abc import ABC, abstractmethod
 from typing import AsyncIterator
-from convene_core.models.voice import Voice
+from kutana_core.models.voice import Voice
 
 class TTSProvider(ABC):
     """Abstract base class for text-to-speech providers."""
@@ -242,8 +242,8 @@ class PiperTTS(TTSProvider):
 
 Agents get a default voice from three resolution layers (highest priority first):
 
-1. **Per-call override** — `tts_voice_id` in the `convene_join_meeting` call
-2. **Agent config** — voice assigned in the Convene dashboard (persisted in `agents.tts_voice_id`)
+1. **Per-call override** — `tts_voice_id` in the `kutana_join_meeting` call
+2. **Agent config** — voice assigned in the Kutana dashboard (persisted in `agents.tts_voice_id`)
 3. **Provider default** — the TTS provider's built-in default voice
 
 ```python
@@ -259,7 +259,7 @@ async def resolve_voice(agent_id: str, requested_voice: str | None) -> str:
 
 ### Voice Assignment UI
 
-The Convene dashboard (Settings → Agents → Voice) lets workspace admins assign voices to agents.
+The Kutana dashboard (Settings → Agents → Voice) lets workspace admins assign voices to agents.
 Voices are fetched from the configured TTS provider at page load. Custom voice IDs (e.g., cloned
 ElevenLabs voices) can be pasted directly.
 
@@ -292,7 +292,7 @@ async def synthesize_cached(
 
 ### Length Limits
 
-| Tier | Max chars per `convene_start_speaking` call | Estimated cost |
+| Tier | Max chars per `kutana_start_speaking` call | Estimated cost |
 |------|----------------------------------------------|----------------|
 | Free | 500 chars | ~$0.001 (Cartesia) |
 | Pro | 2,000 chars | ~$0.004 |
@@ -309,7 +309,7 @@ TTS usage is metered per character synthesized and billed alongside meeting minu
 ## Gateway Synthesis Flow
 
 ```
-Agent (text) ─── convene_start_speaking({text}) ──► MCP Server
+Agent (text) ─── kutana_start_speaking({text}) ──► MCP Server
                                                          │
                                                          │── enqueue TurnManager
                                                          │
@@ -352,7 +352,7 @@ Agent (text) ─── convene_start_speaking({text}) ──► MCP Server
 
 ## Related Files
 
-- `packages/convene-providers/src/convene_providers/tts/` — Provider implementations
+- `packages/kutana-providers/src/kutana_providers/tts/` — Provider implementations
 - `docs/providers/cartesia-tts.md` — Cartesia setup and usage
 - `docs/providers/elevenlabs-tts.md` — ElevenLabs setup and usage
 - `docs/providers/piper-tts.md` — Piper local TTS setup

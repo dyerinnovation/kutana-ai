@@ -1,19 +1,19 @@
-# Convene Meeting — Claude Code Skill
+# Kutana Meeting — Claude Code Skill
 
-Connect Claude Code to live Convene AI meetings. Read transcripts, manage turns, chat, and create tasks — all from within a coding session.
+Connect Claude Code to live Kutana AI meetings. Read transcripts, manage turns, chat, and create tasks — all from within a coding session.
 
 ## Prerequisites
 
-- A Convene account with an agent API key (`cvn_...`)
-- Get your key from the [Convene dashboard](https://convene.spark-b0f2.local) → Settings → API Keys
+- A Kutana account with an agent API key (`cvn_...`)
+- Get your key from the [Kutana dashboard](https://kutana.spark-b0f2.local) → Settings → API Keys
 
 ## Installation
 
 ### Option A — Copy skill to Claude Code (recommended)
 
 ```bash
-mkdir -p ~/.claude/skills/convene-meeting
-cp skills/convene-meeting/SKILL.md ~/.claude/skills/convene-meeting/
+mkdir -p ~/.claude/skills/kutana-meeting
+cp skills/kutana-meeting/SKILL.md ~/.claude/skills/kutana-meeting/
 ```
 
 The skill activates automatically when you mention meetings, standups, calls, or ask about transcripts.
@@ -25,9 +25,9 @@ In your `~/.claude/settings.json` (or project `.claude/settings.json`):
 ```json
 {
   "mcpServers": {
-    "convene": {
+    "kutana": {
       "type": "streamableHttp",
-      "url": "https://convene.spark-b0f2.local/mcp",
+      "url": "https://kutana.spark-b0f2.local/mcp",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY"
       }
@@ -36,14 +36,14 @@ In your `~/.claude/settings.json` (or project `.claude/settings.json`):
 }
 ```
 
-Replace `YOUR_API_KEY` with your Convene API key. Or use an environment variable:
+Replace `YOUR_API_KEY` with your Kutana API key. Or use an environment variable:
 
 ```json
 {
   "mcpServers": {
-    "convene": {
+    "kutana": {
       "type": "streamableHttp",
-      "url": "https://convene.spark-b0f2.local/mcp",
+      "url": "https://kutana.spark-b0f2.local/mcp",
       "headers": {
         "Authorization": "Bearer ${CONVENE_API_KEY}"
       }
@@ -60,7 +60,7 @@ For quick one-off joins without configuring MCP in settings:
 
 ```bash
 export CONVENE_API_KEY=cvn_...
-export CONVENE_URL=https://convene.spark-b0f2.local
+export CONVENE_URL=https://kutana.spark-b0f2.local
 
 ./scripts/connect.sh "Daily Standup"        # join by title
 ./scripts/connect.sh --id <meeting-uuid>    # join by ID

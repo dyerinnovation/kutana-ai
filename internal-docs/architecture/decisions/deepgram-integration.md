@@ -1,7 +1,7 @@
 # Deepgram STT Integration
 
 ## Overview
-Convene AI uses Deepgram as its primary Speech-to-Text (STT) provider. Deepgram is a cloud API service — audio goes in, transcribed text with speaker labels comes back. No self-hosted infrastructure needed.
+Kutana AI uses Deepgram as its primary Speech-to-Text (STT) provider. Deepgram is a cloud API service — audio goes in, transcribed text with speaker labels comes back. No self-hosted infrastructure needed.
 
 ## Why Deepgram
 - **Accuracy:** Nova-3 achieves 5.26% WER (word error rate), leading independent benchmarks

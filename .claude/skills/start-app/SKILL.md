@@ -1,6 +1,6 @@
 ---
 name: start-app
-description: Start the Convene AI application on the DGX Spark. TRIGGER on: start app, start services, start convene, launch app, bring up services, start the stack.
+description: Start the Kutana AI application on the DGX Spark. TRIGGER on: start app, start services, start kutana, launch app, bring up services, start the stack.
 permissions:
   - Bash(ssh:*)
   - Bash(scp:*)
@@ -8,7 +8,7 @@ permissions:
 
 # Start App
 
-Starts all Convene AI services on the DGX Spark via K3s/Kubernetes.
+Starts all Kutana AI services on the DGX Spark via K3s/Kubernetes.
 
 ## Usage
 
@@ -27,7 +27,7 @@ The script will:
 
 ## Service URLs (after start)
 
-- Frontend + API: `https://convene.spark-b0f2.local`
-- API health: `https://convene.spark-b0f2.local/api/health`
-- MCP server: `https://convene.spark-b0f2.local/mcp`
-- Agent gateway: `wss://convene.spark-b0f2.local/ws`
+- Frontend + API: `https://kutana.spark-b0f2.local`
+- API health: `https://kutana.spark-b0f2.local/api/health`
+- MCP server: `https://kutana.spark-b0f2.local/mcp`
+- Agent gateway: `wss://kutana.spark-b0f2.local/ws`

@@ -55,7 +55,7 @@ The api-server groups routes into separate router modules under `routes/`:
 
 ### task-engine
 - Runs a background extraction consumer as an `asyncio.Task` during lifespan
-- TaskExtractor delegates to `LLMProvider.extract_tasks()` from convene-core
+- TaskExtractor delegates to `LLMProvider.extract_tasks()` from kutana-core
 - TaskDeduplicator uses `SequenceMatcher` with 0.85 similarity threshold
 
 ### worker

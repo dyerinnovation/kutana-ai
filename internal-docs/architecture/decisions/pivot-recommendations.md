@@ -1,4 +1,4 @@
-# Convene AI — Pivot Recommendations: Agent-First Meeting Platform
+# Kutana AI — Pivot Recommendations: Agent-First Meeting Platform
 
 > This document analyzes each existing strategy doc, identifies what needs to change for the pivot from "phone-dial-in meeting bot" to "agent-first meeting platform," and proposes new TASKLIST phases covering the user-facing product (signup, billing, agent marketplace, etc.) that are currently missing.
 
@@ -17,9 +17,9 @@
 
 **What needs to change:**
 
-The one-liner needs to shift from "dials into your meetings" to "the meeting platform built for AI agents." The current framing positions Convene as a tool that bolts onto existing platforms. The new framing positions it as the platform itself.
+The one-liner needs to shift from "dials into your meetings" to "the meeting platform built for AI agents." The current framing positions Kutana as a tool that bolts onto existing platforms. The new framing positions it as the platform itself.
 
-The "Why Now" section lists three forces — voice AI latency, phone dial-in, and market stuck in transcription. The phone dial-in argument needs to be replaced. The new "why now" is that AI agents are proliferating (OpenAI Operator, Anthropic computer use, thousands of custom agents) and they all need a way to join meetings. No platform serves them. Convene fills that gap.
+The "Why Now" section lists three forces — voice AI latency, phone dial-in, and market stuck in transcription. The phone dial-in argument needs to be replaced. The new "why now" is that AI agents are proliferating (OpenAI Operator, Anthropic computer use, thousands of custom agents) and they all need a way to join meetings. No platform serves them. Kutana fills that gap.
 
 The business case section needs a dual-audience framing. The current doc only addresses teams who want smarter meetings. The pivot adds a second, arguably more important audience: developers building AI agents who need meeting access infrastructure. This is the Twilio-like API play.
 
@@ -27,7 +27,7 @@ The revenue model needs a usage-based tier for the developer API alongside the p
 
 Unit economics need updating. Twilio costs drop significantly (or disappear) since you're running your own WebRTC media server. STT/LLM costs remain. New costs appear: WebRTC infrastructure (LiveKit hosting), bandwidth for video/audio streams, and the Agent Gateway service compute.
 
-The competitive moat section should add "platform ownership" — unlike bolted-on tools, Convene owns the meeting environment. No risk of Zoom blocking your bot or Teams changing their API. And the agent ecosystem network effect: the more agents that support Convene, the more valuable it is for teams, and vice versa.
+The competitive moat section should add "platform ownership" — unlike bolted-on tools, Kutana owns the meeting environment. No risk of Zoom blocking your bot or Teams changing their API. And the agent ecosystem network effect: the more agents that support Kutana, the more valuable it is for teams, and vice versa.
 
 **Recommended action:** Full rewrite preserving the problem statement, insight, and phased progression. Restructure around two audiences (developers and teams) and the platform thesis.
 
@@ -55,13 +55,13 @@ F1.4 (Twilio Phone Integration) shifts from being the core meeting access method
 
 F1.8 (API Server & Dashboard) needs to be split into multiple features: the API server becomes the central orchestrator for meeting rooms and participants. The dashboard becomes the Meeting Web Client — a full browser-based conferencing UI, not just a task/transcript viewer.
 
-F1.9 (Calendar Integration) — less critical in the new model since you own the meeting platform. Users create meetings directly in Convene. Calendar integration becomes about syncing Convene meetings *to* their calendar, not scraping dial-in info from calendar events.
+F1.9 (Calendar Integration) — less critical in the new model since you own the meeting platform. Users create meetings directly in Kutana. Calendar integration becomes about syncing Kutana meetings *to* their calendar, not scraping dial-in info from calendar events.
 
 **New features needed (not in current roadmap):**
 - Agent Gateway Service (WebSocket/gRPC endpoint for agent connections)
 - WebRTC Media Server integration (LiveKit)
 - Meeting Web Client (browser-based video/audio conferencing)
-- Agent SDK (Python package for building Convene-compatible agents)
+- Agent SDK (Python package for building Kutana-compatible agents)
 - User authentication and workspace management
 - Billing and subscription management
 - Agent marketplace / registry
@@ -80,15 +80,15 @@ F1.9 (Calendar Integration) — less critical in the new model since you own the
 
 **What needs to change:**
 
-The competitive frame shifts. The current doc positions Convene against transcription tools (Otter, Fireflies) and meeting AI features (Zoom Companion, Copilot). Those are still relevant competitors for the team-facing product, but the pivot introduces a new competitive category: meeting infrastructure for AI agents.
+The competitive frame shifts. The current doc positions Kutana against transcription tools (Otter, Fireflies) and meeting AI features (Zoom Companion, Copilot). Those are still relevant competitors for the team-facing product, but the pivot introduces a new competitive category: meeting infrastructure for AI agents.
 
 New competitors to analyze:
-- **Recall.ai** — Moves from "Tier 4: Infrastructure" to direct competitor. They provide meeting bot infrastructure. Convene's pitch is that instead of hacking bots into platforms that resist them, use a platform that welcomes agents natively. Recall.ai's $250M valuation and customer list (HubSpot, Calendly) validates the market but also shows the demand.
+- **Recall.ai** — Moves from "Tier 4: Infrastructure" to direct competitor. They provide meeting bot infrastructure. Kutana's pitch is that instead of hacking bots into platforms that resist them, use a platform that welcomes agents natively. Recall.ai's $250M valuation and customer list (HubSpot, Calendly) validates the market but also shows the demand.
 - **LiveKit / Daily.co** — WebRTC infrastructure providers. They're enabling layers, not direct competitors, but worth analyzing as potential partners or build-vs-buy decisions.
-- **Zoom, Teams, Google Meet** — No longer just platforms Convene connects to. They become competitors in the meeting platform space. Convene's differentiation is agent-first design vs. their human-first (agent-hostile) design.
-- **Recall.ai + any AI startup** — The combination of Recall.ai infrastructure + any AI meeting product is effectively what Convene offers in one integrated package. The integrated approach has advantages (lower latency, better UX, single billing) but the unbundled approach has flexibility.
+- **Zoom, Teams, Google Meet** — No longer just platforms Kutana connects to. They become competitors in the meeting platform space. Kutana's differentiation is agent-first design vs. their human-first (agent-hostile) design.
+- **Recall.ai + any AI startup** — The combination of Recall.ai infrastructure + any AI meeting product is effectively what Kutana offers in one integrated package. The integrated approach has advantages (lower latency, better UX, single billing) but the unbundled approach has flexibility.
 
-The differentiation matrix needs a new row: "Native agent API" — Convene is the only one with a purpose-built agent connection protocol. Every other tool requires workarounds (phone dial-in, browser bots, or Recall.ai as a middleman).
+The differentiation matrix needs a new row: "Native agent API" — Kutana is the only one with a purpose-built agent connection protocol. Every other tool requires workarounds (phone dial-in, browser bots, or Recall.ai as a middleman).
 
 The risk section needs a new entry: "Building a meeting platform is a massive engineering undertaking." Mitigations include LiveKit handling the hard WebRTC/SFU work, starting with audio-only meetings (simpler than full video), and the existing codebase providing the AI pipeline that would take competitors months to build.
 
@@ -109,9 +109,9 @@ The risk section needs a new entry: "Building a meeting platform is a massive en
 
 The core GTM thesis needs to account for the two-sided market. The current doc assumes one growth loop: agent joins meeting → non-users see it → they sign up. The pivot creates two loops:
 
-Loop 1 (Developer side): Developer builds an AI agent → needs meeting access → finds Convene API → integrates → their agent joins Convene meetings → more meetings happen on Convene.
+Loop 1 (Developer side): Developer builds an AI agent → needs meeting access → finds Kutana API → integrates → their agent joins Kutana meetings → more meetings happen on Kutana.
 
-Loop 2 (Team side): Team tries Convene for its built-in AI features → loves the task tracking and memory → invites more team members → meetings move to Convene → agents from Loop 1 are available.
+Loop 2 (Team side): Team tries Kutana for its built-in AI features → loves the task tracking and memory → invites more team members → meetings move to Kutana → agents from Loop 1 are available.
 
 The Phase 1 launch strategy needs a "developer beta" track. This means: API documentation site, quickstart guide, example agent code, a Python SDK published to PyPI, and a free tier with enough agent-minutes for prototyping. The narrative shifts from "I built an AI that joins your standups" to "I built a meeting platform where AI agents are first-class participants — here's the SDK."
 
@@ -119,13 +119,13 @@ Pricing needs the usage-based developer tier:
 - **Free**: 100 agent-minutes/month, 5 meetings — prototyping
 - **Developer**: ~$0.05–0.10/agent-minute, WebSocket/gRPC agent connections, structured data feeds
 - **Team**: $20–50/seat/month — the end-user product with built-in AI features
-- **Platform**: Custom pricing for companies running high-volume agents through Convene
+- **Platform**: Custom pricing for companies running high-volume agents through Kutana
 
 The "What NOT to Spend Money On" section should add: don't build a full video conferencing UI before the agent API is proven. The agent API is the differentiator. The meeting UI can start minimal (audio-only, basic screen) and improve iteratively.
 
 New distribution channels to add:
 - **Agent framework ecosystems** — LangChain, CrewAI, AutoGen, Semantic Kernel. Get listed in their docs as the recommended meeting integration.
-- **PyPI / npm** — The SDK itself is a distribution channel. Every `pip install convene` is a potential customer.
+- **PyPI / npm** — The SDK itself is a distribution channel. Every `pip install kutana` is a potential customer.
 - **Open-source community** — Open-source the agent SDK and connection protocol. Let the community build integrations. This is how Twilio, Stripe, and LiveKit grew.
 - **Partnership with Recall.ai customers** — Companies already using Recall.ai to get bots into meetings might prefer a platform that does it natively. Target their customer list.
 
@@ -135,7 +135,7 @@ New distribution channels to add:
 
 ### README.md — Needs Complete Rewrite
 
-The README currently describes Convene as "a voice-first AI agent that dials into your meetings via phone." This needs to become a description of the agent-first meeting platform. The architecture diagram needs updating to show the new services (Agent Gateway, WebRTC, Meeting Client). The "Architecture Decision: Phone Dial-In" section needs to become "Architecture Decision: Agent-First Platform" explaining why Convene owns the meeting environment instead of bolting onto existing platforms.
+The README currently describes Kutana as "a voice-first AI agent that dials into your meetings via phone." This needs to become a description of the agent-first meeting platform. The architecture diagram needs updating to show the new services (Agent Gateway, WebRTC, Meeting Client). The "Architecture Decision: Phone Dial-In" section needs to become "Architecture Decision: Agent-First Platform" explaining why Kutana owns the meeting environment instead of bolting onto existing platforms.
 
 ---
 
@@ -182,7 +182,7 @@ Revenue requires a way to pay. This should be built early so you can validate wi
 
 ### Phase 2C: Meeting Creation & Management UI
 
-Users need a way to create, schedule, and join meetings through Convene's own interface.
+Users need a way to create, schedule, and join meetings through Kutana's own interface.
 
 - [ ] Implement meeting creation flow (title, time, participants, recurrence)
 - [ ] Implement meeting invitation system (email invites with join links)
@@ -193,8 +193,8 @@ Users need a way to create, schedule, and join meetings through Convene's own in
 - [ ] Implement meeting recording controls (start/stop, consent prompt)
 - [ ] Implement meeting history view (past meetings, transcripts, extracted tasks)
 - [ ] Implement meeting detail view (transcript replay, task timeline, decisions)
-- [ ] Implement calendar sync (push Convene meetings to Google Calendar / Outlook)
-- [ ] **Milestone: A team can create, join, and review meetings entirely within Convene**
+- [ ] Implement calendar sync (push Kutana meetings to Google Calendar / Outlook)
+- [ ] **Milestone: A team can create, join, and review meetings entirely within Kutana**
 
 ### Phase 2D: Agent Marketplace & Management
 
@@ -205,19 +205,19 @@ This is the developer-facing product — where AI agents get registered, configu
 - [ ] Implement agent authentication (API keys or OAuth for agent connections)
 - [ ] Implement agent capability declaration (listen, speak, push-ui, access-transcript)
 - [ ] Implement agent connection protocol documentation (interactive API docs)
-- [ ] Implement built-in agents (Convene's own task tracker, note taker, standup facilitator)
+- [ ] Implement built-in agents (Kutana's own task tracker, note taker, standup facilitator)
 - [ ] Implement agent marketplace UI (browse available agents, see descriptions, reviews)
 - [ ] Implement "Add agent to meeting" flow (select from marketplace or connect custom)
 - [ ] Implement agent status dashboard (connected, active, error states, usage)
 - [ ] Implement agent permissions management (which meetings can this agent join?)
 - [ ] Implement agent analytics (how often used, which meetings, performance metrics)
-- [ ] Publish Python SDK to PyPI (`pip install convene`)
+- [ ] Publish Python SDK to PyPI (`pip install kutana`)
 - [ ] Create developer portal with quickstart guides and example agents
 - [ ] **Milestone: A developer can register an agent, connect it to a meeting, and receive audio/events**
 
 ### Phase 2E: Real-Time Collaboration Surfaces
 
-This is what makes meetings on Convene better than meetings on Zoom — the AI-generated content is visible to everyone in real-time.
+This is what makes meetings on Kutana better than meetings on Zoom — the AI-generated content is visible to everyone in real-time.
 
 - [ ] Implement shared meeting sidebar (visible to all participants during meeting)
 - [ ] Implement live task extraction feed in sidebar (tasks appear as detected)
@@ -246,7 +246,7 @@ The persistent workspace experience — what users see between meetings.
 
 ### Phase 2G: Integrations
 
-Connect Convene to the tools teams already use.
+Connect Kutana to the tools teams already use.
 
 - [ ] Implement Slack integration (meeting summaries, task notifications, slash commands)
 - [ ] Implement Linear integration (bidirectional task sync)
@@ -255,7 +255,7 @@ Connect Convene to the tools teams already use.
 - [ ] Implement Notion integration (push meeting summaries and task tables)
 - [ ] Implement webhook API (generic event push for custom integrations)
 - [ ] Implement Zapier / Make triggers (meeting.ended, task.created, etc.)
-- [ ] **Milestone: Tasks extracted in Convene meetings automatically appear in the team's project management tool**
+- [ ] **Milestone: Tasks extracted in Kutana meetings automatically appear in the team's project management tool**
 
 ### Phase 2H: Platform Hardening
 
@@ -284,7 +284,7 @@ Given the pivot, here's the recommended order of work:
 
 **Next: Agent Gateway MVP (new Phase 2A-Auth + Agent Gateway from pivot prompt):** Build user auth and the Agent Gateway simultaneously. The gateway is the core differentiator. Test with your own task extraction agent as the first client.
 
-**Then: WebRTC + Meeting UI (Phase 2C):** Add LiveKit for browser-based meetings. Build the minimal meeting UI. Now humans and agents can meet on Convene.
+**Then: WebRTC + Meeting UI (Phase 2C):** Add LiveKit for browser-based meetings. Build the minimal meeting UI. Now humans and agents can meet on Kutana.
 
 **Then: Billing (Phase 2B):** Add Stripe billing once there's a product to charge for.
 

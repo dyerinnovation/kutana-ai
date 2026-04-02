@@ -299,7 +299,7 @@ class AgentSessionHandler:
             })
             try:
                 await self._manager.redis.xadd(
-                    "convene:events",
+                    "kutana:events",
                     {
                         "event_type": f"data.channel.{msg.channel}",
                         "payload": event_payload,
@@ -328,7 +328,7 @@ class AgentSessionHandler:
                     "sequence": 0,
                 })
                 try:
-                    await self._manager.redis.publish("convene:chat", notification)
+                    await self._manager.redis.publish("kutana:chat", notification)
                 except Exception:
                     logger.warning(
                         "Failed to publish agent chat to pub/sub for %s",
@@ -601,7 +601,7 @@ class AgentSessionHandler:
         if self.meeting_id is None or self._manager.redis is None:
             return
 
-        from convene_core.events.definitions import ParticipantJoined, ParticipantLeft
+        from kutana_core.events.definitions import ParticipantJoined, ParticipantLeft
 
         if action == "joined":
             event: ParticipantJoined | ParticipantLeft = ParticipantJoined(
@@ -621,7 +621,7 @@ class AgentSessionHandler:
         payload = json.dumps(event.to_dict(), default=str)
         try:
             await self._manager.redis.xadd(
-                "convene:events",
+                "kutana:events",
                 {"event_type": event.event_type, "payload": payload},
                 maxlen=10_000,
                 approximate=True,
@@ -740,7 +740,7 @@ class AgentSessionHandler:
             return
 
         try:
-            from convene_core.database.models import AgentSessionORM
+            from kutana_core.database.models import AgentSessionORM
 
             async with self._db_factory() as db:
                 record = AgentSessionORM(
@@ -770,7 +770,7 @@ class AgentSessionHandler:
         try:
             from sqlalchemy import update
 
-            from convene_core.database.models import AgentSessionORM
+            from kutana_core.database.models import AgentSessionORM
 
             async with self._db_factory() as db:
                 await db.execute(

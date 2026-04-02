@@ -16,16 +16,16 @@ from uuid import UUID
 
 import redis.asyncio as aioredis
 
-from convene_core.models.chat import ChatMessageType
+from kutana_core.models.chat import ChatMessageType
 
 if TYPE_CHECKING:
-    from convene_core.interfaces.chat_store import ChatStore
+    from kutana_core.interfaces.chat_store import ChatStore
     from agent_gateway.connection_manager import ConnectionManager
 
 logger = logging.getLogger(__name__)
 
 # Must match the channel used by RedisChatStore
-_CHAT_PUBSUB_CHANNEL = "convene:chat"
+_CHAT_PUBSUB_CHANNEL = "kutana:chat"
 
 
 class ChatBridge:

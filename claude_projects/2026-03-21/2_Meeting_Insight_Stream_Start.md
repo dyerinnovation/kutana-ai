@@ -1,29 +1,29 @@
 # Phase B: Meeting Insight Stream — Entity Schema & Extraction Pipeline
 
 ## Objective
-Implement the Meeting Insight Stream extraction pipeline for Convene AI. This adds a structured
+Implement the Meeting Insight Stream extraction pipeline for Kutana AI. This adds a structured
 entity extraction layer that consumes windowed transcript batches, extracts 7 entity types via
 an LLM, deduplicates results, and publishes insights to the message bus.
 
 ## Files to Create
 
-### convene-core: extraction module
-- `packages/convene-core/src/convene_core/extraction/__init__.py`
-- `packages/convene-core/src/convene_core/extraction/types.py` — entity schema + batch types
-- `packages/convene-core/src/convene_core/extraction/abc.py` — Extractor ABC
-- `packages/convene-core/src/convene_core/extraction/collector.py` — BatchCollector service
-- `packages/convene-core/src/convene_core/extraction/deduplicator.py` — EntityDeduplicator
+### kutana-core: extraction module
+- `packages/kutana-core/src/kutana_core/extraction/__init__.py`
+- `packages/kutana-core/src/kutana_core/extraction/types.py` — entity schema + batch types
+- `packages/kutana-core/src/kutana_core/extraction/abc.py` — Extractor ABC
+- `packages/kutana-core/src/kutana_core/extraction/collector.py` — BatchCollector service
+- `packages/kutana-core/src/kutana_core/extraction/deduplicator.py` — EntityDeduplicator
 
-### convene-providers: LLM extractor
-- `packages/convene-providers/src/convene_providers/extraction/__init__.py`
-- `packages/convene-providers/src/convene_providers/extraction/llm_extractor.py`
+### kutana-providers: LLM extractor
+- `packages/kutana-providers/src/kutana_providers/extraction/__init__.py`
+- `packages/kutana-providers/src/kutana_providers/extraction/llm_extractor.py`
 
 ### Tests
-- `packages/convene-core/tests/test_extraction.py`
-- `packages/convene-providers/tests/test_llm_extractor.py`
+- `packages/kutana-core/tests/test_extraction.py`
+- `packages/kutana-providers/tests/test_llm_extractor.py`
 
 ## Files to Modify
-- `packages/convene-providers/src/convene_providers/registry.py` — add ProviderType.EXTRACTOR,
+- `packages/kutana-providers/src/kutana_providers/registry.py` — add ProviderType.EXTRACTOR,
   register LLMExtractor as "llm"
 
 ## Entity Types (7 total)
@@ -113,7 +113,7 @@ All inherit from `ExtractedEntity` base:
 - `entities: list[AnyExtractedEntity]` (discriminated union)
 - `processing_time_ms: float`
 
-## Extractor ABC (convene-core)
+## Extractor ABC (kutana-core)
 ```python
 class Extractor(ABC):
     async def extract(batch: TranscriptBatch) -> ExtractionResult: ...
@@ -121,7 +121,7 @@ class Extractor(ABC):
     @property entity_types(self) -> list[str]: ...
 ```
 
-## BatchCollector (convene-core)
+## BatchCollector (kutana-core)
 - Subscribes to `meeting.{meeting_id}.transcript`
 - Buffers `BatchSegment` objects in a rolling window
 - asyncio background task flushes every 1s; fires when `elapsed >= batch_window_seconds`
@@ -130,14 +130,14 @@ class Extractor(ABC):
   - `meeting.{meeting_id}.insights` (full result)
   - `meeting.{meeting_id}.insights.{entity_type}` (per type)
 
-## EntityDeduplicator (convene-core)
+## EntityDeduplicator (kutana-core)
 - `process(meeting_id, new_entities) -> list[AnyExtractedEntity]` (returns unique new entities)
 - `get_all(meeting_id) -> list[AnyExtractedEntity]` (all deduplicated entities for meeting)
 - Similarity: `difflib.SequenceMatcher` ratio, threshold 0.85
 - Low-confidence filter: entities with confidence < 0.3 discarded
 - Merge: higher-confidence entity wins; `model_copy(update={...})`
 
-## LLMExtractor (convene-providers)
+## LLMExtractor (kutana-providers)
 - Implements `Extractor` ABC
 - Uses `anthropic.AsyncAnthropic` (same pattern as `AnthropicLLM`)
 - Tool-use schema covers all 7 entity types
@@ -150,9 +150,9 @@ class Extractor(ABC):
 - Register `LLMExtractor` as `"llm"` in `_build_default_registry()`
 
 ## Recovery Notes
-- Project root: `/Users/jonathandyer/Documents/Dyer_Innovation/dev/convene-ai`
+- Project root: `/Users/jonathandyer/Documents/Dyer_Innovation/dev/kutana-ai`
 - Python 3.12+, mypy strict, ruff formatting, pytest asyncio_mode=auto
-- MessageBus pattern: `MockMessageBus` in `convene_providers.testing`
+- MessageBus pattern: `MockMessageBus` in `kutana_providers.testing`
 - Pydantic v2 discriminated union: `Annotated[Union[...], Field(discriminator="entity_type")]`
 - All tests use `--import-mode=importlib` (set in root pyproject.toml)
 - Commit: `feat: add Meeting Insight Stream entity schema, extraction pipeline, and batch collector`

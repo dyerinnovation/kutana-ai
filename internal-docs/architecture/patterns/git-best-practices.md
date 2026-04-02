@@ -1,4 +1,4 @@
-# Git Best Practices — Convene AI
+# Git Best Practices — Kutana AI
 
 ## Commit and Push Cadence
 - **Push after each plan completes** — never let uncommitted changes accumulate across sessions
@@ -10,7 +10,7 @@
 - Group by area: core models, providers, services, docs, infra/charts
 
 ## SSH Setup
-- GitHub remote uses SSH: `git@github.com:dyerinnovation/convene-ai.git`
+- GitHub remote uses SSH: `git@github.com:dyerinnovation/kutana-ai.git`
 - SSH key: `~/.ssh/dyerinnovation-key`
 - Config in `~/.ssh/config` maps `github.com` to this key
 - HTTPS with Git Credential Manager (GCM) hangs in non-interactive shells — always use SSH

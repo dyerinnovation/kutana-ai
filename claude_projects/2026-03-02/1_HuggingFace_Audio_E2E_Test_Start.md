@@ -23,5 +23,5 @@ Download a real speech audio file from HuggingFace, update the E2E test script w
 ## Key Details
 - Audio: LibriSpeech sample from `facebook/wav2vec2-large-960h` repo
 - Gateway URL: `ws://localhost:8003`
-- STT: `whisper-remote` pointing to `http://spark-b0f2.local/convene-stt/v1`
+- STT: `whisper-remote` pointing to `http://spark-b0f2.local/kutana-stt/v1`
 - Output format: JSON with timestamp, meeting ID, audio info, all messages, summary

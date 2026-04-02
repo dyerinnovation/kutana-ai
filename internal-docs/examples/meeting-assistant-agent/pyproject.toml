@@ -1,7 +1,7 @@
 [project]
 name = "meeting-assistant-agent"
 version = "0.1.0"
-description = "Example Claude Agent SDK agent that participates in Convene AI meetings"
+description = "Example Claude Agent SDK agent that participates in Kutana AI meetings"
 requires-python = ">=3.12"
 dependencies = [
     "claude-agent-sdk>=0.1",

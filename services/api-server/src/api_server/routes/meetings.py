@@ -13,8 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api_server.auth_deps import CurrentUser, CurrentUserOrAgent
 from api_server.deps import get_db_session
-from convene_core.database.models import MeetingORM
-from convene_core.models.meeting import MeetingStatus
+from kutana_core.database.models import MeetingORM
+from kutana_core.models.meeting import MeetingStatus
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
 
@@ -28,12 +28,12 @@ class MeetingCreateRequest(BaseModel):
     """Request body for creating a new meeting.
 
     Attributes:
-        platform: Meeting platform (e.g. "convene", "zoom").
+        platform: Meeting platform (e.g. "kutana", "zoom").
         title: Optional human-readable meeting title.
         scheduled_at: When the meeting is scheduled to start.
     """
 
-    platform: str = "convene"
+    platform: str = "kutana"
     title: str | None = None
     scheduled_at: datetime
 

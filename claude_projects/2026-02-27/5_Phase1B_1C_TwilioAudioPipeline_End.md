@@ -2,7 +2,7 @@
 
 ## Work Completed
 
-- **Provider Registry Integration Tests** (`packages/convene-providers/tests/test_registry_integration.py`)
+- **Provider Registry Integration Tests** (`packages/kutana-providers/tests/test_registry_integration.py`)
   - STT lifecycle: register → create → start_stream → send_audio → get_transcript → close
   - TTS lifecycle: register → create → synthesize → get_voices
   - LLM lifecycle: register → create → extract_tasks/summarize/generate_report
@@ -15,7 +15,7 @@
 
 - **Redis Streams Event Publisher** (`services/audio-service/src/audio_service/event_publisher.py`)
   - `EventPublisher` class wrapping async Redis XADD
-  - Stream key: `convene:events`, maxlen=10,000 (approximate trim)
+  - Stream key: `kutana:events`, maxlen=10,000 (approximate trim)
   - Entry format: `{event_type, payload}` using `event.to_dict()`
 
 - **Audio Pipeline Enhancements** (`services/audio-service/src/audio_service/audio_pipeline.py`)
@@ -58,7 +58,7 @@
 
 - 141 passed, 1 skipped (groq not installed), 7 deselected (pre-existing GroqLLM import failure)
 - ruff check clean on all new/modified files
-- mypy strict: pre-existing import-not-found errors for cross-package references (CI only checks convene-core)
+- mypy strict: pre-existing import-not-found errors for cross-package references (CI only checks kutana-core)
 
 ## Lessons Learned
 

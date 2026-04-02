@@ -1,0 +1,25 @@
+[project]
+name = "kutana-memory"
+version = "0.1.0"
+description = "Four-layer memory system for Kutana AI"
+requires-python = ">=3.12"
+dependencies = [
+    "kutana-core",
+    "redis>=5.0",
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg>=0.29",
+    "pgvector>=0.3",
+]
+
+[tool.uv.sources]
+kutana-core = { workspace = true }
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kutana_memory"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

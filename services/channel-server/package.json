@@ -1,7 +1,7 @@
 {
-  "name": "@convene/channel-server",
+  "name": "@kutana/channel-server",
   "version": "0.1.0",
-  "description": "Convene AI Claude Code Channel server — bridges meeting events to Claude via MCP",
+  "description": "Kutana AI Claude Code Channel server — bridges meeting events to Claude via MCP",
   "type": "module",
   "scripts": {
     "start": "bun src/server.ts",

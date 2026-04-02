@@ -19,4 +19,4 @@
 
 ## STT Provider
 
-Whisper Remote on DGX Spark (`http://spark-b0f2.local/convene-stt/v1`)
+Whisper Remote on DGX Spark (`http://spark-b0f2.local/kutana-stt/v1`)

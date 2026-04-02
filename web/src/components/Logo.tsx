@@ -1,5 +1,5 @@
 /**
- * Convene AI logo mark — a C-arc ring with an AI node dot in the gap.
+ * Kutana AI logo mark — a C-arc ring with an AI node dot in the gap.
  *
  * Concept: the arc represents meeting participants arranged in a circle
  * (with a gap); the dot in the gap is the AI agent connecting to the meeting.
@@ -16,7 +16,7 @@ interface LogoMarkProps {
   className?: string;
 }
 
-export function ConveneLogoMark({ size = 28, bare = false, className }: LogoMarkProps) {
+export function KutanaLogoMark({ size = 28, bare = false, className }: LogoMarkProps) {
   // Arc geometry: center (14,14), radius 7
   // Opening on the right — gap spans roughly 45° to 315° (clockwise through right)
   // Arc endpoints: at ±45° from the right side (i.e., 315° and 45°)
@@ -32,11 +32,11 @@ export function ConveneLogoMark({ size = 28, bare = false, className }: LogoMark
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
-      aria-label="Convene AI"
+      aria-label="Kutana AI"
     >
       <defs>
         <linearGradient
-          id="convene-logo-gradient"
+          id="kutana-logo-gradient"
           x1="0"
           y1="0"
           x2="28"
@@ -50,7 +50,7 @@ export function ConveneLogoMark({ size = 28, bare = false, className }: LogoMark
 
       {/* Background — omitted in bare mode */}
       {!bare && (
-        <rect width="28" height="28" rx="7" fill="url(#convene-logo-gradient)" />
+        <rect width="28" height="28" rx="7" fill="url(#kutana-logo-gradient)" />
       )}
 
       {/* C-arc: participants in a meeting ring */}

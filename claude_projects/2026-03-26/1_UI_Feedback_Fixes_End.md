@@ -4,9 +4,9 @@
 
 - **Fixed WebSocket "connection failed"**: Changed agent-gateway endpoint from `/human/connect` to `/connect` — ingress strips `/human` via rewrite-target, same pattern as the signup 404 fix
 - **Fixed Templates 500**: Created `agent_templates` + `hosted_agent_sessions` tables via Alembic migration + direct SQL on DGX postgres. Seeded 4 default templates (Meeting Notetaker, Technical Scribe, Standup Facilitator, Meeting Summarizer)
-- **Restructured sidebar nav**: Dashboard (/) → summary page, Agents (/agents) → user agents + Convene Managed Agents, removed Templates entry, added /templates → /agents redirect
+- **Restructured sidebar nav**: Dashboard (/) → summary page, Agents (/agents) → user agents + Kutana Managed Agents, removed Templates entry, added /templates → /agents redirect
 - **New DashboardPage**: Welcome greeting, upcoming meetings card, agents summary card, quick action buttons
-- **New AgentsPage**: User agents grid + "Convene Managed Agents" section with category filters and activate modal
+- **New AgentsPage**: User agents grid + "Kutana Managed Agents" section with category filters and activate modal
 - **Removed "Video soon"** placeholder text from meeting room tiles
 - **Proportional video tiles**: Dynamic grid sizing based on participant count (1 person fills space, scales down for more)
 

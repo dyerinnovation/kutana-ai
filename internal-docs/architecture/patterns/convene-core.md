@@ -1,11 +1,11 @@
-# Convene Core Package Patterns
+# Kutana Core Package Patterns
 
 ## Package Structure
 
 ```
-packages/convene-core/
+packages/kutana-core/
 ├── pyproject.toml
-├── src/convene_core/
+├── src/kutana_core/
 │   ├── __init__.py
 │   ├── models/          # Pydantic v2 domain models
 │   ├── events/          # Event definitions for inter-service communication

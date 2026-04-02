@@ -16,9 +16,9 @@ from api_server.auth_deps import CurrentUser  # noqa: TC001 — runtime dep for 
 from api_server.deps import get_db_session, get_event_publisher
 from api_server.encryption import encrypt_value
 from api_server.event_publisher import EventPublisher  # noqa: TC001 — runtime dep for FastAPI DI
-from convene_core.database.models import FeedORM, FeedRunORM, FeedSecretORM
-from convene_core.events.definitions import FeedCreated, FeedDeleted, FeedUpdated
-from convene_core.models.feed import FeedCreate, FeedRead, FeedRunRead, FeedUpdate
+from kutana_core.database.models import FeedORM, FeedRunORM, FeedSecretORM
+from kutana_core.events.definitions import FeedCreated, FeedDeleted, FeedUpdated
+from kutana_core.models.feed import FeedCreate, FeedRead, FeedRunRead, FeedUpdate
 
 router = APIRouter(prefix="/feeds", tags=["feeds"])
 
@@ -424,7 +424,7 @@ async def trigger_feed(
     await db.flush()
 
     # Publish a feed run event to Redis Streams for the worker to pick up
-    from convene_core.events.definitions import FeedRunStarted
+    from kutana_core.events.definitions import FeedRunStarted
 
     await _safe_publish(
         publisher,

@@ -1,7 +1,7 @@
-"""Feed agent builder and execution for Convene Feeds.
+"""Feed agent builder and execution for Kutana Feeds.
 
 The FeedAgent is a short-lived Claude Haiku agent instantiated per-run.
-It receives access to the Convene MCP server (to read meeting data or
+It receives access to the Kutana MCP server (to read meeting data or
 inject context) and the delivery/source MCP or channel connection.
 
 Supports two MCP transport modes:
@@ -22,13 +22,13 @@ from typing import TYPE_CHECKING, Any
 import anthropic
 import httpx
 
-from convene_core.feeds.adapters import MCPServerConfig, StdioMCPServerConfig
+from kutana_core.feeds.adapters import MCPServerConfig, StdioMCPServerConfig
 
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from convene_core.database.models import FeedORM
-    from convene_core.feeds.adapters import ChannelAdapter
+    from kutana_core.database.models import FeedORM
+    from kutana_core.feeds.adapters import ChannelAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -41,13 +41,13 @@ _JSONRPC_ID_COUNTER = 0
 # System prompt templates
 # ---------------------------------------------------------------------------
 
-_OUTBOUND_PROMPT = """You are a Convene delivery agent. Your job is to push meeting data to {platform}.
+_OUTBOUND_PROMPT = """You are a Kutana delivery agent. Your job is to push meeting data to {platform}.
 
 Meeting ID: {meeting_id}
 Deliver: {data_types}
 
 Steps:
-1. Use convene_get_summary / convene_get_tasks / convene_get_transcript as needed.
+1. Use kutana_get_summary / kutana_get_tasks / kutana_get_transcript as needed.
 2. Format the data appropriately for {platform}.
 3. Deliver it using the {delivery_mechanism} tools available to you.
 4. Confirm delivery and stop.
@@ -57,7 +57,7 @@ Be concise — this is a notification, not a report.
 
 {adapter_suffix}"""
 
-_INBOUND_PROMPT = """You are a Convene context agent. Your job is to pull relevant context from {platform} \
+_INBOUND_PROMPT = """You are a Kutana context agent. Your job is to pull relevant context from {platform} \
 and inject it into the meeting before it starts.
 
 Meeting ID: {meeting_id}
@@ -66,7 +66,7 @@ Context to pull: {context_types}
 Steps:
 1. Use the {platform} tools to fetch the relevant context (linked thread, issue, doc, etc.).
 2. Summarize or structure the context as appropriate.
-3. Use convene_set_context(meeting_id, context) to inject it into the meeting.
+3. Use kutana_set_context(meeting_id, context) to inject it into the meeting.
 4. Confirm injection and stop.
 
 Be concise — participants will see this as a context sidebar, not a full document.
@@ -98,7 +98,7 @@ def _build_system_prompt(
     Returns:
         The complete system prompt string.
     """
-    from convene_core.models.feed import FeedDirection
+    from kutana_core.models.feed import FeedDirection
 
     feed_direction = FeedDirection(direction)
     adapter_suffix = adapter.system_prompt_suffix(feed_direction)
@@ -127,8 +127,8 @@ def build_feed_agent(
     meeting_id: UUID,
     direction: str,
     adapter: ChannelAdapter,
-    convene_mcp_url: str,
-    convene_mcp_token: str,
+    kutana_mcp_url: str,
+    kutana_mcp_token: str,
 ) -> dict[str, Any]:
     """Build the configuration for a feed agent run.
 
@@ -140,8 +140,8 @@ def build_feed_agent(
         meeting_id: Meeting to process.
         direction: Run direction.
         adapter: Channel adapter for the feed's platform.
-        convene_mcp_url: URL of the Convene MCP server.
-        convene_mcp_token: Bearer token for the Convene MCP server.
+        kutana_mcp_url: URL of the Kutana MCP server.
+        kutana_mcp_token: Bearer token for the Kutana MCP server.
 
     Returns:
         A dict with agent configuration including system_prompt,
@@ -149,9 +149,9 @@ def build_feed_agent(
     """
     system_prompt = _build_system_prompt(feed, meeting_id, direction, adapter)
 
-    # Collect MCP servers: Convene MCP (always HTTP) + adapter servers
+    # Collect MCP servers: Kutana MCP (always HTTP) + adapter servers
     http_servers: list[dict[str, str]] = [
-        {"url": convene_mcp_url, "token": convene_mcp_token},
+        {"url": kutana_mcp_url, "token": kutana_mcp_token},
     ]
     stdio_servers: list[StdioMCPServerConfig] = []
 
@@ -384,7 +384,7 @@ class _StdioMCPProcess:
             {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {},
-                "clientInfo": {"name": "convene-feed-agent", "version": "0.1.0"},
+                "clientInfo": {"name": "kutana-feed-agent", "version": "0.1.0"},
             },
         )
         # Send initialized notification (no response expected)
@@ -443,8 +443,8 @@ async def run_feed(
     meeting_id: UUID,
     direction: str,
     adapter: ChannelAdapter,
-    convene_mcp_url: str,
-    convene_mcp_token: str,
+    kutana_mcp_url: str,
+    kutana_mcp_token: str,
 ) -> dict[str, Any]:
     """Execute a feed agent run using Claude Haiku with MCP tool-use loop.
 
@@ -457,8 +457,8 @@ async def run_feed(
         meeting_id: Meeting to process.
         direction: Run direction.
         adapter: Channel adapter for the feed's platform.
-        convene_mcp_url: URL of the Convene MCP server.
-        convene_mcp_token: Bearer token for the Convene MCP server.
+        kutana_mcp_url: URL of the Kutana MCP server.
+        kutana_mcp_token: Bearer token for the Kutana MCP server.
 
     Returns:
         A dict with execution results including the final text response.
@@ -472,8 +472,8 @@ async def run_feed(
         meeting_id=meeting_id,
         direction=direction,
         adapter=adapter,
-        convene_mcp_url=convene_mcp_url,
-        convene_mcp_token=convene_mcp_token,
+        kutana_mcp_url=kutana_mcp_url,
+        kutana_mcp_token=kutana_mcp_token,
     )
 
     logger.info(

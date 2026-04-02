@@ -47,14 +47,14 @@ Implement the full meeting join experience with browser audio, MCP OAuth 2.1 aut
 
 ## Part B: Agent Platform (Phase 2)
 
-### B1: Convene CLI Tool
+### B1: Kutana CLI Tool
 - Python CLI with typer
 - Commands: login, agents, meetings, keys
 - WebSocket meeting join with mic audio
 
 ### B2: OpenClaw Plugin + Skill
 - TypeScript plugin for OpenClaw
-- Native Convene tools
+- Native Kutana tools
 - SKILL.md for agent instructions
 
 ### B3: Claude Agent SDK Integration Guide
@@ -75,7 +75,7 @@ Implement the full meeting join experience with browser audio, MCP OAuth 2.1 aut
 - Encrypted Anthropic API key storage
 
 ### B6: Claude Code Skill
-- `.claude/skills/convene-meeting/SKILL.md`
+- `.claude/skills/kutana-meeting/SKILL.md`
 - Uses MCP server for meeting context
 
 ### B7: Capability-Based Channel Routing

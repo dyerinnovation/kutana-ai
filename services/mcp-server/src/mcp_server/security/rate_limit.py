@@ -1,11 +1,11 @@
 """Per-agent, per-tool Redis sliding-window rate limiter.
 
-Follows the portable provider-abstraction pattern used elsewhere in Convene AI.
+Follows the portable provider-abstraction pattern used elsewhere in Kutana AI.
 The abstract base class (RateLimiter) can be swapped for testing or alternative
 backends without changing callers.
 
 Redis key pattern:
-    convene:rate_limit:{agent_id}:{tool_name}   ZSET (score = unix timestamp)
+    kutana:rate_limit:{agent_id}:{tool_name}   ZSET (score = unix timestamp)
 
 Default per-tool limits (requests / minute):
     raise_hand              10
@@ -140,7 +140,7 @@ class RedisRateLimiter(RateLimiter):
         )
 
         r = await self._get_redis()
-        key = f"convene:rate_limit:{agent_id}:{tool_name}"
+        key = f"kutana:rate_limit:{agent_id}:{tool_name}"
         now = time.time()
         window_start = now - window_seconds
 

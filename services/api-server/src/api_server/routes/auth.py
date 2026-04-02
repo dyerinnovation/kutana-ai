@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api_server.auth import create_user_token, hash_password, verify_password
 from api_server.auth_deps import CurrentUser
 from api_server.deps import Settings, get_db_session, get_settings
-from convene_core.database.models import UserORM
+from kutana_core.database.models import UserORM
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

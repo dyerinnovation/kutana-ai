@@ -1,4 +1,4 @@
-"""HTTP client for the Convene API server."""
+"""HTTP client for the Kutana API server."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class ApiClient:
-    """Async HTTP client for the Convene API server.
+    """Async HTTP client for the Kutana API server.
 
     Handles token exchange and CRUD operations against the API.
     Supports both API key auth and Bearer JWT auth (for MCP tokens).
@@ -160,14 +160,14 @@ class ApiClient:
     async def create_meeting(
         self,
         title: str | None = None,
-        platform: str = "convene",
+        platform: str = "kutana",
         scheduled_at: str | None = None,
     ) -> dict[str, Any]:
         """Create a new meeting.
 
         Args:
             title: Optional meeting title.
-            platform: Meeting platform (default: "convene").
+            platform: Meeting platform (default: "kutana").
             scheduled_at: ISO 8601 datetime string. Defaults to now.
 
         Returns:

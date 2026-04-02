@@ -2,15 +2,15 @@ services:
   postgres:
     image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_USER: convene
-      POSTGRES_PASSWORD: convene
-      POSTGRES_DB: convene
+      POSTGRES_USER: kutana
+      POSTGRES_PASSWORD: kutana
+      POSTGRES_DB: kutana
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U convene"]
+      test: ["CMD-SHELL", "pg_isready -U kutana"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -34,7 +34,7 @@ services:
     command: alembic upgrade head
     env_file: .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://convene:convene@postgres:5432/convene
+      DATABASE_URL: postgresql+asyncpg://kutana:kutana@postgres:5432/kutana
     depends_on:
       postgres:
         condition: service_healthy
@@ -48,7 +48,7 @@ services:
       - "8000:8000"
     env_file: .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://convene:convene@postgres:5432/convene
+      DATABASE_URL: postgresql+asyncpg://kutana:kutana@postgres:5432/kutana
       REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
@@ -67,7 +67,7 @@ services:
       - "8003:8003"
     env_file: .env
     environment:
-      AGENT_GATEWAY_DATABASE_URL: postgresql+asyncpg://convene:convene@postgres:5432/convene
+      AGENT_GATEWAY_DATABASE_URL: postgresql+asyncpg://kutana:kutana@postgres:5432/kutana
       AGENT_GATEWAY_REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
@@ -100,7 +100,7 @@ services:
       - "8002:8002"
     env_file: .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://convene:convene@postgres:5432/convene
+      DATABASE_URL: postgresql+asyncpg://kutana:kutana@postgres:5432/kutana
       REDIS_URL: redis://redis:6379/0
       EXTRACTION_WINDOW_SECONDS: "30"
       EXTRACTION_OVERLAP_SECONDS: "5"

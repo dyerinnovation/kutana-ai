@@ -18,7 +18,7 @@ export MEETING_ID=$(curl -s -X POST http://localhost:8000/api/v1/meetings \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "title": "Lifecycle Test Meeting",
-    "platform": "convene",
+    "platform": "kutana",
     "scheduled_at": "'"$(date -u -v+1H +%Y-%m-%dT%H:%M:%SZ)"'"
   }' | jq -r '.id')
 
@@ -29,7 +29,7 @@ Expected response (201):
 ```json
 {
   "id": "<uuid>",
-  "platform": "convene",
+  "platform": "kutana",
   "title": "Lifecycle Test Meeting",
   "status": "scheduled",
   "scheduled_at": "...",
@@ -133,7 +133,7 @@ Expected: `401`.
 
 ### Step 1: Login
 1. Open `http://localhost:5173` in a browser
-2. Log in with `tester@convene.dev` / `TestPass123!`
+2. Log in with `tester@kutana.dev` / `TestPass123!`
 
 ### Step 2: View Meetings Page
 1. Navigate to the Meetings page
@@ -142,7 +142,7 @@ Expected: `401`.
 
 ### Step 3: Create Meeting via UI
 1. Click **"Create Meeting"** button
-2. Fill in: Title = "UI Test Meeting", Platform = "convene", Scheduled At = future time
+2. Fill in: Title = "UI Test Meeting", Platform = "kutana", Scheduled At = future time
 3. Click **Submit**
 4. Verify new card appears with status badge **"scheduled"** (gray)
 
@@ -191,7 +191,7 @@ export MEETING_ID=$(curl -s -X POST http://localhost:8000/api/v1/meetings \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "title": "Fresh Test Meeting",
-    "platform": "convene",
+    "platform": "kutana",
     "scheduled_at": "'"$(date -u -v+1H +%Y-%m-%dT%H:%M:%SZ)"'"
   }' | jq -r '.id')
 ```

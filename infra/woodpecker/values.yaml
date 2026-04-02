@@ -1,4 +1,4 @@
-# Woodpecker CI Helm values for Convene AI / DGX Spark
+# Woodpecker CI Helm values for Kutana AI / DGX Spark
 #
 # Chart: woodpecker-ci/woodpecker
 # Install:  see infra/woodpecker/deploy.sh
@@ -20,11 +20,11 @@ server:
     WOODPECKER_ORGS: "dyerinnovation"
     WOODPECKER_OPEN: "false"
 
-    # Database — reuse the convene PostgreSQL instance with a separate DB
+    # Database — reuse the kutana PostgreSQL instance with a separate DB
     # The woodpecker database must be created before first install.
     # deploy.sh handles this automatically.
     WOODPECKER_DATABASE_DRIVER: "postgres"
-    WOODPECKER_DATABASE_DATASOURCE: "postgres://convene:convene@postgres.convene.svc:5432/woodpecker?sslmode=disable"
+    WOODPECKER_DATABASE_DATASOURCE: "postgres://kutana:kutana@postgres.kutana.svc:5432/woodpecker?sslmode=disable"
 
   # Sensitive values injected from the woodpecker-secrets K8s Secret
   extraEnv:

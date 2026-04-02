@@ -6,7 +6,7 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING
 
-from convene_core.events.definitions import (
+from kutana_core.events.definitions import (
     MeetingEnded,
     MeetingStarted,
     TranscriptSegmentFinal,
@@ -17,8 +17,8 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from audio_service.event_publisher import EventPublisher
-    from convene_core.interfaces.stt import STTProvider
-    from convene_core.models.transcript import TranscriptSegment
+    from kutana_core.interfaces.stt import STTProvider
+    from kutana_core.models.transcript import TranscriptSegment
 
 logger = logging.getLogger(__name__)
 

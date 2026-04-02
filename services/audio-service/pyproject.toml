@@ -1,11 +1,11 @@
 [project]
 name = "audio-service"
 version = "0.1.0"
-description = "Audio pipeline and transport adapters for Convene AI"
+description = "Audio pipeline and transport adapters for Kutana AI"
 requires-python = ">=3.12"
 dependencies = [
-    "convene-core",
-    "convene-providers",
+    "kutana-core",
+    "kutana-providers",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "redis>=5.0",
@@ -13,8 +13,8 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-convene-core = { workspace = true }
-convene-providers = { workspace = true }
+kutana-core = { workspace = true }
+kutana-providers = { workspace = true }
 
 [tool.hatch.metadata]
 allow-direct-references = true

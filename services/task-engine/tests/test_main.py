@@ -13,13 +13,13 @@ from uuid import UUID, uuid4
 import pytest
 
 import task_engine.main as main_module
-from convene_core.extraction.types import (
+from kutana_core.extraction.types import (
     BatchSegment,
     ExtractionResult,
     TaskEntity,
     TranscriptBatch,
 )
-from convene_core.models.transcript import TranscriptSegment
+from kutana_core.models.transcript import TranscriptSegment
 from task_engine.windower import SegmentWindow
 
 pytestmark = pytest.mark.asyncio
@@ -601,7 +601,7 @@ class TestPersistTaskEntities:
 
     async def test_no_op_when_no_task_entities(self) -> None:
         """Skips DB write when there are no task entities."""
-        from convene_core.extraction.types import DecisionEntity
+        from kutana_core.extraction.types import DecisionEntity
 
         mid = uuid4()
         decision = DecisionEntity(
@@ -622,7 +622,7 @@ class TestPersistTaskEntities:
 
     async def test_task_entity_persisted_to_db(self) -> None:
         """A TaskEntity results in a TaskORM being added to the session."""
-        from convene_core.database.models import TaskORM
+        from kutana_core.database.models import TaskORM
 
         mid = uuid4()
         entity = _make_task_entity(meeting_id=str(mid), title="Write report")

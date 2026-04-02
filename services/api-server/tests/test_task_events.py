@@ -67,8 +67,8 @@ class TestApiServerEventPublisher:
 
     async def test_publish_calls_xadd_with_stream_key(self) -> None:
         """publish() calls xadd on the injected Redis client."""
-        from convene_core.events.definitions import TaskCreated
-        from convene_core.models.task import Task, TaskPriority, TaskStatus
+        from kutana_core.events.definitions import TaskCreated
+        from kutana_core.models.task import Task, TaskPriority, TaskStatus
 
         publisher, mock_redis = _make_redis_publisher()
 
@@ -91,8 +91,8 @@ class TestApiServerEventPublisher:
 
     async def test_publish_sets_event_type_field(self) -> None:
         """Stream entry contains the correct event_type field."""
-        from convene_core.events.definitions import TaskCreated
-        from convene_core.models.task import Task, TaskPriority, TaskStatus
+        from kutana_core.events.definitions import TaskCreated
+        from kutana_core.models.task import Task, TaskPriority, TaskStatus
 
         publisher, mock_redis = _make_redis_publisher()
 
@@ -114,8 +114,8 @@ class TestApiServerEventPublisher:
 
     async def test_publish_task_updated_event_type(self) -> None:
         """task.updated events are correctly named in the stream."""
-        from convene_core.events.definitions import TaskUpdated
-        from convene_core.models.task import Task, TaskPriority, TaskStatus
+        from kutana_core.events.definitions import TaskUpdated
+        from kutana_core.models.task import Task, TaskPriority, TaskStatus
 
         publisher, mock_redis = _make_redis_publisher()
 
@@ -137,8 +137,8 @@ class TestApiServerEventPublisher:
 
     async def test_publish_returns_entry_id(self) -> None:
         """publish() returns the entry ID from xadd."""
-        from convene_core.events.definitions import TaskCreated
-        from convene_core.models.task import Task, TaskPriority, TaskStatus
+        from kutana_core.events.definitions import TaskCreated
+        from kutana_core.models.task import Task, TaskPriority, TaskStatus
 
         publisher, mock_redis = _make_redis_publisher()
         mock_redis.xadd.return_value = "1111111111-0"
@@ -169,7 +169,7 @@ class TestOrmToDomain:
     def test_converts_all_fields(self) -> None:
         """_orm_to_domain maps all ORM fields to the domain model."""
         from api_server.routes.tasks import _orm_to_domain
-        from convene_core.models.task import TaskPriority, TaskStatus
+        from kutana_core.models.task import TaskPriority, TaskStatus
 
         dep_id = uuid4()
         task_orm = _make_task_orm(status="in_progress", priority="high")
@@ -215,8 +215,8 @@ class TestSafePublish:
 
     async def test_publish_error_is_swallowed(self) -> None:
         """_safe_publish does not re-raise exceptions from the publisher."""
-        from convene_core.events.definitions import TaskCreated
-        from convene_core.models.task import Task, TaskPriority, TaskStatus
+        from kutana_core.events.definitions import TaskCreated
+        from kutana_core.models.task import Task, TaskPriority, TaskStatus
         from api_server.routes.tasks import _safe_publish
 
         mock_redis = AsyncMock()
@@ -239,8 +239,8 @@ class TestSafePublish:
 
     async def test_publish_success_calls_publisher(self) -> None:
         """_safe_publish delegates to the publisher when no error occurs."""
-        from convene_core.events.definitions import TaskCreated
-        from convene_core.models.task import Task, TaskPriority, TaskStatus
+        from kutana_core.events.definitions import TaskCreated
+        from kutana_core.models.task import Task, TaskPriority, TaskStatus
         from api_server.routes.tasks import _safe_publish
 
         publisher, mock_redis = _make_redis_publisher()

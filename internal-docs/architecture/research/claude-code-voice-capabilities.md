@@ -1,4 +1,4 @@
-# Claude Code Voice Capabilities & Convene Integration
+# Claude Code Voice Capabilities & Kutana Integration
 
 ## Claude Code Voice Mode — What It Actually Is
 
@@ -12,9 +12,9 @@ Per official Anthropic documentation (code.claude.com/docs/en/voice-dictation):
 - **Not available** via API keys, Bedrock, Vertex AI, or Foundry
 - **Not accessible** to MCP servers — audio stream is internal to Claude Code
 
-## Implications for Convene
+## Implications for Kutana
 
-Claude Code is a **text agent** in Convene's capability taxonomy:
+Claude Code is a **text agent** in Kutana's capability taxonomy:
 
 | Capability | Claude Code | True Voice Agent |
 |-----------|-------------|-----------------|
@@ -86,12 +86,12 @@ Claude Code uses Path 1 only. The gateway's TTS pipeline handles voice output.
 ## Future Considerations
 
 - If Anthropic adds voice output to Claude Code in the future, the channel server could be updated to use the audio sidecar path instead of TTS
-- Third-party MCP voice servers (VoiceMode, Claude-to-Speech) exist but are not integrated with Convene's meeting audio pipeline
+- Third-party MCP voice servers (VoiceMode, Claude-to-Speech) exist but are not integrated with Kutana's meeting audio pipeline
 - The channel server's stdio transport cannot carry binary audio — any future audio integration would need a parallel connection
 
 ## References
 
 - Voice dictation docs: https://code.claude.com/docs/en/voice-dictation
-- Convene voice agent architecture: `internal-docs/architecture/research/voice-agent-integration.md`
-- Convene TTS pipeline: `internal-docs/architecture/research/tts-text-agents.md`
+- Kutana voice agent architecture: `internal-docs/architecture/research/voice-agent-integration.md`
+- Kutana TTS pipeline: `internal-docs/architecture/research/tts-text-agents.md`
 - TTS tier enforcement: `internal-docs/architecture/research/tts-tier-enforcement-plan.md`

@@ -13,10 +13,10 @@
 git pull origin main
 
 # Verify all services healthy
-ssh dgx 'docker compose -f ~/convene-ai/docker-compose.yml ps'
+ssh dgx 'docker compose -f ~/kutana-ai/docker-compose.yml ps'
 
 # Verify migrations current
-ssh dgx 'cd ~/convene-ai && uv run alembic current'
+ssh dgx 'cd ~/kutana-ai && uv run alembic current'
 
 # Run existing test suite
 uv run pytest -x -v

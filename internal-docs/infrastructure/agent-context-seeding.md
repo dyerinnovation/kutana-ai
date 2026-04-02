@@ -1,14 +1,14 @@
 # Agent Context Seeding Architecture
 
 ## Problem
-Voice and coding agent APIs assume 1:1 dialogue between model and user. Convene AI meetings are N-way conversations. Agents need structured context to understand the meeting environment, participants, and (for late joiners) what's already happened.
+Voice and coding agent APIs assume 1:1 dialogue between model and user. Kutana AI meetings are N-way conversations. Agents need structured context to understand the meeting environment, participants, and (for late joiners) what's already happened.
 
 ## Solution: Three-Layer Context
 Agent context is provided through three documents, layered from static to dynamic:
 
-### Layer 1: Platform Context (`convene-ai-platform.md`)
+### Layer 1: Platform Context (`kutana-ai-platform.md`)
 - **Scope:** Fixed, versioned with the platform
-- **Contents:** What Convene AI is, message formats (<channel> tags, insight stream entities), available tools (reply, accept_task, update_status, request_context), multi-speaker transcript format, agent behavior norms
+- **Contents:** What Kutana AI is, message formats (<channel> tags, insight stream entities), available tools (reply, accept_task, update_status, request_context), multi-speaker transcript format, agent behavior norms
 - **When provided:** At agent connection time, never changes during a meeting
 - **Maps to:** Claude Code Channel `instructions` field; Gemini Live `system_instruction`
 

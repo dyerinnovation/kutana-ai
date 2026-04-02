@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Agent Gateway (`services/agent-gateway/`) is the WebSocket entry point for AI agents connecting to Convene meetings. It provides authentication, bidirectional audio/data streaming, and event relay.
+The Agent Gateway (`services/agent-gateway/`) is the WebSocket entry point for AI agents connecting to Kutana meetings. It provides authentication, bidirectional audio/data streaming, and event relay.
 
 ## Service Structure
 
@@ -69,14 +69,14 @@ Agent audio_data → base64 decode → AudioBridge.process_audio()
 - Background `_consume_segments` task drives the async iterator from `pipeline.get_segments()`
 - Segments are published to Redis via `EventPublisher` inside the pipeline
 - `EventRelay` detects `transcript.segment.final` and calls `send_transcript()` (not generic `send_event()`)
-- agent-gateway depends on `audio-service` and `convene-providers` as workspace deps (embeds AudioPipeline, no inter-service calls)
+- agent-gateway depends on `audio-service` and `kutana-providers` as workspace deps (embeds AudioPipeline, no inter-service calls)
 
 ### STT Settings
 The gateway reads `AGENT_GATEWAY_STT_PROVIDER`, `AGENT_GATEWAY_STT_API_KEY`, `AGENT_GATEWAY_WHISPER_MODEL_SIZE`, `AGENT_GATEWAY_WHISPER_API_URL` for STT configuration.
 
 ## Event Relay
 
-The `EventRelay` consumes from Redis Streams (`convene:events`) using consumer group `agent-gateway`. Events are routed to agents by:
+The `EventRelay` consumes from Redis Streams (`kutana:events`) using consumer group `agent-gateway`. Events are routed to agents by:
 1. Match `meeting_id` to joined sessions
 2. Filter by capabilities (e.g., transcript events require `listen` or `transcribe`)
 3. `transcript.segment.final` events are unpacked into structured `TranscriptMessage` fields (speaker_id, text, timestamps, confidence)

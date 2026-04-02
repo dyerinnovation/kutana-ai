@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from convene_core.database.models import TaskORM
-from convene_core.events.definitions import TaskCreated
+from kutana_core.database.models import TaskORM
+from kutana_core.events.definitions import TaskCreated
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import (
@@ -14,9 +14,9 @@ if TYPE_CHECKING:
         async_sessionmaker,
     )
 
-    from convene_core.interfaces.llm import LLMProvider
-    from convene_core.models.task import Task
-    from convene_core.models.transcript import TranscriptSegment
+    from kutana_core.interfaces.llm import LLMProvider
+    from kutana_core.models.task import Task
+    from kutana_core.models.transcript import TranscriptSegment
     from task_engine.event_publisher import EventPublisher
 
 logger = logging.getLogger(__name__)

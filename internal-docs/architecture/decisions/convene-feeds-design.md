@@ -1,4 +1,4 @@
-# Convene Feeds — Architecture Design
+# Kutana Feeds — Architecture Design
 
 **Status:** Draft
 **Date:** 2026-03-25
@@ -8,9 +8,9 @@
 
 ## 1. Overview
 
-Convene Feeds is a **bidirectional integration layer** for connecting external platforms to meetings. A Feed can **pull data in** (e.g., fetch a Slack thread or Notion page as meeting context before or during a meeting) and **push data out** (e.g., post a summary to Slack after the meeting ends). The same channel or MCP connection handles both directions — there is no separate inbound vs. outbound channel concept.
+Kutana Feeds is a **bidirectional integration layer** for connecting external platforms to meetings. A Feed can **pull data in** (e.g., fetch a Slack thread or Notion page as meeting context before or during a meeting) and **push data out** (e.g., post a summary to Slack after the meeting ends). The same channel or MCP connection handles both directions — there is no separate inbound vs. outbound channel concept.
 
-The key design principle: **a Convene agent is the integration mechanism**. There is no custom API code, no platform SDKs, and no per-platform auth logic in the core — both context retrieval and delivery happen through Claude Code channels (Discord, Telegram, Slack) or MCP servers that the agent already knows how to use.
+The key design principle: **a Kutana agent is the integration mechanism**. There is no custom API code, no platform SDKs, and no per-platform auth logic in the core — both context retrieval and delivery happen through Claude Code channels (Discord, Telegram, Slack) or MCP servers that the agent already knows how to use.
 
 ### How It Fits the Existing Architecture
 
@@ -22,7 +22,7 @@ flowchart TD
         Notion[Notion / GitHub / etc.]
     end
 
-    subgraph Convene Core
+    subgraph Kutana Core
         MS[MeetingStarted event] --> MB[(Redis Streams\nMessageBus)]
         ME[MeetingEnded event] --> MB
         MB --> FD[FeedDispatcher\nStream Consumer]
@@ -32,10 +32,10 @@ flowchart TD
 
     subgraph MCP Server
         AG -->|Bearer token| MCP[MCP Server\n:3001]
-        MCP --> GS[convene_get_summary\nnew tool]
-        MCP --> GT[convene_get_tasks]
-        MCP --> GTr[convene_get_transcript]
-        MCP --> SC[convene_set_context\nnew tool]
+        MCP --> GS[kutana_get_summary\nnew tool]
+        MCP --> GT[kutana_get_tasks]
+        MCP --> GTr[kutana_get_transcript]
+        MCP --> SC[kutana_set_context\nnew tool]
     end
 
     subgraph Bidirectional Channel / MCP
@@ -169,10 +169,10 @@ class FeedRead(FeedBase):
 
 ### FeedDispatcher (new stream consumer in `services/worker/`)
 
-The FeedDispatcher is a new consumer that runs inside the existing worker service alongside the Slack bot. It subscribes to `convene:events` on the `feed-dispatcher` consumer group.
+The FeedDispatcher is a new consumer that runs inside the existing worker service alongside the Slack bot. It subscribes to `kutana:events` on the `feed-dispatcher` consumer group.
 
 ```
-convene:events (Redis Stream)
+kutana:events (Redis Stream)
        │
        ├─ event_type == "meeting.started"
        │       ▼
@@ -182,7 +182,7 @@ convene:events (Redis Stream)
        │       │                                    AND trigger == "meeting_started"
        │       ├─ for each matching Feed (inbound or bidirectional):
        │       │       insert FeedRun(status="pending", direction="inbound")
-       │       │       enqueue FeedAgent task via Redis Streams: convene:feed-runs
+       │       │       enqueue FeedAgent task via Redis Streams: kutana:feed-runs
        │       └─ ack message
        │
        └─ event_type == "meeting.ended"
@@ -193,13 +193,13 @@ convene:events (Redis Stream)
                │                                    AND trigger == "meeting_ended"
                ├─ for each matching Feed (outbound or bidirectional):
                │       insert FeedRun(status="pending", direction="outbound")
-               │       enqueue FeedAgent task via Redis Streams: convene:feed-runs
+               │       enqueue FeedAgent task via Redis Streams: kutana:feed-runs
                └─ ack message
 ```
 
 **Why not dispatch synchronously?** Feed agents may take 10–30 seconds (LLM calls, external API round-trips). Dispatching asynchronously via a second stream decouples latency and allows retries.
 
-### FeedRunner (consumes `convene:feed-runs`)
+### FeedRunner (consumes `kutana:feed-runs`)
 
 A second consumer in the worker that picks up `FeedRun` records and actually launches the agent:
 
@@ -222,17 +222,17 @@ The FeedAgent is a short-lived Claude Haiku agent instantiated per-run. It recei
 - The meeting ID
 - The run direction (`inbound` or `outbound`)
 - A system prompt describing what to fetch and where to send it (or what to pull and where to inject it)
-- Access to the Convene MCP server (to read meeting data or inject context)
+- Access to the Kutana MCP server (to read meeting data or inject context)
 - Access to the delivery/source MCP or channel (bidirectional — same connection for both pull and push)
 
 ```
 FeedAgent (Haiku)
     │
-    ├── Convene MCP tools
-    │       convene_get_summary(meeting_id)       ← new tool (outbound)
-    │       convene_get_tasks(meeting_id)          (outbound)
-    │       convene_get_transcript(meeting_id)     (outbound)
-    │       convene_set_context(meeting_id, ctx)   ← new tool (inbound)
+    ├── Kutana MCP tools
+    │       kutana_get_summary(meeting_id)       ← new tool (outbound)
+    │       kutana_get_tasks(meeting_id)          (outbound)
+    │       kutana_get_transcript(meeting_id)     (outbound)
+    │       kutana_set_context(meeting_id, ctx)   ← new tool (inbound)
     │
     └── External channel / MCP  ← BIDIRECTIONAL
             pull: slack_get_thread / notion_get_page / github_get_issue
@@ -245,13 +245,13 @@ FeedAgent (Haiku)
 
 **Outbound (push meeting data to platform):**
 ```
-You are a Convene delivery agent. Your job is to push meeting data to {platform}.
+You are a Kutana delivery agent. Your job is to push meeting data to {platform}.
 
 Meeting ID: {meeting_id}
 Deliver: {data_types}  (e.g. summary, tasks)
 
 Steps:
-1. Use convene_get_summary / convene_get_tasks / convene_get_transcript as needed.
+1. Use kutana_get_summary / kutana_get_tasks / kutana_get_transcript as needed.
 2. Format the data appropriately for {platform}.
 3. Deliver it using the {delivery_mechanism} tools available to you.
 4. Confirm delivery and stop.
@@ -262,7 +262,7 @@ Be concise — this is a notification, not a report.
 
 **Inbound (pull context from platform into meeting):**
 ```
-You are a Convene context agent. Your job is to pull relevant context from {platform}
+You are a Kutana context agent. Your job is to pull relevant context from {platform}
 and inject it into the meeting before it starts.
 
 Meeting ID: {meeting_id}
@@ -271,7 +271,7 @@ Context to pull: {context_types}  (e.g. thread, page)
 Steps:
 1. Use the {platform} tools to fetch the relevant context (linked thread, issue, doc, etc.).
 2. Summarize or structure the context as appropriate.
-3. Use convene_set_context(meeting_id, context) to inject it into the meeting.
+3. Use kutana_set_context(meeting_id, context) to inject it into the meeting.
 4. Confirm injection and stop.
 
 Be concise — participants will see this as a context sidebar, not a full document.
@@ -295,7 +295,7 @@ For channel delivery the FeedRunner configures the Claude Code channel plugin, w
 The `ChannelAdapter` ABC abstracts the difference between MCP servers and Claude Code channels so `FeedRunner` doesn't need to know which type a Feed uses. Adapters are **bidirectional** — the same adapter instance is used whether the agent is pulling context in or pushing data out.
 
 ```python
-# packages/convene-core/src/convene_core/feeds/adapters.py
+# packages/kutana-core/src/kutana_core/feeds/adapters.py
 
 from abc import ABC, abstractmethod
 from enum import StrEnum
@@ -393,19 +393,19 @@ Adding a new platform is one line in the registry plus, if it's a new delivery t
 
 ---
 
-## 6. `convene_get_summary` — New MCP Tool
+## 6. `kutana_get_summary` — New MCP Tool
 
-This is the only new MCP tool required. The existing `convene_get_tasks` and `convene_get_transcript` tools already cover the other data types.
+This is the only new MCP tool required. The existing `kutana_get_tasks` and `kutana_get_transcript` tools already cover the other data types.
 
 ### Tool Design
 
-**Name:** `convene_get_summary`
+**Name:** `kutana_get_summary`
 **Purpose:** Return a structured meeting summary (title, key points, decisions, action item count).
 **Implementation:** Calls the task-engine's existing LLM pipeline or reads a cached `MeetingSummaryORM` row.
 
 ```python
 @mcp.tool()
-async def convene_get_summary(
+async def kutana_get_summary(
     meeting_id: str,
     ctx: Context,
 ) -> dict[str, Any]:
@@ -513,7 +513,7 @@ All endpoints use the existing `get_current_user` JWT dependency.
 Tasks:
 - [ ] `FeedORM` + `FeedRunORM` migration
 - [ ] `MeetingSummaryORM` migration
-- [ ] `convene_get_summary` MCP tool (on-demand Haiku generation)
+- [ ] `kutana_get_summary` MCP tool (on-demand Haiku generation)
 - [ ] `FeedDispatcher` stream consumer in worker service
 - [ ] `FeedRunner` consumer + `build_feed_agent()` utility
 - [ ] `MCPChannelAdapter` + `build_adapter()` registry
@@ -577,7 +577,7 @@ class FeedSecretORM(Base):
 
 - **Algorithm:** AES-256-GCM (authenticated encryption — protects both confidentiality and integrity).
 - **Key material:** Derived from `SECRET_KEY` env var via HKDF. Phase 1 uses app-level key. Phase 3 evaluates KMS (AWS KMS / HashiCorp Vault) for Enterprise tier — matching how Zapier and n8n handle OAuth token storage.
-- **At-rest encryption utility** lives in `packages/convene-core/src/convene_core/security/encryption.py`. No other module encrypts/decrypts tokens directly.
+- **At-rest encryption utility** lives in `packages/kutana-core/src/kutana_core/security/encryption.py`. No other module encrypts/decrypts tokens directly.
 
 ### API Behavior
 
@@ -743,7 +743,7 @@ These anti-patterns are explicitly out of scope and should be rejected in code r
 | Hard-coded platform names anywhere except `ADAPTER_REGISTRY` | Any platform logic outside the registry breaks portability. |
 | Long-running agents attached to meetings | FeedAgents are short-lived, single-purpose, and ephemeral. |
 | Reading transcript segments directly in `FeedDispatcher` | Dispatcher only queries Feed config. Data access is the agent's job via MCP tools. |
-| `worker` service making HTTP calls to other Convene services | All cross-service data flows through the MessageBus or the MCP server. |
+| `worker` service making HTTP calls to other Kutana services | All cross-service data flows through the MessageBus or the MCP server. |
 | Storing tokens in the `feeds` table or returning them in API responses | Tokens live in `feed_secrets` only and are write-only at the API layer. See §9. |
 | Mixing Feed agent status with participant list in the UI | Feed agents use a dedicated sidebar section and a consent banner. See §10. |
 

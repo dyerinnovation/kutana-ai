@@ -5,7 +5,7 @@
 
 ## Work Completed
 
-### Domain Model Extensions (convene-core)
+### Domain Model Extensions (kutana-core)
 - Created `models/room.py` — `Room` model with `RoomStatus` enum (pending/active/closed)
 - Created `models/agent_session.py` — `AgentSession` model with `ConnectionType` and `AgentSessionStatus` enums
 - Modified `models/meeting.py` — `dial_in_number` and `meeting_code` now optional; added `room_id`, `room_name`, `meeting_type`
@@ -32,7 +32,7 @@
 - `main.py` — FastAPI app with `/health` and `/agent/connect` WebSocket endpoint
 
 ### Audio Service Refactor
-- **Archived** `twilio_handler.py`, `meeting_dialer.py` to `~/Documents/Dyer_Innovation/archive/convene-twilio/`
+- **Archived** `twilio_handler.py`, `meeting_dialer.py` to `~/Documents/Dyer_Innovation/archive/kutana-twilio/`
 - **Removed** Twilio dependency from `pyproject.toml`
 - **Simplified** `AudioPipeline` — removed all mulaw transcoding, now accepts PCM16 16kHz mono directly
 - Created `audio_adapter.py` — `AudioAdapter` ABC for transport-agnostic audio input
@@ -62,7 +62,7 @@
 
 - [ ] Phase P-B: LiveKit integration (docker-compose, room management, audio adapter, bridge)
 - [ ] Phase P-C: React meeting web client
-- [ ] Phase P-D: Convene SDK Python package
+- [ ] Phase P-D: Kutana SDK Python package
 - [ ] Phase 1D remaining: transcript windowing, LLM task extraction pipeline, task persistence, memory wiring
 
 ## Lessons Learned

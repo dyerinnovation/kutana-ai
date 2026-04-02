@@ -1,4 +1,4 @@
-# Convene AI — Logo / Icon Prompt Ideas
+# Kutana AI — Logo / Icon Prompt Ideas
 
 Five detailed prompts for NanaBanana (or any AI image generator).
 Each describes a distinct visual direction. All outputs should be **1024×1024 px**, square format, suitable for use as an app icon.

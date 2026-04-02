@@ -1,10 +1,10 @@
 # Feeds
 
-Feeds are bidirectional integrations that connect your Convene meetings to external platforms. Push meeting summaries to Slack, pull context from Notion, or deliver recaps to Discord — all automatically.
+Feeds are bidirectional integrations that connect your Kutana meetings to external platforms. Push meeting summaries to Slack, pull context from Notion, or deliver recaps to Discord — all automatically.
 
 ## How it works
 
-When a meeting ends (or starts), Convene automatically runs your configured Feeds. Each Feed is a short-lived AI agent that reads meeting data and delivers it to your chosen platform — or pulls external context into the meeting before it begins.
+When a meeting ends (or starts), Kutana automatically runs your configured Feeds. Each Feed is a short-lived AI agent that reads meeting data and delivers it to your chosen platform — or pulls external context into the meeting before it begins.
 
 **Outbound (push):** After a meeting ends, a Feed agent reads the summary, tasks, and transcript, then posts a formatted recap to your Slack channel, Discord server, or other destination.
 

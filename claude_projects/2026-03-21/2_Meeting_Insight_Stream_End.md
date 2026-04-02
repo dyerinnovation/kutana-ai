@@ -2,32 +2,32 @@
 
 ## Work Completed
 
-- **Entity schema** (`convene_core/extraction/types.py`): 7 Pydantic v2 entity models
+- **Entity schema** (`kutana_core/extraction/types.py`): 7 Pydantic v2 entity models
   (`TaskEntity`, `DecisionEntity`, `QuestionEntity`, `EntityMentionEntity`, `KeyPointEntity`,
   `BlockerEntity`, `FollowUpEntity`) all inheriting from `ExtractedEntity` base with auto-UUID
   `id`, `entity_type` discriminator, `meeting_id`, `confidence`, `extracted_at`, `batch_id`,
   and `content_key()` method. `AnyExtractedEntity` discriminated union for serialization.
   `TranscriptBatch` and `ExtractionResult` containers also defined.
 
-- **Extractor ABC** (`convene_core/extraction/abc.py`): Abstract `Extractor` with
+- **Extractor ABC** (`kutana_core/extraction/abc.py`): Abstract `Extractor` with
   `extract(batch) -> ExtractionResult`, `name: str` property, `entity_types: list[str]` property.
 
-- **BatchCollector** (`convene_core/extraction/collector.py`): Subscribes to
+- **BatchCollector** (`kutana_core/extraction/collector.py`): Subscribes to
   `meeting.{id}.transcript`, buffers `BatchSegment` objects in a rolling window,
   asyncio background flush loop (1s tick), triggers extractors on window expiry,
   publishes to `meeting.{id}.insights` (full) and `meeting.{id}.insights.{type}` (per-type).
   Final flush on `stop()`.
 
-- **EntityDeduplicator** (`convene_core/extraction/deduplicator.py`): Per-meeting registry,
+- **EntityDeduplicator** (`kutana_core/extraction/deduplicator.py`): Per-meeting registry,
   `process()` / `get_all()` / `clear()` API. `difflib.SequenceMatcher` similarity (0.85
   threshold), min-confidence filter (0.3), merge keeps higher-confidence entity.
 
-- **LLMExtractor** (`convene_providers/extraction/llm_extractor.py`): Implements `Extractor`
+- **LLMExtractor** (`kutana_providers/extraction/llm_extractor.py`): Implements `Extractor`
   ABC using `anthropic.AsyncAnthropic` with `extract_meeting_entities` tool-use schema covering
   all 7 types. Parses response via `model_validate` per entity type. `# type: ignore[call-overload]`
   on the Anthropic `messages.create()` call (same pattern as existing providers).
 
-- **Registry** (`convene_providers/registry.py`): Added `ProviderType.EXTRACTOR = "extractor"`,
+- **Registry** (`kutana_providers/registry.py`): Added `ProviderType.EXTRACTOR = "extractor"`,
   registered `LLMExtractor` as `"llm"` in `_build_default_registry()`.
 
 - **Tests**: 75 tests, all passing. Coverage: entity model validation, discriminated union
@@ -51,13 +51,13 @@
   the `X | Y` pipe syntax for union types; `Annotated[X | Y | Z, Field(discriminator=...)]`
   works correctly with Pydantic v2 and Python 3.12 discriminated unions.
 
-- `Subscription` from `convene_core.messaging.types` should be in `TYPE_CHECKING` block
+- `Subscription` from `kutana_core.messaging.types` should be in `TYPE_CHECKING` block
   (ruff TC001) since `from __future__ import annotations` makes all annotations lazy strings
   — no runtime import needed.
 
 - Anthropic `messages.create()` overloads don't accept `dict[str, Any]` for `tools` —
   use `# type: ignore[call-overload]` on the first line of the call (not on the `tools=` line).
-  CI only runs mypy on `packages/convene-core/` so providers files don't get checked.
+  CI only runs mypy on `packages/kutana-core/` so providers files don't get checked.
 
 - `difflib.SequenceMatcher` is ideal for entity deduplication — no dependencies, works well
   for natural language strings, and the ratio in [0, 1] maps naturally to a threshold.

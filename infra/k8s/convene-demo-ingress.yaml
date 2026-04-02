@@ -1,14 +1,14 @@
-# Convene AI demo ingress — routes convene.spark-b0f2.local to host processes
+# Kutana AI demo ingress — routes kutana.spark-b0f2.local to host processes
 # Services use manual Endpoints pointing to the DGX node IP (172.20.14.68)
-# Apply with: kubectl apply -f convene-demo-ingress.yaml
+# Apply with: kubectl apply -f kutana-demo-ingress.yaml
 
 ---
 # ── Frontend (Vite dev server, port 5173) ────────────────────────────────────
 apiVersion: v1
 kind: Service
 metadata:
-  name: convene-frontend
-  namespace: convene
+  name: kutana-frontend
+  namespace: kutana
 spec:
   ports:
     - port: 5173
@@ -17,8 +17,8 @@ spec:
 apiVersion: v1
 kind: Endpoints
 metadata:
-  name: convene-frontend
-  namespace: convene
+  name: kutana-frontend
+  namespace: kutana
 subsets:
   - addresses:
       - ip: 172.20.14.68
@@ -30,8 +30,8 @@ subsets:
 apiVersion: v1
 kind: Service
 metadata:
-  name: convene-api
-  namespace: convene
+  name: kutana-api
+  namespace: kutana
 spec:
   ports:
     - port: 8000
@@ -40,8 +40,8 @@ spec:
 apiVersion: v1
 kind: Endpoints
 metadata:
-  name: convene-api
-  namespace: convene
+  name: kutana-api
+  namespace: kutana
 subsets:
   - addresses:
       - ip: 172.20.14.68
@@ -53,8 +53,8 @@ subsets:
 apiVersion: v1
 kind: Service
 metadata:
-  name: convene-gateway
-  namespace: convene
+  name: kutana-gateway
+  namespace: kutana
 spec:
   ports:
     - port: 8003
@@ -63,8 +63,8 @@ spec:
 apiVersion: v1
 kind: Endpoints
 metadata:
-  name: convene-gateway
-  namespace: convene
+  name: kutana-gateway
+  namespace: kutana
 subsets:
   - addresses:
       - ip: 172.20.14.68
@@ -76,8 +76,8 @@ subsets:
 apiVersion: v1
 kind: Service
 metadata:
-  name: convene-mcp
-  namespace: convene
+  name: kutana-mcp
+  namespace: kutana
 spec:
   ports:
     - port: 3001
@@ -86,8 +86,8 @@ spec:
 apiVersion: v1
 kind: Endpoints
 metadata:
-  name: convene-mcp
-  namespace: convene
+  name: kutana-mcp
+  namespace: kutana
 subsets:
   - addresses:
       - ip: 172.20.14.68
@@ -99,8 +99,8 @@ subsets:
 apiVersion: v1
 kind: Service
 metadata:
-  name: convene-audio
-  namespace: convene
+  name: kutana-audio
+  namespace: kutana
 spec:
   ports:
     - port: 8001
@@ -109,8 +109,8 @@ spec:
 apiVersion: v1
 kind: Endpoints
 metadata:
-  name: convene-audio
-  namespace: convene
+  name: kutana-audio
+  namespace: kutana
 subsets:
   - addresses:
       - ip: 172.20.14.68
@@ -125,12 +125,12 @@ subsets:
 #   /human/connect  → agent-gateway:8003  (WebSocket, human browsers)
 #   /mcp            → mcp-server:3001     (MCP Streamable HTTP SSE)
 #   /               → vite frontend:5173  (catch-all, last)
-# TLS: self-signed cert in secret convene-tls (regenerate with deploy/gen-tls-cert.sh)
+# TLS: self-signed cert in secret kutana-tls (regenerate with deploy/gen-tls-cert.sh)
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: convene-main
-  namespace: convene
+  name: kutana-main
+  namespace: kutana
   annotations:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
@@ -141,45 +141,45 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - convene.spark-b0f2.local
-      secretName: convene-tls
+        - kutana.spark-b0f2.local
+      secretName: kutana-tls
   rules:
-    - host: convene.spark-b0f2.local
+    - host: kutana.spark-b0f2.local
       http:
         paths:
           - path: /api/
             pathType: Prefix
             backend:
               service:
-                name: convene-api
+                name: kutana-api
                 port:
                   number: 8000
           - path: /agent/
             pathType: Prefix
             backend:
               service:
-                name: convene-gateway
+                name: kutana-gateway
                 port:
                   number: 8003
           - path: /human/
             pathType: Prefix
             backend:
               service:
-                name: convene-gateway
+                name: kutana-gateway
                 port:
                   number: 8003
           - path: /mcp
             pathType: Prefix
             backend:
               service:
-                name: convene-mcp
+                name: kutana-mcp
                 port:
                   number: 3001
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: convene-frontend
+                name: kutana-frontend
                 port:
                   number: 5173
 
@@ -188,8 +188,8 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: convene-audio
-  namespace: convene
+  name: kutana-audio
+  namespace: kutana
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /$2
     nginx.ingress.kubernetes.io/use-regex: "true"
@@ -201,16 +201,16 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - convene.spark-b0f2.local
-      secretName: convene-tls
+        - kutana.spark-b0f2.local
+      secretName: kutana-tls
   rules:
-    - host: convene.spark-b0f2.local
+    - host: kutana.spark-b0f2.local
       http:
         paths:
           - path: /audio(/|$)(.*)
             pathType: ImplementationSpecific
             backend:
               service:
-                name: convene-audio
+                name: kutana-audio
                 port:
                   number: 8001

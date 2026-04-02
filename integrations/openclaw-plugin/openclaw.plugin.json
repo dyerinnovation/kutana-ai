@@ -1,17 +1,17 @@
 {
-  "name": "@convene/openclaw-plugin",
+  "name": "@kutana/openclaw-plugin",
   "version": "0.1.0",
-  "description": "Convene AI meeting tools for OpenClaw agents",
+  "description": "Kutana AI meeting tools for OpenClaw agents",
   "main": "dist/index.js",
   "tools": [
     {
-      "name": "convene_list_meetings",
-      "description": "List available Convene AI meetings",
+      "name": "kutana_list_meetings",
+      "description": "List available Kutana AI meetings",
       "parameters": {}
     },
     {
-      "name": "convene_join_meeting",
-      "description": "Join a Convene AI meeting by ID",
+      "name": "kutana_join_meeting",
+      "description": "Join a Kutana AI meeting by ID",
       "parameters": {
         "meeting_id": {
           "type": "string",
@@ -21,7 +21,7 @@
       }
     },
     {
-      "name": "convene_get_transcript",
+      "name": "kutana_get_transcript",
       "description": "Get recent transcript segments from the current meeting",
       "parameters": {
         "last_n": {
@@ -32,7 +32,7 @@
       }
     },
     {
-      "name": "convene_create_task",
+      "name": "kutana_create_task",
       "description": "Create a task/action item from a meeting",
       "parameters": {
         "meeting_id": {
@@ -53,13 +53,13 @@
       }
     },
     {
-      "name": "convene_get_participants",
+      "name": "kutana_get_participants",
       "description": "List participants in the current meeting",
       "parameters": {}
     },
     {
-      "name": "convene_create_meeting",
-      "description": "Create a new Convene AI meeting",
+      "name": "kutana_create_meeting",
+      "description": "Create a new Kutana AI meeting",
       "parameters": {
         "title": {
           "type": "string",
@@ -69,17 +69,17 @@
       }
     }
   ],
-  "skills": ["skills/convene"],
+  "skills": ["skills/kutana"],
   "config": {
     "apiKey": {
       "type": "string",
-      "description": "Convene API key (cvn_...)",
+      "description": "Kutana API key (cvn_...)",
       "required": true
     },
     "mcpUrl": {
       "type": "string",
-      "description": "Convene MCP server URL",
-      "default": "https://convene.spark-b0f2.local/mcp"
+      "description": "Kutana MCP server URL",
+      "default": "https://kutana.spark-b0f2.local/mcp"
     }
   }
 }

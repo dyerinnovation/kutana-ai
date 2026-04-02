@@ -21,7 +21,7 @@
 │              │  GL.iNet Flint │   │   DGX Spark    │       │
 │              │  2 Router      │   │   (Workhorse)  │       │
 │              │  WireGuard SVR │   │   Claude Code  │       │
-│              │  192.168.8.1   │   │   Convene AI   │       │
+│              │  192.168.8.1   │   │   Kutana AI   │       │
 │              │  DDNS enabled  │   │   Whisper GPU  │       │
 │              └────────────────┘   │   10.0.0.2     │       │
 │                                   └────────────────┘       │
@@ -245,7 +245,7 @@ Wants=network-online.target
 Type=simple
 User=claude
 Group=claude
-WorkingDirectory=/home/claude/projects/convene-ai
+WorkingDirectory=/home/claude/projects/kutana-ai
 EnvironmentFile=/home/claude/.env.claude
 ExecStart=/home/claude/.nvm/versions/node/v22.0.0/bin/claude --channels plugin:discord@claude-plugins-official --dangerously-skip-permissions
 Restart=always
@@ -286,21 +286,21 @@ journalctl -u claude-code -f  # Watch logs
 
 ---
 
-## Phase 4: Convene AI Stack
+## Phase 4: Kutana AI Stack
 
 ### 4.1 Clone and Configure
 ```bash
 sudo -u claude -i
 cd ~/projects
-git clone <your-repo-url> convene-ai
-cd convene-ai
+git clone <your-repo-url> kutana-ai
+cd kutana-ai
 
 # Copy environment file
 cp .env.example .env
 # Edit .env with your actual keys:
 #   DEEPGRAM_API_KEY=your-key
 #   ANTHROPIC_API_KEY=your-key
-#   DATABASE_URL=postgresql+asyncpg://convene:convene@postgres:5432/convene
+#   DATABASE_URL=postgresql+asyncpg://kutana:kutana@postgres:5432/kutana
 #   REDIS_URL=redis://redis:6379
 nano .env
 ```
@@ -367,14 +367,14 @@ curl -X POST http://localhost:8080/v1/audio/transcriptions \
   -F "model=large-v3"
 ```
 
-### 5.3 Configure in Convene AI
+### 5.3 Configure in Kutana AI
 ```bash
 # Add to .env:
-echo 'CONVENE_STT_PROVIDER=whisper-local' >> ~/projects/convene-ai/.env
-echo 'WHISPER_SERVER_URL=http://host.docker.internal:8080' >> ~/projects/convene-ai/.env
+echo 'CONVENE_STT_PROVIDER=whisper-local' >> ~/projects/kutana-ai/.env
+echo 'WHISPER_SERVER_URL=http://host.docker.internal:8080' >> ~/projects/kutana-ai/.env
 
 # Restart audio service to pick up the change
-cd ~/projects/convene-ai
+cd ~/projects/kutana-ai
 docker compose restart audio-service
 ```
 
@@ -392,7 +392,7 @@ sudo ufw default allow outgoing
 sudo ufw allow from 192.168.8.0/24 to any port 22    # LAN
 sudo ufw allow from 10.0.0.0/24 to any port 22       # VPN
 
-# Allow Convene AI ports only from VPN/LAN
+# Allow Kutana AI ports only from VPN/LAN
 sudo ufw allow from 192.168.8.0/24 to any port 8000:8003 proto tcp
 sudo ufw allow from 10.0.0.0/24 to any port 8000:8003 proto tcp
 
@@ -424,7 +424,7 @@ sudo systemctl restart fail2ban
 ### 6.3 API Key Management
 ```bash
 # Ensure .env is readable only by claude user
-chmod 600 /home/claude/projects/convene-ai/.env
+chmod 600 /home/claude/projects/kutana-ai/.env
 chmod 600 /home/claude/.env.claude
 
 # Set spending limits:
@@ -457,7 +457,7 @@ if ! systemctl is-active --quiet claude-code; then
 fi
 
 # Check Docker containers
-cd /home/claude/projects/convene-ai
+cd /home/claude/projects/kutana-ai
 UNHEALTHY=$(docker compose ps --format json 2>/dev/null | jq -r 'select(.Health != "healthy" and .State != "running") | .Service' 2>/dev/null)
 if [ -n "$UNHEALTHY" ]; then
     ERRORS+="❌ Unhealthy containers: $UNHEALTHY\n"
@@ -499,11 +499,11 @@ mkdir -p "$BACKUP_DIR"
 # Backup configs and keys
 tar czf "$BACKUP_DIR/config-$DATE.tar.gz" \
     /home/claude/.env.claude \
-    /home/claude/projects/convene-ai/.env \
-    /home/claude/projects/convene-ai/docker-compose.yml
+    /home/claude/projects/kutana-ai/.env \
+    /home/claude/projects/kutana-ai/docker-compose.yml
 
 # Backup PostgreSQL
-docker exec convene-ai-postgres-1 pg_dump -U convene convene | \
+docker exec kutana-ai-postgres-1 pg_dump -U kutana kutana | \
     gzip > "$BACKUP_DIR/db-$DATE.sql.gz"
 
 # Keep only last 7 days
@@ -521,8 +521,8 @@ chmod +x /home/claude/backup.sh
 # View Claude Code logs
 journalctl -u claude-code -f
 
-# View all Convene AI logs
-cd ~/projects/convene-ai && docker compose logs -f
+# View all Kutana AI logs
+cd ~/projects/kutana-ai && docker compose logs -f
 
 # View specific service
 docker compose logs -f api-server
@@ -540,13 +540,13 @@ docker compose logs -f task-engine
 | SSH to DGX | `ssh claude@192.168.8.100` |
 | Claude Code logs | `journalctl -u claude-code -f` |
 | Restart Claude Code | `sudo systemctl restart claude-code` |
-| Start Convene AI | `cd ~/projects/convene-ai && docker compose up -d` |
-| Stop Convene AI | `cd ~/projects/convene-ai && docker compose down` |
+| Start Kutana AI | `cd ~/projects/kutana-ai && docker compose up -d` |
+| Stop Kutana AI | `cd ~/projects/kutana-ai && docker compose down` |
 | View all containers | `docker compose ps` |
 | View container logs | `docker compose logs -f <service>` |
 | Check GPU | `nvidia-smi` |
 | Check disk | `df -h` |
-| Run pipeline test | `cd ~/projects/convene-ai/examples && python3 test-pipeline.py` |
+| Run pipeline test | `cd ~/projects/kutana-ai/examples && python3 test-pipeline.py` |
 
 ## Troubleshooting
 

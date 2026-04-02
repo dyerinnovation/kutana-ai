@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from convene_core.models.transcript import TranscriptSegment
+from kutana_core.models.transcript import TranscriptSegment
 from task_engine.windower import (
     DEFAULT_OVERLAP_SECONDS,
     DEFAULT_WINDOW_SECONDS,

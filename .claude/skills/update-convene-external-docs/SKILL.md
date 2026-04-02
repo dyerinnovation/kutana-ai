@@ -1,31 +1,31 @@
 ---
-name: update-convene-external-docs
+name: update-kutana-external-docs
 model: claude-sonnet-4-6
 description: >
-  Create and update user-facing external documentation for Convene AI. External
-  docs are for humans and AI agents who USE Convene — not internal implementation
+  Create and update user-facing external documentation for Kutana AI. External
+  docs are for humans and AI agents who USE Kutana — not internal implementation
   docs. TRIGGER on: update external docs, write docs, create docs, feature docs,
   user docs, agent docs, API docs, public docs, documentation for users, external
   documentation, docs site.
 ---
 
-# Update Convene External Docs
+# Update Kutana External Docs
 
 External docs live at `external-docs/` and are the canonical reference for anyone
-using Convene AI — human users, agent developers, and AI agents searching for how
+using Kutana AI — human users, agent developers, and AI agents searching for how
 to use the platform. They must meet Anthropic/Stripe doc quality: no placeholders,
 real working examples, complete API signatures, agent-readable structure.
 
 **Core principle:** External docs are about the **product and its functionality**,
 not the repository, codebase, or technology internals. Write for a user who
-doesn't know or care how Convene is built — only what it does and how to use it.
+doesn't know or care how Kutana is built — only what it does and how to use it.
 
 ## Internal vs External
 
 | Location | Audience | Purpose |
 |---|---|---|
 | `internal-docs/` | Contributors and maintainers | Architecture, internals, database schema, development patterns |
-| `external-docs/` | **Users and agents of Convene** | How to use Convene — features, API, examples |
+| `external-docs/` | **Users and agents of Kutana** | How to use Kutana — features, API, examples |
 
 **Rule:** External docs never reference `internal-docs/`, repo structure, or
 implementation details. Cross-link only to other pages within `external-docs/`.
@@ -43,10 +43,10 @@ external-docs/
 │       ├── mcp-auth.md                ← OAuth 2.1 Bearer token flow
 │       ├── mcp-quickstart.md          ← Connect any MCP-compatible agent
 │       ├── claude-code-channel.md     ← Claude Code as a meeting participant
-│       └── cli.md                     ← Convene CLI reference
+│       └── cli.md                     ← Kutana CLI reference
 ├── openclaw/
 │   ├── plugin-guide.md                ← OpenClaw plugin setup
-│   └── convene-skill.md               ← Convene OpenClaw skill
+│   └── kutana-skill.md               ← Kutana OpenClaw skill
 ├── providers/
 │   ├── README.md                      ← Provider selection guide
 │   ├── llm/                           ← LLM provider docs

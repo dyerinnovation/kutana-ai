@@ -1,10 +1,10 @@
-# Discord Bot Setup for Convene Feeds
+# Discord Bot Setup for Kutana Feeds
 
-This guide walks through creating a Discord bot and deploying its token so the Convene worker can send/receive messages via Discord feeds.
+This guide walks through creating a Discord bot and deploying its token so the Kutana worker can send/receive messages via Discord feeds.
 
 ## Architecture
 
-Convene uses the [official Claude Discord channel plugin](https://github.com/anthropics/claude-plugins-official/tree/main/external_plugins/discord) — an MCP server that communicates over stdio. The worker spawns it as a subprocess for each Discord feed run and passes the bot token via environment variable.
+Kutana uses the [official Claude Discord channel plugin](https://github.com/anthropics/claude-plugins-official/tree/main/external_plugins/discord) — an MCP server that communicates over stdio. The worker spawns it as a subprocess for each Discord feed run and passes the bot token via environment variable.
 
 ```
 Worker pod → ClaudeCodeChannelAdapter → bun plugins/discord/server.ts (stdio MCP) → Discord API
@@ -20,7 +20,7 @@ Worker pod → ClaudeCodeChannelAdapter → bun plugins/discord/server.ts (stdio
 
 1. Go to https://discord.com/developers/applications
 2. Click **New Application**
-3. Name it (e.g., "Convene Bot") and click **Create**
+3. Name it (e.g., "Kutana Bot") and click **Create**
 
 ## Step 2: Create the Bot
 
@@ -69,26 +69,26 @@ TOKEN_B64=$(echo -n 'YOUR_DISCORD_BOT_TOKEN_HERE' | base64)
 
 # Deploy with the token
 ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml \
-  /home/jondyer3/.local/bin/helm upgrade --install convene charts/convene \
-  -n convene --set secrets.discordBotToken='"$TOKEN_B64"''
+  /home/jondyer3/.local/bin/helm upgrade --install kutana charts/kutana \
+  -n kutana --set secrets.discordBotToken='"$TOKEN_B64"''
 ```
 
-Or set it directly in `charts/convene/values.yaml` under `secrets.discordBotToken` (base64-encoded).
+Or set it directly in `charts/kutana/values.yaml` under `secrets.discordBotToken` (base64-encoded).
 
 The worker pod reads `DISCORD_BOT_TOKEN` from the Kubernetes secret and passes it to the Discord plugin subprocess.
 
 ## Step 7: Create a Discord Feed
 
-Use the Convene API to create a feed targeting your Discord channel:
+Use the Kutana API to create a feed targeting your Discord channel:
 
 ```bash
-curl -X POST https://convene.spark-b0f2.local/api/feeds \
+curl -X POST https://kutana.spark-b0f2.local/api/feeds \
   -H "Authorization: Bearer <your-jwt>" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Discord Alerts",
     "platform": "discord",
-    "channel_name": "convene-alerts",
+    "channel_name": "kutana-alerts",
     "direction": "outbound",
     "data_types": ["summary", "tasks"],
     "trigger": "meeting_end"
@@ -98,7 +98,7 @@ curl -X POST https://convene.spark-b0f2.local/api/feeds \
 Store the bot token as a feed secret:
 
 ```bash
-curl -X PUT https://convene.spark-b0f2.local/api/feeds/<feed-id>/secret \
+curl -X PUT https://kutana.spark-b0f2.local/api/feeds/<feed-id>/secret \
   -H "Authorization: Bearer <your-jwt>" \
   -H "Content-Type: application/json" \
   -d '{"token": "YOUR_DISCORD_BOT_TOKEN_HERE"}'
@@ -109,13 +109,13 @@ curl -X PUT https://convene.spark-b0f2.local/api/feeds/<feed-id>/secret \
 1. Check the worker pod is running:
    ```bash
    ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml \
-     kubectl get pods -n convene -l app.kubernetes.io/name=worker'
+     kubectl get pods -n kutana -l app.kubernetes.io/name=worker'
    ```
 
 2. Trigger a test feed run and check worker logs:
    ```bash
    ssh dgx 'echo JDf33nawm3! | sudo -S env KUBECONFIG=/etc/rancher/k3s/k3s.yaml \
-     kubectl logs -n convene deploy/worker --tail=50'
+     kubectl logs -n kutana deploy/worker --tail=50'
    ```
 
 3. Verify the message appears in your Discord channel

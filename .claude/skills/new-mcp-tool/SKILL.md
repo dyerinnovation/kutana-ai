@@ -1,11 +1,11 @@
 ---
 name: new-mcp-tool
-description: Add a new MCP tool to the Convene MCP server. TRIGGER on: new MCP tool, add MCP tool, new tool for agents, expose feature via MCP, new convene tool.
+description: Add a new MCP tool to the Kutana MCP server. TRIGGER on: new MCP tool, add MCP tool, new tool for agents, expose feature via MCP, new kutana tool.
 ---
 
 # New MCP Tool
 
-Checklist for adding a new tool to the Convene MCP server.
+Checklist for adding a new tool to the Kutana MCP server.
 
 ## Checklist
 
@@ -19,7 +19,7 @@ Checklist for adding a new tool to the Convene MCP server.
 - [ ] Update OpenClaw plugin if the tool should be exposed to OpenClaw clients
   - See `integrations/openclaw-plugin/` and `docs/integrations/OPENCLAW.md`
 - [ ] Create or update the relevant skill SKILL.md in `.claude/skills/` if this tool powers a new agent behavior
-- [ ] Test with the Claude Code skill (`/convene-meeting`) and verify the tool appears
+- [ ] Test with the Claude Code skill (`/kutana-meeting`) and verify the tool appears
 
 ## Reference
 

@@ -1,6 +1,6 @@
-# Convene AI Demo Agent
+# Kutana AI Demo Agent
 
-A minimal Claude-powered agent that joins a Convene AI meeting via WebSocket,
+A minimal Claude-powered agent that joins a Kutana AI meeting via WebSocket,
 receives live transcript segments and entity extraction events, and uses Claude
 Sonnet with tool use to respond intelligently.
 
@@ -54,7 +54,7 @@ export CONVENE_API_KEY=$(curl -s -X POST "http://localhost:8000/api/v1/agents/$A
 
 ## What the Agent Does
 
-- Connects to the Convene AI agent gateway via WebSocket
+- Connects to the Kutana AI agent gateway via WebSocket
 - Joins the specified meeting with `listen`, `transcribe`, and `extract_tasks` capabilities
 - Receives live transcript segments and prints them to stdout
 - Receives entity extraction events (tasks, decisions, key points, etc.)

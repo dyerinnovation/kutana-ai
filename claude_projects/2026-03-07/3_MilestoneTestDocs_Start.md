@@ -13,7 +13,7 @@ Create per-feature manual test playbooks in `docs/milestone-testing/` for all 16
 | `01-meeting-lifecycle.md` | Create → Start → Join → End (API + UI) |
 | `02-browser-meeting-room.md` | Mic capture, WebSocket, live transcripts |
 | `03-mcp-auth-flow.md` | API key → MCP JWT → Bearer auth |
-| `04-convene-cli.md` | All CLI commands end-to-end |
+| `04-kutana-cli.md` | All CLI commands end-to-end |
 | `05-api-key-security.md` | Expiry, rate limiting, audit log |
 | `06-openclaw-plugin.md` | Build, install, tool calls |
 | `07-claude-agent-sdk.md` | 4 agent templates against live meeting |
@@ -36,7 +36,7 @@ Create per-feature manual test playbooks in `docs/milestone-testing/` for all 16
 - `services/api-server/src/api_server/rate_limit.py` — Redis-based rate limiting
 - `services/mcp-server/src/mcp_server/main.py` — 11 MCP tools
 - `services/mcp-server/src/mcp_server/auth.py` — JWT validation
-- `services/cli/src/convene_cli/main.py` — Typer CLI commands
+- `services/cli/src/kutana_cli/main.py` — Typer CLI commands
 - `services/agent-gateway/src/agent_gateway/event_relay.py` — Channel routing
 - `scripts/demo_meeting_flow.py` — 13-step E2E demo
 - `web/src/pages/MeetingRoomPage.tsx` — Browser meeting room
