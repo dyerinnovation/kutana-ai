@@ -52,7 +52,7 @@ agentGateway:
   image:
     tag: latest
   ttsProvider: cartesia
-  ttsCartesiaApiKey: "sk_car_kwTxP6F8fUvxM6D4DFXREZ"
+  ttsCartesiaApiKey: ""
   resources:
     requests:
       cpu: 100m
@@ -142,10 +142,13 @@ web:
 # Secrets (base64-encoded values — override at install time)
 # ---------------------------------------------------------------------------
 secrets:
-  jwtSecret: Y2hhbmdlLW1lLWluLXByb2R1Y3Rpb24=
-  deepgramApiKey: "MmU5YmVlYzRhY2EzY2ZlMmVmMDA0Nzc2OTQzY2UzMTExZjg4NjE4Mg=="
+  # All values are base64-encoded. Set via values-secrets.yaml (gitignored) or --set.
+  # Never commit real keys here — these are empty placeholders.
+  jwtSecret: ""
+  deepgramApiKey: ""
   anthropicApiKey: ""
   discordBotToken: ""
+  ttsCartesiaApiKey: ""
 
 # ---------------------------------------------------------------------------
 # Ingress
