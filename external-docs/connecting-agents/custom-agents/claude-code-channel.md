@@ -27,14 +27,15 @@ Claude reads these and can respond using the meeting tools — sending chat mess
 ## Prerequisites
 
 - **Claude Code** (latest version)
-- **Bun** runtime v1.0+ ([bun.sh](https://bun.sh))
+- **Node.js** 20+ (includes `npm` and `npx` — download from [nodejs.org](https://nodejs.org))
+- **Git**
 - A **Kutana API key**
 
 ## Setup
 
 ### 1. Create an agent and get an API key
 
-1. Sign in to your Kutana instance (e.g. `https://kutana.spark-b0f2.local`)
+1. Sign in to your Kutana instance
 2. Navigate to **Agents**
 3. Click **Create New Agent** — give it a name like "Claude Code"
 4. Select the capabilities your agent needs (listen, voice, text chat, etc.)
@@ -43,45 +44,52 @@ Claude reads these and can respond using the meeting tools — sending chat mess
 7. Click **Generate Key** — give it a name (e.g. "my-macbook")
 8. **Copy the key immediately** — it starts with `cvn_` and is only shown once
 
-### 2. Install dependencies
+### 2. Clone the repository and install dependencies
 
 ```bash
-cd /path/to/kutana-ai/services/channel-server
-bun install
+git clone https://github.com/dyerinnovation/kutana-ai.git
+cd kutana-ai/services/channel-server
+npm install
 ```
 
 ### 3. Configure Claude Code
 
-Register the Kutana channel as an MCP server using the Claude Code CLI:
+Register the Kutana channel as an MCP server using the Claude Code CLI. Replace the placeholder values with your actual paths and API key:
 
 ```bash
-claude mcp add-json --scope user kutana '{
+claude mcp add-json --scope user kutana-ai '{
   "type": "stdio",
-  "command": "bun",
-  "args": ["/path/to/kutana-ai/services/channel-server/src/server.ts"],
+  "command": "npx",
+  "args": ["tsx", "/path/to/kutana-ai/services/channel-server/src/server.ts"],
   "env": {
     "CONVENE_API_KEY": "cvn_your_key_here",
-    "CONVENE_API_URL": "wss://kutana.spark-b0f2.local/ws",
-    "CONVENE_HTTP_URL": "https://kutana.spark-b0f2.local",
+    "CONVENE_API_URL": "wss://your-kutana-instance.example.com/ws",
+    "CONVENE_HTTP_URL": "https://your-kutana-instance.example.com",
     "CONVENE_TLS_REJECT_UNAUTHORIZED": "0",
     "CONVENE_AGENT_NAME": "Claude Code"
   }
 }'
 ```
 
-Replace `/path/to/kutana-ai` with the actual path to your repository, and paste your API key.
+| Placeholder | Replace with |
+|-------------|-------------|
+| `/path/to/kutana-ai` | The absolute path where you cloned the repository |
+| `cvn_your_key_here` | The API key you generated in Step 1 |
+| `your-kutana-instance.example.com` | Your Kutana instance hostname |
 
-`--scope user` makes the server available across all your projects. You can verify registration with `claude mcp get kutana`.
+`npx tsx` runs TypeScript directly — no build step required. `tsx` is downloaded automatically by `npx` on first use.
+
+`--scope user` makes the server available across all your Claude Code projects. Verify it with `claude mcp get kutana-ai`.
 
 ### 4. Launch Claude Code with the channel enabled
 
 The Kutana channel is a custom (non-plugin) channel, so during the research preview you need to explicitly enable it at launch:
 
 ```bash
-claude --dangerously-load-development-channels server:kutana
+claude --dangerously-load-development-channels server:kutana-ai
 ```
 
-`server:kutana` references the server you registered with `claude mcp add-json`. This flag activates the push event flow — without it, tools work but real-time events (transcript, chat, insights) are silently dropped.
+`server:kutana-ai` references the server you registered with `claude mcp add-json`. This flag activates the push event flow — without it, tools work but real-time events (transcript, chat, insights) are silently dropped.
 
 > **Note:** Published channel plugins (Discord, Telegram) use `--channels plugin:name@publisher` instead. The `--dangerously-load-development-channels` flag is specific to custom channels during the research preview and may change when channels graduate from preview.
 
@@ -91,7 +99,7 @@ Verify the plugin loaded:
 /mcp
 ```
 
-You should see `kutana` listed with 18 tools available.
+You should see `kutana-ai` listed with tools available.
 
 ## Environment variables
 
@@ -259,7 +267,7 @@ Available entity types: `task`, `decision`, `question`, `entity_mention`, `key_p
 ```
 Claude Code
     │
-    └── stdio MCP ──→ Kutana Channel Plugin (bun)
+    └── stdio MCP ──→ Kutana Channel Plugin (Node.js)
                           │
                           ├── HTTP (fetch) ──→ API Server   (list/create meetings)
                           └── WebSocket    ──→ Agent Gateway (join, events, chat, turn)

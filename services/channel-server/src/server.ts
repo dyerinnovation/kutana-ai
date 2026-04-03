@@ -169,8 +169,11 @@ async function main(): Promise<void> {
 }
 
 // Only run main() when this file is the entry point (not when imported by tests).
+// Bun exposes import.meta.main; Node/tsx needs a URL comparison.
+import { fileURLToPath } from "node:url";
 const isEntryPoint =
-  (import.meta as unknown as { main?: boolean }).main ?? false;
+  (import.meta as unknown as { main?: boolean }).main ??
+  process.argv[1] === fileURLToPath(import.meta.url);
 if (isEntryPoint) {
   main().catch((err: unknown) => {
     process.stderr.write(`[channel-server] Fatal: ${String(err)}\n`);

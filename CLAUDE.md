@@ -30,6 +30,7 @@ See `internal-docs/development/TASKLIST.md` for the task queue.
 @.claude/rules/git-workflow.md
 @.claude/rules/security.md
 @.claude/rules/documentation.md
+@.claude/rules/external-docs.md
 @.claude/rules/dgx-connection.md
 
 ## Key References
