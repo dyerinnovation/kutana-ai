@@ -609,7 +609,7 @@ export function MeetingRoomPage() {
                       {isSpeakingViaTts ? (
                         <span className="text-green-400">Speaking...</span>
                       ) : (
-                        p.role
+                        p.role.charAt(0).toUpperCase() + p.role.slice(1)
                       )}
                     </p>
                     {isAgent && (

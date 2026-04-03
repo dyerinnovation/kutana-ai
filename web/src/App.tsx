@@ -12,6 +12,7 @@ import { MeetingRoomPage } from "@/pages/MeetingRoomPage";
 import { AgentTemplatePage } from "@/pages/AgentTemplatePage";
 import { DocsPage } from "@/pages/DocsPage";
 import { FeedsPage } from "@/pages/FeedsPage";
+import { CalendarPage } from "@/pages/CalendarPage";
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/agents/:id" element={<AgentDetailPage />} />
         <Route path="/meetings" element={<MeetingsPage />} />
         <Route path="/meetings/:id/room" element={<MeetingRoomPage />} />
+        <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/feeds" element={<FeedsPage />} />
         <Route path="/templates" element={<AgentTemplatePage />} />
         <Route path="/docs" element={<DocsPage />} />
