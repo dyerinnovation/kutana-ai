@@ -104,6 +104,9 @@ class AudioBridge:
         )
         self._pipelines[meeting_id] = pipeline
 
+        # Eagerly connect to STT provider to avoid cold start latency
+        await pipeline.start()
+
         # Start background task to consume transcript segments
         task = asyncio.create_task(self._consume_segments(meeting_id, pipeline))
         self._segment_tasks[meeting_id] = task

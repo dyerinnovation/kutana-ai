@@ -52,7 +52,7 @@ agentGateway:
   image:
     tag: latest
   ttsProvider: cartesia
-  ttsCartesiaApiKey: ""
+  ttsCartesiaApiKey: "sk_car_kwTxP6F8fUvxM6D4DFXREZ"
   resources:
     requests:
       cpu: 100m

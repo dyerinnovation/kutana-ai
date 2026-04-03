@@ -68,6 +68,14 @@ class AudioPipeline:
         self._speaker_name = speaker_name
         self._audio_buffer: bytearray = bytearray()
 
+    async def start(self) -> None:
+        """Eagerly start the STT stream.
+
+        Call at pipeline creation to avoid cold start latency
+        on the first audio chunk.  Safe to call multiple times.
+        """
+        await self._ensure_started()
+
     async def _ensure_started(self) -> None:
         """Start the STT stream if it hasn't been started yet.
 
