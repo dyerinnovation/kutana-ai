@@ -224,7 +224,9 @@ class HumanSessionHandler:
             return
 
         if self._audio_bridge is not None:
-            await self._audio_bridge.process_audio(self.meeting_id, audio_bytes)
+            await self._audio_bridge.process_audio(
+                self.meeting_id, audio_bytes, speaker_name=self.agent_name
+            )
 
         logger.info(
             "Received %d bytes of audio from human %s",

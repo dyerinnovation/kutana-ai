@@ -64,6 +64,9 @@ class AudioBridge:
         self._transcription_interval_s = transcription_interval_s
         self._pipelines: dict[UUID, AudioPipeline] = {}
         self._segment_tasks: dict[UUID, asyncio.Task[None]] = {}
+        # Tracks the most recent speaker name per meeting so transcript
+        # segments are attributed to whoever last sent audio.
+        self._current_speaker: dict[UUID, str] = {}
         logger.info(
             "AudioBridge initialized (stt_provider=%s, whisper_api_url=%s)",
             stt_provider,
@@ -88,11 +91,24 @@ class AudioBridge:
     ) -> None:
         """Create an STT pipeline for a meeting if one doesn't exist.
 
+        Also updates the current speaker name for the meeting so that
+        transcript segments are attributed to the correct participant,
+        even when multiple participants share the same pipeline.
+
         Args:
             meeting_id: The meeting to create a pipeline for.
             speaker_name: Display name of the speaker for this pipeline.
         """
+        # Always update the current speaker when a participant joins,
+        # even if the pipeline already exists.
+        if speaker_name:
+            self._current_speaker[meeting_id] = speaker_name
+
         if meeting_id in self._pipelines:
+            # Update the pipeline's speaker_name so new segments
+            # are attributed to the latest joiner.
+            if speaker_name:
+                self._pipelines[meeting_id].set_speaker_name(speaker_name)
             return
 
         stt_provider = _create_stt_provider(self._stt_settings, meeting_id)
@@ -104,21 +120,27 @@ class AudioBridge:
         )
         self._pipelines[meeting_id] = pipeline
 
-        # Eagerly connect to STT provider to avoid cold start latency
-        await pipeline.start()
-
         # Start background task to consume transcript segments
         task = asyncio.create_task(self._consume_segments(meeting_id, pipeline))
         self._segment_tasks[meeting_id] = task
 
         logger.info("Created audio pipeline for meeting %s", meeting_id)
 
-    async def process_audio(self, meeting_id: UUID, audio_bytes: bytes) -> None:
+    async def process_audio(
+        self,
+        meeting_id: UUID,
+        audio_bytes: bytes,
+        speaker_name: str | None = None,
+    ) -> None:
         """Forward PCM16 audio to the meeting's pipeline.
+
+        Updates the pipeline's speaker attribution when a new speaker
+        sends audio, so transcript segments reflect the correct name.
 
         Args:
             meeting_id: The meeting the audio belongs to.
             audio_bytes: Raw PCM16 16kHz mono audio bytes.
+            speaker_name: Display name of the speaker sending this audio.
         """
         pipeline = self._pipelines.get(meeting_id)
         if pipeline is None:
@@ -127,6 +149,14 @@ class AudioBridge:
                 meeting_id,
             )
             return
+
+        # Update speaker attribution when a different speaker sends audio
+        if speaker_name:
+            current = self._current_speaker.get(meeting_id)
+            if current != speaker_name:
+                self._current_speaker[meeting_id] = speaker_name
+                pipeline.set_speaker_name(speaker_name)
+
         await pipeline.process_audio(audio_bytes)
 
     async def close_pipeline(self, meeting_id: UUID) -> None:
@@ -141,6 +171,9 @@ class AudioBridge:
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await task
+
+        # Clean up speaker tracking
+        self._current_speaker.pop(meeting_id, None)
 
         # Close the pipeline
         pipeline = self._pipelines.pop(meeting_id, None)

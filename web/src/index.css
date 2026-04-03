@@ -215,6 +215,48 @@ html[data-theme="light"] {
   background-clip: text;
 }
 
+/* ─── Active Speaker Ring ─────────────────────────────────────────────────── */
+
+@keyframes speaker-ring {
+  0%, 100% { box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);  opacity: 1;   }
+  50%      { box-shadow: 0 0 16px rgba(16, 185, 129, 0.7); opacity: 0.7; }
+}
+
+/* ─── Voice Agent Orb ──────────────────────────────────────────────────────── */
+
+/* Idle: slow breathing pulse (3 s cycle) */
+@keyframes orb-breathe {
+  0%, 100% { transform: scale(1);   opacity: 1;   }
+  50%      { transform: scale(1.06); opacity: 0.85; }
+}
+
+/* Speaking: faster pulse with bigger scale (1 s cycle) */
+@keyframes orb-speak {
+  0%, 100% { transform: scale(1);    opacity: 1;   }
+  50%      { transform: scale(1.12); opacity: 0.9;  }
+}
+
+.animate-orb-breathe {
+  animation: orb-breathe 3s ease-in-out infinite;
+}
+
+.animate-orb-speak {
+  animation: orb-speak 1s ease-in-out infinite;
+}
+
+/* Glow box-shadows */
+.shadow-orb-idle {
+  box-shadow:
+    0 0 16px 4px rgba(139, 92, 246, 0.25),
+    0 0 32px 8px rgba(139, 92, 246, 0.10);
+}
+
+.shadow-orb-speak {
+  box-shadow:
+    0 0 20px 6px rgba(139, 92, 246, 0.45),
+    0 0 48px 12px rgba(139, 92, 246, 0.18);
+}
+
 /* Code / monospace block */
 .code-block {
   background: var(--color-gray-950);

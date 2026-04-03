@@ -37,9 +37,12 @@ export interface Meeting {
   title: string;
   platform: string;
   scheduled_at: string;
-  status: string;
+  started_at: string | null;
+  ended_at: string | null;
+  status: "scheduled" | "active" | "completed" | "failed";
   created_at: string;
-  owner_id: string;
+  updated_at: string;
+  owner_id?: string;
 }
 
 export interface PaginatedResponse<T> {

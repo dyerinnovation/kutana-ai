@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { getMeetingToken } from "@/api/meetings";
 import { Button } from "@/components/ui/Button";
+import { VoiceAgentOrb } from "@/components/VoiceAgentOrb";
 import type {
   TranscriptSegment,
   Participant,
@@ -47,6 +48,12 @@ function getAvatarSize(count: number): string {
   return "h-20 w-20 text-2xl";
 }
 
+function getOrbSize(count: number): "sm" | "md" | "lg" {
+  if (count <= 2) return "lg";
+  if (count <= 4) return "md";
+  return "sm";
+}
+
 function isAgentParticipant(p: Participant): boolean {
   return p.role === "agent" || p.role.toLowerCase().includes("agent");
 }
@@ -76,17 +83,47 @@ export function MeetingRoomPage() {
   const playbackContextRef = useRef<AudioContext | null>(null);
   const workletRef = useRef<AudioWorkletNode | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
+  const transcriptScrollRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll transcript panel
+  // Transcript auto-scroll state
+  const [transcriptAtBottom, setTranscriptAtBottom] = useState(true);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+
+  // Track transcript scroll position
+  const handleTranscriptScroll = useCallback(() => {
+    const el = transcriptScrollRef.current;
+    if (!el) return;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+    setTranscriptAtBottom(atBottom);
+    setShowScrollToBottom(!atBottom);
+  }, []);
+
+  // Auto-scroll transcript panel only when user is at the bottom
   useEffect(() => {
+    if (transcriptAtBottom) {
+      transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [transcripts, transcriptAtBottom]);
+
+  function scrollTranscriptToBottom() {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [transcripts]);
+    setTranscriptAtBottom(true);
+    setShowScrollToBottom(false);
+  }
 
   // Auto-scroll chat panel
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
+
+  // Auto-focus chat input when entering the meeting room
+  useEffect(() => {
+    if (status === "connected") {
+      chatInputRef.current?.focus();
+    }
+  }, [status]);
 
   // Clear "your turn" alert after 5 seconds
   useEffect(() => {
@@ -477,14 +514,21 @@ export function MeetingRoomPage() {
     <div className="flex h-[calc(100vh-8rem)] flex-col">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-800 pb-4 mb-3">
-        <div>
-          <h1 className="text-xl font-bold text-gray-50">Meeting Room</h1>
-          <p className="text-xs text-gray-500 font-mono mt-0.5">
-            {meetingId}
-          </p>
+        <div className="flex items-center gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold text-gray-50">Meeting Room</h1>
+              <span className="text-sm text-gray-400">
+                {totalCount} participant{totalCount !== 1 ? "s" : ""}
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 font-mono mt-0.5">
+              {meetingId}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <StatusBadge status={status} />
+        <div className="flex items-center gap-3">
+          <ConnectionIndicator status={status} />
         </div>
       </div>
 
@@ -573,41 +617,48 @@ export function MeetingRoomPage() {
               return (
                 <div
                   key={p.id}
-                  className={`relative flex flex-col items-center justify-center ${getTileHeight(totalCount)} w-full rounded-xl border p-4 transition-colors ${
+                  className={`relative flex flex-col items-center justify-center ${getTileHeight(totalCount)} w-full rounded-xl border-2 p-4 transition-all duration-300 ${
                     isActive || isSpeakingViaTts
-                      ? "border-emerald-500/60 bg-emerald-950/30"
+                      ? isAgent
+                        ? "border-violet-400 bg-violet-950/30 shadow-[0_0_15px_rgba(139,92,246,0.3),0_0_30px_rgba(139,92,246,0.1)] ring-1 ring-violet-400/30"
+                        : "border-emerald-400 bg-emerald-950/30 shadow-[0_0_15px_rgba(16,185,129,0.3),0_0_30px_rgba(16,185,129,0.1)] ring-1 ring-emerald-400/30"
                       : isAgent
                         ? "border-violet-700/40 bg-gray-900/50"
                         : "border-gray-800 bg-gray-900/50"
                   }`}
                 >
                   <div className="relative mb-3">
-                    {p.avatar_url ? (
+                    {isAgent ? (
+                      <VoiceAgentOrb
+                        isSpeaking={isActive || isSpeakingViaTts || !!p.is_speaking}
+                        size={getOrbSize(totalCount)}
+                      />
+                    ) : p.avatar_url ? (
                       <img
                         src={p.avatar_url}
                         alt={p.name}
                         className={`${getAvatarSize(totalCount)} rounded-full object-cover`}
                       />
                     ) : (
-                      <div className={`${getAvatarSize(totalCount)} rounded-full flex items-center justify-center font-semibold ${
-                        isAgent
-                          ? "bg-violet-700 text-violet-100"
-                          : "bg-gray-700 text-gray-300"
-                      }`}>
-                        {isAgent ? <BotIcon /> : p.name.charAt(0).toUpperCase()}
+                      <div className={`${getAvatarSize(totalCount)} rounded-full flex items-center justify-center font-semibold bg-gray-700 text-gray-300`}>
+                        {p.name.charAt(0).toUpperCase()}
                       </div>
                     )}
-                    {(isActive || isSpeakingViaTts || p.is_speaking) && (
-                      <div className={`absolute inset-0 ${getAvatarSize(totalCount)} rounded-full border-2 border-green-400 animate-pulse`} />
+                    {!isAgent && (isActive || isSpeakingViaTts || p.is_speaking) && (
+                      <div className={`absolute inset-0 ${getAvatarSize(totalCount)} rounded-full border-2 border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-[speaker-ring_1.5s_ease-in-out_infinite]`} />
                     )}
                   </div>
-                  <p className="text-lg font-medium text-gray-200 truncate max-w-full">
+                  <p className={`text-lg font-medium truncate max-w-full transition-colors ${
+                    isActive || isSpeakingViaTts
+                      ? isAgent ? "text-violet-300" : "text-emerald-300"
+                      : "text-gray-200"
+                  }`}>
                     {p.name}
                   </p>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <p className="text-sm text-gray-400">
                       {isSpeakingViaTts ? (
-                        <span className="text-green-400">Speaking...</span>
+                        <span className={isAgent ? "text-violet-400" : "text-green-400"}>Speaking...</span>
                       ) : (
                         p.role.charAt(0).toUpperCase() + p.role.slice(1)
                       )}
@@ -663,32 +714,47 @@ export function MeetingRoomPage() {
 
           {/* Transcript panel */}
           {rightTab === "transcript" && (
-            <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
-              {transcripts.length === 0 && status === "connected" && (
-                <p className="text-xs text-gray-500 text-center py-6">
-                  Waiting for speech...
-                </p>
-              )}
-              {transcripts.length === 0 && status === "connecting" && (
-                <p className="text-xs text-gray-500 text-center py-6">
-                  Connecting to meeting...
-                </p>
-              )}
-              {transcripts.map((seg, i) => (
-                <div
-                  key={`${seg.speaker_id}-${seg.start_time}-${i}`}
-                  className={`text-xs leading-snug ${seg.is_final ? "text-gray-300" : "text-gray-500 italic"}`}
+            <div className="relative flex-1 flex flex-col min-h-0">
+              <div
+                ref={transcriptScrollRef}
+                onScroll={handleTranscriptScroll}
+                className="flex-1 overflow-y-auto px-3 py-2 space-y-1"
+              >
+                {transcripts.length === 0 && status === "connected" && (
+                  <p className="text-xs text-gray-500 text-center py-6">
+                    Waiting for speech...
+                  </p>
+                )}
+                {transcripts.length === 0 && status === "connecting" && (
+                  <p className="text-xs text-gray-500 text-center py-6">
+                    Connecting to meeting...
+                  </p>
+                )}
+                {transcripts.map((seg, i) => (
+                  <div
+                    key={`${seg.speaker_id}-${seg.start_time}-${i}`}
+                    className={`text-xs leading-snug ${seg.is_final ? "text-gray-300" : "text-gray-500 italic"}`}
+                  >
+                    <span className="font-medium text-blue-400">
+                      {seg.speaker_name ?? seg.speaker_id}
+                    </span>
+                    <span className="text-gray-600 mx-1 text-[10px]">
+                      {formatTimestamp(seg.start_time)}
+                    </span>
+                    <span>{seg.text}</span>
+                  </div>
+                ))}
+                <div ref={transcriptEndRef} />
+              </div>
+              {showScrollToBottom && (
+                <button
+                  onClick={scrollTranscriptToBottom}
+                  className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full bg-gray-800 border border-gray-600 px-3 py-1 text-[11px] font-medium text-gray-300 shadow-lg hover:bg-gray-700 hover:text-gray-100 transition-colors"
                 >
-                  <span className="font-medium text-blue-400">
-                    {seg.speaker_name ?? seg.speaker_id}
-                  </span>
-                  <span className="text-gray-600 mx-1 text-[10px]">
-                    {formatTimestamp(seg.start_time)}
-                  </span>
-                  <span>{seg.text}</span>
-                </div>
-              ))}
-              <div ref={transcriptEndRef} />
+                  <ArrowDownIcon />
+                  Scroll to bottom
+                </button>
+              )}
             </div>
           )}
 
@@ -737,7 +803,8 @@ export function MeetingRoomPage() {
             className="flex gap-2 p-3 border-t border-gray-700"
           >
             <input
-              className="flex-1 rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-50 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              ref={chatInputRef}
+              className="flex-1 rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-50 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               placeholder="Type a message..."
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
@@ -779,25 +846,26 @@ export function MeetingRoomPage() {
   );
 }
 
-function StatusBadge({ status }: { status: ConnectionStatus }) {
-  const styles: Record<ConnectionStatus, string> = {
-    connecting:
-      "bg-yellow-600/20 text-yellow-400 border border-yellow-500/30",
-    connected: "bg-green-600/20 text-green-400 border border-green-500/30",
-    disconnected:
-      "bg-gray-600/20 text-gray-400 border border-gray-500/30",
-    error: "bg-red-600/20 text-red-400 border border-red-500/30",
+function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
+  const dotColor: Record<ConnectionStatus, string> = {
+    connecting: "bg-amber-400 animate-pulse",
+    connected: "bg-green-400",
+    disconnected: "bg-red-500",
+    error: "bg-red-500",
   };
 
   return (
-    <span
-      className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${styles[status]}`}
-    >
-      {status === "connecting" && "Connecting..."}
-      {status === "connected" && "Connected"}
-      {status === "disconnected" && "Disconnected"}
-      {status === "error" && "Error"}
-    </span>
+    <div className="flex items-center gap-2">
+      <span className={`h-2.5 w-2.5 rounded-full ${dotColor[status]}`} />
+      {(status === "disconnected" || status === "error") && (
+        <span className="text-xs text-red-400 font-medium">
+          {status === "disconnected" ? "Disconnected" : "Error"}
+        </span>
+      )}
+      {status === "connecting" && (
+        <span className="text-xs text-amber-400 font-medium">Connecting...</span>
+      )}
+    </div>
   );
 }
 
@@ -905,6 +973,25 @@ function ChatIcon() {
   );
 }
 
+/** Arrow down icon for scroll-to-bottom button */
+function ArrowDownIcon() {
+  return (
+    <svg
+      className="h-3 w-3"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={2}
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3"
+      />
+    </svg>
+  );
+}
+
 /** Leave/exit door icon */
 function LeaveIcon() {
   return (
@@ -943,21 +1030,3 @@ function HandIcon({ className }: { className?: string }) {
   );
 }
 
-/** Sparkle/bot icon for AI agent avatars */
-function BotIcon() {
-  return (
-    <svg
-      className="h-10 w-10 text-violet-200"
-      fill="none"
-      viewBox="0 0 24 24"
-      strokeWidth={1.5}
-      stroke="currentColor"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"
-      />
-    </svg>
-  );
-}

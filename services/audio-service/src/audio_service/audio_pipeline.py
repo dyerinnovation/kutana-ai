@@ -68,14 +68,6 @@ class AudioPipeline:
         self._speaker_name = speaker_name
         self._audio_buffer: bytearray = bytearray()
 
-    async def start(self) -> None:
-        """Eagerly start the STT stream.
-
-        Call at pipeline creation to avoid cold start latency
-        on the first audio chunk.  Safe to call multiple times.
-        """
-        await self._ensure_started()
-
     async def _ensure_started(self) -> None:
         """Start the STT stream if it hasn't been started yet.
 
@@ -187,6 +179,17 @@ class AudioPipeline:
                     )
                 except Exception:
                     logger.exception("Failed to publish TranscriptSegmentFinal event")
+
+    def set_speaker_name(self, name: str) -> None:
+        """Update the speaker name used for transcript segment attribution.
+
+        Called by AudioBridge when a different participant sends audio,
+        ensuring segments are labelled with the correct speaker.
+
+        Args:
+            name: The display name of the current speaker.
+        """
+        self._speaker_name = name
 
     def reset_provider(self, new_stt: STTProvider) -> None:
         """Swap the STT provider and reset stream state.
