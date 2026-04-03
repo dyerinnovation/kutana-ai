@@ -6,13 +6,13 @@ export async function listMeetings(): Promise<PaginatedResponse<Meeting>> {
 }
 
 export async function createMeeting(data: {
-  platform: string;
   title: string;
   scheduled_at: string;
+  platform?: string;
 }): Promise<Meeting> {
   return apiFetch<Meeting>("/meetings", {
     method: "POST",
-    body: JSON.stringify(data),
+    body: JSON.stringify({ platform: "kutana", ...data }),
   });
 }
 

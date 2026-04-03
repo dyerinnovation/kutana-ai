@@ -1,5 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import "@/styles/datepicker-overrides.css";
 import type { Meeting } from "@/types";
 import { listMeetings, createMeeting, startMeeting, endMeeting } from "@/api/meetings";
 import { Button } from "@/components/ui/Button";
@@ -21,9 +24,9 @@ export function MeetingsPage() {
   // Create meeting state
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState("");
-  const [platform, setPlatform] = useState("kutana");
-  const [scheduledAt, setScheduledAt] = useState("");
+  const [scheduledAt, setScheduledAt] = useState<Date | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [startingId, setStartingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadMeetings();
@@ -50,14 +53,13 @@ export function MeetingsPage() {
     try {
       await createMeeting({
         title,
-        platform,
-        scheduled_at: new Date(scheduledAt).toISOString(),
+        platform: "kutana",
+        scheduled_at: scheduledAt!.toISOString(),
       });
+      await loadMeetings();
       setShowCreate(false);
       setTitle("");
-      setPlatform("kutana");
-      setScheduledAt("");
-      await loadMeetings();
+      setScheduledAt(null);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to create meeting"
@@ -69,6 +71,7 @@ export function MeetingsPage() {
 
   async function handleStart(meetingId: string) {
     setError(null);
+    setStartingId(meetingId);
     try {
       await startMeeting(meetingId);
       await loadMeetings();
@@ -76,6 +79,8 @@ export function MeetingsPage() {
       setError(
         err instanceof Error ? err.message : "Failed to start meeting"
       );
+    } finally {
+      setStartingId(null);
     }
   }
 
@@ -141,9 +146,6 @@ export function MeetingsPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <CardTitle>{meeting.title}</CardTitle>
-                    <p className="text-xs text-gray-500 font-mono mt-1">
-                      {meeting.id}
-                    </p>
                   </div>
                   <span
                     className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${
@@ -154,17 +156,13 @@ export function MeetingsPage() {
                           : "bg-gray-600/20 text-gray-400 border border-gray-500/30"
                     }`}
                   >
-                    {meeting.status}
+                    {meeting.status.charAt(0).toUpperCase() + meeting.status.slice(1)}
                   </span>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div className="flex gap-6 text-sm text-gray-400">
-                    <div>
-                      <span className="text-gray-500">Platform: </span>
-                      {meeting.platform}
-                    </div>
                     <div>
                       <span className="text-gray-500">Scheduled: </span>
                       {formatDateTime(meeting.scheduled_at)}
@@ -175,8 +173,9 @@ export function MeetingsPage() {
                       <Button
                         size="sm"
                         onClick={() => handleStart(meeting.id)}
+                        disabled={startingId === meeting.id}
                       >
-                        Start
+                        {startingId === meeting.id ? "Starting..." : "Start"}
                       </Button>
                     )}
                     {meeting.status === "active" && (
@@ -219,27 +218,23 @@ export function MeetingsPage() {
               required
             />
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-gray-300">
-                Platform
+              <label className="block text-xs font-medium uppercase tracking-widest text-gray-400">
+                When<span className="text-red-400 ml-0.5">*</span>
               </label>
-              <select
-                className="flex h-10 w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-50 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                value={platform}
-                onChange={(e) => setPlatform(e.target.value)}
-              >
-                <option value="kutana">Kutana</option>
-                <option value="zoom">Zoom</option>
-                <option value="teams">Teams</option>
-                <option value="meet">Google Meet</option>
-              </select>
+              <DatePicker
+                selected={scheduledAt}
+                onChange={(date: Date | null) => setScheduledAt(date)}
+                showTimeSelect
+                timeFormat="HH:mm"
+                timeIntervals={15}
+                dateFormat="MMMM d, yyyy h:mm aa"
+                minDate={new Date()}
+                placeholderText="Pick a date and time"
+                className="flex h-9 w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-50 placeholder:text-gray-500 transition-colors duration-150 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+                calendarClassName="kutana-calendar"
+                required
+              />
             </div>
-            <Input
-              label="Scheduled At"
-              type="datetime-local"
-              value={scheduledAt}
-              onChange={(e) => setScheduledAt(e.target.value)}
-              required
-            />
           </div>
           <DialogFooter>
             <Button
