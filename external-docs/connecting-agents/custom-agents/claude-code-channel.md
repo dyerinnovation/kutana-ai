@@ -81,6 +81,8 @@ claude mcp add-json --scope user kutana-ai '{
 
 `--scope user` makes the server available across all your Claude Code projects. Verify it with `claude mcp get kutana-ai`.
 
+> **Important:** You must use the `claude mcp add-json` CLI command shown above. Manually editing Claude Code's JSON config files will not work — the server won't be detected. Always use the CLI to register MCP servers.
+
 ### 4. Launch Claude Code with the channel enabled
 
 The Kutana channel is a custom (non-plugin) channel, so during the research preview you need to explicitly enable it at launch:
