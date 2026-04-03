@@ -207,7 +207,7 @@ export class KutanaClient {
         "X-API-Key": this.config.kutanaApiKey,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ title, platform: "kutana" }),
+      body: JSON.stringify({ title, platform: "kutana", scheduled_at: new Date().toISOString() }),
       ...(this.config.tlsRejectUnauthorized
         ? {}
         : { tls: { rejectUnauthorized: false } }),
