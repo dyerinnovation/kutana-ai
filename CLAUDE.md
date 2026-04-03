@@ -53,7 +53,7 @@ ssh dgx 'cd ~/kutana-ai && uv run pytest services/api-server/tests/'
 ssh dgx 'cd ~/kutana-ai && bash scripts/build_and_push.sh all'
 
 # Deploy (kubectl/helm run locally, configured to target DGX K3s cluster)
-helm upgrade --install kutana charts/kutana -n kutana --create-namespace
+helm upgrade --install kutana charts/kutana -f charts/kutana/values-secrets.yaml -n kutana --create-namespace
 
 # Pod status
 kubectl get pods -n kutana
