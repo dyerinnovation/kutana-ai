@@ -128,9 +128,7 @@ async def list_meetings(
     Returns:
         MeetingListResponse with meeting data.
     """
-    result = await db.execute(
-        select(MeetingORM).order_by(MeetingORM.scheduled_at.desc())
-    )
+    result = await db.execute(select(MeetingORM).order_by(MeetingORM.scheduled_at.desc()))
     meetings = result.scalars().all()
 
     count_result = await db.execute(select(func.count()).select_from(MeetingORM))
@@ -189,9 +187,7 @@ async def get_meeting(
     Raises:
         HTTPException: 404 if meeting not found.
     """
-    result = await db.execute(
-        select(MeetingORM).where(MeetingORM.id == meeting_id)
-    )
+    result = await db.execute(select(MeetingORM).where(MeetingORM.id == meeting_id))
     meeting = result.scalar_one_or_none()
     if meeting is None:
         raise HTTPException(
@@ -222,9 +218,7 @@ async def update_meeting(
     Raises:
         HTTPException: 404 if meeting not found.
     """
-    result = await db.execute(
-        select(MeetingORM).where(MeetingORM.id == meeting_id)
-    )
+    result = await db.execute(select(MeetingORM).where(MeetingORM.id == meeting_id))
     meeting = result.scalar_one_or_none()
     if meeting is None:
         raise HTTPException(
@@ -260,15 +254,16 @@ async def start_meeting(
     Raises:
         HTTPException: 404 if not found, 409 if not in scheduled status.
     """
-    result = await db.execute(
-        select(MeetingORM).where(MeetingORM.id == meeting_id)
-    )
+    result = await db.execute(select(MeetingORM).where(MeetingORM.id == meeting_id))
     meeting = result.scalar_one_or_none()
     if meeting is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Meeting not found",
         )
+
+    if meeting.status == MeetingStatus.ACTIVE.value:
+        return _to_response(meeting)
 
     if meeting.status != MeetingStatus.SCHEDULED.value:
         raise HTTPException(
@@ -302,9 +297,7 @@ async def end_meeting(
     Raises:
         HTTPException: 404 if not found, 409 if not in active status.
     """
-    result = await db.execute(
-        select(MeetingORM).where(MeetingORM.id == meeting_id)
-    )
+    result = await db.execute(select(MeetingORM).where(MeetingORM.id == meeting_id))
     meeting = result.scalar_one_or_none()
     if meeting is None:
         raise HTTPException(

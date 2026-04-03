@@ -139,8 +139,11 @@ class ChatBridge:
             meeting_id: The meeting to broadcast to.
             payload: Serialisable message payload from the pub/sub notification.
         """
+        sender_session_id = payload.get("sender_session_id")
         sessions = self.manager.get_meeting_sessions(meeting_id)
         for session in sessions:
+            if sender_session_id and str(session.session_id) == sender_session_id:
+                continue
             try:
                 await session.send_event("chat.message.received", payload)
             except Exception:
