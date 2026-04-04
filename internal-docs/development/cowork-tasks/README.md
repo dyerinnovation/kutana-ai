@@ -21,10 +21,12 @@ The detailed logic lives here in the repo, not in the CoWork UI. This gives you:
 
 | Task | File | Schedule | Model | Purpose |
 |---|---|---|---|---|
-| Daily Build Sprint | `cowork-task-descriptions/daily-build.md` | Weekdays 7:00 AM | Sonnet | Implements one roadmap item |
-| Daily Review Brief | `cowork-task-descriptions/daily-review.md` | Weekdays 8:30 AM | Haiku | Summarizes build results |
-| Weekly Architecture Review | `cowork-task-descriptions/weekly-architecture-review.md` | Fridays 4:00 PM | Opus | Deep codebase analysis |
-| April Release E2E | `cowork-task-descriptions/april-release-e2e.md` | Manual (Apr 5-11) | Sonnet | Run M_APRIL multi-party scenarios |
+| Morning Status Sync | `cowork-task-descriptions/morning-status.md` | Weekdays 7:00 AM | Haiku | Git activity, tasklist state, infra health → Obsidian vault |
+| Infrastructure Health Check | `cowork-task-descriptions/infra-health-check.md` | Every 6 hours | Haiku | DGX/K3s health monitoring, silent when healthy |
+| Weekly Architecture Review | `cowork-task-descriptions/weekly-architecture-review.md` | Fridays 4:00 PM | Opus | Deep codebase analysis → Obsidian vault |
+| Daily Build Sprint (retired) | `cowork-task-descriptions/daily-build.md` | — | — | Implements one roadmap item |
+| Daily Review Brief (retired) | `cowork-task-descriptions/daily-review.md` | — | — | Summarizes build results |
+| April Release E2E (retired) | `cowork-task-descriptions/april-release-e2e.md` | — | — | Run M_APRIL multi-party scenarios |
 
 ## Coordination files
 
@@ -32,11 +34,16 @@ These files enable sync between you and the scheduled tasks:
 
 | File | Purpose | Who writes |
 |---|---|---|
-| `docs/TASKLIST.md` | Ordered task queue | You (CoWork checks items off) |
-| `docs/PROGRESS.md` | Append-only development log | CoWork daily build |
-| `docs/HANDOFF.md` | Shift change notes | Both you and CoWork |
-| `cowork-task-output/DAILY_BRIEF.md` | Morning summary for review | CoWork daily review |
+| `internal-docs/development/TASKLIST.md` | Ordered task queue | You (CoWork checks items off) |
+| `internal-docs/development/PROGRESS.md` | Append-only development log | CoWork daily build |
+| `internal-docs/development/HANDOFF.md` | Shift change notes | Both you and CoWork |
+| `cowork-task-output/DAILY_BRIEF.md` | Morning status fallback (vault not mounted) | CoWork morning status |
+| `cowork-task-output/HEALTH_CHECK.md` | Infra health fallback (vault not mounted) | CoWork health check |
 | `cowork-task-output/WEEKLY_REVIEW.md` | Architecture assessment | CoWork weekly review |
+| Obsidian: `Kutana AI/Status/current-sprint.md` | Live sprint status | CoWork morning status |
+| Obsidian: `Kutana AI/Reports/daily/{date}.md` | Daily status archive | CoWork morning status |
+| Obsidian: `Kutana AI/Infrastructure/health-check.md` | Infra health record | CoWork health check |
+| Obsidian: `Kutana AI/Reports/weekly/{date}.md` | Weekly review archive | CoWork weekly review |
 
 ## Modifying task behavior
 
