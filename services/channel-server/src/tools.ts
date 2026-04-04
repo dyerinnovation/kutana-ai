@@ -829,6 +829,13 @@ function handleGetMeetingRecap(client: KutanaClient) {
     .filter((e): e is FollowUpEntity => e.entity_type === "follow_up")
     .map((e) => ({ id: e.id, description: e.description, owner: e.owner }));
 
+  if (allEntities.length === 0) {
+    return ok(
+      "No entities extracted yet. The meeting recap will populate after " +
+      "the entity extraction agent processes enough transcript (typically 3 minutes).",
+    );
+  }
+
   const recap = {
     summary: {
       total_entities: allEntities.length,
@@ -863,6 +870,12 @@ function handleGetEntityHistory(
       : 50;
 
   const entities = client.getEntities(entityType as EntityType, limit);
+  if (entities.length === 0) {
+    return ok(
+      `No ${entityType} entities extracted yet. Entity extraction runs in 3-minute windows — ` +
+      `results appear after enough transcript has accumulated.`,
+    );
+  }
   return ok(JSON.stringify(entities, null, 2));
 }
 

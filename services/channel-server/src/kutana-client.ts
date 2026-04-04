@@ -472,7 +472,17 @@ export class KutanaClient {
     const msgType = msg["type"] as string | undefined;
 
     if (msgType === "transcript" && this.shouldForwardTranscript()) {
-      const segment = msg as unknown as TranscriptSegment;
+      const segment: TranscriptSegment = {
+        type: "transcript",
+        meeting_id: String(msg["meeting_id"] ?? ""),
+        segment_id: String(msg["speaker_id"] ?? `${msg["start_time"]}-${msg["end_time"]}`),
+        speaker: (msg["speaker_name"] as string | null) ?? (msg["speaker"] as string | null) ?? null,
+        text: String(msg["text"] ?? ""),
+        start_time: Number(msg["start_time"] ?? 0),
+        end_time: Number(msg["end_time"] ?? 0),
+        confidence: Number(msg["confidence"] ?? 1),
+        is_final: (msg["is_final"] as boolean) ?? true,
+      };
       this.transcriptBuffer.push(segment);
       this.emit({
         topic: "transcript",

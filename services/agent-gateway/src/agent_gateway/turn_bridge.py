@@ -82,6 +82,18 @@ class TurnBridge:
         logger.info("TurnBridge stopped")
 
     # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    def _resolve_participant_name(self, meeting_id: UUID, participant_id: UUID) -> str | None:
+        """Look up a participant's display name from the connection manager."""
+        sessions = self.manager.get_meeting_sessions(meeting_id)
+        for session in sessions:
+            if session.session_id == participant_id:
+                return session.agent_name
+        return None
+
+    # ------------------------------------------------------------------
     # Action handlers — called from session dispatch
     # ------------------------------------------------------------------
 
@@ -246,10 +258,16 @@ class TurnBridge:
         return {
             "meeting_id": str(meeting_id),
             "active_speaker_id": str(status.active_speaker_id) if status.active_speaker_id else None,
+            "active_speaker_name": (
+                self._resolve_participant_name(meeting_id, status.active_speaker_id)
+                if status.active_speaker_id
+                else None
+            ),
             "queue": [
                 {
                     "position": entry.position,
                     "participant_id": str(entry.participant_id),
+                    "name": self._resolve_participant_name(meeting_id, entry.participant_id),
                     "hand_raise_id": str(entry.hand_raise_id),
                     "priority": entry.priority,
                     "topic": entry.topic,
@@ -307,6 +325,12 @@ class TurnBridge:
                 "meeting_id": str(meeting_id),
                 "previous_speaker_id": str(previous_speaker_id) if previous_speaker_id else None,
                 "new_speaker_id": str(new_speaker_id) if new_speaker_id else None,
+                "speaker_id": str(new_speaker_id) if new_speaker_id else None,
+                "speaker_name": (
+                    self._resolve_participant_name(meeting_id, new_speaker_id)
+                    if new_speaker_id
+                    else None
+                ),
             },
         )
 

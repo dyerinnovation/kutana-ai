@@ -130,6 +130,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     _connection_manager.chat_bridge = _chat_bridge
     _chat_bridge.start()
 
+    # Initialise InsightBridge (relay task-engine extractions to WS sessions)
+    from agent_gateway.insight_bridge import InsightBridge
+
+    _insight_bridge = InsightBridge(
+        manager=_connection_manager,
+        redis_url=_settings.redis_url,
+    )
+    _insight_bridge.start()
+
     # Initialise TTSBridge (provider selection based on config)
     from agent_gateway.tts_bridge import TTSBridge
 
@@ -168,6 +177,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if _chat_bridge is not None:
         await _chat_bridge.stop()
         _chat_bridge = None
+    if _insight_bridge is not None:
+        await _insight_bridge.stop()
     if _turn_bridge is not None:
         await _turn_bridge.stop()
         _turn_bridge = None

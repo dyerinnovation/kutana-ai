@@ -82,6 +82,10 @@ export function MeetingRoomPage() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const playbackContextRef = useRef<AudioContext | null>(null);
   const workletRef = useRef<AudioWorkletNode | null>(null);
+  // TTS queue refs (declared early so cleanup can reference them)
+  const ttsQueueRef = useRef<TtsAudioPayload[]>([]);
+  const ttsPlayingRef = useRef(false);
+  const currentTtsSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -148,6 +152,13 @@ export function MeetingRoomPage() {
       audioContextRef.current.close();
       audioContextRef.current = null;
     }
+    // Stop any queued/playing TTS before closing the context
+    ttsQueueRef.current = [];
+    if (currentTtsSourceRef.current) {
+      try { currentTtsSourceRef.current.stop(); } catch { /* already stopped */ }
+      currentTtsSourceRef.current = null;
+    }
+    ttsPlayingRef.current = false;
     if (playbackContextRef.current) {
       playbackContextRef.current.close();
       playbackContextRef.current = null;
@@ -158,62 +169,78 @@ export function MeetingRoomPage() {
     }
   }, []);
 
-  const playTtsAudio = useCallback(async (payload: TtsAudioPayload) => {
-    const { speaker_name, data, format } = payload;
-
-    // Decode base64 → ArrayBuffer
+  // TTS audio queue — plays messages sequentially instead of overlapping
+  const decodeTtsPayload = useCallback(async (payload: TtsAudioPayload, ctx: AudioContext): Promise<AudioBuffer> => {
+    const { data, format } = payload;
     const binary = atob(data);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     const audioBuffer = bytes.buffer;
 
-    // Lazy-create a playback AudioContext (separate from the capture context)
-    if (!playbackContextRef.current) {
-      playbackContextRef.current = new AudioContext();
-    }
-    const ctx = playbackContextRef.current;
-
-    // Resume context if suspended (browser autoplay policy)
-    if (ctx.state === "suspended") {
-      await ctx.resume();
-    }
-
-    let decoded: AudioBuffer;
     if (format === "pcm_s16le") {
-      // Raw signed 16-bit little-endian PCM — convert manually
       const pcm16 = new Int16Array(audioBuffer);
       const float32 = new Float32Array(pcm16.length);
       for (let i = 0; i < pcm16.length; i++) {
         float32[i] = pcm16[i] / (pcm16[i] < 0 ? 0x8000 : 0x7fff);
       }
-      // Use source sample rate from payload, or 24000 (Cartesia default)
       const sourceSampleRate = payload.sample_rate || 24000;
-      decoded = ctx.createBuffer(1, float32.length, sourceSampleRate);
+      const decoded = ctx.createBuffer(1, float32.length, sourceSampleRate);
       decoded.copyToChannel(float32, 0);
-    } else {
-      // WAV / MP3 / any other container — let the browser decode it
-      try {
-        decoded = await ctx.decodeAudioData(audioBuffer);
-      } catch (err) {
-        console.error("[TTS] decodeAudioData failed:", err);
-        return;
-      }
+      return decoded;
+    }
+    return ctx.decodeAudioData(audioBuffer);
+  }, []);
+
+  const playNextTts = useCallback(async () => {
+    const next = ttsQueueRef.current.shift();
+    if (!next) {
+      ttsPlayingRef.current = false;
+      return;
     }
 
-    // Mark speaker as active, play, then clear
-    setSpeakingNames((prev) => new Set([...prev, speaker_name]));
+    ttsPlayingRef.current = true;
+
+    if (!playbackContextRef.current) {
+      playbackContextRef.current = new AudioContext();
+    }
+    const ctx = playbackContextRef.current;
+    if (ctx.state === "suspended") await ctx.resume();
+
+    let decoded: AudioBuffer;
+    try {
+      decoded = await decodeTtsPayload(next, ctx);
+    } catch (err) {
+      console.error("[TTS] decode failed:", err);
+      void playNextTts();
+      return;
+    }
+
+    setSpeakingNames((prev) => new Set([...prev, next.speaker_name]));
     const source = ctx.createBufferSource();
     source.buffer = decoded;
     source.connect(ctx.destination);
+    currentTtsSourceRef.current = source;
     source.onended = () => {
+      currentTtsSourceRef.current = null;
       setSpeakingNames((prev) => {
-        const next = new Set(prev);
-        next.delete(speaker_name);
-        return next;
+        const s = new Set(prev);
+        s.delete(next.speaker_name);
+        return s;
       });
+      void playNextTts();
     };
     source.start();
-  }, []);
+  }, [decodeTtsPayload]);
+
+  const enqueueTtsAudio = useCallback((payload: TtsAudioPayload) => {
+    ttsQueueRef.current.push(payload);
+    if (!ttsPlayingRef.current) {
+      void playNextTts();
+    }
+  }, [playNextTts]);
+
+  // stopAllTts will be added in Phase 6 (interruption handling) using
+  // ttsQueueRef, currentTtsSourceRef, and ttsPlayingRef.
 
   const handleWsMessage = useCallback((event: MessageEvent) => {
     let msg: GatewayMessage;
@@ -269,7 +296,7 @@ export function MeetingRoomPage() {
         break;
       case "event":
         if (msg.event_type === "tts.audio") {
-          void playTtsAudio(msg.payload as unknown as TtsAudioPayload);
+          enqueueTtsAudio(msg.payload as unknown as TtsAudioPayload);
         } else if (msg.event_type === "chat.message.received") {
           const p = msg.payload as Record<string, unknown>;
           const cm: ChatMessage = {
@@ -285,21 +312,23 @@ export function MeetingRoomPage() {
             setChatMessages((prev) => [...prev, cm]);
             if (cm.is_agent) setRightTab("chat");
           }
+        } else if (msg.event_type === "turn.speaker.changed") {
+          const p = msg.payload as Record<string, unknown>;
+          if (p.new_speaker_id) {
+            setActiveSpeaker({
+              id: p.new_speaker_id as string,
+              name: (p.speaker_name as string) ?? "Unknown",
+            });
+          } else {
+            setActiveSpeaker(null);
+          }
+        } else if (msg.event_type === "turn.queue.updated") {
+          const p = msg.payload as Record<string, unknown>;
+          setTurnQueue((p.queue as TurnQueueEntry[]) ?? []);
+        } else if (msg.event_type === "turn.your_turn") {
+          setYourTurnAlert(true);
+          setHandRaised(false);
         }
-        break;
-      case "turn.speaker.changed":
-        if (msg.speaker_id && msg.speaker_name) {
-          setActiveSpeaker({ id: msg.speaker_id, name: msg.speaker_name });
-        } else {
-          setActiveSpeaker(null);
-        }
-        break;
-      case "turn.queue.updated":
-        setTurnQueue(msg.queue);
-        break;
-      case "turn.your_turn":
-        setYourTurnAlert(true);
-        setHandRaised(false);
         break;
       case "chat": {
         const cm: ChatMessage = {
@@ -318,7 +347,7 @@ export function MeetingRoomPage() {
         break;
       }
     }
-  }, [playTtsAudio]);
+  }, [enqueueTtsAudio]);
 
   // Connect on mount
   useEffect(() => {
