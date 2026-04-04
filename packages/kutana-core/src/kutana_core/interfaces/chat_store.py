@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from datetime import datetime
-from uuid import UUID
+from typing import TYPE_CHECKING
 
 from kutana_core.models.chat import ChatMessage, ChatMessageType
+
+if TYPE_CHECKING:
+    from datetime import datetime
+    from uuid import UUID
 
 
 class ChatStore(ABC):

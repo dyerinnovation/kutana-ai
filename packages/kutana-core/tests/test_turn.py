@@ -84,7 +84,7 @@ class TestQueueEntry:
 
     def test_position_required(self) -> None:
         """QueueEntry requires a position."""
-        with pytest.raises(Exception):
+        with pytest.raises(TypeError):
             QueueEntry(participant_id=PARTICIPANT_A)  # type: ignore[call-arg]
 
 

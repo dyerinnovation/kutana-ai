@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
 
-from kutana_core.models.turn import HandRaisePriority, RaiseHandResult, SpeakingStatus
+from kutana_core.models.turn import RaiseHandResult, SpeakingStatus
 from kutana_providers.turn_management.redis_turn_manager import (
-    RedisTurnManager,
     _PRIORITY_OFFSET,
+    RedisTurnManager,
 )
 
 MEETING_ID = uuid4()

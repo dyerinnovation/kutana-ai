@@ -8,13 +8,15 @@ when the configurable timeout expires.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
 
 if TYPE_CHECKING:
-    from kutana_core.interfaces.turn_manager import TurnManager
+    from uuid import UUID
+
     from agent_gateway.connection_manager import ConnectionManager
+    from kutana_core.interfaces.turn_manager import TurnManager
 
 logger = logging.getLogger(__name__)
 
@@ -73,10 +75,8 @@ class TurnBridge:
         """Stop the background monitor and close the TurnManager."""
         if self._monitor_task and not self._monitor_task.done():
             self._monitor_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._monitor_task
-            except asyncio.CancelledError:
-                pass
         if hasattr(self.turn_manager, "close"):
             await self.turn_manager.close()  # type: ignore[attr-defined]
         logger.info("TurnBridge stopped")

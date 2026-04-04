@@ -11,14 +11,14 @@ from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
-from kutana_core.models.transcript import TranscriptSegment
-
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
+    from uuid import UUID
+
+    from kutana_core.models.transcript import TranscriptSegment
 
 logger = logging.getLogger(__name__)
 

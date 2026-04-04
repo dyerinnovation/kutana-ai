@@ -22,8 +22,8 @@ const CATEGORIES = [
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
-  productivity: "bg-blue-600/20 text-blue-400 border border-blue-500/30",
-  engineering: "bg-cyan-600/20 text-cyan-400 border border-cyan-500/30",
+  productivity: "bg-blue-600/20 text-blue-500 border border-blue-500/30",
+  engineering: "bg-blue-600/20 text-blue-500 border border-blue-500/30",
   general: "bg-gray-600/20 text-gray-400 border border-gray-500/30",
 };
 

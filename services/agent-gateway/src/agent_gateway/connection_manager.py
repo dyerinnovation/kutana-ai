@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
-from uuid import UUID
 
 if TYPE_CHECKING:
-    from agent_gateway.agent_session import AgentSessionHandler
+    from uuid import UUID
+
     from agent_gateway.audio_router import AudioRouter
     from agent_gateway.chat_bridge import ChatBridge
-    from agent_gateway.human_session import HumanSessionHandler
     from agent_gateway.tts_bridge import TTSBridge
     from agent_gateway.turn_bridge import TurnBridge
 

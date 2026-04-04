@@ -7,14 +7,12 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-
 from agent_gateway.tts_bridge import (
     CharBudgetTracker,
     PhraseCache,
     TTSBridge,
     VoicePool,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

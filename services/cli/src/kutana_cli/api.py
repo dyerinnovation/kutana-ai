@@ -40,20 +40,19 @@ class KutanaClient:
         json_body: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         url = f"{self.base_url}/api/v1{path}"
-        async with aiohttp.ClientSession() as session:
-            async with session.request(
-                method,
-                url,
-                json=json_body,
-                headers=self._headers(),
-            ) as resp:
-                if resp.status >= 400:
-                    body = await resp.json()
-                    detail = body.get("detail", str(body))
-                    raise ApiError(resp.status, detail)
-                if resp.status == 204:
-                    return {}
-                return await resp.json()  # type: ignore[no-any-return]
+        async with aiohttp.ClientSession() as session, session.request(
+            method,
+            url,
+            json=json_body,
+            headers=self._headers(),
+        ) as resp:
+            if resp.status >= 400:
+                body = await resp.json()
+                detail = body.get("detail", str(body))
+                raise ApiError(resp.status, detail)
+            if resp.status == 204:
+                return {}
+            return await resp.json()  # type: ignore[no-any-return]
 
     # -- Auth ---------------------------------------------------------------
 

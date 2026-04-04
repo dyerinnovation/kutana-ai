@@ -28,8 +28,9 @@ from task_engine.windower import DEFAULT_OVERLAP_SECONDS, DEFAULT_WINDOW_SECONDS
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from kutana_core.models.transcript import TranscriptSegment
     from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+
+    from kutana_core.models.transcript import TranscriptSegment
     from task_engine.windower import SegmentWindow
 
 logger = logging.getLogger(__name__)

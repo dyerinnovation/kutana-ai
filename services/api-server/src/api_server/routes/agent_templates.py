@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -233,8 +234,8 @@ async def deactivate_session(
             detail="Session not found",
         )
 
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     session.status = "stopped"
-    session.ended_at = datetime.now(timezone.utc)
+    session.ended_at = datetime.now(UTC)
     await db.flush()

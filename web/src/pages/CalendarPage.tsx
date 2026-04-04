@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import type { Meeting } from "@/types";
 import { listMeetings } from "@/api/meetings";
 import { Button } from "@/components/ui/Button";
@@ -152,11 +153,19 @@ export function CalendarPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-50">Calendar</h1>
-        <p className="mt-1 text-sm text-gray-400">
-          View scheduled meetings by date
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-50">Calendar</h1>
+          <p className="mt-1 text-sm text-gray-400">
+            View scheduled meetings by date
+          </p>
+        </div>
+        <Link to="/meetings">
+          <Button variant="outline">
+            <CalendarPlusIcon />
+            New Meeting
+          </Button>
+        </Link>
       </div>
 
       {error && (
@@ -176,9 +185,21 @@ export function CalendarPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <Button variant="outline" size="sm" onClick={goToPrevMonth}>
-                  <ChevronLeftIcon />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={goToPrevMonth}>
+                    <ChevronLeftIcon />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setYear(today.getFullYear());
+                      setMonth(today.getMonth());
+                    }}
+                  >
+                    Today
+                  </Button>
+                </div>
                 <CardTitle>{formatMonthYear(year, month)}</CardTitle>
                 <Button variant="outline" size="sm" onClick={goToNextMonth}>
                   <ChevronRightIcon />
@@ -211,14 +232,14 @@ export function CalendarPage() {
                       onClick={() => setSelectedDay(cell.key)}
                       className={`relative flex min-h-[3.5rem] flex-col items-center justify-start bg-gray-950 px-1 pt-2 text-sm transition-colors hover:bg-gray-800 ${
                         isSelected
-                          ? "bg-emerald-600 text-white hover:bg-emerald-500"
+                          ? "bg-emerald-600 !text-white hover:bg-emerald-500"
                           : isToday
                             ? "ring-1 ring-inset ring-emerald-500"
                             : ""
                       } ${
                         cell.isCurrentMonth
                           ? isSelected
-                            ? "text-white"
+                            ? "text-gray-50"
                             : "text-gray-50"
                           : "text-gray-600"
                       }`}
@@ -226,7 +247,7 @@ export function CalendarPage() {
                       <span
                         className={`${
                           isSelected
-                            ? "flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white"
+                            ? "flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 !text-white"
                             : isToday
                               ? "flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400"
                               : ""
@@ -287,7 +308,7 @@ export function CalendarPage() {
                                 : "border-gray-500/30 bg-gray-600/20 text-gray-400"
                           }`}
                         >
-                          {meeting.status}
+                          {meeting.status.charAt(0).toUpperCase() + meeting.status.slice(1)}
                         </span>
                       </div>
                     </CardHeader>
@@ -303,6 +324,14 @@ export function CalendarPage() {
 }
 
 /* ── Icons ──────────────────────────────────────────────────────── */
+
+function CalendarPlusIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z" />
+    </svg>
+  );
+}
 
 function ChevronLeftIcon() {
   return (

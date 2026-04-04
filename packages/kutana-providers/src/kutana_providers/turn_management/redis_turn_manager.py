@@ -260,7 +260,7 @@ class RedisTurnManager(TurnManager):
         Returns:
             RaiseHandResult with position and hand_raise_id.
         """
-        r = await self._get_redis()
+        await self._get_redis()
         hand_raise_id = uuid4()
         score = self._priority_score(priority)
         member = f"{participant_id}:{hand_raise_id}"

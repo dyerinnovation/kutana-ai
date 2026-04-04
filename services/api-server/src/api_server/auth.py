@@ -5,11 +5,13 @@ from __future__ import annotations
 import hashlib
 import secrets
 import time
-from typing import Any
-from uuid import UUID
+from typing import TYPE_CHECKING, Any
 
 import bcrypt
 import jwt
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 # ---------------------------------------------------------------------------
 # Password hashing (bcrypt)

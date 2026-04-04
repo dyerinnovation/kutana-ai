@@ -34,7 +34,10 @@ from __future__ import annotations
 import json
 import logging
 import time
-from uuid import UUID
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 _audit_logger = logging.getLogger("kutana.audit")
 

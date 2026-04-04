@@ -9,14 +9,14 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from redis.asyncio import Redis  # noqa: TC002 — runtime dep for FastAPI DI
+from redis.asyncio import Redis
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002 — runtime dep for FastAPI DI
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from api_server.auth_deps import CurrentUser  # noqa: TC001 — runtime dep for FastAPI DI
+from api_server.auth_deps import CurrentUser
 from api_server.deps import get_db_session, get_event_publisher, get_redis
 from api_server.encryption import encrypt_value
-from api_server.event_publisher import EventPublisher  # noqa: TC001 — runtime dep for FastAPI DI
+from api_server.event_publisher import EventPublisher
 from kutana_core.database.models import FeedORM, FeedRunORM, FeedSecretORM
 from kutana_core.events.definitions import FeedCreated, FeedDeleted, FeedUpdated
 from kutana_core.models.feed import FeedCreate, FeedRead, FeedRunRead, FeedUpdate

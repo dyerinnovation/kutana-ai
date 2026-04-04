@@ -9,15 +9,18 @@ or the session is deactivated.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
+from datetime import UTC
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
 
 import anthropic
 import httpx
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 logger = logging.getLogger(__name__)
@@ -384,18 +387,17 @@ class ManagedAgentRunner:
         for session_id, task in list(self._active_agents.items()):
             if not task.done():
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
             logger.info("Cancelled managed agent session %s", session_id)
         self._active_agents.clear()
         logger.info("ManagedAgentRunner stopped")
 
     async def _poll_and_spawn(self) -> None:
         """Check for pending sessions and spawn agent tasks."""
-        from kutana_core.database.models import HostedAgentSessionORM, AgentTemplateORM, MeetingORM
         from sqlalchemy import select
+
+        from kutana_core.database.models import AgentTemplateORM, HostedAgentSessionORM, MeetingORM
 
         async with self._session_factory() as db:
             # Find sessions that are "active" but not yet running
@@ -503,10 +505,11 @@ class ManagedAgentRunner:
             session_id: The session to update.
             status: New status string.
         """
-        from datetime import datetime, timezone
+        from datetime import datetime
+
+        from sqlalchemy import select
 
         from kutana_core.database.models import HostedAgentSessionORM
-        from sqlalchemy import select
 
         try:
             async with self._session_factory() as db:
@@ -518,7 +521,7 @@ class ManagedAgentRunner:
                 if session:
                     session.status = status
                     if status in ("completed", "stopped", "failed"):
-                        session.ended_at = datetime.now(tz=timezone.utc)
+                        session.ended_at = datetime.now(tz=UTC)
                     await db.commit()
         except Exception:
             logger.warning("Failed to update session %s status to %s", session_id, status)

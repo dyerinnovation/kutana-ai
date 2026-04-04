@@ -77,7 +77,7 @@ def validate_meeting_id(meeting_id: str) -> UUID:
         raise ValueError(
             f"Invalid meeting_id: expected a UUID (e.g. 'xxxxxxxx-xxxx-…'), "
             f"got {meeting_id!r:.50}"
-        )
+        ) from None
 
 
 def sanitize_content(content: str) -> str:

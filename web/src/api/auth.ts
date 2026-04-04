@@ -25,3 +25,14 @@ export async function login(data: {
 export async function getMe(): Promise<User> {
   return apiFetch<User>("/auth/me");
 }
+
+export async function updateProfile(data: {
+  name?: string;
+  current_password?: string;
+  new_password?: string;
+}): Promise<User> {
+  return apiFetch<User>("/auth/me", {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}

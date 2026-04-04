@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
@@ -68,17 +68,21 @@ export function Layout() {
 
           {/* User row */}
           <div className="flex items-center gap-3 rounded-lg px-2 py-2">
-            {/* Avatar with brand gradient */}
-            <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-gradient-brand text-[11px] font-semibold text-white">
+            {/* Avatar with brand gradient — links to profile */}
+            <Link
+              to="/profile"
+              className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-gradient-brand text-[11px] font-semibold text-white transition-opacity hover:opacity-80"
+              title="Edit profile"
+            >
               {user?.name?.charAt(0).toUpperCase() ?? "?"}
-            </div>
+            </Link>
 
-            <div className="flex-1 min-w-0">
-              <p className="truncate text-xs font-medium text-gray-200">
+            <Link to="/profile" className="flex-1 min-w-0 group">
+              <p className="truncate text-xs font-medium text-gray-200 group-hover:text-gray-50">
                 {user?.name}
               </p>
               <p className="truncate text-[11px] text-gray-500">{user?.email}</p>
-            </div>
+            </Link>
 
             {/* Sign out — icon button */}
             <button

@@ -10,9 +10,8 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
-import pytest
-
 import mcp_server.main as main_module
+import pytest
 from mcp_server.auth import MCPIdentity
 from mcp_server.main import (
     kutana_cancel_hand_raise,
@@ -451,7 +450,7 @@ async def test_start_speaking_not_active_speaker() -> None:
 @pytest.mark.asyncio
 async def test_start_speaking_started_at_is_iso_string() -> None:
     """kutana_start_speaking started_at is a valid ISO 8601 string."""
-    from datetime import datetime, UTC
+    from datetime import UTC, datetime
 
     tm = _make_turn_manager()
     expected_dt = datetime(2026, 3, 23, 15, 30, 0, tzinfo=UTC)

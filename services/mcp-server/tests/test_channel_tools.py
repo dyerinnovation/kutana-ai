@@ -7,9 +7,6 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-import pytest
-
-
 # ---------------------------------------------------------------------------
 # GatewayClient tests
 # ---------------------------------------------------------------------------
@@ -203,10 +200,9 @@ class TestGatewayClientSourceInJoin:
         mock_ws.send = mock_send
         mock_ws.recv = AsyncMock(side_effect=mock_recv)
 
-        with patch("websockets.connect", new=AsyncMock(return_value=mock_ws)):
-            with patch.object(asyncio, "create_task"):
-                client = GatewayClient("ws://localhost:8003", "test-token")
-                await client.connect_and_join(str(uuid4()))
+        with patch("websockets.connect", new=AsyncMock(return_value=mock_ws)), patch.object(asyncio, "create_task"):
+            client = GatewayClient("ws://localhost:8003", "test-token")
+            await client.connect_and_join(str(uuid4()))
 
         assert len(sent_messages) == 1
         join_msg = json.loads(sent_messages[0])

@@ -8,6 +8,7 @@ to WebSocket-connected participants as ``data.channel.insights.*`` events.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from typing import TYPE_CHECKING, Any
@@ -67,10 +68,8 @@ class InsightBridge:
         """Stop the pub/sub subscriber."""
         if self._pubsub_task and not self._pubsub_task.done():
             self._pubsub_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._pubsub_task
-            except asyncio.CancelledError:
-                pass
         logger.info("InsightBridge stopped")
 
     async def _pubsub_loop(self) -> None:

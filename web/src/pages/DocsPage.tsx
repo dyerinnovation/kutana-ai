@@ -8,20 +8,20 @@ import { docsTree, docPages, firstPageId, type DocNode } from "@/docs/manifest";
 
 const markdownComponents = {
   h1: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-    <h1 className="text-2xl font-bold text-white mb-4" {...props}>
+    <h1 className="text-2xl font-bold text-gray-50 mb-4" {...props}>
       {children}
     </h1>
   ),
   h2: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
     <h2
-      className="text-base font-semibold text-white border-b border-gray-800 pb-2 mt-8 mb-3"
+      className="text-base font-semibold text-gray-50 border-b border-gray-800 pb-2 mt-8 mb-3"
       {...props}
     >
       {children}
     </h2>
   ),
   h3: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-    <h3 className="text-sm font-semibold text-white mt-6 mb-2" {...props}>
+    <h3 className="text-sm font-semibold text-gray-50 mt-6 mb-2" {...props}>
       {children}
     </h3>
   ),
@@ -179,8 +179,8 @@ function NavItem({
           "w-full text-left rounded-lg px-3 py-1.5 text-sm transition-colors",
           depth > 0 && "ml-3",
           active === node.id
-            ? "bg-gray-800 text-white font-medium"
-            : "text-gray-400 hover:bg-gray-900 hover:text-white"
+            ? "bg-gray-800 text-gray-50 font-medium"
+            : "text-gray-400 hover:bg-gray-900 hover:text-gray-50"
         )}
       >
         {node.title}

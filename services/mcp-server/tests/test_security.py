@@ -7,11 +7,10 @@ These tests are pure unit tests — no Redis, no HTTP, no external services.
 from __future__ import annotations
 
 import json
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
-
 from mcp_server.auth import MCPIdentity
 from mcp_server.security.rate_limit import NoOpRateLimiter, RedisRateLimiter
 from mcp_server.security.sanitization import (
@@ -392,7 +391,7 @@ class TestRedisRateLimiterUnit:
         mock_redis.pipeline.side_effect = ConnectionError("Redis down")
         limiter._redis = mock_redis
 
-        allowed, retry = await limiter.check(uuid4(), "send_chat_message")
+        allowed, _retry = await limiter.check(uuid4(), "send_chat_message")
         assert allowed is True
 
     @pytest.mark.asyncio
@@ -436,7 +435,6 @@ class TestRedisRateLimiterUnit:
         agent_a = uuid4()
         agent_b = uuid4()
 
-        call_counts: dict[str, int] = {}
 
         mock_redis = AsyncMock()
         mock_pipe = AsyncMock()

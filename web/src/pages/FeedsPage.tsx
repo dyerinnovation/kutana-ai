@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import type { Feed, FeedCreate, Meeting } from "@/types";
 import { listFeeds, createFeed, updateFeed, toggleFeed, triggerFeed } from "@/api/feeds";
 import { listMeetings } from "@/api/meetings";
@@ -274,7 +275,10 @@ export function FeedsPage() {
             Feeds
           </h1>
           <p className="mt-0.5 text-sm text-gray-400">
-            Connect meetings to external platforms — push summaries, pull context.
+            Connect meetings to external platforms — push summaries, pull context.{" "}
+            <Link to="/docs" className="text-blue-400 hover:text-blue-300 underline underline-offset-2">
+              Learn more
+            </Link>
           </p>
         </div>
 

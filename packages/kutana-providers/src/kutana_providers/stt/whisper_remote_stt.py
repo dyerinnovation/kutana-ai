@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import math
 import re
@@ -244,7 +243,7 @@ class WhisperRemoteSTT(STTProvider):
                         response.status,
                         elapsed,
                     )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.error(
                     "Whisper POST timed out after %.1fs (url=%s)",
                     self._request_timeout_s,

@@ -8,7 +8,7 @@ tasks are created or updated via the REST API.  All external dependencies
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -215,9 +215,9 @@ class TestSafePublish:
 
     async def test_publish_error_is_swallowed(self) -> None:
         """_safe_publish does not re-raise exceptions from the publisher."""
+        from api_server.routes.tasks import _safe_publish
         from kutana_core.events.definitions import TaskCreated
         from kutana_core.models.task import Task, TaskPriority, TaskStatus
-        from api_server.routes.tasks import _safe_publish
 
         mock_redis = AsyncMock()
         mock_redis.xadd = AsyncMock(side_effect=RuntimeError("Redis is down"))
@@ -239,9 +239,9 @@ class TestSafePublish:
 
     async def test_publish_success_calls_publisher(self) -> None:
         """_safe_publish delegates to the publisher when no error occurs."""
+        from api_server.routes.tasks import _safe_publish
         from kutana_core.events.definitions import TaskCreated
         from kutana_core.models.task import Task, TaskPriority, TaskStatus
-        from api_server.routes.tasks import _safe_publish
 
         publisher, mock_redis = _make_redis_publisher()
 

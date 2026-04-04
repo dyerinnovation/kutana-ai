@@ -10,15 +10,19 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
-import pytest
-
 import mcp_server.main as main_module
+import pytest
 from mcp_server.auth import MCPIdentity
 from mcp_server.main import (
     kutana_get_chat_messages as get_chat_messages,
+)
+from mcp_server.main import (
     kutana_get_meeting_status as get_meeting_status,
+)
+from mcp_server.main import (
     kutana_send_chat_message as send_chat_message,
 )
+
 from kutana_core.models.chat import ChatMessage, ChatMessageType
 
 # ---------------------------------------------------------------------------

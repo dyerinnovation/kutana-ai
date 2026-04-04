@@ -50,6 +50,20 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class UpdateProfileRequest(BaseModel):
+    """Request body for updating user profile.
+
+    Attributes:
+        name: New display name (optional).
+        current_password: Required when changing password.
+        new_password: New password (min 8 chars, optional).
+    """
+
+    name: str | None = None
+    current_password: str | None = None
+    new_password: str | None = None
+
+
 class UserResponse(BaseModel):
     """Public user representation.
 
@@ -192,6 +206,57 @@ async def me(current_user: CurrentUser) -> UserResponse:
     Returns:
         The user's public profile.
     """
+    return UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        name=current_user.name,
+        is_active=current_user.is_active,
+        created_at=current_user.created_at,
+    )
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_profile(
+    body: UpdateProfileRequest,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> UserResponse:
+    """Update the current user's profile (name and/or password).
+
+    Args:
+        body: Fields to update.
+        current_user: Injected from JWT.
+        db: Database session.
+
+    Returns:
+        The updated user profile.
+
+    Raises:
+        HTTPException: 400 if password change requirements not met.
+    """
+    if body.name is not None:
+        current_user.name = body.name
+
+    if body.new_password is not None:
+        if body.current_password is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is required to set a new password",
+            )
+        if not verify_password(body.current_password, current_user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is incorrect",
+            )
+        if len(body.new_password) < 8:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="New password must be at least 8 characters",
+            )
+        current_user.hashed_password = hash_password(body.new_password)
+
+    await db.flush()
+
     return UserResponse(
         id=current_user.id,
         email=current_user.email,

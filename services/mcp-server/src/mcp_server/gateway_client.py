@@ -6,6 +6,7 @@ Reuses the battle-tested connection pattern from scripts/test_e2e_gateway.py.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from typing import Any
@@ -205,7 +206,7 @@ class GatewayClient:
                 "type": "subscribe_channel",
                 "channels": [channel],
             })
-            asyncio.create_task(self._ws.send(subscribe_msg))
+            _task = asyncio.create_task(self._ws.send(subscribe_msg))  # noqa: RUF006
 
         logger.info("Subscribed to channel: %s", channel)
 
@@ -331,10 +332,8 @@ class GatewayClient:
 
         if self._listener_task is not None:
             self._listener_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._listener_task
-            except asyncio.CancelledError:
-                pass
             self._listener_task = None
 
         self._meeting_id = None

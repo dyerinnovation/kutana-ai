@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import typer
 from rich.console import Console
@@ -191,7 +191,7 @@ def meetings_create(
     """Create a new meeting."""
     _require_auth()
     if scheduled_at is None:
-        scheduled_at = datetime.now(tz=timezone.utc).isoformat()
+        scheduled_at = datetime.now(tz=UTC).isoformat()
 
     client = KutanaClient()
     try:

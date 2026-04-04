@@ -13,6 +13,7 @@ import { AgentTemplatePage } from "@/pages/AgentTemplatePage";
 import { DocsPage } from "@/pages/DocsPage";
 import { FeedsPage } from "@/pages/FeedsPage";
 import { CalendarPage } from "@/pages/CalendarPage";
+import { ProfilePage } from "@/pages/ProfilePage";
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="/templates" element={<AgentTemplatePage />} />
         <Route path="/docs" element={<DocsPage />} />
         <Route path="/docs/*" element={<DocsPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Route>
     </Routes>
   );
