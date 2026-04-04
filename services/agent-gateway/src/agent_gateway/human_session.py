@@ -22,6 +22,7 @@ from agent_gateway.protocol import (
     EventMessage,
     FinishedSpeaking,
     GetQueue,
+    InterruptTts,
     Joined,
     LowerHand,
     ParticipantUpdate,
@@ -96,9 +97,7 @@ class HumanSessionHandler:
         self._manager.join_meeting(self.session_id, self.meeting_id)
 
         if self._audio_bridge is not None:
-            await self._audio_bridge.ensure_pipeline(
-                self.meeting_id, speaker_name=self.agent_name
-            )
+            await self._audio_bridge.ensure_pipeline(self.meeting_id, speaker_name=self.agent_name)
 
         # Send joined confirmation so the frontend can transition to "connected"
         response = Joined(
@@ -121,8 +120,7 @@ class HumanSessionHandler:
             participant_id = (
                 getattr(session, "_identity", None)
                 and getattr(session._identity, "agent_config_id", session.session_id)
-                or session.session_id
-            )
+            ) or session.session_id
             try:
                 await self.send_participant_update(
                     action="joined",
@@ -148,7 +146,7 @@ class HumanSessionHandler:
                 await self._dispatch(data)
         except Exception as e:
             from fastapi import WebSocketDisconnect
-            from starlette.websockets import WebSocketState
+
             if isinstance(e, WebSocketDisconnect):
                 logger.warning(
                     "Human session %s disconnected (code=%s)",
@@ -168,7 +166,7 @@ class HumanSessionHandler:
         """Route an incoming message to the appropriate handler.
 
         Humans can send: audio_data, leave_meeting, raise_hand,
-        lower_hand, finished_speaking, get_queue, chat.
+        lower_hand, finished_speaking, get_queue, chat, interrupt_tts.
         All other message types are silently ignored.
 
         Args:
@@ -193,6 +191,8 @@ class HumanSessionHandler:
             await self._handle_get_queue(GetQueue.model_validate(data))
         elif msg_type == "chat":
             await self._handle_chat(data)
+        elif msg_type == "interrupt_tts":
+            await self._handle_interrupt_tts(InterruptTts.model_validate(data))
 
     async def _handle_chat(self, data: dict[str, Any]) -> None:
         """Handle a chat message from the browser and broadcast to all participants.
@@ -210,6 +210,18 @@ class HumanSessionHandler:
                 sender_name=self.agent_name,
                 content=text,
             )
+
+    async def _handle_interrupt_tts(self, msg: InterruptTts) -> None:
+        """Handle a TTS interrupt request from the browser.
+
+        Forwards the interrupt to the TTS bridge which broadcasts
+        ``tts.interrupt`` to all listeners and notifies the speaking agent.
+
+        Args:
+            msg: The interrupt_tts message.
+        """
+        if self._manager.tts_bridge is not None:
+            await self._manager.tts_bridge.interrupt(self.meeting_id)
 
     async def _handle_audio(self, msg: AudioData) -> None:
         """Forward PCM16 audio from the browser to the STT pipeline.

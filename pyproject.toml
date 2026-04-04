@@ -18,8 +18,8 @@ members = [
     "services/cli",
 ]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "groq>=0.11",
     "mypy>=1.19.1",
     "pydantic>=2.12.5",

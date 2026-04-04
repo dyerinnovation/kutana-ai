@@ -32,6 +32,7 @@ See `internal-docs/development/TASKLIST.md` for the task queue.
 @.claude/rules/documentation.md
 @.claude/rules/external-docs.md
 @.claude/rules/dgx-connection.md
+@.claude/rules/zero-tolerance-errors.md
 
 ## Key References
 

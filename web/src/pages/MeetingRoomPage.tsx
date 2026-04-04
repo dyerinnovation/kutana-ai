@@ -300,8 +300,24 @@ export function MeetingRoomPage() {
     enqueueTtsAudio(assembled);
   }, [enqueueTtsAudio]);
 
-  // stopAllTts will be added in Phase 6 (interruption handling) using
-  // ttsQueueRef, currentTtsSourceRef, and ttsPlayingRef.
+  const stopAllTts = useCallback(() => {
+    ttsQueueRef.current = [];
+    ttsStreamsRef.current.clear();
+    if (currentTtsSourceRef.current) {
+      try { currentTtsSourceRef.current.stop(); } catch { /* already stopped */ }
+      currentTtsSourceRef.current = null;
+    }
+    ttsPlayingRef.current = false;
+    setSpeakingNames(new Set());
+  }, []);
+
+  // Send interrupt signal to backend when the user interrupts TTS
+  const sendTtsInterrupt = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: "interrupt_tts" }));
+    }
+    stopAllTts();
+  }, [stopAllTts]);
 
   const handleWsMessage = useCallback((event: MessageEvent) => {
     let msg: GatewayMessage;
@@ -379,6 +395,8 @@ export function MeetingRoomPage() {
             setChatMessages((prev) => [...prev, cm]);
             if (cm.is_agent) setRightTab("chat");
           }
+        } else if (msg.event_type === "tts.interrupt") {
+          stopAllTts();
         } else if (msg.event_type === "turn.speaker.changed") {
           const p = msg.payload as Record<string, unknown>;
           if (p.new_speaker_id) {
@@ -414,7 +432,7 @@ export function MeetingRoomPage() {
         break;
       }
     }
-  }, [enqueueTtsAudio, handleTtsStreamStart, handleTtsStreamChunk, handleTtsStreamEnd]);
+  }, [enqueueTtsAudio, handleTtsStreamStart, handleTtsStreamChunk, handleTtsStreamEnd, stopAllTts]);
 
   // Connect on mount
   useEffect(() => {
@@ -503,6 +521,12 @@ export function MeetingRoomPage() {
             for (let i = 0; i < input.length; i++) sumSq += input[i] * input[i];
             const rms = Math.sqrt(sumSq / input.length);
             if (rms < RMS_SILENCE_THRESHOLD) return;
+
+            // Auto-interrupt: if TTS is playing and user starts speaking, stop it
+            if (ttsPlayingRef.current) {
+              sendTtsInterruptRef.current();
+            }
+
             // Convert Float32 [-1,1] to Int16
             const pcm16 = new Int16Array(input.length);
             for (let i = 0; i < input.length; i++) {
@@ -562,6 +586,12 @@ export function MeetingRoomPage() {
   useEffect(() => {
     isMutedRef.current = isMuted;
   }, [isMuted]);
+
+  // Ref for interrupt callback so audio processor closure stays current
+  const sendTtsInterruptRef = useRef(sendTtsInterrupt);
+  useEffect(() => {
+    sendTtsInterruptRef.current = sendTtsInterrupt;
+  }, [sendTtsInterrupt]);
 
   function handleLeave() {
     cleanup();
@@ -934,6 +964,15 @@ export function MeetingRoomPage() {
           <HandIcon className="h-4 w-4 mr-1.5" />
           {handRaised ? "Lower Hand" : "Raise Hand"}
         </Button>
+        {speakingNames.size > 0 && (
+          <Button
+            variant="outline"
+            onClick={sendTtsInterrupt}
+            className="border-red-500/60 text-red-400 hover:bg-red-900/20"
+          >
+            <StopIcon /> Stop Agent
+          </Button>
+        )}
         <Button variant="destructive" onClick={handleLeave}>
           <LeaveIcon /> Leave
         </Button>
@@ -1103,6 +1142,14 @@ function LeaveIcon() {
         strokeLinejoin="round"
         d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"
       />
+    </svg>
+  );
+}
+
+function StopIcon() {
+  return (
+    <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+      <rect x="6" y="6" width="12" height="12" rx="1" />
     </svg>
   );
 }

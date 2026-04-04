@@ -3,7 +3,7 @@
 Client -> Server messages:
     JoinMeeting, AudioData, DataMessage, LeaveMeeting,
     RaiseHand, LowerHand, FinishedSpeaking, GetQueue,
-    StartSpeaking, SpokenText, StopSpeaking
+    StartSpeaking, SpokenText, StopSpeaking, InterruptTts
 
 Server -> Client messages:
     Joined, TranscriptMessage, AudioMessage, EventMessage,
@@ -33,7 +33,7 @@ class Capability(enum.StrEnum):
     EXTRACT_TASKS = "extract_tasks"
     DATA_ONLY = "data_only"
     # Voice capabilities — enable the /audio/connect sidecar
-    VOICE_IN = "voice_in"   # agent can send audio into the meeting
+    VOICE_IN = "voice_in"  # agent can send audio into the meeting
     VOICE_OUT = "voice_out"  # agent can receive mixed audio from the meeting
 
 
@@ -92,10 +92,11 @@ class LowerHand(BaseModel):
 
 
 class StartSpeaking(BaseModel):
-    """Signal that the active speaker has started actively speaking.
+    """Signal that a TTS-enabled agent is about to speak.
 
     Sent after receiving turn_your_turn to indicate the agent has begun
-    speaking content (as opposed to just being promoted to the active slot).
+    speaking content. Activates TTS mode for the session so subsequent
+    SpokenText messages are synthesized and broadcast as audio.
     """
 
     type: Literal["start_speaking"] = "start_speaking"
@@ -124,16 +125,6 @@ class SubscribeChannel(BaseModel):
     channels: list[str]
 
 
-class StartSpeaking(BaseModel):
-    """Signal that a TTS-enabled agent is about to speak.
-
-    Activates TTS mode for the session. Subsequent SpokenText messages
-    are synthesized and broadcast as audio to all meeting participants.
-    """
-
-    type: Literal["start_speaking"] = "start_speaking"
-
-
 class SpokenText(BaseModel):
     """Text to be synthesized via TTS and broadcast as audio.
 
@@ -156,6 +147,16 @@ class StopSpeaking(BaseModel):
     type: Literal["stop_speaking"] = "stop_speaking"
 
 
+class InterruptTts(BaseModel):
+    """Request from a human to interrupt the current TTS playback.
+
+    Triggers a ``tts.interrupt`` event broadcast to all listeners
+    and a ``tts.interrupted`` notification to the speaking agent.
+    """
+
+    type: Literal["interrupt_tts"] = "interrupt_tts"
+
+
 # ---------------------------------------------------------------------------
 # Server -> Client messages
 # ---------------------------------------------------------------------------
@@ -170,8 +171,8 @@ class Joined(BaseModel):
     participants: list[dict[str, Any]] = Field(default_factory=list)
     granted_capabilities: list[str] = Field(default_factory=list)
     # Audio sidecar — only present when voice_in or voice_out is granted.
-    audio_ws_url: str | None = None   # Full WebSocket URL including token + meeting_id
-    audio_token: str | None = None    # Short-lived JWT for /audio/connect
+    audio_ws_url: str | None = None  # Full WebSocket URL including token + meeting_id
+    audio_token: str | None = None  # Short-lived JWT for /audio/connect
 
 
 class TranscriptMessage(BaseModel):
@@ -274,9 +275,9 @@ CLIENT_MESSAGE_TYPES = {
     "finished_speaking": FinishedSpeaking,
     "get_queue": GetQueue,
     "subscribe_channel": SubscribeChannel,
-    "start_speaking": StartSpeaking,
     "spoken_text": SpokenText,
     "stop_speaking": StopSpeaking,
+    "interrupt_tts": InterruptTts,
 }
 
 SERVER_MESSAGE_TYPES = {

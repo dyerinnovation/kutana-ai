@@ -17,10 +17,9 @@ import logging
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
-from kutana_core.interfaces.tts import TTSProvider, Voice
-
 if TYPE_CHECKING:
     from agent_gateway.connection_manager import ConnectionManager
+    from kutana_core.interfaces.tts import TTSProvider, Voice
 
 logger = logging.getLogger(__name__)
 
@@ -279,6 +278,10 @@ class TTSBridge:
         self._voice_pool = VoicePool(voice_pool)
         self._budget = CharBudgetTracker(limit=char_limit)
         self._cache = PhraseCache()
+        # Track the currently speaking agent session per meeting for interruption.
+        self._active_speakers: dict[UUID, UUID] = {}  # meeting_id -> session_id
+        # Set when interrupt() is called so in-flight streaming aborts early.
+        self._interrupted: set[UUID] = set()  # meeting_ids with pending interrupt
 
     # ------------------------------------------------------------------
     # Voice management
@@ -407,8 +410,18 @@ class TTSBridge:
         Returns:
             True if synthesis succeeded and audio was broadcast; False otherwise.
         """
+        self._active_speakers[meeting_id] = session_id
+        self._interrupted.discard(meeting_id)
+
         audio = await self.synthesize_text(session_id, text, voice)
         if audio is None:
+            self._active_speakers.pop(meeting_id, None)
+            return False
+
+        # Check if interrupted during synthesis
+        if meeting_id in self._interrupted:
+            self._interrupted.discard(meeting_id)
+            self._active_speakers.pop(meeting_id, None)
             return False
 
         audio_b64 = base64.b64encode(audio).decode()
@@ -433,6 +446,7 @@ class TTSBridge:
             except Exception:
                 logger.warning("Failed to deliver TTS audio to session %s", session.session_id)
 
+        self._active_speakers.pop(meeting_id, None)
         logger.info(
             "TTS broadcast: meeting=%s speaker=%s chars=%d delivered=%d",
             meeting_id,
@@ -493,6 +507,9 @@ class TTSBridge:
             )
             return False
 
+        self._active_speakers[meeting_id] = session_id
+        self._interrupted.discard(meeting_id)
+
         stream_id = str(uuid4())
         sessions = self._manager.get_meeting_sessions(meeting_id)
         listeners = [s for s in sessions if "listen" in s.capabilities]
@@ -513,11 +530,16 @@ class TTSBridge:
             except Exception:
                 logger.warning("Failed to send stream_start to %s", session.session_id)
 
-        # Stream chunks from provider
+        # Stream chunks from provider, aborting early on interrupt
         chunk_index = 0
         all_chunks: list[bytes] = []
+        interrupted = False
         try:
             async for chunk in self._provider.synthesize_stream(text, effective_voice):
+                # Check if interrupted between chunks
+                if meeting_id in self._interrupted:
+                    interrupted = True
+                    break
                 all_chunks.append(chunk)
                 chunk_b64 = base64.b64encode(chunk).decode()
                 chunk_payload: dict[str, Any] = {
@@ -540,6 +562,20 @@ class TTSBridge:
                         "tts.audio.stream_end",
                         {"stream_id": stream_id, "error": True},
                     )
+            self._active_speakers.pop(meeting_id, None)
+            return False
+
+        if interrupted:
+            self._interrupted.discard(meeting_id)
+            # Send stream_end with error flag so clients discard partial audio
+            for session in listeners:
+                with contextlib.suppress(Exception):
+                    await session.send_event(
+                        "tts.audio.stream_end",
+                        {"stream_id": stream_id, "error": True},
+                    )
+            self._active_speakers.pop(meeting_id, None)
+            logger.info("TTS stream interrupted for meeting %s", meeting_id)
             return False
 
         # Cache the complete audio for future requests
@@ -555,6 +591,7 @@ class TTSBridge:
             with contextlib.suppress(Exception):
                 await session.send_event("tts.audio.stream_end", end_payload)
 
+        self._active_speakers.pop(meeting_id, None)
         logger.info(
             "TTS stream broadcast: meeting=%s speaker=%s chars=%d chunks=%d listeners=%d",
             meeting_id,
@@ -564,6 +601,45 @@ class TTSBridge:
             len(listeners),
         )
         return True
+
+    # ------------------------------------------------------------------
+    # Interruption
+    # ------------------------------------------------------------------
+
+    async def interrupt(self, meeting_id: UUID) -> None:
+        """Interrupt any in-progress TTS for a meeting.
+
+        Broadcasts ``tts.interrupt`` to all listeners so frontends stop playback,
+        and sends ``tts.interrupted`` to the speaking agent session.
+
+        Args:
+            meeting_id: The meeting to interrupt TTS in.
+        """
+        # Flag the meeting so any in-flight streaming loop aborts
+        self._interrupted.add(meeting_id)
+
+        sessions = self._manager.get_meeting_sessions(meeting_id)
+        listeners = [s for s in sessions if "listen" in s.capabilities]
+
+        # Broadcast tts.interrupt to all listeners (frontends)
+        payload: dict[str, Any] = {"meeting_id": str(meeting_id)}
+        for session in listeners:
+            with contextlib.suppress(Exception):
+                await session.send_event("tts.interrupt", payload)
+
+        # Notify the speaking agent that it was interrupted
+        speaker_session_id = self._active_speakers.pop(meeting_id, None)
+        if speaker_session_id is not None:
+            for session in sessions:
+                if session.session_id == speaker_session_id:
+                    with contextlib.suppress(Exception):
+                        await session.send_event(
+                            "tts.interrupted",
+                            {"meeting_id": str(meeting_id)},
+                        )
+                    break
+
+        logger.info("TTS interrupted for meeting %s", meeting_id)
 
     # ------------------------------------------------------------------
     # Introspection
