@@ -13,28 +13,29 @@ import {
 import { Dialog, DialogTitle, DialogFooter } from "@/components/ui/Dialog";
 
 const DATA_TYPE_OPTIONS = [
-  { value: "summary", label: "Summary" },
-  { value: "tasks", label: "Action Items" },
-  { value: "decisions", label: "Decisions" },
-  { value: "transcript", label: "Transcript" },
+  { value: "summary", label: "Summary", description: "Key discussion points and meeting overview" },
+  { value: "tasks", label: "Action Items", description: "Tasks with assignees and deadlines" },
+  { value: "decisions", label: "Decisions", description: "Decisions made with context" },
+  { value: "transcript", label: "Transcript", description: "Full or condensed meeting transcript" },
 ];
 
 const CONTEXT_TYPE_OPTIONS = [
-  { value: "agenda", label: "Agenda" },
-  { value: "participants", label: "Participants" },
-  { value: "previous_meetings", label: "Previous Meetings" },
+  { value: "thread", label: "Thread", description: "Linked conversation thread" },
+  { value: "page", label: "Page", description: "Linked document or page" },
+  { value: "issue", label: "Issue", description: "Linked issue or ticket" },
+  { value: "document", label: "Document", description: "Related document content" },
 ];
 
 const DIRECTION_OPTIONS = [
-  { value: "outbound", label: "Outbound" },
-  { value: "inbound", label: "Inbound" },
-  { value: "bidirectional", label: "Bidirectional" },
+  { value: "outbound", label: "Push", description: "Send meeting data out after meetings" },
+  { value: "inbound", label: "Pull", description: "Fetch context before meetings start" },
+  { value: "bidirectional", label: "Both", description: "Pull context in, push results out" },
 ] as const;
 
 const TRIGGER_OPTIONS = [
-  { value: "meeting_ended", label: "When meeting ends" },
-  { value: "meeting_started", label: "When meeting starts" },
-  { value: "manual", label: "Manual only" },
+  { value: "meeting_ended", label: "Meeting Ends", description: "Run automatically when the meeting wraps up" },
+  { value: "meeting_started", label: "Meeting Starts", description: "Run automatically when a meeting begins" },
+  { value: "manual", label: "Manual", description: "Only when you click Run Now" },
 ] as const;
 
 interface Integration {
@@ -491,176 +492,242 @@ export function FeedsPage() {
       <Dialog open={modalOpen} onClose={closeModal}>
         <form onSubmit={handleSave}>
           <DialogTitle>
-            {editingFeed ? `Edit Feed: ${editingFeed.name}` : "Create Feed"}
+            {editingFeed ? `Edit Feed: ${editingFeed.name}` : `Configure ${INTEGRATIONS.find((i) => i.platform === form.platform)?.name ?? form.platform} Feed`}
           </DialogTitle>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             {/* Name */}
             <Input
-              label="Name"
-              placeholder="e.g. Slack Standup Summary"
+              label="Feed Name"
+              placeholder={`e.g. ${form.platform === "discord" ? "Discord Standup Recap" : "Slack Post-Meeting Summary"}`}
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
               required
             />
 
-            {/* Platform */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-medium uppercase tracking-widest text-gray-400">
-                Platform
-              </label>
-              <select
-                className="flex h-9 w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-50 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50"
-                value={form.platform}
-                onChange={(e) => {
-                  const platform = e.target.value;
-                  setForm((p) => ({
-                    ...p,
-                    platform,
-                    delivery_type: PLATFORM_DELIVERY[platform] ?? "mcp",
-                  }));
-                }}
-              >
-                {INTEGRATIONS.filter((i) => i.status === "available").map((i) => (
-                  <option key={i.platform} value={i.platform}>
-                    {i.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Platform (only show if editing — on create it's pre-selected) */}
+            {editingFeed && (
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-gray-300">
+                  Platform
+                </label>
+                <div className="flex gap-2">
+                  {INTEGRATIONS.filter((i) => i.status === "available").map((i) => {
+                    const isSelected = form.platform === i.platform;
+                    return (
+                      <button
+                        key={i.platform}
+                        type="button"
+                        onClick={() =>
+                          setForm((p) => ({
+                            ...p,
+                            platform: i.platform,
+                            delivery_type: PLATFORM_DELIVERY[i.platform] ?? "mcp",
+                          }))
+                        }
+                        className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                          isSelected
+                            ? "border-blue-500 bg-blue-600/10 text-blue-300"
+                            : "border-gray-700 bg-gray-800/50 text-gray-400 hover:border-gray-600"
+                        }`}
+                      >
+                        {i.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Direction */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-medium uppercase tracking-widest text-gray-400">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-300">
                 Direction
               </label>
-              <div className="flex gap-3">
-                {DIRECTION_OPTIONS.map((opt) => (
-                  <label
-                    key={opt.value}
-                    className="flex items-center gap-2 text-sm text-gray-300"
-                  >
-                    <input
-                      type="radio"
-                      name="direction"
-                      value={opt.value}
-                      checked={form.direction === opt.value}
-                      onChange={() =>
-                        setForm((p) => ({ ...p, direction: opt.value }))
-                      }
-                      className="accent-blue-500"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
+              <div className="grid grid-cols-3 gap-2">
+                {DIRECTION_OPTIONS.map((opt) => {
+                  const isSelected = form.direction === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setForm((p) => ({ ...p, direction: opt.value }))}
+                      className={`rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                        isSelected
+                          ? "border-blue-500 bg-blue-600/10"
+                          : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
+                      }`}
+                    >
+                      <span className={`text-sm font-medium ${isSelected ? "text-blue-300" : "text-gray-300"}`}>
+                        {opt.label}
+                      </span>
+                      <p className={`text-xs mt-0.5 ${isSelected ? "text-blue-400/70" : "text-gray-500"}`}>
+                        {opt.description}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Conditional: Channel name */}
-            {form.delivery_type === "channel" && (
-              <Input
-                label="Channel Name"
-                placeholder="#meeting-notes"
-                value={form.channel_name ?? ""}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, channel_name: e.target.value }))
-                }
-              />
-            )}
-
-            {/* Conditional: MCP fields */}
-            {form.delivery_type === "mcp" && (
-              <>
+            {/* Platform-specific connection fields */}
+            <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                {form.delivery_type === "channel" ? "Channel Connection" : "MCP Server Connection"}
+              </p>
+              {form.delivery_type === "channel" ? (
                 <Input
-                  label="MCP Server URL"
-                  placeholder="https://mcp.example.com/sse"
-                  value={form.mcp_server_url ?? ""}
+                  label="Channel Name"
+                  placeholder={form.platform === "discord" ? "#meeting-notes" : "#general"}
+                  value={form.channel_name ?? ""}
                   onChange={(e) =>
-                    setForm((p) => ({ ...p, mcp_server_url: e.target.value }))
+                    setForm((p) => ({ ...p, channel_name: e.target.value }))
                   }
                 />
-                <Input
-                  label="Auth Token"
-                  type="password"
-                  placeholder="Bearer token for the MCP server"
-                  value={form.mcp_auth_token ?? ""}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, mcp_auth_token: e.target.value }))
-                  }
-                />
-              </>
+              ) : (
+                <>
+                  <Input
+                    label="MCP Server URL"
+                    placeholder="https://mcp.slack.com/sse"
+                    value={form.mcp_server_url ?? ""}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, mcp_server_url: e.target.value }))
+                    }
+                  />
+                  <Input
+                    label="Auth Token"
+                    type="password"
+                    placeholder="Bearer token for the MCP server"
+                    value={form.mcp_auth_token ?? ""}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, mcp_auth_token: e.target.value }))
+                    }
+                  />
+                </>
+              )}
+            </div>
+
+            {/* Data types (outbound) */}
+            {(form.direction === "outbound" || form.direction === "bidirectional") && (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  What to deliver
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {DATA_TYPE_OPTIONS.map((opt) => {
+                    const isSelected = form.data_types.includes(opt.value);
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => toggleDataType(opt.value)}
+                        className={`rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                          isSelected
+                            ? "border-blue-500 bg-blue-600/10"
+                            : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className={`text-sm font-medium ${isSelected ? "text-blue-300" : "text-gray-300"}`}>
+                            {opt.label}
+                          </span>
+                          {isSelected && (
+                            <span className="ml-2 h-4 w-4 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                              <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                              </svg>
+                            </span>
+                          )}
+                        </div>
+                        <p className={`text-xs mt-0.5 ${isSelected ? "text-blue-400/70" : "text-gray-500"}`}>
+                          {opt.description}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
 
-            {/* Data types */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-medium uppercase tracking-widest text-gray-400">
-                Data Types
-              </label>
-              <div className="flex flex-wrap gap-3">
-                {DATA_TYPE_OPTIONS.map((opt) => (
-                  <label
-                    key={opt.value}
-                    className="flex items-center gap-2 text-sm text-gray-300"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={form.data_types.includes(opt.value)}
-                      onChange={() => toggleDataType(opt.value)}
-                      className="accent-blue-500"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
+            {/* Context types (inbound) */}
+            {(form.direction === "inbound" || form.direction === "bidirectional") && (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  What to pull in
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {CONTEXT_TYPE_OPTIONS.map((opt) => {
+                    const isSelected = (form.context_types ?? []).includes(opt.value);
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => toggleContextType(opt.value)}
+                        className={`rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                          isSelected
+                            ? "border-blue-500 bg-blue-600/10"
+                            : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className={`text-sm font-medium ${isSelected ? "text-blue-300" : "text-gray-300"}`}>
+                            {opt.label}
+                          </span>
+                          {isSelected && (
+                            <span className="ml-2 h-4 w-4 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                              <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                              </svg>
+                            </span>
+                          )}
+                        </div>
+                        <p className={`text-xs mt-0.5 ${isSelected ? "text-blue-400/70" : "text-gray-500"}`}>
+                          {opt.description}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-
-            {/* Context types */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-medium uppercase tracking-widest text-gray-400">
-                Context Types (inbound)
-              </label>
-              <div className="flex flex-wrap gap-3">
-                {CONTEXT_TYPE_OPTIONS.map((opt) => (
-                  <label
-                    key={opt.value}
-                    className="flex items-center gap-2 text-sm text-gray-300"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={(form.context_types ?? []).includes(opt.value)}
-                      onChange={() => toggleContextType(opt.value)}
-                      className="accent-blue-500"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
-            </div>
+            )}
 
             {/* Trigger */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-medium uppercase tracking-widest text-gray-400">
-                Trigger
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-300">
+                When to run
               </label>
-              <div className="flex gap-3">
-                {TRIGGER_OPTIONS.map((opt) => (
-                  <label
-                    key={opt.value}
-                    className="flex items-center gap-2 text-sm text-gray-300"
-                  >
-                    <input
-                      type="radio"
-                      name="trigger"
-                      value={opt.value}
-                      checked={form.trigger === opt.value}
-                      onChange={() =>
-                        setForm((p) => ({ ...p, trigger: opt.value }))
-                      }
-                      className="accent-blue-500"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
+              <div className="space-y-2">
+                {TRIGGER_OPTIONS.map((opt) => {
+                  const isSelected = form.trigger === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setForm((p) => ({ ...p, trigger: opt.value }))}
+                      className={`w-full rounded-lg border px-4 py-3 text-left transition-colors ${
+                        isSelected
+                          ? "border-blue-500 bg-blue-600/10"
+                          : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={`text-sm font-medium ${isSelected ? "text-blue-300" : "text-gray-300"}`}>
+                          {opt.label}
+                        </span>
+                        {isSelected && (
+                          <span className="ml-2 h-4 w-4 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                            <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                            </svg>
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-xs mt-0.5 ${isSelected ? "text-blue-400/70" : "text-gray-500"}`}>
+                        {opt.description}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
