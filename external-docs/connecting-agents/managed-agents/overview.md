@@ -1,68 +1,87 @@
 # Managed Agents
 
-Managed agents are pre-built AI agents available directly in the Kutana dashboard. No code, no configuration files — just select an agent, assign it to a meeting, and Kutana handles the rest.
+Managed agents are pre-built AI agents available directly in the Kutana dashboard. No code, no configuration files -- select an agent, assign it to a meeting, and Kutana handles the rest.
+
+Each managed agent is a Claude-powered AI that joins your meeting as a participant, monitors the conversation, and performs its specific role using the Kutana MCP tools.
 
 ## Available Agents
 
-### Meeting Summarizer
+### Meeting Notetaker
 
-Produces rolling meeting summaries every 5 minutes during a meeting and a final comprehensive summary when the meeting ends.
-
-**Category:** Summarization
-**Produces:** Key discussion points, decisions made, overall meeting summary
-**Best for:** Keeping remote team members in the loop, post-meeting recaps
-
-### Action Item Tracker
-
-Listens for commitments, assignments, and deadlines during the meeting and extracts them as structured tasks.
+Takes detailed notes during meetings and extracts action items automatically. Organizes notes by topic and posts structured updates to the meeting chat.
 
 **Category:** Productivity
-**Produces:** Task list with assignees, deadlines, and context
-**Best for:** Ensuring nothing falls through the cracks after a meeting
+**Capabilities:** Transcription, task extraction, action items
+**Best for:** Keeping meeting records organized, capturing action items with assignees
 
-### Decision Logger
+### Technical Scribe
 
-Captures decisions as they are made during the meeting, including the context and rationale behind each decision.
-
-**Category:** Documentation
-**Produces:** Decision log with context, participants involved, and timestamps
-**Best for:** Audit trails, onboarding new team members, revisiting past decisions
-
-### Code Discussion Tracker
-
-Extracts code-related topics, technical decisions, and references to specific files, functions, or systems discussed during the meeting.
+Captures technical decisions, architecture discussions, and engineering context. Uses precise technical language and tracks code references and follow-up engineering tasks.
 
 **Category:** Engineering
-**Produces:** Technical discussion summary, code references, architecture decisions
-**Best for:** Engineering standups, architecture reviews, sprint planning
+**Capabilities:** Transcription, task extraction, summarization
+**Best for:** Engineering standups, architecture reviews, sprint planning, technical decision logging
+
+### Standup Facilitator
+
+Guides daily standups through each participant's update: what they did, what they plan to do, and any blockers. Tracks blockers and suggests follow-ups.
+
+**Category:** Productivity
+**Capabilities:** Transcription, task extraction, action items
+**Best for:** Daily standups, team check-ins, blocker tracking
+
+### Meeting Summarizer
+
+Generates concise post-meeting summaries with key takeaways including attendees, discussion topics, decisions made, action items, and next steps.
+
+**Category:** General
+**Capabilities:** Transcription, summarization
+**Best for:** Post-meeting recaps, keeping remote team members in the loop
 
 ## How to Activate
 
-1. Go to **Dashboard → Agents → Templates**
-2. Browse the available managed agents
-3. Click **Activate** on the agent you want
-4. Choose which meetings it should join:
-   - **All meetings** — the agent joins every meeting you create
-   - **Tagged meetings** — the agent only joins meetings with a specific tag
-   - **Manual** — you assign the agent to individual meetings
-5. The agent is now active and will join meetings automatically
+1. Go to **Agents** in the sidebar
+2. Scroll to **Kutana Managed Agents**
+3. Click **Activate Agent** on the agent you want
+4. Select the meeting from the dropdown
+5. Click **Activate** to confirm
 
-## API Key Requirements
+The agent joins the meeting immediately and begins monitoring the transcript.
 
-| Tier | API Key | Cost |
-|------|---------|------|
-| Free | You provide your own Anthropic API key in Settings | Free |
-| Pro / Business | Included with your plan | Included in subscription |
-| Enterprise | Dedicated key management | Custom pricing |
+## How It Works
 
-## Output
+When activated, a managed agent:
 
-Managed agent output appears in two places:
+1. **Joins the meeting** as a participant (visible in the participant list)
+2. **Monitors the transcript** continuously using the Kutana MCP tools
+3. **Performs its role** -- extracting tasks, taking notes, facilitating, or summarizing
+4. **Posts updates** to the meeting chat with findings and insights
+5. **Runs until the meeting ends** or you deactivate it
 
-- **During the meeting**: Real-time output in the meeting sidebar under the agent's name
-- **After the meeting**: Full output in the meeting recap page, organized by agent
+### Entity Extraction
+
+Managed agents work alongside the always-on entity extraction pipeline. The extraction pipeline processes transcript in 3-minute windows and extracts:
+
+- **Tasks** -- action items with assignees and priorities
+- **Decisions** -- choices made with context and rationale
+- **Questions** -- open questions raised during discussion
+- **Key Points** -- significant discussion points
+- **Blockers** -- impediments identified
+- **Follow-ups** -- post-meeting actions needed
+
+Agents can read these extracted entities using the `get_entity_history` and `get_meeting_recap` MCP tools.
+
+## Deactivating
+
+To stop a managed agent:
+
+1. Go to **Agents** in the sidebar
+2. Find the active session under your agents
+3. Click **Deactivate**
+
+The agent will leave the meeting and stop monitoring.
 
 ## See Also
 
-- [Connecting Agents Overview](/docs/connecting-agents/overview) — Custom vs managed agents
-- [Custom Agents](/docs/connecting-agents/custom-agents/mcp-quickstart) — Build your own agent
+- [Connecting Agents Overview](/docs/connecting-agents/overview) -- Custom vs managed agents
+- [MCP Server Reference](/docs/connecting-agents/mcp-server) -- Available MCP tools for agents

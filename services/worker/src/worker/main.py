@@ -56,6 +56,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Start feed consumers
     from worker.feed_dispatcher import FeedDispatcher
     from worker.feed_runner import FeedRunner
+    from worker.managed_agent import ManagedAgentRunner
 
     dispatcher = FeedDispatcher(
         redis_url=_REDIS_URL,
@@ -67,18 +68,25 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         kutana_mcp_url=_KUTANA_MCP_URL,
         kutana_mcp_token=_KUTANA_MCP_TOKEN,
     )
+    agent_runner = ManagedAgentRunner(
+        session_factory=_session_factory,
+        kutana_mcp_url=_KUTANA_MCP_URL,
+        kutana_mcp_token=_KUTANA_MCP_TOKEN,
+    )
 
     dispatcher_task = asyncio.create_task(dispatcher.start(), name="feed-dispatcher")
     runner_task = asyncio.create_task(runner.start(), name="feed-runner")
-    _background_tasks.extend([dispatcher_task, runner_task])
+    agent_runner_task = asyncio.create_task(agent_runner.start(), name="managed-agent-runner")
+    _background_tasks.extend([dispatcher_task, runner_task, agent_runner_task])
 
-    logger.info("Feed consumers started: FeedDispatcher + FeedRunner")
+    logger.info("Background consumers started: FeedDispatcher + FeedRunner + ManagedAgentRunner")
 
     yield
 
-    logger.info("worker shutting down — stopping feed consumers")
+    logger.info("worker shutting down — stopping consumers")
     await dispatcher.stop()
     await runner.stop()
+    await agent_runner.stop()
 
     # Cancel tasks if they haven't exited yet
     for task in _background_tasks:
