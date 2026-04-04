@@ -110,6 +110,28 @@ export interface TtsAudioPayload {
   char_count: number;
 }
 
+export interface TtsStreamStart {
+  stream_id: string;
+  meeting_id: string;
+  speaker_session_id: string;
+  speaker_name: string;
+  format: string;
+  sample_rate: number;
+  char_count: number;
+}
+
+export interface TtsStreamChunk {
+  stream_id: string;
+  chunk_index: number;
+  data: string;  // base64-encoded PCM16 chunk
+}
+
+export interface TtsStreamEnd {
+  stream_id: string;
+  total_chunks?: number;
+  error?: boolean;
+}
+
 export interface Participant {
   id: string;
   name: string;

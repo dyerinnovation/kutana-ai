@@ -683,7 +683,7 @@ class AgentSessionHandler:
             )
             return
 
-        success = await self._tts_bridge.synthesize_and_broadcast(
+        success = await self._tts_bridge.synthesize_and_broadcast_stream(
             session_id=self.session_id,
             meeting_id=self.meeting_id,
             text=msg.text,

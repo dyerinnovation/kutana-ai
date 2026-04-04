@@ -12,9 +12,10 @@ Responsibilities:
 from __future__ import annotations
 
 import base64
+import contextlib
 import logging
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from kutana_core.interfaces.tts import TTSProvider, Voice
 
@@ -34,7 +35,7 @@ _DEFAULT_VOICE_POOL: list[str] = [
 ]
 
 _CHAR_BUDGET_DEFAULT: int = 100_000  # characters per agent per session
-_CACHE_MAX_SIZE: int = 256           # max number of cached audio entries
+_CACHE_MAX_SIZE: int = 256  # max number of cached audio entries
 
 
 # ---------------------------------------------------------------------------
@@ -283,9 +284,7 @@ class TTSBridge:
     # Voice management
     # ------------------------------------------------------------------
 
-    def assign_voice(
-        self, session_id: UUID, requested_voice: str | None = None
-    ) -> str:
+    def assign_voice(self, session_id: UUID, requested_voice: str | None = None) -> str:
         """Assign a voice to a session.
 
         Args:
@@ -342,18 +341,12 @@ class TTSBridge:
         if not text:
             return None
 
-        effective_voice = (
-            voice
-            or self._voice_pool.get(session_id)
-            or _DEFAULT_VOICE_POOL[0]
-        )
+        effective_voice = voice or self._voice_pool.get(session_id) or _DEFAULT_VOICE_POOL[0]
 
         # Cache hit — no budget consumption for repeated phrases
         cached = self._cache.get(effective_voice, text)
         if cached is not None:
-            logger.debug(
-                "TTS cache hit for session %s (%d chars)", session_id, len(text)
-            )
+            logger.debug("TTS cache hit for session %s (%d chars)", session_id, len(text))
             return cached
 
         # Budget check
@@ -438,9 +431,7 @@ class TTSBridge:
                 await session.send_event("tts.audio", payload)
                 delivered += 1
             except Exception:
-                logger.warning(
-                    "Failed to deliver TTS audio to session %s", session.session_id
-                )
+                logger.warning("Failed to deliver TTS audio to session %s", session.session_id)
 
         logger.info(
             "TTS broadcast: meeting=%s speaker=%s chars=%d delivered=%d",
@@ -448,6 +439,129 @@ class TTSBridge:
             speaker_name,
             len(text),
             delivered,
+        )
+        return True
+
+    async def synthesize_and_broadcast_stream(
+        self,
+        session_id: UUID,
+        meeting_id: UUID,
+        text: str,
+        speaker_name: str,
+        voice: str | None = None,
+        audio_format: str = "pcm_s16le",
+    ) -> bool:
+        """Stream TTS chunks to meeting listeners as they arrive from the provider.
+
+        Instead of waiting for full synthesis, broadcasts a sequence of events:
+        ``tts.audio.stream_start`` -> N x ``tts.audio.chunk`` -> ``tts.audio.stream_end``.
+        Clients can begin playback after a small buffer, reducing perceived latency.
+
+        Falls back to batch ``synthesize_and_broadcast`` on provider error.
+
+        Args:
+            session_id: The speaking agent session.
+            meeting_id: The meeting to broadcast to.
+            text: Text to synthesize.
+            speaker_name: Display name of the speaker.
+            voice: Voice ID override; uses session assignment if None.
+            audio_format: Audio format hint for clients.
+
+        Returns:
+            True if streaming succeeded; False if budget exceeded or error.
+        """
+        text = text.strip()
+        if not text:
+            return False
+
+        effective_voice = voice or self._voice_pool.get(session_id) or _DEFAULT_VOICE_POOL[0]
+
+        # Check cache — if cached, send as single batch (already fast)
+        cached = self._cache.get(effective_voice, text)
+        if cached is not None:
+            return await self.synthesize_and_broadcast(
+                session_id, meeting_id, text, speaker_name, voice, audio_format
+            )
+
+        # Budget check
+        if not self._budget.check_and_consume(session_id, len(text)):
+            logger.warning(
+                "TTS budget exceeded for session %s (%d/%d chars used)",
+                session_id,
+                self._budget.get_usage(session_id),
+                self._budget.limit,
+            )
+            return False
+
+        stream_id = str(uuid4())
+        sessions = self._manager.get_meeting_sessions(meeting_id)
+        listeners = [s for s in sessions if "listen" in s.capabilities]
+
+        # Broadcast stream_start
+        start_payload: dict[str, Any] = {
+            "stream_id": stream_id,
+            "meeting_id": str(meeting_id),
+            "speaker_session_id": str(session_id),
+            "speaker_name": speaker_name,
+            "format": audio_format,
+            "sample_rate": 24000,
+            "char_count": len(text),
+        }
+        for session in listeners:
+            try:
+                await session.send_event("tts.audio.stream_start", start_payload)
+            except Exception:
+                logger.warning("Failed to send stream_start to %s", session.session_id)
+
+        # Stream chunks from provider
+        chunk_index = 0
+        all_chunks: list[bytes] = []
+        try:
+            async for chunk in self._provider.synthesize_stream(text, effective_voice):
+                all_chunks.append(chunk)
+                chunk_b64 = base64.b64encode(chunk).decode()
+                chunk_payload: dict[str, Any] = {
+                    "stream_id": stream_id,
+                    "chunk_index": chunk_index,
+                    "data": chunk_b64,
+                }
+                for session in listeners:
+                    with contextlib.suppress(Exception):  # fire-and-forget per listener
+                        await session.send_event("tts.audio.chunk", chunk_payload)
+                chunk_index += 1
+        except Exception:
+            logger.exception(
+                "TTS streaming failed for session %s (voice=%s)", session_id, effective_voice
+            )
+            # Send stream_end with error so clients clean up
+            for session in listeners:
+                with contextlib.suppress(Exception):
+                    await session.send_event(
+                        "tts.audio.stream_end",
+                        {"stream_id": stream_id, "error": True},
+                    )
+            return False
+
+        # Cache the complete audio for future requests
+        if all_chunks:
+            self._cache.put(effective_voice, text, b"".join(all_chunks))
+
+        # Broadcast stream_end
+        end_payload: dict[str, Any] = {
+            "stream_id": stream_id,
+            "total_chunks": chunk_index,
+        }
+        for session in listeners:
+            with contextlib.suppress(Exception):
+                await session.send_event("tts.audio.stream_end", end_payload)
+
+        logger.info(
+            "TTS stream broadcast: meeting=%s speaker=%s chars=%d chunks=%d listeners=%d",
+            meeting_id,
+            speaker_name,
+            len(text),
+            chunk_index,
+            len(listeners),
         )
         return True
 

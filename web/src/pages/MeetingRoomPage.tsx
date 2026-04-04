@@ -9,6 +9,9 @@ import type {
   Participant,
   GatewayMessage,
   TtsAudioPayload,
+  TtsStreamStart,
+  TtsStreamChunk,
+  TtsStreamEnd,
   ChatMessage,
   TurnQueueEntry,
 } from "@/types";
@@ -86,6 +89,8 @@ export function MeetingRoomPage() {
   const ttsQueueRef = useRef<TtsAudioPayload[]>([]);
   const ttsPlayingRef = useRef(false);
   const currentTtsSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  // Streaming TTS: accumulate chunks per stream_id, assemble into TtsAudioPayload on stream_end
+  const ttsStreamsRef = useRef<Map<string, { meta: TtsStreamStart; chunks: string[] }>>(new Map());
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -154,6 +159,7 @@ export function MeetingRoomPage() {
     }
     // Stop any queued/playing TTS before closing the context
     ttsQueueRef.current = [];
+    ttsStreamsRef.current.clear();
     if (currentTtsSourceRef.current) {
       try { currentTtsSourceRef.current.stop(); } catch { /* already stopped */ }
       currentTtsSourceRef.current = null;
@@ -239,6 +245,61 @@ export function MeetingRoomPage() {
     }
   }, [playNextTts]);
 
+  const handleTtsStreamStart = useCallback((payload: TtsStreamStart) => {
+    ttsStreamsRef.current.set(payload.stream_id, { meta: payload, chunks: [] });
+  }, []);
+
+  const handleTtsStreamChunk = useCallback((payload: TtsStreamChunk) => {
+    const stream = ttsStreamsRef.current.get(payload.stream_id);
+    if (stream) {
+      stream.chunks[payload.chunk_index] = payload.data;
+    }
+  }, []);
+
+  const handleTtsStreamEnd = useCallback((payload: TtsStreamEnd) => {
+    const stream = ttsStreamsRef.current.get(payload.stream_id);
+    ttsStreamsRef.current.delete(payload.stream_id);
+
+    if (!stream || payload.error) return;
+
+    // Assemble chunks into a single base64 string and enqueue as a TtsAudioPayload
+    const allB64 = stream.chunks.filter(Boolean);
+    if (allB64.length === 0) return;
+
+    // Decode all base64 chunks, concatenate raw bytes, re-encode
+    const rawParts = allB64.map((b64) => {
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes;
+    });
+    const totalLen = rawParts.reduce((sum, p) => sum + p.length, 0);
+    const combined = new Uint8Array(totalLen);
+    let offset = 0;
+    for (const part of rawParts) {
+      combined.set(part, offset);
+      offset += part.length;
+    }
+    // Re-encode to base64 for the existing TTS queue
+    let combinedB64 = "";
+    const CHUNK = 8192;
+    for (let i = 0; i < combined.length; i += CHUNK) {
+      combinedB64 += String.fromCharCode(...combined.subarray(i, i + CHUNK));
+    }
+    combinedB64 = btoa(combinedB64);
+
+    const assembled: TtsAudioPayload = {
+      meeting_id: stream.meta.meeting_id,
+      speaker_session_id: stream.meta.speaker_session_id,
+      speaker_name: stream.meta.speaker_name,
+      data: combinedB64,
+      format: stream.meta.format,
+      sample_rate: stream.meta.sample_rate,
+      char_count: stream.meta.char_count,
+    };
+    enqueueTtsAudio(assembled);
+  }, [enqueueTtsAudio]);
+
   // stopAllTts will be added in Phase 6 (interruption handling) using
   // ttsQueueRef, currentTtsSourceRef, and ttsPlayingRef.
 
@@ -297,6 +358,12 @@ export function MeetingRoomPage() {
       case "event":
         if (msg.event_type === "tts.audio") {
           enqueueTtsAudio(msg.payload as unknown as TtsAudioPayload);
+        } else if (msg.event_type === "tts.audio.stream_start") {
+          handleTtsStreamStart(msg.payload as unknown as TtsStreamStart);
+        } else if (msg.event_type === "tts.audio.chunk") {
+          handleTtsStreamChunk(msg.payload as unknown as TtsStreamChunk);
+        } else if (msg.event_type === "tts.audio.stream_end") {
+          handleTtsStreamEnd(msg.payload as unknown as TtsStreamEnd);
         } else if (msg.event_type === "chat.message.received") {
           const p = msg.payload as Record<string, unknown>;
           const cm: ChatMessage = {
@@ -347,7 +414,7 @@ export function MeetingRoomPage() {
         break;
       }
     }
-  }, [enqueueTtsAudio]);
+  }, [enqueueTtsAudio, handleTtsStreamStart, handleTtsStreamChunk, handleTtsStreamEnd]);
 
   // Connect on mount
   useEffect(() => {

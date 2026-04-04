@@ -86,9 +86,7 @@ class AudioBridge:
         """
         return _create_stt_provider(self._stt_settings, meeting_id)
 
-    async def ensure_pipeline(
-        self, meeting_id: UUID, speaker_name: str | None = None
-    ) -> None:
+    async def ensure_pipeline(self, meeting_id: UUID, speaker_name: str | None = None) -> None:
         """Create an STT pipeline for a meeting if one doesn't exist.
 
         Also updates the current speaker name for the meeting so that
@@ -119,6 +117,16 @@ class AudioBridge:
             speaker_name=speaker_name,
         )
         self._pipelines[meeting_id] = pipeline
+
+        # Eagerly start the STT stream so the provider WebSocket is
+        # already connected when the first audio chunk arrives.
+        try:
+            await pipeline.start()
+        except Exception:
+            logger.warning(
+                "Eager pipeline start failed for meeting %s — will retry on first audio",
+                meeting_id,
+            )
 
         # Start background task to consume transcript segments
         task = asyncio.create_task(self._consume_segments(meeting_id, pipeline))

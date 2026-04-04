@@ -68,6 +68,15 @@ class AudioPipeline:
         self._speaker_name = speaker_name
         self._audio_buffer: bytearray = bytearray()
 
+    async def start(self) -> None:
+        """Eagerly start the STT stream to avoid cold-start latency.
+
+        Call this from AudioBridge.ensure_pipeline() so the provider
+        WebSocket is already connected when the first audio chunk arrives.
+        Safe to call multiple times — subsequent calls are no-ops.
+        """
+        await self._ensure_started()
+
     async def _ensure_started(self) -> None:
         """Start the STT stream if it hasn't been started yet.
 
