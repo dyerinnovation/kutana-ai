@@ -42,9 +42,10 @@ export async function toggleFeed(
   });
 }
 
-export async function triggerFeed(id: string): Promise<FeedRun> {
+export async function triggerFeed(id: string, meetingId: string): Promise<FeedRun> {
   return apiFetch<FeedRun>(`/feeds/${id}/trigger`, {
     method: "POST",
+    body: JSON.stringify({ meeting_id: meetingId }),
   });
 }
 

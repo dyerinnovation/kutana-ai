@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
-import type { Feed, FeedCreate } from "@/types";
+import type { Feed, FeedCreate, Meeting } from "@/types";
 import { listFeeds, createFeed, updateFeed, toggleFeed, triggerFeed } from "@/api/feeds";
+import { listMeetings } from "@/api/meetings";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import {
@@ -13,10 +14,9 @@ import { Dialog, DialogTitle, DialogFooter } from "@/components/ui/Dialog";
 
 const DATA_TYPE_OPTIONS = [
   { value: "summary", label: "Summary" },
-  { value: "action_items", label: "Action Items" },
+  { value: "tasks", label: "Action Items" },
   { value: "decisions", label: "Decisions" },
   { value: "transcript", label: "Transcript" },
-  { value: "key_topics", label: "Key Topics" },
 ];
 
 const CONTEXT_TYPE_OPTIONS = [
@@ -32,9 +32,9 @@ const DIRECTION_OPTIONS = [
 ] as const;
 
 const TRIGGER_OPTIONS = [
-  { value: "meeting_end", label: "When meeting ends" },
-  { value: "on_demand", label: "On demand" },
-  { value: "scheduled", label: "Scheduled" },
+  { value: "meeting_ended", label: "When meeting ends" },
+  { value: "meeting_started", label: "When meeting starts" },
+  { value: "manual", label: "Manual only" },
 ] as const;
 
 interface Integration {
@@ -113,7 +113,7 @@ const EMPTY_FORM: FeedCreate = {
   mcp_auth_token: "",
   data_types: [],
   context_types: [],
-  trigger: "meeting_end",
+  trigger: "meeting_ended",
   meeting_tag: "",
 };
 
@@ -129,6 +129,13 @@ export function FeedsPage() {
   const [form, setForm] = useState<FeedCreate>({ ...EMPTY_FORM });
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Trigger modal state
+  const [triggerModalOpen, setTriggerModalOpen] = useState(false);
+  const [triggerFeedId, setTriggerFeedId] = useState<string | null>(null);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [selectedMeetingId, setSelectedMeetingId] = useState("");
+  const [isTriggering, setIsTriggering] = useState(false);
 
   useEffect(() => {
     loadFeeds();
@@ -212,12 +219,30 @@ export function FeedsPage() {
     }
   }
 
-  async function handleTrigger(feed: Feed) {
+  async function openTriggerModal(feed: Feed) {
+    setTriggerFeedId(feed.id);
+    setSelectedMeetingId("");
+    setTriggerModalOpen(true);
     try {
-      await triggerFeed(feed.id);
+      const res = await listMeetings();
+      setMeetings(res.items);
+    } catch {
+      setMeetings([]);
+    }
+  }
+
+  async function handleTrigger() {
+    if (!triggerFeedId || !selectedMeetingId) return;
+    setIsTriggering(true);
+    try {
+      await triggerFeed(triggerFeedId, selectedMeetingId);
+      setTriggerModalOpen(false);
       loadFeeds();
     } catch (err) {
       setFeedsError(err instanceof Error ? err.message : "Failed to trigger feed");
+      setTriggerModalOpen(false);
+    } finally {
+      setIsTriggering(false);
     }
   }
 
@@ -366,7 +391,7 @@ export function FeedsPage() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => handleTrigger(feed)}
+                      onClick={() => openTriggerModal(feed)}
                       disabled={!feed.is_active}
                     >
                       Run Now
@@ -424,6 +449,44 @@ export function FeedsPage() {
         </div>
       </section>
 
+      {/* ── Trigger Feed Modal ──────────────────────────────── */}
+      <Dialog open={triggerModalOpen} onClose={() => setTriggerModalOpen(false)}>
+        <DialogTitle>Run Feed</DialogTitle>
+        <div className="space-y-4">
+          <p className="text-sm text-gray-400">
+            Select a meeting to run this feed against.
+          </p>
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium uppercase tracking-widest text-gray-400">
+              Meeting
+            </label>
+            <select
+              className="flex h-9 w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-50 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+              value={selectedMeetingId}
+              onChange={(e) => setSelectedMeetingId(e.target.value)}
+            >
+              <option value="">Select a meeting...</option>
+              {meetings.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.title} ({m.status})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setTriggerModalOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleTrigger}
+            disabled={!selectedMeetingId || isTriggering}
+          >
+            {isTriggering ? "Running..." : "Run Feed"}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
       {/* ── Create / Edit Feed Modal ────────────────────────── */}
       <Dialog open={modalOpen} onClose={closeModal}>
         <form onSubmit={handleSave}>
@@ -458,7 +521,11 @@ export function FeedsPage() {
                   }));
                 }}
               >
-                <option value="slack">Slack</option>
+                {INTEGRATIONS.filter((i) => i.status === "available").map((i) => (
+                  <option key={i.platform} value={i.platform}>
+                    {i.name}
+                  </option>
+                ))}
               </select>
             </div>
 

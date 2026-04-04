@@ -2,18 +2,19 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Annotated
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
+from redis.asyncio import Redis  # noqa: TC002 — runtime dep for FastAPI DI
 from sqlalchemy import select
-
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002 — runtime dep for FastAPI DI
 
 from api_server.auth_deps import CurrentUser  # noqa: TC001 — runtime dep for FastAPI DI
-from api_server.deps import get_db_session, get_event_publisher
+from api_server.deps import get_db_session, get_event_publisher, get_redis
 from api_server.encryption import encrypt_value
 from api_server.event_publisher import EventPublisher  # noqa: TC001 — runtime dep for FastAPI DI
 from kutana_core.database.models import FeedORM, FeedRunORM, FeedSecretORM
@@ -389,7 +390,7 @@ async def trigger_feed(
     body: FeedTriggerRequest,
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    publisher: Annotated[EventPublisher, Depends(get_event_publisher)],
+    redis_client: Annotated[Redis, Depends(get_redis)],  # type: ignore[type-arg]
 ) -> FeedRunRead:
     """Manually trigger a feed run for a specific meeting.
 
@@ -398,7 +399,7 @@ async def trigger_feed(
         body: Contains the meeting_id to trigger for.
         current_user: Authenticated user.
         db: Database session.
-        publisher: Redis event publisher.
+        redis_client: Redis client for stream publishing.
 
     Returns:
         FeedRunRead for the created run.
@@ -412,8 +413,9 @@ async def trigger_feed(
     if feed.direction in ("inbound", "bidirectional"):
         direction = "inbound"
 
+    run_id = uuid4()
     run = FeedRunORM(
-        id=uuid4(),
+        id=run_id,
         feed_id=feed.id,
         meeting_id=body.meeting_id,
         trigger="manual",
@@ -423,17 +425,30 @@ async def trigger_feed(
     db.add(run)
     await db.flush()
 
-    # Publish a feed run event to Redis Streams for the worker to pick up
-    from kutana_core.events.definitions import FeedRunStarted
+    # Write directly to kutana:feed-runs stream so the FeedRunner picks it up
+    await redis_client.xadd(
+        "kutana:feed-runs",
+        {
+            "event_type": "feed.run.pending",
+            "payload": json.dumps(
+                {
+                    "feed_run_id": str(run_id),
+                    "feed_id": str(feed.id),
+                    "meeting_id": str(body.meeting_id),
+                    "direction": direction,
+                },
+                default=str,
+            ),
+        },
+        maxlen=10_000,
+        approximate=True,
+    )
 
-    await _safe_publish(
-        publisher,
-        FeedRunStarted(
-            feed_run_id=run.id,
-            feed_id=feed.id,
-            meeting_id=body.meeting_id,
-            direction=direction,
-        ),
+    logger.info(
+        "Manual feed trigger: feed=%s meeting=%s direction=%s",
+        feed.name,
+        body.meeting_id,
+        direction,
     )
 
     return _run_orm_to_read(run)

@@ -17,7 +17,7 @@ When a meeting ends (or starts), Kutana automatically runs your configured Feeds
 | Platform | Status | Delivery type |
 |----------|--------|---------------|
 | Slack | Available | MCP Server |
-| Discord | Coming Soon | Channel |
+| Discord | Available | Channel |
 | Notion | Planned | MCP Server |
 | GitHub | Planned | MCP Server |
 
@@ -48,8 +48,8 @@ When a meeting ends (or starts), Kutana automatically runs your configured Feeds
 | Trigger | When it runs |
 |---------|-------------|
 | After meeting ends | Automatically when the meeting is ended by the host |
-| When participant leaves | When any participant disconnects |
-| Manually | Only when you click "Run Now" from the Feeds page |
+| When meeting starts | Automatically when a meeting begins (useful for inbound context) |
+| Manually | Only when you click "Run Now" from the Feeds page and select a meeting |
 
 ## Feed runs
 
