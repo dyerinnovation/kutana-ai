@@ -17,6 +17,15 @@ The detailed logic lives here in the repo, not in the CoWork UI. This gives you:
 - **Code review** — PR changes to task behavior just like code changes
 - **Reproducibility** — Anyone on the team can see exactly what the automated tasks do
 
+## Task definitions
+
+| Location | Purpose |
+|---|---|
+| `cowork-task-descriptions/` | Cloud versions (CoWork/GCP — no local filesystem access) |
+| `local-task-descriptions/` | Local desktop versions (Mac mini — full filesystem + SSH access) |
+
+For setup instructions for the local desktop tasks, see **[DESKTOP_TASK_SETUP.md](DESKTOP_TASK_SETUP.md)**.
+
 ## Active tasks
 
 | Task | File | Schedule | Model | Purpose |
@@ -55,6 +64,12 @@ See `cowork-task-descriptions/GUIDE.md` for a detailed walkthrough.
 
 ## Adding new scheduled tasks
 
+**Cloud tasks (CoWork):**
 1. Create a new `.md` file in `cowork-task-descriptions/` with the task instructions
 2. In CoWork Scheduled sidebar, create a new task pointing to your file
+3. Update the table above in this README
+
+**Local desktop tasks:**
+1. Create a new `.md` file in `local-task-descriptions/` with the task instructions
+2. Follow the setup steps in `DESKTOP_TASK_SETUP.md` to create the task in Claude Code Desktop
 3. Update the table above in this README
