@@ -124,6 +124,19 @@ overall trajectory}
 
 ---
 
+## Write to Obsidian vault
+
+After writing `WEEKLY_REVIEW.md`, also copy the full report to the Obsidian vault:
+
+Create `/Volumes/Dev_SSD/Dyer_Innovation_Obsidian_Vault/Dyer-Innovation/Dyer Innovation/Kutana AI/Reports/weekly/{YYYY-MM-DD}.md` with the same content as the weekly review output.
+
+**If the Obsidian vault is not mounted** (external SSD disconnected), skip the vault write and note the failure at the top of `WEEKLY_REVIEW.md`:
+```
+> Vault write skipped — /Volumes/Dev_SSD not mounted at time of run.
+```
+
+---
+
 ## Hard rules
 
 - **Never modify code files.** This task is analysis only.
