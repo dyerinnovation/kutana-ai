@@ -175,6 +175,21 @@ spec:
                 port:
                   number: 80
 {{- if .Values.ingress.publicHosts }}
+---
+# Public web subdomain — dev.kutana.ai. No ssl-redirect: TLS terminates at
+# Cloudflare edge and cloudflared forwards as plain HTTP to localhost:80.
+# A local ssl-redirect would cause a 308 loop since nginx sees HTTP.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "kutana.fullname" . }}-web-public
+  labels:
+    {{- include "kutana.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
     - host: {{ .Values.ingress.publicHosts.web }}
       http:
         paths:
