@@ -47,6 +47,32 @@ spec:
                 port:
                   number: 3001
 ---
+{{- if .Values.ingress.publicHosts }}
+# Public API subdomain — api-dev.kutana.ai → api-server at root (no /api rewrite).
+# TLS terminates at Cloudflare edge, so no in-cluster tls block.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "kutana.fullname" . }}-api-public
+  labels:
+    {{- include "kutana.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingress.publicHosts.api }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-server
+                port:
+                  number: 8000
+---
+{{- end }}
 # Separate Ingress for WebSocket routes (agent-gateway) with long timeouts
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -91,6 +117,35 @@ spec:
                 port:
                   number: 8003
 ---
+{{- if .Values.ingress.publicHosts }}
+# Public WS subdomain — ws-dev.kutana.ai → agent-gateway at root (no rewrite).
+# Clients connect to wss://ws-dev.kutana.ai/agent/connect or /connect directly.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "kutana.fullname" . }}-ws-public
+  labels:
+    {{- include "kutana.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingress.publicHosts.ws }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: agent-gateway
+                port:
+                  number: 8003
+---
+{{- end }}
 # Web frontend — catch-all (no rewrite, Prefix match has lowest specificity)
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -119,4 +174,16 @@ spec:
                 name: web
                 port:
                   number: 80
+{{- if .Values.ingress.publicHosts }}
+    - host: {{ .Values.ingress.publicHosts.web }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  number: 80
+{{- end }}
 {{- end }}

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 from uuid import UUID
 
@@ -58,6 +58,9 @@ class UserResponse(BaseModel):
         email: Email address.
         name: Display name.
         is_active: Account active flag.
+        plan_tier: Subscription tier.
+        subscription_status: Current subscription state.
+        trial_ends_at: Free trial expiration.
         created_at: Creation timestamp.
     """
 
@@ -65,6 +68,9 @@ class UserResponse(BaseModel):
     email: str
     name: str
     is_active: bool
+    plan_tier: str = "basic"
+    subscription_status: str = "trialing"
+    trial_ends_at: datetime | None = None
     created_at: datetime
 
 
@@ -119,10 +125,14 @@ async def register(
             detail="Email already registered",
         )
 
+    trial_end = datetime.now(timezone.utc) + timedelta(days=14)
     user = UserORM(
         email=body.email,
         hashed_password=hash_password(body.password),
         name=body.name,
+        plan_tier="basic",
+        subscription_status="trialing",
+        trial_ends_at=trial_end,
     )
     db.add(user)
     await db.flush()
@@ -135,6 +145,9 @@ async def register(
             email=user.email,
             name=user.name,
             is_active=user.is_active,
+            plan_tier=user.plan_tier,
+            subscription_status=user.subscription_status,
+            trial_ends_at=user.trial_ends_at,
             created_at=user.created_at,
         ),
     )
@@ -177,6 +190,9 @@ async def login(
             email=user.email,
             name=user.name,
             is_active=user.is_active,
+            plan_tier=user.plan_tier,
+            subscription_status=user.subscription_status,
+            trial_ends_at=user.trial_ends_at,
             created_at=user.created_at,
         ),
     )
@@ -197,5 +213,8 @@ async def me(current_user: CurrentUser) -> UserResponse:
         email=current_user.email,
         name=current_user.name,
         is_active=current_user.is_active,
+        plan_tier=current_user.plan_tier,
+        subscription_status=current_user.subscription_status,
+        trial_ends_at=current_user.trial_ends_at,
         created_at=current_user.created_at,
     )

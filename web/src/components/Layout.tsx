@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
@@ -77,6 +77,16 @@ export function Layout() {
                 {user?.name}
               </p>
               <p className="truncate text-[11px] text-gray-500">{user?.email}</p>
+              {user && (
+                <Link
+                  to="/settings/billing"
+                  className="mt-1 inline-flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium text-blue-300 transition-colors hover:bg-blue-500/20"
+                >
+                  {user.plan_tier.charAt(0).toUpperCase() + user.plan_tier.slice(1)}
+                  {user.subscription_status === "trialing" && " · Trial"}
+                  {user.subscription_status === "past_due" && " · Past due"}
+                </Link>
+              )}
             </div>
 
             {/* Sign out — icon button */}

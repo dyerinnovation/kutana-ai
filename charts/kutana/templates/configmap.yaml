@@ -12,6 +12,7 @@ data:
   CONVENE_MESSAGE_BUS: "redis"
   STT_PROVIDER: "deepgram"
   LOG_LEVEL: "info"
+  CORS_ORIGINS: {{ .Values.apiServer.corsOrigins | default "http://localhost:3000,http://localhost:5173,https://dev.kutana.ai" | quote }}
   # Task engine uses extraction windows
   EXTRACTION_WINDOW_SECONDS: "30"
   EXTRACTION_OVERLAP_SECONDS: "5"
@@ -25,3 +26,14 @@ data:
   AGENT_GATEWAY_TTS_CARTESIA_API_KEY: {{ .Values.agentGateway.ttsCartesiaApiKey | default "" | quote }}
   # Worker (feed dispatcher/runner)
   CONVENE_MCP_URL: "http://mcp-server.{{ .Release.Namespace }}.svc:3001/"
+  # Stripe billing
+  STRIPE_TRIAL_DAYS: {{ .Values.billing.trialDays | quote }}
+  BILLING_SUCCESS_URL: {{ .Values.billing.successUrl | quote }}
+  BILLING_CANCEL_URL: {{ .Values.billing.cancelUrl | quote }}
+  BILLING_PORTAL_RETURN_URL: {{ .Values.billing.portalReturnUrl | quote }}
+  STRIPE_PRICE_BASIC_MONTHLY: {{ .Values.billing.priceBasicMonthly | quote }}
+  STRIPE_PRICE_BASIC_YEARLY: {{ .Values.billing.priceBasicYearly | quote }}
+  STRIPE_PRICE_PRO_MONTHLY: {{ .Values.billing.priceProMonthly | quote }}
+  STRIPE_PRICE_PRO_YEARLY: {{ .Values.billing.priceProYearly | quote }}
+  STRIPE_PRICE_BUSINESS_MONTHLY: {{ .Values.billing.priceBusinessMonthly | quote }}
+  STRIPE_PRICE_BUSINESS_YEARLY: {{ .Values.billing.priceBusinessYearly | quote }}

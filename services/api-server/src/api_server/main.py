@@ -14,6 +14,7 @@ from api_server.routes.agent_keys import router as agent_keys_router
 from api_server.routes.agent_templates import router as agent_templates_router
 from api_server.routes.agents import router as agents_router
 from api_server.routes.auth import router as auth_router
+from api_server.routes.billing import router as billing_router
 from api_server.routes.feeds import router as feeds_router
 from api_server.routes.health import router as health_router
 from api_server.routes.meetings import router as meetings_router
@@ -57,6 +58,7 @@ app.add_middleware(RateLimitMiddleware)
 
 app.include_router(health_router)
 app.include_router(auth_router, prefix="/v1")
+app.include_router(billing_router, prefix="/v1")
 app.include_router(meetings_router, prefix="/v1")
 app.include_router(tasks_router, prefix="/v1")
 app.include_router(agents_router, prefix="/v1")

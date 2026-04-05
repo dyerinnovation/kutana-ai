@@ -2,6 +2,9 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  plan_tier: "basic" | "pro" | "business" | "enterprise";
+  subscription_status: "active" | "past_due" | "canceled" | "trialing" | "incomplete";
+  trial_ends_at: string | null;
   created_at: string;
 }
 
