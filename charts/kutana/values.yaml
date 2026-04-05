@@ -146,6 +146,23 @@ secrets:
   deepgramApiKey: "MmU5YmVlYzRhY2EzY2ZlMmVmMDA0Nzc2OTQzY2UzMTExZjg4NjE4Mg=="
   anthropicApiKey: ""
   discordBotToken: ""
+  stripeSecretKey: ""
+  stripeWebhookSecret: ""
+
+# ---------------------------------------------------------------------------
+# Stripe Billing (non-secret config — populate from scripts/stripe_setup.py)
+# ---------------------------------------------------------------------------
+billing:
+  trialDays: "14"
+  successUrl: "https://kutana.spark-b0f2.local/settings/billing?status=success"
+  cancelUrl: "https://kutana.spark-b0f2.local/pricing?status=cancel"
+  portalReturnUrl: "https://kutana.spark-b0f2.local/settings/billing"
+  priceBasicMonthly: ""
+  priceBasicYearly: ""
+  priceProMonthly: ""
+  priceProYearly: ""
+  priceBusinessMonthly: ""
+  priceBusinessYearly: ""
 
 # ---------------------------------------------------------------------------
 # Ingress
@@ -156,3 +173,9 @@ ingress:
   host: kutana.spark-b0f2.local
   tls:
     secretName: kutana-tls
+  # Public hostnames served via Cloudflare tunnel (TLS terminates at the edge,
+  # so no in-cluster certs needed for these).
+  publicHosts:
+    web: dev.kutana.ai
+    api: api-dev.kutana.ai
+    ws: ws-dev.kutana.ai

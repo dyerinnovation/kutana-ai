@@ -560,6 +560,29 @@
 
 > Third-party integrations and the agent marketplace.
 
+- [ ] 🔗 BLOCK: Feed Sources (Proactive Participant context feeds)
+  - [ ] Define FeedProvider ABC in kutana-core (start, stop, normalize → FeedMessage)
+  - [ ] Define FeedMessage Pydantic model (source, channel_id, content, media_type, thread_id, entities, timestamp, raw)
+  - [ ] 🔗 BLOCK: Telegram Feed Source — Phase 1 (Bot API)
+    - [ ] Implement TelegramBotFeedProvider using python-telegram-bot 22.7 (async webhook mode)
+    - [ ] Webhook handler FastAPI route — validate X-Telegram-Bot-Api-Secret-Token, return 200 immediately
+    - [ ] Publish normalized FeedMessage to Redis Streams (feed.telegram.{workspace_id}.{chat_id})
+    - [ ] FeedConsumer worker — subscribe to feed streams, route messages to active meeting context
+    - [ ] Handle message types: text (all entities), photo + caption, forwarded messages, polls
+    - [ ] API: POST /workspaces/{id}/feeds — add Telegram feed source (bot token + chat_id)
+    - [ ] API: GET/DELETE /workspaces/{id}/feeds — list/remove configured feed sources
+    - [ ] Web UI: Feed Sources panel in workspace settings (add bot token + channel)
+    - [ ] Integration tests: webhook → Redis → meeting context flow
+    - [ ] Disable privacy mode requirement documented; bot must be channel/group admin
+  - [ ] 🔗 BLOCK: Telegram Feed Source — Phase 2 (MTProto / user-authorized)
+    - [ ] User-delegated auth flow: phone number → OTP → Telethon session string encrypted in PostgreSQL
+    - [ ] Implement TelegramMTProtoFeedProvider using Telethon 1.42.0 (persistent TCP, K3s Deployment)
+    - [ ] Meeting start hook: seed last 50 messages from configured feeds into meeting context
+    - [ ] Voice message transcription: download → Deepgram STT → inject as text FeedMessage
+    - [ ] Revocation UI: disconnect Telegram account and purge session + feed data
+    - [ ] Privacy consent flow before MTProto authorization (in-product disclosure)
+  - [ ] Research doc: `research-and-planning/kutana-telegram-feed-research.docx` ✅
+
 - [ ] 🔗 BLOCK: Integrations
   - [ ] Implement Slack integration (summaries, task notifications, slash commands)
   - [ ] Implement Linear integration (bidirectional task sync)

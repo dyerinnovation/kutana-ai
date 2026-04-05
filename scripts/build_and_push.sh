@@ -49,8 +49,12 @@ FAILED=()
 SUCCEEDED=()
 
 for svc in "${SERVICES[@]}"; do
+  BUILD_ARGS=()
   if [[ "$svc" == "web" ]]; then
     DOCKERFILE="web/Dockerfile"
+    # Vite env vars for production build. Override in env if needed.
+    BUILD_ARGS+=(--build-arg "VITE_API_BASE_URL=${VITE_API_BASE_URL:-https://api-dev.kutana.ai/v1}")
+    BUILD_ARGS+=(--build-arg "VITE_WS_BASE_URL=${VITE_WS_BASE_URL:-https://ws-dev.kutana.ai}")
   else
     DOCKERFILE="services/${svc}/Dockerfile"
   fi
@@ -66,7 +70,7 @@ for svc in "${SERVICES[@]}"; do
   echo "==> Building $svc ..."
   START_TIME=$(date +%s)
 
-  if docker build -t "$TAG" -f "$DOCKERFILE" . ; then
+  if docker build -t "$TAG" "${BUILD_ARGS[@]}" -f "$DOCKERFILE" . ; then
     echo "==> Pushing $svc ..."
     if docker push "$TAG" ; then
       END_TIME=$(date +%s)

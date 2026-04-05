@@ -218,6 +218,14 @@ class UserORM(Base):
         hashed_password: Bcrypt-hashed password.
         name: Display name.
         is_active: Whether the account is active.
+        plan_tier: Subscription tier (basic, pro, business, enterprise).
+        stripe_customer_id: Stripe customer ID.
+        stripe_subscription_id: Stripe subscription ID.
+        subscription_status: Current subscription state.
+        trial_ends_at: When the free trial expires.
+        subscription_period_end: Current billing period end.
+        meetings_this_month: Meeting count for current billing cycle.
+        billing_cycle_start: Start of current billing cycle.
         created_at: Record creation timestamp.
         updated_at: Record update timestamp.
     """
@@ -229,6 +237,40 @@ class UserORM(Base):
     hashed_password: Mapped[str] = mapped_column(sa.String(255), nullable=False)
     name: Mapped[str] = mapped_column(sa.String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
+
+    # Billing & subscription
+    plan_tier: Mapped[str] = mapped_column(
+        sa.Enum("basic", "pro", "business", "enterprise", name="plan_tier"),
+        nullable=False,
+        server_default="basic",
+    )
+    stripe_customer_id: Mapped[str | None] = mapped_column(
+        sa.String(255), nullable=True, unique=True
+    )
+    stripe_subscription_id: Mapped[str | None] = mapped_column(
+        sa.String(255), nullable=True
+    )
+    subscription_status: Mapped[str] = mapped_column(
+        sa.Enum(
+            "active", "past_due", "canceled", "trialing", "incomplete",
+            name="subscription_status",
+        ),
+        nullable=False,
+        server_default="trialing",
+    )
+    trial_ends_at: Mapped[datetime | None] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
+    subscription_period_end: Mapped[datetime | None] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
+    meetings_this_month: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, server_default="0"
+    )
+    billing_cycle_start: Mapped[datetime | None] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
     )

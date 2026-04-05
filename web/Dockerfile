@@ -9,6 +9,11 @@ COPY web/package.json web/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY web/ .
 COPY external-docs/ /repo/external-docs/
+# Vite bakes env vars at build time — pass as build args.
+ARG VITE_API_BASE_URL
+ARG VITE_WS_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_WS_BASE_URL=$VITE_WS_BASE_URL
 RUN pnpm build
 
 # Stage 2: Serve with nginx

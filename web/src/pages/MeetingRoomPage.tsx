@@ -13,7 +13,13 @@ import type {
 } from "@/types";
 
 const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
-const HUMAN_WS_BASE = `${wsProto}//${window.location.host}/human/connect`;
+// If VITE_WS_BASE_URL is set (e.g. "https://ws-dev.kutana.ai"), use that host
+// and connect to /connect at root (public WS ingress has no /human rewrite).
+// Otherwise fall back to same-origin /human/connect (LAN dev).
+const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL;
+const HUMAN_WS_BASE = WS_BASE_URL
+  ? `${WS_BASE_URL.replace(/^https?:/, wsProto)}/connect`
+  : `${wsProto}//${window.location.host}/human/connect`;
 const SAMPLE_RATE = 16000;
 
 // Energy gate: drop audio frames where the RMS level is below this threshold.

@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
 from functools import lru_cache
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 
 from fastapi import Depends
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -16,9 +17,6 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from api_server.event_publisher import EventPublisher
-
-if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +44,21 @@ class Settings(BaseSettings):
     debug: bool = False
     jwt_secret: str = "change-me-in-production"
     agent_gateway_jwt_secret: str = "change-me-in-production"
+
+    # Stripe billing
+    stripe_secret_key: str = ""
+    stripe_publishable_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_price_basic_monthly: str = ""
+    stripe_price_basic_yearly: str = ""
+    stripe_price_pro_monthly: str = ""
+    stripe_price_pro_yearly: str = ""
+    stripe_price_business_monthly: str = ""
+    stripe_price_business_yearly: str = ""
+    stripe_trial_days: int = 14
+    billing_success_url: str = "http://localhost:5173/settings/billing?status=success"
+    billing_cancel_url: str = "http://localhost:5173/pricing?status=cancel"
+    billing_portal_return_url: str = "http://localhost:5173/settings/billing"
 
 
 @lru_cache(maxsize=1)
