@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api_server.auth import generate_api_key
 from api_server.auth_deps import CurrentUser
+from api_server.billing_deps import API_KEY_MIN_TIER, require_tier
 from api_server.deps import get_db_session
 from kutana_core.database.models import AgentApiKeyORM, AgentConfigORM, ApiKeyAuditLogORM
 
@@ -142,7 +143,12 @@ async def create_key(
 
     Returns:
         KeyCreateResponse with the raw key.
+
+    Raises:
+        HTTPException: 402/403 if user lacks the Business+ plan required
+            for API key issuance.
     """
+    require_tier(current_user, API_KEY_MIN_TIER)
     await _get_owned_agent(agent_id, current_user.id, db)
 
     raw_key, key_hash = generate_api_key()

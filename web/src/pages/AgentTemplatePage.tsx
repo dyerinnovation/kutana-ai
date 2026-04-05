@@ -11,6 +11,9 @@ import {
   CardContent,
 } from "@/components/ui/Card";
 import { Dialog, DialogTitle, DialogFooter } from "@/components/ui/Dialog";
+import { useAuth } from "@/hooks/useAuth";
+import { MANAGED_AGENT_MIN_TIER, meetsTier } from "@/lib/planLimits";
+import { UpgradeBadge } from "@/components/UpgradeBadge";
 
 const CATEGORIES = [
   { value: "", label: "All" },
@@ -29,6 +32,9 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export function AgentTemplatePage() {
+  const { user } = useAuth();
+  const canActivate = meetsTier(user, MANAGED_AGENT_MIN_TIER);
+
   const [templates, setTemplates] = useState<AgentTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -183,13 +189,19 @@ export function AgentTemplatePage() {
                       Premium
                     </span>
                   )}
-                  <Button
-                    size="sm"
-                    onClick={() => openActivateModal(template)}
-                    className="ml-auto"
-                  >
-                    Activate
-                  </Button>
+                  {canActivate ? (
+                    <Button
+                      size="sm"
+                      onClick={() => openActivateModal(template)}
+                      className="ml-auto"
+                    >
+                      Activate
+                    </Button>
+                  ) : (
+                    <div className="ml-auto">
+                      <UpgradeBadge requiredTier={MANAGED_AGENT_MIN_TIER} />
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

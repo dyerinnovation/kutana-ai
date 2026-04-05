@@ -12,6 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api_server.auth_deps import CurrentUser, CurrentUserOrAgent
+from api_server.billing_deps import check_meeting_limit
 from api_server.deps import get_db_session
 from kutana_core.database.models import MeetingORM
 from kutana_core.models.meeting import MeetingStatus
@@ -145,19 +146,24 @@ async def list_meetings(
 @router.post("", response_model=MeetingResponse, status_code=201)
 async def create_meeting(
     body: MeetingCreateRequest,
-    _current_user: CurrentUserOrAgent,
+    current_user: CurrentUserOrAgent,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> MeetingResponse:
     """Create a new meeting.
 
     Args:
         body: The meeting creation payload.
-        _current_user: Authenticated user.
+        current_user: Authenticated user.
         db: Database session.
 
     Returns:
         MeetingResponse with the newly created meeting data.
+
+    Raises:
+        HTTPException: 402/403 if the user has no active subscription or
+            has hit their monthly meeting limit.
     """
+    await check_meeting_limit(current_user, db)
     meeting = MeetingORM(
         platform=body.platform,
         title=body.title,
@@ -165,6 +171,7 @@ async def create_meeting(
         status=MeetingStatus.SCHEDULED.value,
     )
     db.add(meeting)
+    current_user.meetings_this_month += 1
     await db.flush()
     await db.refresh(meeting)
     return _to_response(meeting)

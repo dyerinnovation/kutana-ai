@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -10,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api_server.auth_deps import CurrentUser
+from api_server.billing_deps import MANAGED_AGENT_MIN_TIER, require_tier
 from api_server.deps import get_db_session
 from kutana_core.database.models import (
     AgentTemplateORM,
@@ -158,8 +160,10 @@ async def activate_template(
         The created hosted session.
 
     Raises:
-        HTTPException: 404 if template or meeting not found.
+        HTTPException: 402/403 if user lacks the Business+ plan required
+            for managed agents, or 404 if template or meeting not found.
     """
+    require_tier(user, MANAGED_AGENT_MIN_TIER)
     # Verify template exists
     t_result = await db.execute(
         select(AgentTemplateORM).where(AgentTemplateORM.id == template_id)
@@ -233,8 +237,8 @@ async def deactivate_session(
             detail="Session not found",
         )
 
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     session.status = "stopped"
-    session.ended_at = datetime.now(timezone.utc)
+    session.ended_at = datetime.now(UTC)
     await db.flush()

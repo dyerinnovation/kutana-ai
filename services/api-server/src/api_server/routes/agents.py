@@ -12,6 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api_server.auth_deps import CurrentUser
+from api_server.billing_deps import check_agent_config_limit
 from api_server.deps import get_db_session
 from kutana_core.database.models import AgentConfigORM
 
@@ -147,7 +148,12 @@ async def create_agent(
 
     Returns:
         AgentResponse with the newly created agent data.
+
+    Raises:
+        HTTPException: 402/403 if the user has no active subscription or
+            has hit their custom-agent limit.
     """
+    await check_agent_config_limit(current_user, db)
     agent = AgentConfigORM(
         name=body.name,
         voice_id=body.voice_id,

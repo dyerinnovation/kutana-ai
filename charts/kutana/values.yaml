@@ -154,9 +154,9 @@ secrets:
 # ---------------------------------------------------------------------------
 billing:
   trialDays: "14"
-  successUrl: "https://kutana.spark-b0f2.local/settings/billing?status=success"
-  cancelUrl: "https://kutana.spark-b0f2.local/pricing?status=cancel"
-  portalReturnUrl: "https://kutana.spark-b0f2.local/settings/billing"
+  successUrl: "https://dev.kutana.ai/settings/billing?status=success"
+  cancelUrl: "https://dev.kutana.ai/pricing?status=cancel"
+  portalReturnUrl: "https://dev.kutana.ai/settings/billing"
   priceBasicMonthly: ""
   priceBasicYearly: ""
   priceProMonthly: ""

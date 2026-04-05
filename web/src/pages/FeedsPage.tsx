@@ -10,6 +10,9 @@ import {
   CardContent,
 } from "@/components/ui/Card";
 import { Dialog, DialogTitle, DialogFooter } from "@/components/ui/Dialog";
+import { useAuth } from "@/hooks/useAuth";
+import { FEED_LIMIT, upgradeTargetFor } from "@/lib/planLimits";
+import { UpgradeBadge } from "@/components/UpgradeBadge";
 
 const DATA_TYPE_OPTIONS = [
   { value: "summary", label: "Summary" },
@@ -118,6 +121,12 @@ const EMPTY_FORM: FeedCreate = {
 };
 
 export function FeedsPage() {
+  const { user } = useAuth();
+  const feedLimit = user
+    ? FEED_LIMIT[user.plan_tier as keyof typeof FEED_LIMIT]
+    : 0;
+  const feedsBlocked = feedLimit === 0;
+
   // Feeds state
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [feedsLoading, setFeedsLoading] = useState(true);
@@ -381,13 +390,18 @@ export function FeedsPage() {
 
       {/* ── Available Integrations ───────────────────────────── */}
       <section className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight text-gray-50">
-            Available Integrations
-          </h2>
-          <p className="mt-0.5 text-sm text-gray-400">
-            Connect Kutana to your favorite platforms
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight text-gray-50">
+              Available Integrations
+            </h2>
+            <p className="mt-0.5 text-sm text-gray-400">
+              Connect Kutana to your favorite platforms
+            </p>
+          </div>
+          {feedsBlocked && (
+            <UpgradeBadge requiredTier={upgradeTargetFor("feeds")} />
+          )}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -412,9 +426,13 @@ export function FeedsPage() {
                 <Button
                   size="sm"
                   onClick={() => openCreateModal(integration.platform)}
-                  disabled={integration.status !== "available"}
+                  disabled={
+                    integration.status !== "available" || feedsBlocked
+                  }
                 >
-                  {integration.status === "available"
+                  {feedsBlocked && integration.status === "available"
+                    ? "Upgrade to unlock"
+                    : integration.status === "available"
                     ? "Configure"
                     : STATUS_LABEL[integration.status]}
                 </Button>

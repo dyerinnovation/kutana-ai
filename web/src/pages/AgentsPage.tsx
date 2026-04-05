@@ -13,6 +13,9 @@ import {
   CardContent,
 } from "@/components/ui/Card";
 import { Dialog, DialogTitle, DialogFooter } from "@/components/ui/Dialog";
+import { useAuth } from "@/hooks/useAuth";
+import { AGENT_CONFIG_LIMIT, planLabel } from "@/lib/planLimits";
+import { UpgradeBadge } from "@/components/UpgradeBadge";
 
 const CATEGORIES = [
   { value: "", label: "All" },
@@ -28,6 +31,11 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export function AgentsPage() {
+  const { user } = useAuth();
+  const agentLimit = user
+    ? AGENT_CONFIG_LIMIT[user.plan_tier as keyof typeof AGENT_CONFIG_LIMIT]
+    : 0;
+
   // User agents state
   const [agents, setAgents] = useState<Agent[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(true);
@@ -105,12 +113,29 @@ export function AgentsPage() {
               AI agents that join and listen to your meetings
             </p>
           </div>
-          <Link to="/agents/new">
-            <Button>
-              <PlusIcon />
-              New Agent
-            </Button>
-          </Link>
+          {(() => {
+            const atLimit =
+              agentLimit !== null && agents.length >= agentLimit;
+            if (atLimit) {
+              return (
+                <div className="flex flex-col items-end gap-1">
+                  <Button disabled title={`Limit reached on ${planLabel(user?.plan_tier ?? "basic")} plan`}>
+                    <PlusIcon />
+                    New Agent
+                  </Button>
+                  <UpgradeBadge requiredTier={user?.plan_tier === "basic" ? "pro" : "business"} />
+                </div>
+              );
+            }
+            return (
+              <Link to="/agents/new">
+                <Button>
+                  <PlusIcon />
+                  New Agent
+                </Button>
+              </Link>
+            );
+          })()}
         </div>
 
         {agentsLoading && (
