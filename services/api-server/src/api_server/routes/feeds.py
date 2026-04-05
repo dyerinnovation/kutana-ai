@@ -9,10 +9,10 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api_server.auth_deps import CurrentUser  # noqa: TC001 — runtime dep for FastAPI DI
+from api_server.billing_deps import check_feed_limit
 from api_server.deps import get_db_session, get_event_publisher
 from api_server.encryption import encrypt_value
 from api_server.event_publisher import EventPublisher  # noqa: TC001 — runtime dep for FastAPI DI
@@ -223,7 +223,12 @@ async def create_feed(
 
     Returns:
         FeedRead with the newly created feed.
+
+    Raises:
+        HTTPException: 402/403 if the user has no active subscription,
+            is on Basic (feeds disallowed), or has hit their feed limit.
     """
+    await check_feed_limit(current_user, db)
     feed = FeedORM(
         id=uuid4(),
         user_id=current_user.id,
