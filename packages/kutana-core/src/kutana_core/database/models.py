@@ -728,3 +728,25 @@ class FeedSecretORM(Base):
     feed: Mapped[FeedORM] = relationship(back_populates="secret")
 
     __table_args__ = (Index("ix_feed_secrets_feed_id", "feed_id", unique=True),)
+
+
+class UsageRecordORM(Base):
+    """Tracks time-based usage for agents and feeds."""
+
+    __tablename__ = "usage_records"
+
+    id: Mapped[UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(sa.Uuid, ForeignKey("users.id"), nullable=False)
+    resource_type: Mapped[str] = mapped_column(sa.String(20), nullable=False)  # "agent" or "feed"
+    resource_id: Mapped[UUID] = mapped_column(sa.Uuid, nullable=False)  # agent_config or feed id
+    started_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+    ended_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), nullable=True)
+    duration_seconds: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=0)
+    billing_period: Mapped[str] = mapped_column(sa.String(7), nullable=False)  # "YYYY-MM"
+
+    __table_args__ = (
+        Index("ix_usage_records_user_period", "user_id", "billing_period"),
+        Index("ix_usage_records_resource", "resource_type", "resource_id"),
+    )
