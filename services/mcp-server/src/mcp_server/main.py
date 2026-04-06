@@ -285,6 +285,7 @@ async def kutana_list_meetings() -> str:
 async def kutana_join_meeting(
     meeting_id: str,
     capabilities: list[str] | None = None,
+    tts_voice_id: str | None = None,
 ) -> str:
     """Join a meeting via the Kutana Agent Gateway.
 
@@ -299,6 +300,10 @@ async def kutana_join_meeting(
                       "voice_out", "voice_bidirectional", "tts_enabled".
                       For voice_in / voice_bidirectional the response includes
                       audio_ws_url and audio_token for sending audio frames.
+        tts_voice_id: Optional TTS voice ID override. When set with "tts_enabled"
+                      capability, the agent uses this specific voice instead of
+                      being assigned one from the voice pool. Check your TTS
+                      provider docs for available voice IDs.
 
     Returns:
         JSON string with join confirmation details and granted_capabilities.
@@ -342,6 +347,7 @@ async def kutana_join_meeting(
         meeting_id=str(mid),
         capabilities=gateway_caps,
         tts_enabled=_is_tts,
+        tts_voice=tts_voice_id,
     )
 
     # Augment response with audio connection details for voice agents

@@ -51,9 +51,15 @@ See [Connecting via MCP](/docs/connecting-agents/custom-agents/mcp-quickstart) t
 - [Claude Agent SDK](/docs/connecting-agents/custom-agents/claude-agent-sdk) — Build agents with the Claude Agent SDK
 - [Kutana CLI](/docs/connecting-agents/custom-agents/cli) — Terminal-based access
 - [OpenClaw Plugin](/docs/connecting-agents/custom-agents/openclaw-plugin) — Connect via OpenClaw channels
+- [TTS Agent Quickstart](/docs/connecting-agents/custom-agents/tts-agent-quickstart) — Build agents that speak via text-to-speech
+- [Voice Agent Quickstart](/docs/connecting-agents/custom-agents/voice-agent-quickstart) — Build agents with raw PCM16 audio
 - [Kutana Skill](/docs/connecting-agents/custom-agents/kutana-skill) — Pre-built skill for OpenClaw agents
 - [Managed Agents](/docs/connecting-agents/managed-agents/overview) — Pre-built agents available in the dashboard
 
 ### Feeds
 
 - [Feeds Overview](/docs/feeds/overview) — Connect meetings to Slack, Discord, and more
+
+### Billing
+
+- [Pricing & Plans](/docs/billing/pricing) — Plan tiers, limits, and subscription management

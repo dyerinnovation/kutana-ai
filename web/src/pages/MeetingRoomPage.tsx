@@ -223,7 +223,13 @@ export function MeetingRoomPage() {
         // Server sends one participant per update (join/leave notification)
         setParticipants((prev) => {
           if (msg.action === "joined") {
-            const p: Participant = { id: msg.participant_id, name: msg.name, role: msg.role, is_muted: false };
+            const p: Participant = {
+              id: msg.participant_id,
+              name: msg.name,
+              role: msg.role,
+              is_muted: false,
+              capabilities: msg.capabilities,
+            };
             return prev.some((x) => x.id === p.id) ? prev : [...prev, p];
           } else {
             return prev.filter((x) => x.id !== msg.participant_id);

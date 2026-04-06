@@ -11,12 +11,22 @@
     },
     {
       "name": "kutana_join_meeting",
-      "description": "Join a Kutana AI meeting by ID",
+      "description": "Join a Kutana AI meeting by ID with optional capability declaration",
       "parameters": {
         "meeting_id": {
           "type": "string",
           "description": "The meeting ID to join",
           "required": true
+        },
+        "capabilities": {
+          "type": "array",
+          "description": "Agent capabilities: text_only (default), voice_in, voice_out, voice_bidirectional, tts_enabled",
+          "required": false
+        },
+        "tts_voice_id": {
+          "type": "string",
+          "description": "TTS voice ID override (used with tts_enabled capability)",
+          "required": false
         }
       }
     },
@@ -64,6 +74,151 @@
         "title": {
           "type": "string",
           "description": "Meeting title",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "kutana_leave_meeting",
+      "description": "Leave the current meeting",
+      "parameters": {}
+    },
+    {
+      "name": "kutana_raise_hand",
+      "description": "Request to speak in the meeting",
+      "parameters": {
+        "meeting_id": {
+          "type": "string",
+          "description": "The meeting ID",
+          "required": true
+        },
+        "topic": {
+          "type": "string",
+          "description": "Optional topic for what you want to discuss",
+          "required": false
+        }
+      }
+    },
+    {
+      "name": "kutana_cancel_hand_raise",
+      "description": "Withdraw from the speaker queue",
+      "parameters": {
+        "meeting_id": {
+          "type": "string",
+          "description": "The meeting ID",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "kutana_get_queue_status",
+      "description": "Check the current speaker queue and your position",
+      "parameters": {
+        "meeting_id": {
+          "type": "string",
+          "description": "The meeting ID",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "kutana_start_speaking",
+      "description": "Confirm you are starting to speak (after your turn arrives)",
+      "parameters": {
+        "meeting_id": {
+          "type": "string",
+          "description": "The meeting ID",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "kutana_mark_finished_speaking",
+      "description": "Signal you are done speaking, advance the queue",
+      "parameters": {
+        "meeting_id": {
+          "type": "string",
+          "description": "The meeting ID",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "kutana_speak",
+      "description": "Speak text in the meeting (handles turn management and TTS automatically)",
+      "parameters": {
+        "meeting_id": {
+          "type": "string",
+          "description": "The meeting ID",
+          "required": true
+        },
+        "text": {
+          "type": "string",
+          "description": "The text to speak",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "kutana_send_chat_message",
+      "description": "Send a chat message to the meeting",
+      "parameters": {
+        "meeting_id": {
+          "type": "string",
+          "description": "The meeting ID",
+          "required": true
+        },
+        "content": {
+          "type": "string",
+          "description": "Message content",
+          "required": true
+        },
+        "message_type": {
+          "type": "string",
+          "description": "Message type: text, question, action_item, or decision",
+          "required": false
+        }
+      }
+    },
+    {
+      "name": "kutana_get_chat_messages",
+      "description": "Get chat messages from the meeting",
+      "parameters": {
+        "meeting_id": {
+          "type": "string",
+          "description": "The meeting ID",
+          "required": true
+        },
+        "limit": {
+          "type": "number",
+          "description": "Number of messages to return (default: 50)",
+          "required": false
+        },
+        "message_type": {
+          "type": "string",
+          "description": "Filter by message type",
+          "required": false
+        }
+      }
+    },
+    {
+      "name": "kutana_get_meeting_status",
+      "description": "Get comprehensive meeting state (participants, queue, active speaker, recent chat)",
+      "parameters": {
+        "meeting_id": {
+          "type": "string",
+          "description": "The meeting ID",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "kutana_get_speaking_status",
+      "description": "Check if you are currently the active speaker",
+      "parameters": {
+        "meeting_id": {
+          "type": "string",
+          "description": "The meeting ID",
           "required": true
         }
       }

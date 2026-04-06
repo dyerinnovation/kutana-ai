@@ -19,6 +19,7 @@ Python monorepo (`uv` workspaces) + React 19 frontend.
 - **Phase 1** — Core AI Pipeline (in progress). STT wired, Redis Streams consumer implemented.
 - **Phase 2** — Agent Platform (complete 2026-03-07). MCP OAuth 2.1, meeting lifecycle, browser room, templates, CLI, OpenClaw, channel routing.
 - **Phase 3** — Meeting Platform. LiveKit WebRTC, video tiles, screen sharing, layout modes.
+- **Billing** — Stripe subscription billing (complete 2026-04-05). 4 tiers (Basic/Pro/Business/Enterprise), landing page, tier enforcement, public DNS (dev.kutana.ai).
 
 See `internal-docs/development/TASKLIST.md` for the task queue.
 
@@ -34,7 +35,7 @@ See `internal-docs/development/TASKLIST.md` for the task queue.
 
 ## Key References
 
-- **Architecture patterns:** `internal-docs/architecture/patterns/` (core, providers, message-bus, memory, service-patterns, auth, mcp-server, uv, git)
+- **Architecture patterns:** `internal-docs/architecture/patterns/` (core, providers, message-bus, memory, service-patterns, auth, mcp-server, uv, git, stripe-billing)
 - `internal-docs/architecture/patterns/claude-code-channels.md` — Claude Code channels spec and Kutana integration plan
 - **Task queue:** `internal-docs/development/TASKLIST.md`
 - **Roadmap & strategy:** `internal-docs/strategy/roadmap.md` · `internal-docs/strategy/cost-architecture.md`

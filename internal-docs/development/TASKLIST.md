@@ -206,14 +206,14 @@
   - [x] `source: "claude-code"` propagated in JoinMeeting, AgentIdentity, and ParticipantUpdate
   - [x] SubscribeChannel protocol message — gateway-side channel subscription via WebSocket
   - [x] Integration tests: subscribe flow, event buffering, source claim, channel routing
-  - [ ] Write Claude Code channel setup guide (`docs/integrations/CLAUDE_CODE_CHANNEL.md`)
+  - [x] Write Claude Code channel setup guide (`external-docs/connecting-agents/custom-agents/claude-code-channel.md`)
 
 - [ ] 🔗 BLOCK: Agent Capability Declaration (P0 — ships with April Release)
-  - [ ] Extend `kutana_join_meeting` with `audio_capability` parameter (`text_only`, `voice_in`, `voice_out`, `voice_bidirectional`, `tts_enabled`)
-  - [ ] Extend `kutana_join_meeting` with `tts_voice_id` optional override parameter
-  - [ ] Gateway routes audio based on declared capability at join time
-  - [ ] Participant events include `audio_capability` field for visibility
-  - [ ] Update OpenClaw plugin with new `audio_capability` parameter
+  - [x] Extend `kutana_join_meeting` with `capabilities` parameter (`text_only`, `voice_in`, `voice_out`, `voice_bidirectional`, `tts_enabled`)
+  - [x] Extend `kutana_join_meeting` with `tts_voice_id` optional override parameter
+  - [x] Gateway routes audio based on declared capability at join time
+  - [x] Participant events include `capabilities` field for visibility
+  - [x] Update OpenClaw plugin with capabilities + turn/chat tools (12 → 24 tools)
   - [ ] Integration tests: each capability value routes audio correctly
 
 - [x] 🔗 BLOCK: kutana_start_speaking MCP Tool (P0 — ships with April Release)
@@ -245,32 +245,31 @@
   - [ ] Continuous 20ms frame streaming from gateway to agent (silence-padded)
   - [ ] Integration tests: voice agent joins, sends audio, receives room audio, mixed-minus verified
 
-- [ ] 🔗 BLOCK: MCP Tool Prefix Standardization (P0 — ships with April Release)
-  - [ ] Rename all MCP tools from bare names to `kutana_` prefix (e.g., `join_meeting` → `kutana_join_meeting`)
-  - [ ] Update OpenClaw plugin with renamed tools
-  - [ ] Update `internal-docs/internal-docs/examples/meeting-assistant-agent/` with new tool names
-  - [ ] Update all integration tests to use `kutana_` prefix
-  - [ ] Update `docs/research/channel-plugin.md` tool reference table (already uses `kutana_` prefix)
+- [x] 🔗 BLOCK: MCP Tool Prefix Standardization (P0 — ships with April Release)
+  - [x] Rename all MCP tools from bare names to `kutana_` prefix (e.g., `join_meeting` → `kutana_join_meeting`)
+  - [x] Update OpenClaw plugin with renamed tools
+  - [x] Update all integration tests to use `kutana_` prefix
+  - [ ] Update `docs/research/channel-plugin.md` tool reference table
   - [ ] Update `docs/research/skill-architecture.md` capability mapping table
 
-- [ ] 🔗 BLOCK: Developer Onboarding Documentation (P0 — ships with April Release)
-  - [ ] Write `docs/integrations/CLAUDE_CODE_CHANNEL.md` — end-to-end setup guide (API key → settings.json → first join)
-  - [ ] Write `docs/integrations/VOICE_AGENT_QUICKSTART.md` — voice agent setup (sidecar, PCM16, VAD)
-  - [ ] Write `docs/integrations/TTS_AGENT_QUICKSTART.md` — TTS agent setup (tts_enabled, voice assignment, start_speaking)
-  - [ ] Update `internal-docs/internal-docs/examples/meeting-assistant-agent/` templates to use new capability declaration + `kutana_` prefix
+- [x] 🔗 BLOCK: Developer Onboarding Documentation (P0 — ships with April Release)
+  - [x] Write Claude Code channel setup guide (`external-docs/connecting-agents/custom-agents/claude-code-channel.md`)
+  - [x] Write voice agent quickstart (`external-docs/connecting-agents/custom-agents/voice-agent-quickstart.md`)
+  - [x] Write TTS agent quickstart (`external-docs/connecting-agents/custom-agents/tts-agent-quickstart.md`)
+  - [ ] Update example templates to use new capability declaration + `kutana_` prefix
   - [ ] Add developer onboarding checklist to `docs/SETUP_GUIDE.md`
 
-- [ ] 🔗 BLOCK: Frontend — Turn Management & Chat UI
-  - [ ] Speaker queue panel (ordered list, current speaker highlighted, position indicators)
-  - [ ] Hand-raise button for human participants in the meeting room
-  - [ ] Meeting chat panel (send/receive messages, participant attribution, timestamps)
-  - [ ] Participant list updated to show agent status (in queue, speaking, idle)
-  - [ ] Real-time state updates via WebSocket events
+- [x] 🔗 BLOCK: Frontend — Turn Management & Chat UI
+  - [x] Speaker queue panel (ordered list, current speaker highlighted, position indicators)
+  - [x] Hand-raise button for human participants in the meeting room
+  - [x] Meeting chat panel (send/receive messages, participant attribution, timestamps)
+  - [x] Participant list updated to show agent status (in queue, speaking, idle)
+  - [x] Real-time state updates via WebSocket events
 
 - [ ] 🔗 BLOCK: April Release Examples & Docs
   - [ ] Update `internal-docs/internal-docs/examples/meeting-assistant-agent/` to use turn management + chat tools
   - [x] Update OpenClaw plugin with new MCP tool definitions (turn management + chat — 12 tools total)
-  - [ ] Write Claude Code channel setup guide (`docs/integrations/CLAUDE_CODE_CHANNEL.md`)
+  - [x] Write Claude Code channel setup guide (`external-docs/connecting-agents/custom-agents/claude-code-channel.md`)
   - [ ] Write multi-agent meeting tutorial
   - [ ] Finalize `docs/milestone-testing/M_APRIL_E2E_Test.md` scenario playbook
 
@@ -373,26 +372,48 @@
   - [ ] Speaker diarization integration (segment and label audio by speaker)
   - [ ] Usage metering and subscription/volume billing hooks
   - [ ] Configuration: per-meeting model overrides, default tiers per plan
-  - [ ] Stripe integration: products and pricing for 4 tiers (Free, Pro $29/mo, Business $79/mo, Enterprise custom)
-  - [ ] Stripe Checkout / billing portal integration in web frontend
-  - [ ] Stripe webhook handler for subscription lifecycle (created, updated, cancelled, payment_failed)
+  - [x] Stripe integration: products and pricing for 4 tiers (Basic $7.99/mo, Pro $29/mo, Business $79/mo, Enterprise $150/mo)
+  - [x] Stripe Checkout / billing portal integration in web frontend
+  - [x] Stripe webhook handler for subscription lifecycle (created, updated, cancelled, payment_failed)
   - [ ] Usage-based metering: track meeting minutes, extraction calls, agent sessions per billing period
   - [ ] Stripe usage records API integration for metered billing components
-  - [ ] Subscription middleware: gate features by plan tier (entity types, diarization, custom extractors, model selection)
-  - [ ] Free tier limits enforcement (5 meetings/month, basic extraction, no diarization)
-  - [ ] Billing dashboard in web frontend (current plan, usage, invoices)
+  - [x] Subscription middleware: gate features by plan tier (meetings, agents, feeds, managed agents, API keys)
+  - [x] Tier limits enforcement (Basic: 10 meetings/mo, 1 agent, 0 feeds; Pro: unlimited meetings, 5 agents, 2 feeds; Business+: unlimited)
+  - [x] Billing dashboard in web frontend (BillingPage — current plan, usage, manage subscription)
 
-- [ ] 🔗 BLOCK: Subscription & Billing Infrastructure
-  - [ ] Stripe SDK integration (stripe-python for API server)
-  - [ ] Subscription plans configuration (products, prices, features matrix)
-  - [ ] Customer and subscription management (create customer on signup, link to Kutana user)
-  - [ ] Checkout flow: upgrade/downgrade/cancel via Stripe billing portal
-  - [ ] Webhook endpoint for Stripe events (invoice.paid, customer.subscription.updated, etc.)
+- [x] 🔗 BLOCK: Subscription & Billing Infrastructure
+  - [x] Stripe SDK integration (stripe-python for API server)
+  - [x] Subscription plans configuration (products, prices, features matrix) — Stripe test-mode Price IDs created 2026-04-05
+  - [x] Customer and subscription management (create customer on signup, link to Kutana user)
+  - [x] Checkout flow: upgrade/downgrade/cancel via Stripe billing portal
+  - [x] Webhook endpoint for Stripe events (invoice.paid, customer.subscription.updated, etc.)
   - [ ] Usage metering service: count meeting minutes, LLM calls, STT minutes per user per period
-  - [ ] Plan enforcement middleware: check user's plan before allowing premium features
+  - [x] Plan enforcement middleware: check user's plan before allowing premium features (billing_deps.py)
   - [ ] Grace period and dunning handling for failed payments
   - [ ] Admin dashboard: revenue metrics, subscriber counts, churn tracking
   - [ ] Tests for billing flows and plan enforcement
+
+- [x] 🔗 BLOCK: Landing Page & Public Routing
+  - [x] Convert landing page (v11) to React components (LandingPage.tsx + 12 section components)
+  - [x] Public routing: unauthenticated users see landing page at `/`, authenticated users see dashboard
+  - [x] `/pricing` standalone public route (reuses PricingSection)
+  - [x] CTA wiring: Get Started → /register, Sign In → /login, pricing buttons → /register?plan=tier
+  - [x] Public DNS: dev.kutana.ai (web), api-dev.kutana.ai (API), ws-dev.kutana.ai (WS) via Cloudflare Tunnel
+  - [x] Cross-origin API: VITE_API_BASE_URL env var, CORS allowlist, separate Ingress objects per subdomain
+  - [x] Frontend upgrade badges (UpgradeBadge component) on tier-locked features
+
+- [ ] 🔗 BLOCK: Team & Enterprise (future)
+  - [ ] Team creation and management (`/settings/team`)
+  - [ ] Invite team members by email
+  - [ ] Per-seat billing (Stripe quantity-based subscriptions)
+  - [ ] Team admin role with member management
+  - [ ] Shared agent configurations across team
+  - [ ] Team analytics dashboard
+  - [ ] SSO integration (SAML/OIDC) for enterprise
+  - [ ] On-premise deployment guide for enterprise
+  - [ ] Custom managed agent development workflow
+  - [ ] Advanced access controls (RBAC)
+  - [ ] Volume/custom pricing (contact sales flow)
 
 - [ ] F3.4: Participant video tiles (LiveKit media tracks → `<video>` elements) — blocked on F3.1 (LiveKit integration)
 - [ ] F3.5: Screen sharing support (LiveKit screen track) — blocked on F3.1
@@ -446,15 +467,15 @@
   - [ ] Implement agent assignment to meetings
   - [ ] Implement agent permission management
 
-- [ ] 🔗 BLOCK: Billing
-  - [ ] Integrate Stripe for payment processing
-  - [ ] Implement subscription plans (Free, Developer, Pro, Team, Enterprise)
+- [x] 🔗 BLOCK: Billing
+  - [x] Integrate Stripe for payment processing (stripe-python, billing routes, webhook handler)
+  - [x] Implement subscription plans (Basic, Pro, Business, Enterprise — 4 tiers with monthly/yearly)
   - [ ] Implement usage tracking (agent-minutes, meeting count, storage)
-  - [ ] Implement usage-based billing metering for Developer tier
-  - [ ] Implement plan upgrade/downgrade flows
-  - [ ] Implement billing dashboard (current plan, usage, invoices, payment method)
-  - [ ] Implement free tier limit enforcement
-  - [ ] Implement Stripe webhook handlers (payment success/failure, subscription changes)
+  - [ ] Implement usage-based billing metering
+  - [x] Implement plan upgrade/downgrade flows (Stripe Checkout + Customer Portal)
+  - [x] Implement billing dashboard (BillingPage — current plan, usage, manage subscription)
+  - [x] Implement tier limit enforcement (billing_deps.py — meetings, agents, feeds, managed agents, API keys)
+  - [x] Implement Stripe webhook handlers (payment success/failure, subscription changes)
 
 - [ ] **🏁 Milestone M5: User signs up, creates workspace, subscribes to paid plan**
 

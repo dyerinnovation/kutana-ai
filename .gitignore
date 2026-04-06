@@ -54,9 +54,10 @@ dyerinnovation-key.pub
 # Node
 node_modules/
 
-# Woodpecker / infra secrets (never commit real values)
+# Secrets (never commit real values)
 infra/woodpecker/secrets.yaml
 infra/cloudflare-tunnel/secrets.yaml
+charts/kutana/values-secrets.yaml
 
 # Claude Code local files
 .claude/*
