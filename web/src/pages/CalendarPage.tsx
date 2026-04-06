@@ -9,8 +9,86 @@ import { cn } from "@/lib/utils";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const CELLS = 42; // 6 rows × 7 cols
+const HOUR_START = 7;
+const HOUR_END = 21; // 9pm exclusive → 7am-9pm = 15 slots
+
+type ViewMode = "month" | "week" | "workweek" | "day";
+
+/* ─── Helpers ────────────────────────────────────────────────────────────── */
+
+function formatDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function getWeekStart(date: Date): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() - d.getDay()); // Sunday
+  return d;
+}
+
+function getWeekDates(start: Date, count: number): Date[] {
+  return Array.from({ length: count }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+}
+
+function formatTimeSlot(hour: number): string {
+  const h = hour % 12 || 12;
+  const ampm = hour < 12 ? "AM" : "PM";
+  return `${h} ${ampm}`;
+}
+
+function exportMeetingIcs(meeting: Meeting) {
+  const start = new Date(meeting.scheduled_at);
+  const end = new Date(start.getTime() + 60 * 60 * 1000); // 1 hour default
+  const fmt = (d: Date) =>
+    d
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .replace(/\.\d{3}/, "");
+
+  const ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Kutana//Meeting//EN",
+    "BEGIN:VEVENT",
+    `DTSTART:${fmt(start)}`,
+    `DTEND:${fmt(end)}`,
+    `SUMMARY:${meeting.title || "Kutana Meeting"}`,
+    `UID:${meeting.id}@kutana.ai`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+
+  const blob = new Blob([ics], { type: "text/calendar" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${(meeting.title || "meeting").replace(/\s+/g, "-").toLowerCase()}.ics`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function statusColor(status: string) {
+  if (status === "active") return "bg-green-400";
+  if (status === "scheduled") return "bg-blue-400";
+  return "bg-gray-500";
+}
+
+function statusBlockColor(status: string) {
+  if (status === "active")
+    return "bg-green-600/30 border-green-500/50 text-green-300";
+  if (status === "scheduled")
+    return "bg-blue-600/30 border-blue-500/50 text-blue-300";
+  return "bg-gray-600/30 border-gray-500/50 text-gray-300";
+}
+
+/* ─── Component ──────────────────────────────────────────────────────────── */
 
 export function CalendarPage() {
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -49,11 +127,17 @@ export function CalendarPage() {
     meetingsByDate.set(key, list);
   }
 
-  // Build the calendar grid
+  const today = new Date();
+  const todayStr = formatDateKey(today);
+
+  // The "reference date" used for week/day views
+  const refDate = selectedDate ?? today;
+
+  // Build the month calendar grid
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
   const firstDay = new Date(year, month, 1);
-  const startOffset = firstDay.getDay(); // 0=Sun
+  const startOffset = firstDay.getDay();
 
   const dates: Date[] = [];
   for (let i = 0; i < CELLS; i++) {
@@ -61,43 +145,85 @@ export function CalendarPage() {
     dates.push(d);
   }
 
-  const today = new Date();
-  const todayStr = formatDateKey(today);
+  /* ─── Navigation ─────────────────────────────────────────────────────── */
 
-  function formatDateKey(d: Date): string {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  function prev() {
+    if (viewMode === "month") {
+      setCurrentMonth(new Date(year, month - 1, 1));
+      setSelectedDate(null);
+    } else if (viewMode === "week" || viewMode === "workweek") {
+      const d = new Date(refDate);
+      d.setDate(d.getDate() - 7);
+      setSelectedDate(d);
+    } else {
+      const d = new Date(refDate);
+      d.setDate(d.getDate() - 1);
+      setSelectedDate(d);
+    }
   }
 
-  const monthLabel = currentMonth.toLocaleDateString(undefined, {
-    month: "long",
-    year: "numeric",
-  });
-
-  function prevMonth() {
-    setCurrentMonth(new Date(year, month - 1, 1));
-    setSelectedDate(null);
-  }
-
-  function nextMonth() {
-    setCurrentMonth(new Date(year, month + 1, 1));
-    setSelectedDate(null);
+  function next() {
+    if (viewMode === "month") {
+      setCurrentMonth(new Date(year, month + 1, 1));
+      setSelectedDate(null);
+    } else if (viewMode === "week" || viewMode === "workweek") {
+      const d = new Date(refDate);
+      d.setDate(d.getDate() + 7);
+      setSelectedDate(d);
+    } else {
+      const d = new Date(refDate);
+      d.setDate(d.getDate() + 1);
+      setSelectedDate(d);
+    }
   }
 
   function goToday() {
-    setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1));
-    setSelectedDate(today);
+    const now = new Date();
+    setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+    setSelectedDate(now);
   }
 
-  // Meetings for the selected day
-  const selectedKey = selectedDate ? formatDateKey(selectedDate) : null;
-  const selectedMeetings = selectedKey ? (meetingsByDate.get(selectedKey) ?? []) : [];
+  /* ─── Header label ───────────────────────────────────────────────────── */
 
-  function openSchedule() {
-    if (selectedDate) {
-      setCreateTitle("");
-      setCreateTime("09:00");
-      setShowCreate(true);
+  function headerLabel(): string {
+    if (viewMode === "month") {
+      return currentMonth.toLocaleDateString(undefined, {
+        month: "long",
+        year: "numeric",
+      });
     }
+    if (viewMode === "week" || viewMode === "workweek") {
+      const ws = getWeekStart(refDate);
+      const we = new Date(ws);
+      we.setDate(we.getDate() + 6);
+      const fmtShort = (d: Date) =>
+        d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      const yr = we.getFullYear();
+      return `${fmtShort(ws)} – ${fmtShort(we)}, ${yr}`;
+    }
+    // day
+    return refDate.toLocaleDateString(undefined, {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
+
+  /* ─── Selected day meetings ──────────────────────────────────────────── */
+
+  const selectedKey = selectedDate ? formatDateKey(selectedDate) : null;
+  const selectedMeetings = selectedKey
+    ? (meetingsByDate.get(selectedKey) ?? [])
+    : [];
+
+  function openSchedule(date?: Date, time?: string) {
+    const d = date ?? selectedDate;
+    if (!d) return;
+    if (date) setSelectedDate(date);
+    setCreateTitle("");
+    setCreateTime(time ?? "09:00");
+    setShowCreate(true);
   }
 
   async function handleCreate(e: FormEvent) {
@@ -122,36 +248,145 @@ export function CalendarPage() {
     }
   }
 
-  function exportIcs() {
-    const lines = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//Kutana AI//Calendar//EN",
-    ];
-    for (const m of meetings) {
-      const dt = new Date(m.scheduled_at);
-      const dtStr = dt
-        .toISOString()
-        .replace(/[-:]/g, "")
-        .replace(/\.\d+/, "");
-      lines.push(
-        "BEGIN:VEVENT",
-        `DTSTART:${dtStr}`,
-        `SUMMARY:${m.title.replace(/[,;\\]/g, "")}`,
-        `UID:${m.id}@kutana.ai`,
-        "END:VEVENT"
-      );
-    }
-    lines.push("END:VCALENDAR");
+  /* ─── Time grid views (week / workweek / day) ───────────────────────── */
 
-    const blob = new Blob([lines.join("\r\n")], { type: "text/calendar" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "kutana-meetings.ics";
-    a.click();
-    URL.revokeObjectURL(url);
+  function renderTimeGrid(columnDates: Date[]) {
+    const hours = Array.from(
+      { length: HOUR_END - HOUR_START },
+      (_, i) => HOUR_START + i
+    );
+    const hourHeight = 60; // px per hour
+
+    return (
+      <Card>
+        <CardContent className="p-0 overflow-x-auto">
+          <div className="min-w-[600px]">
+            {/* Column headers */}
+            <div
+              className="grid border-b border-gray-800"
+              style={{
+                gridTemplateColumns: `60px repeat(${columnDates.length}, 1fr)`,
+              }}
+            >
+              <div className="py-2 text-center text-xs text-gray-500" />
+              {columnDates.map((d) => {
+                const key = formatDateKey(d);
+                const isToday = key === todayStr;
+                return (
+                  <div
+                    key={key}
+                    className={cn(
+                      "py-2 text-center text-xs font-medium",
+                      isToday ? "text-blue-400" : "text-gray-400"
+                    )}
+                  >
+                    <span className="uppercase">
+                      {DAY_NAMES[d.getDay()]}
+                    </span>
+                    <br />
+                    <span
+                      className={cn(
+                        "inline-flex h-6 w-6 items-center justify-center rounded-full text-sm font-semibold mt-0.5",
+                        isToday && "bg-blue-600 text-white"
+                      )}
+                    >
+                      {d.getDate()}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Time rows */}
+            <div
+              className="grid relative"
+              style={{
+                gridTemplateColumns: `60px repeat(${columnDates.length}, 1fr)`,
+              }}
+            >
+              {/* Hour labels + horizontal lines */}
+              <div className="relative">
+                {hours.map((h) => (
+                  <div
+                    key={h}
+                    className="border-b border-gray-800/50 text-right pr-2 text-[10px] text-gray-500"
+                    style={{ height: `${hourHeight}px` }}
+                  >
+                    {formatTimeSlot(h)}
+                  </div>
+                ))}
+              </div>
+
+              {/* Day columns */}
+              {columnDates.map((d) => {
+                const key = formatDateKey(d);
+                const dayMeetings = meetingsByDate.get(key) ?? [];
+
+                return (
+                  <div key={key} className="relative border-l border-gray-800/50">
+                    {/* Grid lines */}
+                    {hours.map((h) => (
+                      <button
+                        key={h}
+                        type="button"
+                        className="block w-full border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors"
+                        style={{ height: `${hourHeight}px` }}
+                        onClick={() =>
+                          openSchedule(
+                            d,
+                            `${String(h).padStart(2, "0")}:00`
+                          )
+                        }
+                      />
+                    ))}
+
+                    {/* Meeting blocks */}
+                    {dayMeetings.map((m) => {
+                      const mDate = new Date(m.scheduled_at);
+                      const mHour =
+                        mDate.getHours() + mDate.getMinutes() / 60;
+                      const top =
+                        (mHour - HOUR_START) * hourHeight;
+                      // Clamp within visible range
+                      if (mHour < HOUR_START || mHour >= HOUR_END)
+                        return null;
+
+                      return (
+                        <div
+                          key={m.id}
+                          className={cn(
+                            "absolute left-1 right-1 rounded border px-1.5 py-0.5 text-[11px] leading-tight overflow-hidden cursor-default",
+                            statusBlockColor(m.status)
+                          )}
+                          style={{
+                            top: `${top}px`,
+                            height: `${hourHeight - 2}px`,
+                          }}
+                          title={`${m.title || "Untitled"} — ${mDate.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`}
+                        >
+                          <p className="font-medium truncate">
+                            {m.title || "Untitled"}
+                          </p>
+                          <p className="opacity-70 text-[10px]">
+                            {mDate.toLocaleTimeString(undefined, {
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
+
+  /* ─── Render ─────────────────────────────────────────────────────────── */
 
   return (
     <div className="space-y-6">
@@ -159,18 +394,39 @@ export function CalendarPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-gray-50">Calendar</h1>
         <div className="flex items-center gap-2">
+          {/* View mode toggle */}
+          <div className="flex rounded-lg border border-gray-700 overflow-hidden">
+            {(["month", "week", "workweek", "day"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-medium transition-colors",
+                  viewMode === mode
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-800 text-gray-400 hover:text-gray-200"
+                )}
+              >
+                {mode === "workweek"
+                  ? "Work Week"
+                  : mode.charAt(0).toUpperCase() + mode.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {/* Navigation */}
           <div className="flex items-center rounded-lg border border-gray-800 bg-gray-900">
             <button
-              onClick={prevMonth}
+              onClick={prev}
               className="px-3 py-2 text-gray-400 hover:text-gray-50 transition-colors"
             >
               <ChevronLeftIcon />
             </button>
             <span className="px-3 py-2 text-sm font-medium text-gray-200 min-w-[140px] text-center">
-              {monthLabel}
+              {headerLabel()}
             </span>
             <button
-              onClick={nextMonth}
+              onClick={next}
               className="px-3 py-2 text-gray-400 hover:text-gray-50 transition-colors"
             >
               <ChevronRightIcon />
@@ -179,9 +435,6 @@ export function CalendarPage() {
           <Button variant="outline" size="sm" onClick={goToday}>
             Today
           </Button>
-          <Button variant="outline" size="sm" onClick={exportIcs}>
-            Export .ics
-          </Button>
         </div>
       </div>
 
@@ -189,142 +442,183 @@ export function CalendarPage() {
         <div className="text-center py-12 text-gray-400">Loading...</div>
       ) : (
         <>
-          {/* Calendar Grid */}
-          <Card>
-            <CardContent className="p-0">
-              {/* Day headers */}
-              <div className="grid grid-cols-7 border-b border-gray-800">
-                {DAY_NAMES.map((day) => (
-                  <div
-                    key={day}
-                    className="py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500"
-                  >
-                    {day}
+          {/* ── Month View ──────────────────────────────────────────── */}
+          {viewMode === "month" && (
+            <>
+              <Card>
+                <CardContent className="p-0">
+                  {/* Day headers */}
+                  <div className="grid grid-cols-7 border-b border-gray-800">
+                    {DAY_NAMES.map((day) => (
+                      <div
+                        key={day}
+                        className="py-2 text-center text-xs font-medium uppercase tracking-wider text-gray-500"
+                      >
+                        {day}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
 
-              {/* Date cells */}
-              <div className="grid grid-cols-7">
-                {dates.map((date, i) => {
-                  const key = formatDateKey(date);
-                  const isCurrentMonth = date.getMonth() === month;
-                  const isToday = key === todayStr;
-                  const isSelected =
-                    selectedDate && key === formatDateKey(selectedDate);
-                  const dayMeetings = meetingsByDate.get(key) ?? [];
+                  {/* Date cells */}
+                  <div className="grid grid-cols-7">
+                    {dates.map((date, i) => {
+                      const key = formatDateKey(date);
+                      const isCurrentMonth = date.getMonth() === month;
+                      const isToday = key === todayStr;
+                      const isSelected =
+                        selectedDate &&
+                        key === formatDateKey(selectedDate);
+                      const dayMeetings =
+                        meetingsByDate.get(key) ?? [];
 
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => setSelectedDate(date)}
-                      className={cn(
-                        "h-24 border-b border-r border-gray-800/50 p-2 text-left text-sm transition-colors",
-                        isCurrentMonth
-                          ? "text-gray-200"
-                          : "text-gray-600",
-                        isToday && "bg-blue-600/10",
-                        isSelected && "bg-blue-600/15 ring-1 ring-inset ring-blue-500/50",
-                        "hover:bg-gray-800/50"
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium",
-                          isToday &&
-                            "bg-blue-600 text-white"
-                        )}
-                      >
-                        {date.getDate()}
-                      </span>
-                      {dayMeetings.length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {dayMeetings.slice(0, 3).map((m) => (
-                            <span
-                              key={m.id}
-                              className={cn(
-                                "h-1.5 w-1.5 rounded-full",
-                                m.status === "active"
-                                  ? "bg-green-400"
-                                  : m.status === "scheduled"
-                                    ? "bg-blue-400"
-                                    : "bg-gray-500"
-                              )}
-                            />
-                          ))}
-                          {dayMeetings.length > 3 && (
-                            <span className="text-[10px] text-gray-500">
-                              +{dayMeetings.length - 3}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Selected Day Detail */}
-          {selectedDate && (
-            <Card>
-              <CardContent className="py-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-sm font-semibold text-gray-50">
-                    {selectedDate.toLocaleDateString(undefined, {
-                      weekday: "long",
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </h2>
-                  <Button size="sm" onClick={openSchedule}>
-                    Schedule Meeting
-                  </Button>
-                </div>
-
-                {selectedMeetings.length === 0 ? (
-                  <p className="text-sm text-gray-500 py-4 text-center">
-                    No meetings on this day.
-                  </p>
-                ) : (
-                  <ul className="space-y-2">
-                    {selectedMeetings.map((m) => (
-                      <li
-                        key={m.id}
-                        className="flex items-center justify-between rounded-lg border border-gray-800 px-3 py-2"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-200 truncate">
-                            {m.title || "Untitled Meeting"}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(m.scheduled_at).toLocaleTimeString(
-                              undefined,
-                              { hour: "numeric", minute: "2-digit" }
-                            )}
-                          </p>
-                        </div>
-                        <span
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => setSelectedDate(date)}
                           className={cn(
-                            "ml-2 inline-flex flex-shrink-0 items-center rounded-md px-2 py-0.5 text-[10px] font-medium",
-                            m.status === "active"
-                              ? "bg-green-600/20 text-green-400 border border-green-500/30"
-                              : m.status === "completed"
-                                ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
-                                : "bg-gray-600/20 text-gray-400 border border-gray-500/30"
+                            "h-24 border-b border-r border-gray-800/50 p-2 text-left text-sm transition-colors flex flex-col items-start",
+                            isCurrentMonth
+                              ? "text-gray-200"
+                              : "text-gray-600",
+                            isToday && "bg-blue-600/10",
+                            isSelected &&
+                              "bg-blue-600/15 ring-1 ring-inset ring-blue-500/50",
+                            "hover:bg-gray-800/50"
                           )}
                         >
-                          {m.status.charAt(0).toUpperCase() + m.status.slice(1)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
+                          <span
+                            className={cn(
+                              "inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium",
+                              isToday && "bg-blue-600 text-white"
+                            )}
+                          >
+                            {date.getDate()}
+                          </span>
+                          {dayMeetings.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {dayMeetings
+                                .slice(0, 3)
+                                .map((m) => (
+                                  <span
+                                    key={m.id}
+                                    className={cn(
+                                      "h-1.5 w-1.5 rounded-full",
+                                      statusColor(m.status)
+                                    )}
+                                  />
+                                ))}
+                              {dayMeetings.length > 3 && (
+                                <span className="text-[10px] text-gray-500">
+                                  +{dayMeetings.length - 3}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Selected Day Detail (month view only) */}
+              {selectedDate && (
+                <Card>
+                  <CardContent className="py-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-sm font-semibold text-gray-50">
+                        {selectedDate.toLocaleDateString(undefined, {
+                          weekday: "long",
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </h2>
+                      <Button
+                        size="sm"
+                        onClick={() => openSchedule()}
+                      >
+                        Schedule Meeting
+                      </Button>
+                    </div>
+
+                    {selectedMeetings.length === 0 ? (
+                      <p className="text-sm text-gray-500 py-4 text-center">
+                        No meetings on this day.
+                      </p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {selectedMeetings.map((m) => (
+                          <li
+                            key={m.id}
+                            className="flex items-center justify-between rounded-lg border border-gray-800 px-3 py-2"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-200 truncate">
+                                {m.title || "Untitled Meeting"}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(
+                                  m.scheduled_at
+                                ).toLocaleTimeString(undefined, {
+                                  hour: "numeric",
+                                  minute: "2-digit",
+                                })}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 ml-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  exportMeetingIcs(m)
+                                }
+                                className="p-1 rounded text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 transition-colors"
+                                title="Download .ics"
+                              >
+                                <CalendarDownloadIcon />
+                              </button>
+                              <span
+                                className={cn(
+                                  "inline-flex flex-shrink-0 items-center rounded-md px-2 py-0.5 text-[10px] font-medium",
+                                  m.status === "active"
+                                    ? "bg-green-600/20 text-green-400 border border-green-500/30"
+                                    : m.status ===
+                                        "completed"
+                                      ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
+                                      : "bg-gray-600/20 text-gray-400 border border-gray-500/30"
+                                )}
+                              >
+                                {m.status
+                                  .charAt(0)
+                                  .toUpperCase() +
+                                  m.status.slice(1)}
+                              </span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </>
           )}
+
+          {/* ── Week View ───────────────────────────────────────────── */}
+          {viewMode === "week" &&
+            renderTimeGrid(getWeekDates(getWeekStart(refDate), 7))}
+
+          {/* ── Work Week View ──────────────────────────────────────── */}
+          {viewMode === "workweek" &&
+            (() => {
+              const ws = getWeekStart(refDate);
+              const mon = new Date(ws);
+              mon.setDate(mon.getDate() + 1); // Monday
+              return renderTimeGrid(getWeekDates(mon, 5));
+            })()}
+
+          {/* ── Day View ────────────────────────────────────────────── */}
+          {viewMode === "day" && renderTimeGrid([refDate])}
         </>
       )}
 
@@ -376,16 +670,54 @@ export function CalendarPage() {
 
 function ChevronLeftIcon() {
   return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={2}
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15.75 19.5 8.25 12l7.5-7.5"
+      />
     </svg>
   );
 }
 
 function ChevronRightIcon() {
   return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={2}
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="m8.25 4.5 7.5 7.5-7.5 7.5"
+      />
+    </svg>
+  );
+}
+
+function CalendarDownloadIcon() {
+  return (
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z"
+      />
     </svg>
   );
 }
