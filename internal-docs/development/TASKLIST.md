@@ -327,13 +327,8 @@
 
 - [x] Feeds: audit modal content display for correctness (confirmed correct)
 
-- [ ] 🔗 BLOCK: Google Calendar Integration (pre-launch)
-  - [ ] Google Cloud project setup (Calendar API, OAuth consent screen)
-  - [ ] Backend: OAuth callback endpoint, token storage (new DB columns)
-  - [ ] Backend: Calendar API client (create/update/delete events on meeting CRUD)
-  - [ ] Frontend: "Connect Google Calendar" button in settings
-  - [ ] Token refresh background job
-  - [ ] Two-way sync: meeting changes → calendar events
+- [x] Calendar view modes (month/week/work-week/day) with time grid
+- [x] Per-meeting .ics export (replaces bulk export; covers calendar integration needs without Google API dependency)
 
 ---
 
