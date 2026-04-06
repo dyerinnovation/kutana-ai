@@ -4,6 +4,11 @@ import {
   getSubscription,
   type SubscriptionResponse,
 } from "@/api/billing";
+import {
+  AGENT_MINUTES_PER_MONTH,
+  FEED_MINUTES_PER_MONTH,
+  type PlanTier,
+} from "@/lib/planLimits";
 
 const TIER_LABELS: Record<string, string> = {
   basic: "Basic",
@@ -166,6 +171,23 @@ export function BillingPage() {
           />
         </div>
       </div>
+
+      {/* Time-based usage — TODO: wire to GET /api/billing/usage once the endpoint exists */}
+      <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-6">
+        <h2 className="text-lg font-semibold text-gray-50">Usage This Month</h2>
+        <div className="mt-4 space-y-5">
+          <UsageMeter
+            label="Agent time"
+            usedMinutes={0}
+            limitMinutes={AGENT_MINUTES_PER_MONTH[(sub.plan_tier as PlanTier) ?? "basic"]}
+          />
+          <UsageMeter
+            label="Feed time"
+            usedMinutes={0}
+            limitMinutes={FEED_MINUTES_PER_MONTH[(sub.plan_tier as PlanTier) ?? "basic"]}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -175,6 +197,42 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div>
       <div className="text-xs uppercase tracking-wide text-gray-500">{label}</div>
       <div className="mt-1 text-xl font-semibold text-gray-50">{value}</div>
+    </div>
+  );
+}
+
+function UsageMeter({
+  label,
+  usedMinutes,
+  limitMinutes,
+}: {
+  label: string;
+  usedMinutes: number;
+  limitMinutes: number | null;
+}) {
+  const isUnlimited = limitMinutes === null;
+  const pct = isUnlimited ? 0 : Math.min(100, (usedMinutes / limitMinutes) * 100);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-gray-300">{label}</span>
+        <span className="text-gray-400">
+          {isUnlimited
+            ? "Unlimited"
+            : `${usedMinutes} / ${limitMinutes} minutes used`}
+        </span>
+      </div>
+      {!isUnlimited && (
+        <div className="mt-1.5 h-2 w-full rounded-full bg-gray-800">
+          <div
+            className={`h-2 rounded-full transition-all ${
+              pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-yellow-500" : "bg-green-500"
+            }`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      )}
     </div>
   );
 }
