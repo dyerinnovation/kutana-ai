@@ -18,7 +18,7 @@ interface PricingTier {
   highlighted: boolean;
 }
 
-const tiers: PricingTier[] = [
+const personalTiers: PricingTier[] = [
   {
     name: "Basic",
     monthlyPrice: "$7.99",
@@ -27,12 +27,12 @@ const tiers: PricingTier[] = [
     yearlyUnit: "/ year",
     description: "For individuals exploring AI-powered meetings.",
     features: [
-      "3 agent connections",
-      "60 min agent time / month",
-      "2 feed connections",
-      "30 min feed time / month",
-      "10 meetings / month",
-      "API key access",
+      "Up to 10 meetings per month",
+      "Basic task extraction",
+      "Real-time transcription",
+      "1 custom agent connection",
+      "Meeting memory (last 30 days)",
+      "Community support",
     ],
     cta: { label: "Start Free Trial", href: "/register?plan=basic" },
     highlighted: false,
@@ -47,17 +47,21 @@ const tiers: PricingTier[] = [
     yearlyUnit: "/ year",
     description: "For power users who run AI meetings daily.",
     features: [
-      "10 agent connections",
-      "600 min agent time / month",
-      "10 feed connections",
-      "300 min feed time / month",
       "Unlimited meetings",
+      "All entity extraction (actions, decisions, topics)",
+      "Speaker diarization",
+      "Kutana Text-to-Speech (TTS) for text-only agents",
+      "Feed integrations (Slack, Discord)",
+      "4-layer persistent memory",
       "Priority support",
     ],
     cta: { label: "Start Free Trial", href: "/register?plan=pro" },
     highlighted: false,
     tier: "pro",
   },
+];
+
+const teamTiers: PricingTier[] = [
   {
     name: "Business",
     badge: "Most Popular",
@@ -68,12 +72,14 @@ const tiers: PricingTier[] = [
     description: "For teams running AI-powered meetings daily.",
     minUsers: "Minimum 3 users",
     features: [
-      "Unlimited agents",
-      "Unlimited agent time",
-      "Unlimited feeds",
-      "Unlimited feed time",
-      "Unlimited meetings",
-      "Premium TTS voices",
+      "Everything in Pro",
+      "Custom extractors & premium models",
+      "Full API access & agent participation",
+      "Premium Text-to-Speech (ElevenLabs)",
+      "Unlimited feed integrations",
+      "Kutana Agents with included credits",
+      "Meeting recording & playback",
+      "Team analytics",
     ],
     cta: { label: "Start Free Trial", href: "/register?plan=business" },
     highlighted: true,
@@ -88,7 +94,14 @@ const tiers: PricingTier[] = [
     description: "For organizations with advanced security and scale needs.",
     minUsers: "Minimum 10 users",
     features: [
-      "Everything in Business + custom SLA",
+      "Everything in Business",
+      "Dedicated infrastructure",
+      "On-premise deployment option",
+      "SSO & advanced access controls",
+      "SLA & dedicated support",
+      "Custom Kutana Agent development",
+      "Unlimited TTS & premium models",
+      "Volume pricing",
     ],
     cta: {
       label: "Contact Sales",
@@ -98,6 +111,105 @@ const tiers: PricingTier[] = [
     tier: "enterprise",
   },
 ];
+
+function TierCard({
+  tier,
+  billing,
+  loadingTier,
+  onTierClick,
+}: {
+  tier: PricingTier;
+  billing: "monthly" | "yearly";
+  loadingTier: PlanTier | null;
+  onTierClick: (tier: PricingTier) => void;
+}) {
+  return (
+    <div
+      className={`relative flex flex-col rounded-2xl border p-7 transition-all duration-300 ${
+        tier.highlighted
+          ? "border-green-500/50 bg-gradient-to-b from-green-950/30 to-transparent shadow-[0_0_32px_rgba(34,197,94,0.1)]"
+          : "border-white/10 bg-white/5"
+      }`}
+    >
+      {/* Badge */}
+      {tier.badge && (
+        <div
+          className={`absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-semibold px-4 py-1 rounded-full ${
+            tier.highlighted
+              ? "bg-green-600 text-white"
+              : "bg-teal-500/20 text-teal-400 border border-teal-500/30"
+          }`}
+        >
+          {tier.badge}
+        </div>
+      )}
+
+      {/* Tier name */}
+      <h3 className="text-xl font-bold text-white mt-2 mb-3">
+        {tier.name}
+      </h3>
+
+      {/* Price */}
+      <div className="mb-1">
+        <span className="text-4xl font-extrabold text-white">
+          {billing === "monthly"
+            ? tier.monthlyPrice
+            : tier.yearlyPrice}
+        </span>
+        <span className="text-white/40 text-sm ml-1">
+          {billing === "monthly"
+            ? tier.monthlyUnit
+            : tier.yearlyUnit}
+        </span>
+      </div>
+
+      {/* Description */}
+      <p className="text-white/50 text-sm mb-2">{tier.description}</p>
+
+      {/* Min users */}
+      {tier.minUsers && (
+        <p className="text-yellow-500/80 text-xs font-medium mb-4">
+          {tier.minUsers}
+        </p>
+      )}
+
+      {/* Features */}
+      <ul className="flex-1 space-y-2.5 mb-8 mt-4">
+        {tier.features.map((feature) => (
+          <li
+            key={feature}
+            className="flex items-start gap-2 text-sm text-white/70"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              className="w-4 h-4 mt-0.5 flex-shrink-0 text-green-500"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            {feature}
+          </li>
+        ))}
+      </ul>
+
+      {/* CTA */}
+      <button
+        type="button"
+        onClick={() => onTierClick(tier)}
+        disabled={loadingTier !== null}
+        className={`block w-full text-center py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60 ${
+          tier.highlighted
+            ? "bg-green-600 text-white hover:bg-green-500 shadow-lg shadow-green-600/20"
+            : "bg-white/10 text-white hover:bg-white/15 border border-white/10"
+        }`}
+      >
+        {loadingTier === tier.tier ? "Redirecting\u2026" : tier.cta.label}
+      </button>
+    </div>
+  );
+}
 
 export function PricingSection() {
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
@@ -136,8 +248,7 @@ export function PricingSection() {
           Simple, Transparent Pricing
         </h2>
         <p className="text-center text-white/60 max-w-2xl mx-auto mb-10">
-          Every plan starts with a 14-day free trial. Credit card required —
-          cancel any time before the trial ends.
+          Every plan starts with a 14-day free trial. You can start free.
         </p>
         {error && (
           <div className="mx-auto mb-6 max-w-md rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-center text-sm text-red-300">
@@ -179,95 +290,36 @@ export function PricingSection() {
           </span>
         </div>
 
-        {/* Pricing cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-          {tiers.map((tier) => (
-            <div
-              key={tier.name}
-              className={`relative flex flex-col rounded-2xl border p-7 transition-all duration-300 ${
-                tier.highlighted
-                  ? "border-green-500/50 bg-gradient-to-b from-green-950/30 to-transparent shadow-[0_0_32px_rgba(34,197,94,0.1)]"
-                  : "border-white/10 bg-white/5"
-              }`}
-            >
-              {/* Badge */}
-              {tier.badge && (
-                <div
-                  className={`absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-semibold px-4 py-1 rounded-full ${
-                    tier.highlighted
-                      ? "bg-green-600 text-white"
-                      : "bg-teal-500/20 text-teal-400 border border-teal-500/30"
-                  }`}
-                >
-                  {tier.badge}
-                </div>
-              )}
+        {/* Personal Plans */}
+        <div className="mb-14">
+          <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider mb-6 text-center">Personal Plans</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+            {personalTiers.map((tier) => (
+              <TierCard
+                key={tier.name}
+                tier={tier}
+                billing={billing}
+                loadingTier={loadingTier}
+                onTierClick={handleTierClick}
+              />
+            ))}
+          </div>
+        </div>
 
-              {/* Tier name */}
-              <h3 className="text-xl font-bold text-white mt-2 mb-3">
-                {tier.name}
-              </h3>
-
-              {/* Price */}
-              <div className="mb-1">
-                <span className="text-4xl font-extrabold text-white">
-                  {billing === "monthly"
-                    ? tier.monthlyPrice
-                    : tier.yearlyPrice}
-                </span>
-                <span className="text-white/40 text-sm ml-1">
-                  {billing === "monthly"
-                    ? tier.monthlyUnit
-                    : tier.yearlyUnit}
-                </span>
-              </div>
-
-              {/* Description */}
-              <p className="text-white/50 text-sm mb-2">{tier.description}</p>
-
-              {/* Min users */}
-              {tier.minUsers && (
-                <p className="text-yellow-500/80 text-xs font-medium mb-4">
-                  {tier.minUsers}
-                </p>
-              )}
-
-              {/* Features */}
-              <ul className="flex-1 space-y-2.5 mb-8 mt-4">
-                {tier.features.map((feature) => (
-                  <li
-                    key={feature}
-                    className="flex items-start gap-2 text-sm text-white/70"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      className="w-4 h-4 mt-0.5 flex-shrink-0 text-green-500"
-                    >
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-
-              {/* CTA */}
-              <button
-                type="button"
-                onClick={() => handleTierClick(tier)}
-                disabled={loadingTier !== null}
-                className={`block w-full text-center py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60 ${
-                  tier.highlighted
-                    ? "bg-green-600 text-white hover:bg-green-500 shadow-lg shadow-green-600/20"
-                    : "bg-white/10 text-white hover:bg-white/15 border border-white/10"
-                }`}
-              >
-                {loadingTier === tier.tier ? "Redirecting…" : tier.cta.label}
-              </button>
-            </div>
-          ))}
+        {/* Team Plans */}
+        <div>
+          <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider mb-6 text-center">Team Plans</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+            {teamTiers.map((tier) => (
+              <TierCard
+                key={tier.name}
+                tier={tier}
+                billing={billing}
+                loadingTier={loadingTier}
+                onTierClick={handleTierClick}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </section>
