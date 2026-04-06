@@ -46,6 +46,15 @@ const slides = [
       "Get real-time answers without interrupting the conversation",
     ],
   },
+  {
+    icon: "\uD83C\uDFA4",
+    title: "Conduct Bulk Interviews",
+    points: [
+      "Use Kutana to interview users about your product",
+      "Use Kutana to gather initial info for prospects",
+      "Customize Kutana's agents for your needs",
+    ],
+  },
 ];
 
 export function UseCasesSection() {
@@ -72,7 +81,7 @@ export function UseCasesSection() {
     <section className="bg-gray-950 py-20 px-4" id="use-cases">
       <div className="mx-auto max-w-4xl">
         <h2 className="mb-12 text-center text-3xl font-bold text-white md:text-4xl">
-          Real-World Use Cases
+          Use Cases for Kutana
         </h2>
 
         <div
