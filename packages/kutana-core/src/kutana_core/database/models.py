@@ -237,6 +237,7 @@ class UserORM(Base):
     hashed_password: Mapped[str] = mapped_column(sa.String(255), nullable=False)
     name: Mapped[str] = mapped_column(sa.String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
+    avatar_url: Mapped[str | None] = mapped_column(sa.String(512), nullable=True)
 
     # Billing & subscription
     plan_tier: Mapped[str] = mapped_column(

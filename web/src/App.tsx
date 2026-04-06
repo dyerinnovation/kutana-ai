@@ -16,6 +16,8 @@ import { DocsPage } from "@/pages/DocsPage";
 import { FeedsPage } from "@/pages/FeedsPage";
 import { PricingPage } from "@/pages/PricingPage";
 import { BillingPage } from "@/pages/BillingPage";
+import { ProfilePage } from "@/pages/ProfilePage";
+import { CalendarPage } from "@/pages/CalendarPage";
 
 export default function App() {
   return (
@@ -54,12 +56,14 @@ export default function App() {
         <Route path="/agents/new" element={<AgentCreatePage />} />
         <Route path="/agents/:id" element={<AgentDetailPage />} />
         <Route path="/meetings" element={<MeetingsPage />} />
+        <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/meetings/:id/room" element={<MeetingRoomPage />} />
         <Route path="/feeds" element={<FeedsPage />} />
         <Route path="/templates" element={<AgentTemplatePage />} />
         <Route path="/docs" element={<DocsPage />} />
         <Route path="/docs/*" element={<DocsPage />} />
         <Route path="/settings/billing" element={<BillingPage />} />
+        <Route path="/settings/profile" element={<ProfilePage />} />
       </Route>
     </Routes>
   );

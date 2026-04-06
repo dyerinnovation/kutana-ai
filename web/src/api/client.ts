@@ -10,15 +10,21 @@ export class ApiError extends Error {
   }
 }
 
+interface ApiFetchOptions extends RequestInit {
+  /** Skip setting Content-Type (e.g. for FormData uploads). */
+  rawBody?: boolean;
+}
+
 export async function apiFetch<T>(
   path: string,
-  options: RequestInit = {}
+  options: ApiFetchOptions = {}
 ): Promise<T> {
+  const { rawBody, ...fetchOptions } = options;
   const token = localStorage.getItem("token");
 
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...((options.headers as Record<string, string>) ?? {}),
+    ...(!rawBody ? { "Content-Type": "application/json" } : {}),
+    ...((fetchOptions.headers as Record<string, string>) ?? {}),
   };
 
   if (token) {
@@ -26,7 +32,7 @@ export async function apiFetch<T>(
   }
 
   const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
+    ...fetchOptions,
     headers,
   });
 

@@ -165,6 +165,26 @@ billing:
   priceBusinessYearly: ""
 
 # ---------------------------------------------------------------------------
+# MinIO Object Storage (dev only — production uses cloud S3/R2/GCS)
+# ---------------------------------------------------------------------------
+minio:
+  enabled: true
+  mode: standalone
+  auth:
+    rootUser: kutana
+    rootPassword: kutana-minio-secret
+  persistence:
+    size: 10Gi
+  defaultBuckets: "kutana-uploads"
+
+# S3-compatible storage config (consumed by api-server)
+storage:
+  provider: "s3"
+  bucket: "kutana-uploads"
+  region: "us-east-1"
+  useSSL: "false"
+
+# ---------------------------------------------------------------------------
 # Ingress
 # ---------------------------------------------------------------------------
 ingress:

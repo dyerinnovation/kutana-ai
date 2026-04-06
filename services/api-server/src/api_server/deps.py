@@ -45,6 +45,15 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me-in-production"
     agent_gateway_jwt_secret: str = "change-me-in-production"
 
+    # Object storage (S3-compatible — MinIO in dev, cloud in prod)
+    storage_provider: str = "s3"
+    storage_endpoint: str = "http://localhost:9000"
+    storage_bucket: str = "kutana-uploads"
+    storage_region: str = "us-east-1"
+    storage_use_ssl: bool = False
+    storage_access_key: str = "kutana"
+    storage_secret_key: str = "kutana-minio-secret"
+
     # Stripe billing
     stripe_secret_key: str = ""
     stripe_publishable_key: str = ""
