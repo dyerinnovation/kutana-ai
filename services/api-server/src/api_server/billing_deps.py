@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002 — runtime use i
 from kutana_core.database.models import (
     AgentConfigORM,
     FeedORM,
+    UsageRecordORM,
     UserORM,
 )
 
@@ -40,21 +41,21 @@ MEETINGS_PER_MONTH: dict[str, int | None] = {
 }
 
 AGENT_CONFIG_LIMIT: dict[str, int | None] = {
-    "basic": 1,
-    "pro": 5,
+    "basic": 3,
+    "pro": 10,
     "business": None,
     "enterprise": None,
 }
 
 FEED_LIMIT: dict[str, int | None] = {
-    "basic": 0,
-    "pro": 2,
+    "basic": 2,
+    "pro": 10,
     "business": None,
     "enterprise": None,
 }
 
-# Managed agent templates require Business+
-MANAGED_AGENT_MIN_TIER = "business"
+# Managed agent templates — accessible at Basic+
+MANAGED_AGENT_MIN_TIER = "basic"
 
 # TTS availability
 TTS_PROVIDER_BY_TIER: dict[str, str | None] = {
@@ -64,8 +65,26 @@ TTS_PROVIDER_BY_TIER: dict[str, str | None] = {
     "enterprise": "premium",
 }
 
-# API key access (custom integrations) requires Business+
-API_KEY_MIN_TIER = "business"
+# API key access (custom integrations) — accessible at Basic+
+API_KEY_MIN_TIER = "basic"
+
+# ---------------------------------------------------------------------------
+# Time-based usage budgets (minutes per month)
+# ---------------------------------------------------------------------------
+
+AGENT_MINUTES_PER_MONTH: dict[str, int | None] = {
+    "basic": 60,
+    "pro": 600,
+    "business": None,
+    "enterprise": None,
+}
+
+FEED_MINUTES_PER_MONTH: dict[str, int | None] = {
+    "basic": 30,
+    "pro": 300,
+    "business": None,
+    "enterprise": None,
+}
 
 
 # ---------------------------------------------------------------------------
@@ -185,14 +204,6 @@ async def check_feed_limit(user: UserORM, db: AsyncSession) -> None:
             detail="Subscription required — please update your billing details.",
         )
     limit = FEED_LIMIT.get(user.plan_tier)
-    if limit == 0:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=(
-                "Feed integrations require the Pro plan or higher. "
-                f"Current plan: {user.plan_tier.capitalize()}."
-            ),
-        )
     if limit is None:
         return
     result = await db.execute(
@@ -207,5 +218,42 @@ async def check_feed_limit(user: UserORM, db: AsyncSession) -> None:
             detail=(
                 f"Feed integration limit reached ({limit} on "
                 f"{user.plan_tier.capitalize()} plan). Upgrade for more."
+            ),
+        )
+
+
+async def check_time_budget(
+    user: UserORM,
+    resource_type: str,  # "agent" or "feed"
+    db: AsyncSession,
+) -> None:
+    """Raise 403 if user has exceeded their monthly time budget."""
+    tier = user.plan_tier or "basic"
+    limits = AGENT_MINUTES_PER_MONTH if resource_type == "agent" else FEED_MINUTES_PER_MONTH
+    limit = limits.get(tier)
+    if limit is None:
+        return  # unlimited
+
+    # Sum usage for current billing period
+    now = datetime.now(tz=UTC)
+    period_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    result = await db.execute(
+        select(func.coalesce(func.sum(UsageRecordORM.duration_seconds), 0)).where(
+            UsageRecordORM.user_id == user.id,
+            UsageRecordORM.resource_type == resource_type,
+            UsageRecordORM.started_at >= period_start,
+        )
+    )
+    used_seconds = result.scalar_one()
+    used_minutes = used_seconds / 60
+
+    if used_minutes >= limit:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                f"{resource_type.title()} time budget exceeded "
+                f"({int(used_minutes)}/{limit} minutes). "
+                f"Upgrade your plan for more."
             ),
         )
