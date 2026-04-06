@@ -119,7 +119,7 @@ export function FeaturesSection() {
       <div className="max-w-7xl mx-auto px-6">
         {/* Section heading */}
         <h2 className="text-3xl md:text-4xl font-bold text-center text-white mb-4">
-          Agents: Custom or Kutana Managed
+          Agents: Your Agents or Kutana Agents
         </h2>
         <p className="text-center text-white/60 max-w-2xl mx-auto mb-10">
           Bring your own agents or activate one of ours. Either way, they&rsquo;re in the meeting in seconds.
@@ -145,7 +145,7 @@ export function FeaturesSection() {
               >
                 <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
               </svg>
-              Custom Agents
+              Your Agents
             </button>
             <button
               onClick={() => setActiveTab("managed")}
@@ -185,7 +185,7 @@ export function FeaturesSection() {
                 >
                   <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
                 </svg>
-                Custom Agents
+                Your Agents
               </>
             ) : (
               <>
