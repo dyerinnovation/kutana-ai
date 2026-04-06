@@ -451,6 +451,8 @@
   - [x] Public DNS: dev.kutana.ai (web), api-dev.kutana.ai (API), ws-dev.kutana.ai (WS) via Cloudflare Tunnel
   - [x] Cross-origin API: VITE_API_BASE_URL env var, CORS allowlist, separate Ingress objects per subdomain
   - [x] Frontend upgrade badges (UpgradeBadge component) on tier-locked features
+  - [x] Landing page v21 integration: hero simplification, pricing groups, security simplification, email CTA, meeting diagram rewrite, content updates across all sections
+  - [ ] Add product mockup to landing page hero section (pre-launch — replace with actual UI screenshots/recording)
 
 - [ ] 🔗 BLOCK: Team & Enterprise (future)
   - [ ] Team creation and management (`/settings/team`)
