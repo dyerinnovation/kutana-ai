@@ -3,13 +3,18 @@ import { cn } from "@/lib/utils";
 
 type Section =
   | "getting-started"
+  | "kutana-agents-overview"
+  | "kutana-agents-basic"
+  | "kutana-agents-pro"
+  | "connecting-overview"
   | "mcp-server"
   | "claude-code-channel"
   | "openclaw-skill"
   | "agent-skill"
   | "cli"
-  | "feeds"
-  | "managed-agents";
+  | "feeds-overview"
+  | "feeds-slack"
+  | "feeds-upcoming";
 
 interface NavItem {
   id: Section;
@@ -19,19 +24,45 @@ interface NavItem {
 
 const sections: NavItem[] = [
   { id: "getting-started", label: "Getting Started" },
+  { id: "kutana-agents-overview", label: "Overview", group: "Kutana Agents" },
+  { id: "kutana-agents-basic", label: "Basic Agents", group: "Kutana Agents" },
+  { id: "kutana-agents-pro", label: "Pro Agents", group: "Kutana Agents" },
+  { id: "connecting-overview", label: "Overview", group: "Connecting Your Agent" },
   { id: "mcp-server", label: "MCP Server Reference", group: "Connecting Your Agent" },
   { id: "claude-code-channel", label: "Claude Code Channel", group: "Connecting Your Agent" },
-  { id: "openclaw-skill", label: "OpenClaw Skill", group: "Connecting Your Agent" },
-  { id: "agent-skill", label: "Agent Skill Reference", group: "Connecting Your Agent" },
+  { id: "openclaw-skill", label: "OpenClaw", group: "Connecting Your Agent" },
+  { id: "agent-skill", label: "Kutana Meeting Skill", group: "Connecting Your Agent" },
   { id: "cli", label: "CLI Reference", group: "Connecting Your Agent" },
-  { id: "feeds", label: "Feeds Reference" },
-  { id: "managed-agents", label: "Managed Agents" },
+  { id: "feeds-overview", label: "Overview", group: "Feeds" },
+  { id: "feeds-slack", label: "Slack", group: "Feeds" },
+  { id: "feeds-upcoming", label: "Coming Soon", group: "Feeds" },
 ];
+
+/* ─── Collapsible section ───────────────────────────────────────────────── */
+
+function Collapsible({ title, defaultOpen = false, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
+  return (
+    <details open={defaultOpen} className="group rounded-lg border border-gray-800 bg-gray-900/30">
+      <summary className="flex cursor-pointer items-center justify-between px-4 py-3 text-sm font-medium text-gray-200 hover:text-gray-50 transition-colors [&::-webkit-details-marker]:hidden">
+        {title}
+        <svg className="h-4 w-4 text-gray-500 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="m9 5 7 7-7 7" />
+        </svg>
+      </summary>
+      <div className="border-t border-gray-800 px-4 py-4">
+        {children}
+      </div>
+    </details>
+  );
+}
+
+/* ─── Page ──────────────────────────────────────────────────────────────── */
 
 export function DocsPage() {
   const [active, setActive] = useState<Section>("getting-started");
 
-  // Group sections for sidebar rendering
+  // Ordered groups for sidebar rendering
+  const groupOrder = ["Kutana Agents", "Connecting Your Agent", "Feeds"];
   const ungrouped = sections.filter((s) => !s.group);
   const groups = sections.reduce<Record<string, NavItem[]>>((acc, s) => {
     if (s.group) {
@@ -49,37 +80,28 @@ export function DocsPage() {
             Documentation
           </p>
 
-          {/* Getting Started (ungrouped, first) */}
-          {ungrouped
-            .filter((s) => s.id === "getting-started")
-            .map((s) => (
-              <NavButton key={s.id} active={active === s.id} onClick={() => setActive(s.id)}>
-                {s.label}
-              </NavButton>
-            ))}
-
-          {/* Connecting Your Agent group */}
-          {Object.entries(groups).map(([group, items]) => (
-            <div key={group} className="mt-4">
-              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-gray-600">
-                {group}
-              </p>
-              {items.map((s) => (
-                <NavButton key={s.id} active={active === s.id} onClick={() => setActive(s.id)}>
-                  {s.label}
-                </NavButton>
-              ))}
-            </div>
+          {/* Getting Started (ungrouped) */}
+          {ungrouped.map((s) => (
+            <NavButton key={s.id} active={active === s.id} onClick={() => setActive(s.id)}>
+              {s.label}
+            </NavButton>
           ))}
 
-          {/* Managed Agents (ungrouped, last) */}
-          {ungrouped
-            .filter((s) => s.id !== "getting-started")
-            .map((s) => (
-              <NavButton key={s.id} active={active === s.id} onClick={() => setActive(s.id)}>
-                {s.label}
-              </NavButton>
-            ))}
+          {/* Grouped sections in order */}
+          {groupOrder.map((group) =>
+            groups[group] ? (
+              <div key={group} className="mt-4">
+                <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-gray-600">
+                  {group}
+                </p>
+                {groups[group].map((s) => (
+                  <NavButton key={s.id} active={active === s.id} onClick={() => setActive(s.id)}>
+                    {s.label}
+                  </NavButton>
+                ))}
+              </div>
+            ) : null
+          )}
         </nav>
       </aside>
 
@@ -101,13 +123,18 @@ export function DocsPage() {
       {/* Content */}
       <div className="flex-1 min-w-0 max-w-3xl">
         {active === "getting-started" && <GettingStarted onNavigate={setActive} />}
+        {active === "kutana-agents-overview" && <KutanaAgentsOverview onNavigate={setActive} />}
+        {active === "kutana-agents-basic" && <KutanaAgentsBasic />}
+        {active === "kutana-agents-pro" && <KutanaAgentsPro />}
+        {active === "connecting-overview" && <ConnectingOverview onNavigate={setActive} />}
         {active === "mcp-server" && <McpServerReference />}
-        {active === "claude-code-channel" && <ClaudeCodeChannelSetup />}
-        {active === "openclaw-skill" && <OpenClawSkillSetup />}
-        {active === "agent-skill" && <AgentSkillReference />}
+        {active === "claude-code-channel" && <ClaudeCodeChannel />}
+        {active === "openclaw-skill" && <OpenClawSetup />}
+        {active === "agent-skill" && <KutanaMeetingSkill />}
         {active === "cli" && <CliReference />}
-        {active === "feeds" && <FeedsReference />}
-        {active === "managed-agents" && <ManagedAgents />}
+        {active === "feeds-overview" && <FeedsOverview />}
+        {active === "feeds-slack" && <FeedsSlack />}
+        {active === "feeds-upcoming" && <FeedsUpcoming />}
       </div>
     </div>
   );
@@ -141,75 +168,249 @@ function NavButton({
 
 /* ─── Section components ──────────────────────────────────────────────────── */
 
+/* ── Getting Started (5C) ────────────────────────────────────────────────── */
+
 function GettingStarted({ onNavigate }: { onNavigate: (s: Section) => void }) {
   return (
     <div className="prose-dark space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-gray-50">Getting Started</h1>
         <p className="mt-2 text-gray-400">
-          Kutana is a meeting platform where AI Agents are active participants.
-          Agents connect and actively participate: speaking up, taking notes,
-          chatting, and gathering context for tasks.
+          Welcome to Kutana — an agent-first meeting platform. AI agents join as
+          first-class participants: they listen, speak, extract tasks, and
+          maintain memory across meetings.
         </p>
       </div>
 
-      <DocSection title="1. Create an Account">
-        <p>
-          Register at{" "}
-          <Code>https://dev.kutana.ai</Code> and sign in to the
-          dashboard.
-        </p>
+      <DocSection title="Run Your First Meeting">
+        <ol className="list-decimal list-inside space-y-2 text-gray-400 text-sm">
+          <li>
+            Sign in to the dashboard at{" "}
+            <Code>https://dev.kutana.ai</Code>.
+          </li>
+          <li>
+            Go to <strong className="text-gray-50">Agents</strong> and enable
+            the <strong className="text-gray-50">Transcript Agent</strong> — it
+            captures everything said in the meeting.
+          </li>
+          <li>
+            Click <strong className="text-gray-50">New Meeting</strong> from the
+            dashboard, give it a title, and start the meeting.
+          </li>
+          <li>
+            Watch the agent join automatically. It begins transcribing in real
+            time and surfaces action items as they come up.
+          </li>
+        </ol>
       </DocSection>
 
-      <DocSection title="2. Get an API Key">
+      <DocSection title="Next Steps">
+        <div className="mt-2 grid gap-4 sm:grid-cols-3">
+          <IntegrationCard
+            title="Explore Kutana Agents"
+            desc="See all the pre-built agents available on the platform."
+            onClick={() => onNavigate("kutana-agents-overview")}
+          />
+          <IntegrationCard
+            title="Connect Your Own Agent"
+            desc="Bring your own AI agent into meetings via MCP, Claude Code, or OpenClaw."
+            onClick={() => onNavigate("connecting-overview")}
+          />
+          <IntegrationCard
+            title="Set Up Feeds"
+            desc="Push meeting recaps to Slack or pull context in before a meeting."
+            onClick={() => onNavigate("feeds-overview")}
+          />
+        </div>
+      </DocSection>
+    </div>
+  );
+}
+
+/* ── Kutana Agents Overview (5D) ─────────────────────────────────────────── */
+
+function KutanaAgentsOverview({ onNavigate }: { onNavigate: (s: Section) => void }) {
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-50">Kutana Agents</h1>
+        <p className="mt-2 text-gray-400">
+          Kutana Agents are pre-built AI agents that run on the Kutana platform.
+          They join meetings automatically and handle common tasks — no setup or
+          external configuration required.
+        </p>
+      </div>
+
+      <DocSection title="Two Tiers">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <button
+            onClick={() => onNavigate("kutana-agents-basic")}
+            className="rounded-xl border border-gray-800 bg-gray-900/50 p-4 text-left hover:border-gray-700 transition-colors"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-sm font-semibold text-gray-50">Basic Agents</span>
+              <span className="rounded-md bg-green-600/20 px-2 py-0.5 text-xs font-medium text-green-400">Basic</span>
+            </div>
+            <p className="text-xs text-gray-400">
+              Core platform agents enabled by default for all users. Transcription,
+              action items, and meeting summaries.
+            </p>
+          </button>
+          <button
+            onClick={() => onNavigate("kutana-agents-pro")}
+            className="rounded-xl border border-gray-800 bg-gray-900/50 p-4 text-left hover:border-gray-700 transition-colors"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-sm font-semibold text-gray-50">Pro Agents</span>
+              <span className="rounded-md bg-blue-600/20 px-2 py-0.5 text-xs font-medium text-blue-400">Pro</span>
+            </div>
+            <p className="text-xs text-gray-400">
+              Advanced agents with optional custom prompts for organizational best
+              practices. Scrum Master, interviewer roles, and more.
+            </p>
+          </button>
+        </div>
+      </DocSection>
+    </div>
+  );
+}
+
+/* ── Basic Agents (5D) ───────────────────────────────────────────────────── */
+
+function KutanaAgentsBasic() {
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-50">Basic Agents</h1>
+        <p className="mt-2 text-gray-400">
+          Core platform agents enabled by default for all users. They handle the
+          fundamentals so every meeting is captured and actionable.
+        </p>
+      </div>
+
+      <AgentCard
+        name="Transcript Agent"
+        tier="Basic"
+        tierColor="green"
+        desc="Real-time transcription of meeting audio. Always active."
+        howItWorks="Connects to the meeting audio stream and produces a live transcript with speaker attribution. Segments are available to all participants and other agents via the transcript API."
+      />
+
+      <AgentCard
+        name="Action Item Agent"
+        tier="Basic"
+        tierColor="green"
+        desc="Identifies commitments and action items from conversation. Creates tasks automatically."
+        howItWorks="Monitors the transcript for language indicating commitments (deadlines, assignments, promises). Creates structured tasks with assignees and posts confirmations in the meeting chat."
+      />
+
+      <AgentCard
+        name="Meeting Summary Agent"
+        tier="Basic"
+        tierColor="green"
+        desc="Generates structured meeting summaries at the end of each meeting."
+        howItWorks="When the meeting ends, reads the full transcript, extracts key discussion points, decisions, and open questions, then produces a formatted summary available in the dashboard and via Feeds."
+      />
+    </div>
+  );
+}
+
+/* ── Pro Agents (5D) ─────────────────────────────────────────────────────── */
+
+function KutanaAgentsPro() {
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-50">Pro Agents</h1>
+        <p className="mt-2 text-gray-400">
+          Advanced agents with optional custom prompts for organizational best
+          practices. Available on Pro plans and above.
+        </p>
+      </div>
+
+      <AgentCard
+        name="Scrum Master"
+        tier="Pro"
+        tierColor="blue"
+        desc="Facilitates stand-ups and sprint ceremonies. Tracks blockers, action items, and time."
+        howItWorks="Follows a structured agenda (yesterday, today, blockers). Keeps each participant on track with gentle time reminders, captures blockers as tasks, and posts a sprint summary at the end."
+      />
+
+      <AgentCard
+        name="User Interviewer"
+        tier="Pro"
+        tierColor="blue"
+        desc="Guides user research interviews. Captures insights, themes, and follow-up questions."
+        howItWorks="Follows your interview script or generates questions based on a research goal. Tags responses by theme, captures verbatim quotes, and produces an insight summary with recommended follow-ups."
+      />
+
+      <AgentCard
+        name="Candidate Interviewer"
+        tier="Pro"
+        tierColor="blue"
+        desc="Structures technical and behavioral interviews. Tracks scoring criteria."
+        howItWorks="Manages interview sections (intro, technical, behavioral, wrap-up). Records responses against your rubric, tracks time per section, and produces a structured scorecard for the hiring panel."
+      />
+    </div>
+  );
+}
+
+/* ── Connecting Your Agent Overview (5E) ─────────────────────────────────── */
+
+function ConnectingOverview({ onNavigate }: { onNavigate: (s: Section) => void }) {
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-50">Connecting Your Agent</h1>
+        <p className="mt-2 text-gray-400">
+          Bring your own AI agent into Kutana meetings. Your agent connects to the
+          platform, joins meetings as a participant, and gets access to the full
+          toolkit — turns, chat, transcript, and tasks.
+        </p>
+      </div>
+
+      <DocSection title="Connection Methods">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <IntegrationCard
+            title="Claude Code Channel"
+            desc="Real-time, push-based connection. Claude Code spawns a Kutana channel as a subprocess and receives live meeting events."
+            onClick={() => onNavigate("claude-code-channel")}
+          />
+          <IntegrationCard
+            title="OpenClaw Plugin"
+            desc="Install the @kutana/openclaw-plugin to give any OpenClaw agent native Kutana meeting tools."
+            onClick={() => onNavigate("openclaw-skill")}
+          />
+          <IntegrationCard
+            title="MCP Server (Direct)"
+            desc="Connect any MCP-compatible agent to the Kutana HTTP MCP server with Bearer token auth."
+            onClick={() => onNavigate("mcp-server")}
+          />
+          <IntegrationCard
+            title="CLI"
+            desc="Terminal-based access to meetings, agents, and tasks via the kutana CLI."
+            onClick={() => onNavigate("cli")}
+          />
+        </div>
+      </DocSection>
+
+      <DocSection title="Get an API Key">
         <p>
-          Go to <strong className="text-gray-50">Settings → API Keys</strong> and
-          create a new key. Keys start with{" "}
-          <Code>cvn_</Code> and grant agent access to the MCP server.
+          All connection methods require a Kutana API key. Go to{" "}
+          <strong className="text-gray-50">Settings &rarr; API Keys</strong> in
+          the dashboard and generate a key with the{" "}
+          <strong className="text-gray-50">Agent</strong> scope. Keys start with{" "}
+          <Code>cvn_</Code>.
         </p>
         <Note>
           Keep your API key secret. It grants full agent access to your meetings.
         </Note>
       </DocSection>
-
-      <DocSection title="3. Connect Your Agent">
-        <p>Choose how to connect your AI agent to Kutana:</p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <IntegrationCard
-            title="Claude Code Channel"
-            desc="Add the MCP server to settings.json. Claude joins and participates in meetings naturally from within a coding session."
-            onClick={() => onNavigate("claude-code-channel")}
-          />
-          <IntegrationCard
-            title="OpenClaw Skill"
-            desc="Install the @kutana/openclaw-plugin. Agents in any OpenClaw channel (Slack, WhatsApp) get Kutana tools."
-            onClick={() => onNavigate("openclaw-skill")}
-          />
-        </div>
-        <Note>
-          Agent connection methods (MCP servers, skills, CLI tools) will be
-          published to GitHub and package registries for easy installation in the
-          future.
-        </Note>
-      </DocSection>
-
-      <DocSection title="4. Start a Meeting">
-        <p>
-          Once your agent is connected, create or join a meeting from the
-          dashboard. Your agent will automatically have access to the full meeting
-          toolkit — turns, chat, transcript, and tasks.
-        </p>
-      </DocSection>
-
-      <DocSection title="MCP Server Health">
-        <p>Verify the MCP server is up:</p>
-        <CodeBlock>{`curl https://kutana.spark-b0f2.local/mcp/health`}</CodeBlock>
-        <p>Expected response:</p>
-        <CodeBlock>{`{"status": "healthy", "version": "0.1.0"}`}</CodeBlock>
-      </DocSection>
     </div>
   );
 }
+
+/* ── MCP Server Reference ────────────────────────────────────────────────── */
 
 function McpServerReference() {
   return (
@@ -224,7 +425,7 @@ function McpServerReference() {
 
       <DocSection title="Adding the MCP Server">
         <p>
-          Add the Kutana MCP server to your agent's configuration. The server
+          Add the Kutana MCP server to your agent&apos;s configuration. The server
           uses streamable HTTP transport with Bearer token authentication:
         </p>
         <CodeBlock>{`{
@@ -240,148 +441,154 @@ function McpServerReference() {
 }`}</CodeBlock>
       </DocSection>
 
-      <ToolGroup title="Meeting Lifecycle">
-        <ToolRow
-          name="kutana_list_meetings"
-          params=""
-          desc="List all meetings with status (scheduled, active, ended). No join required."
-        />
-        <ToolRow
-          name="kutana_join_meeting"
-          params="meeting_id, capabilities?"
-          desc="Join a meeting. capabilities: ['listen','transcribe','text_only','voice','tts_enabled']"
-        />
-        <ToolRow
-          name="kutana_join_or_create_meeting"
-          params="title, capabilities?"
-          desc="Join an active meeting by title, or create a new one if none found."
-        />
-        <ToolRow
-          name="kutana_leave_meeting"
-          params=""
-          desc="Leave the current meeting."
-        />
-        <ToolRow
-          name="kutana_create_meeting"
-          params="title, description?, scheduled_start?"
-          desc="Create a new meeting. Returns meeting_id."
-        />
-        <ToolRow
-          name="kutana_start_meeting"
-          params="meeting_id"
-          desc="Start a scheduled meeting (transitions to active)."
-        />
-        <ToolRow
-          name="kutana_end_meeting"
-          params="meeting_id"
-          desc="End an active meeting."
-        />
-        <ToolRow
-          name="kutana_get_meeting_status"
-          params="meeting_id"
-          desc="Get current status, turn queue, participants, and recent chat."
-        />
-      </ToolGroup>
+      <Collapsible title="Meeting Lifecycle Tools" defaultOpen>
+        <ToolGroup title="Meeting Lifecycle">
+          <ToolRow
+            name="kutana_list_meetings"
+            params=""
+            desc="List all meetings with status (scheduled, active, ended). No join required."
+          />
+          <ToolRow
+            name="kutana_join_meeting"
+            params="meeting_id, capabilities?"
+            desc="Join a meeting. capabilities: ['listen','transcribe','text_only','voice','tts_enabled']"
+          />
+          <ToolRow
+            name="kutana_join_or_create_meeting"
+            params="title, capabilities?"
+            desc="Join an active meeting by title, or create a new one if none found."
+          />
+          <ToolRow
+            name="kutana_leave_meeting"
+            params=""
+            desc="Leave the current meeting."
+          />
+          <ToolRow
+            name="kutana_create_meeting"
+            params="title, description?, scheduled_start?"
+            desc="Create a new meeting. Returns meeting_id."
+          />
+          <ToolRow
+            name="kutana_start_meeting"
+            params="meeting_id"
+            desc="Start a scheduled meeting (transitions to active)."
+          />
+          <ToolRow
+            name="kutana_end_meeting"
+            params="meeting_id"
+            desc="End an active meeting."
+          />
+          <ToolRow
+            name="kutana_get_meeting_status"
+            params="meeting_id"
+            desc="Get current status, turn queue, participants, and recent chat."
+          />
+        </ToolGroup>
+      </Collapsible>
 
-      <ToolGroup title="Transcript &amp; Participants">
-        <ToolRow
-          name="kutana_get_transcript"
-          params="last_n?"
-          desc="Get recent transcript segments (default: 50). Must be joined."
-        />
-        <ToolRow
-          name="kutana_get_participants"
-          params=""
-          desc="List all current participants with roles and capabilities."
-        />
-        <ToolRow
-          name="kutana_get_meeting_events"
-          params="last_n?, event_type?"
-          desc="Poll meeting events. Use event_type='turn_your_turn' to wait for the floor."
-        />
-      </ToolGroup>
+      <Collapsible title="Transcript & Participants Tools">
+        <ToolGroup title="Transcript &amp; Participants">
+          <ToolRow
+            name="kutana_get_transcript"
+            params="last_n?"
+            desc="Get recent transcript segments (default: 50). Must be joined."
+          />
+          <ToolRow
+            name="kutana_get_participants"
+            params=""
+            desc="List all current participants with roles and capabilities."
+          />
+          <ToolRow
+            name="kutana_get_meeting_events"
+            params="last_n?, event_type?"
+            desc="Poll meeting events. Use event_type='turn_your_turn' to wait for the floor."
+          />
+        </ToolGroup>
+      </Collapsible>
 
-      <ToolGroup title="Turn Management">
-        <p className="text-sm text-gray-400 pb-2">
-          Raise → wait → start_speaking → speak → mark_finished_speaking
-        </p>
-        <ToolRow
-          name="kutana_raise_hand"
-          params="meeting_id, topic?"
-          desc="Enter the speaker queue. queue_position=0 means floor is yours immediately."
-        />
-        <ToolRow
-          name="kutana_start_speaking"
-          params="meeting_id"
-          desc="Confirm you have the floor and begin your turn."
-        />
-        <ToolRow
-          name="kutana_mark_finished_speaking"
-          params="meeting_id"
-          desc="Release the floor. Advances the queue to the next speaker."
-        />
-        <ToolRow
-          name="kutana_cancel_hand_raise"
-          params="meeting_id"
-          desc="Withdraw from the speaker queue without speaking."
-        />
-        <ToolRow
-          name="kutana_get_queue_status"
-          params="meeting_id"
-          desc="See current speaker and waiting queue."
-        />
-        <ToolRow
-          name="kutana_get_speaking_status"
-          params="meeting_id"
-          desc="Check if it's your turn and the current queue state."
-        />
-      </ToolGroup>
+      <Collapsible title="Turn Management, Chat, Tasks & Channels Tools">
+        <ToolGroup title="Turn Management">
+          <p className="text-sm text-gray-400 pb-2">
+            Raise &rarr; wait &rarr; start_speaking &rarr; speak &rarr; mark_finished_speaking
+          </p>
+          <ToolRow
+            name="kutana_raise_hand"
+            params="meeting_id, topic?"
+            desc="Enter the speaker queue. queue_position=0 means floor is yours immediately."
+          />
+          <ToolRow
+            name="kutana_start_speaking"
+            params="meeting_id"
+            desc="Confirm you have the floor and begin your turn."
+          />
+          <ToolRow
+            name="kutana_mark_finished_speaking"
+            params="meeting_id"
+            desc="Release the floor. Advances the queue to the next speaker."
+          />
+          <ToolRow
+            name="kutana_cancel_hand_raise"
+            params="meeting_id"
+            desc="Withdraw from the speaker queue without speaking."
+          />
+          <ToolRow
+            name="kutana_get_queue_status"
+            params="meeting_id"
+            desc="See current speaker and waiting queue."
+          />
+          <ToolRow
+            name="kutana_get_speaking_status"
+            params="meeting_id"
+            desc="Check if it's your turn and the current queue state."
+          />
+        </ToolGroup>
 
-      <ToolGroup title="Chat">
-        <ToolRow
-          name="kutana_send_chat_message"
-          params="meeting_id, content, message_type?"
-          desc="Send a message. message_type: text | question | action_item | decision"
-        />
-        <ToolRow
-          name="kutana_get_chat_messages"
-          params="meeting_id, limit?, message_type?"
-          desc="Get chat history. Filter by message_type."
-        />
-      </ToolGroup>
+        <ToolGroup title="Chat">
+          <ToolRow
+            name="kutana_send_chat_message"
+            params="meeting_id, content, message_type?"
+            desc="Send a message. message_type: text | question | action_item | decision"
+          />
+          <ToolRow
+            name="kutana_get_chat_messages"
+            params="meeting_id, limit?, message_type?"
+            desc="Get chat history. Filter by message_type."
+          />
+        </ToolGroup>
 
-      <ToolGroup title="Tasks">
-        <ToolRow
-          name="kutana_get_tasks"
-          params="meeting_id"
-          desc="Get all tasks/action items for a meeting. No join required."
-        />
-        <ToolRow
-          name="kutana_create_task"
-          params="meeting_id, description, priority?, assignee?"
-          desc="Create a task. priority: low | medium | high"
-        />
-      </ToolGroup>
+        <ToolGroup title="Tasks">
+          <ToolRow
+            name="kutana_get_tasks"
+            params="meeting_id"
+            desc="Get all tasks/action items for a meeting. No join required."
+          />
+          <ToolRow
+            name="kutana_create_task"
+            params="meeting_id, description, priority?, assignee?"
+            desc="Create a task. priority: low | medium | high"
+          />
+        </ToolGroup>
 
-      <ToolGroup title="Channels">
-        <ToolRow
-          name="kutana_subscribe_channel"
-          params="channel"
-          desc="Subscribe to a named channel for custom pub/sub events."
-        />
-        <ToolRow
-          name="kutana_publish_to_channel"
-          params="channel, payload"
-          desc="Publish a JSON payload to a channel."
-        />
-        <ToolRow
-          name="kutana_get_channel_messages"
-          params="channel, last_n?"
-          desc="Read recent messages from a channel."
-        />
-      </ToolGroup>
+        <ToolGroup title="Channels">
+          <ToolRow
+            name="kutana_subscribe_channel"
+            params="channel"
+            desc="Subscribe to a named channel for custom pub/sub events."
+          />
+          <ToolRow
+            name="kutana_publish_to_channel"
+            params="channel, payload"
+            desc="Publish a JSON payload to a channel."
+          />
+          <ToolRow
+            name="kutana_get_channel_messages"
+            params="channel, last_n?"
+            desc="Read recent messages from a channel."
+          />
+        </ToolGroup>
+      </Collapsible>
 
-      <DocSection title="Capability Options">
+      <Collapsible title="Capability Options">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-800 text-left text-gray-400">
@@ -406,22 +613,61 @@ function McpServerReference() {
             ))}
           </tbody>
         </table>
-      </DocSection>
+      </Collapsible>
+
+      <Collapsible title="Code Example">
+        <CodeBlock>{`// Example: Join a meeting and read the transcript
+const response = await mcpClient.callTool("kutana_list_meetings", {});
+const meetings = JSON.parse(response.content);
+
+const active = meetings.find(m => m.status === "active");
+await mcpClient.callTool("kutana_join_meeting", {
+  meeting_id: active.id,
+  capabilities: ["listen", "transcribe"]
+});
+
+const transcript = await mcpClient.callTool("kutana_get_transcript", {
+  last_n: 20
+});`}</CodeBlock>
+      </Collapsible>
     </div>
   );
 }
 
-function ClaudeCodeChannelSetup() {
+/* ── Claude Code Channel (5F — rewritten) ────────────────────────────────── */
+
+function ClaudeCodeChannel() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-50">Claude Code Channel Setup</h1>
+        <h1 className="text-2xl font-bold text-gray-50">Claude Code Channel</h1>
         <p className="mt-2 text-gray-400">
-          Connect Claude Code to Kutana AI via the MCP server. Once configured,
-          Claude joins and participates in meetings naturally from within a
-          coding session.
+          A real-time, push-based connection between Claude Code and Kutana
+          meetings. The channel runs as a stdio MCP subprocess and delivers live
+          meeting events directly into your Claude Code session.
         </p>
       </div>
+
+      <DocSection title="What Is a Claude Code Channel?">
+        <p>
+          Claude Code Channels are <strong className="text-gray-50">stdio-transport MCP servers</strong> spawned
+          as subprocesses by Claude Code. Unlike standard MCP servers (which Claude
+          Code calls on demand), a channel declares the{" "}
+          <Code>claude/channel</Code> capability and <strong className="text-gray-50">pushes</strong> events
+          into the session via <Code>notifications/claude/channel</Code> messages.
+        </p>
+        <p>
+          Events arrive in Claude&apos;s context as XML tags:
+        </p>
+        <CodeBlock>{`<channel source="kutana-ai" topic="transcript" type="transcript_segment">
+[2.0s-4.5s] Alice: We should finalize the API spec by Thursday.
+</channel>`}</CodeBlock>
+        <p>
+          This means Claude Code receives live transcript, chat messages, turn
+          updates, and extracted insights (tasks, decisions, questions) without
+          polling — they push in automatically.
+        </p>
+      </DocSection>
 
       <DocSection title="Prerequisites">
         <ul className="list-disc list-inside space-y-1 text-gray-400 text-sm">
@@ -434,83 +680,170 @@ function ClaudeCodeChannelSetup() {
         </ul>
       </DocSection>
 
-      <DocSection title="Add the MCP Server">
-        <p>Edit <Code>~/.claude/settings.json</Code>:</p>
-        <CodeBlock>{`{
-  "mcpServers": {
-    "kutana": {
-      "type": "streamableHttp",
-      "url": "https://kutana.spark-b0f2.local/mcp",
-      "headers": {
-        "Authorization": "Bearer \${CONVENE_API_KEY}"
-      }
-    }
-  }
-}`}</CodeBlock>
-        <p>Then export your key in your shell profile:</p>
-        <CodeBlock>{`export CONVENE_API_KEY=cvn_your_key_here`}</CodeBlock>
-      </DocSection>
-
-      <DocSection title="Install the Skill (optional)">
+      <DocSection title="Installation">
         <p>
-          Copy the skill file to Claude Code. The skill activates automatically
-          when you mention meetings, standups, or transcripts.
+          Register the channel using the <Code>claude mcp add-json</Code> CLI
+          command. Do <strong className="text-gray-50">not</strong> edit{" "}
+          <Code>~/.claude/settings.json</Code> manually — the{" "}
+          <Code>--dangerously-load-development-channels</Code> flag only finds
+          servers in the managed registry.
         </p>
-        <CodeBlock>{`mkdir -p ~/.claude/skills/kutana-meeting
-cp skills/kutana-meeting/SKILL.md ~/.claude/skills/kutana-meeting/`}</CodeBlock>
+        <CodeBlock>{`claude mcp add-json --scope user kutana-ai '{
+  "type": "stdio",
+  "command": "npx",
+  "args": ["@kutana/channel"],
+  "env": {
+    "CONVENE_API_KEY": "cvn_your_key_here",
+    "CONVENE_API_URL": "wss://kutana.spark-b0f2.local/ws",
+    "CONVENE_HTTP_URL": "https://kutana.spark-b0f2.local"
+  }
+}'`}</CodeBlock>
+        <p>Then launch Claude Code with the channel enabled:</p>
+        <CodeBlock>{`claude --dangerously-load-development-channels server:kutana-ai`}</CodeBlock>
+        <Note>
+          The <Code>--dangerously-load-development-channels</Code> flag is
+          required during the research preview for custom channels. Without it,
+          tools load but push events are silently dropped.
+        </Note>
       </DocSection>
 
-      <DocSection title="Quick Join Script (optional)">
-        <p>For one-off meeting joins without modifying settings:</p>
-        <CodeBlock>{`export CONVENE_API_KEY=cvn_...
-export CONVENE_URL=https://kutana.spark-b0f2.local
-
-./scripts/connect.sh "Daily Standup"       # join by title
-./scripts/connect.sh --id <meeting-uuid>   # join by ID`}</CodeBlock>
+      <DocSection title="How It Works">
+        <p>The channel follows a lifecycle:</p>
+        <ol className="list-decimal list-inside space-y-2 text-gray-400 text-sm">
+          <li>
+            <strong className="text-gray-50">Startup</strong> — Plugin
+            authenticates with the API (API key to JWT). Tools and resources
+            register. No meeting joined yet.
+          </li>
+          <li>
+            <strong className="text-gray-50">Discovery</strong> — Call{" "}
+            <Code>list_meetings</Code> or browse{" "}
+            <Code>kutana://meeting/&#123;id&#125;</Code> resources.
+          </li>
+          <li>
+            <strong className="text-gray-50">Join</strong> — Call{" "}
+            <Code>join_meeting</Code>. A WebSocket opens and events begin
+            pushing via <Code>{"notifications/claude/channel"}</Code>.
+          </li>
+          <li>
+            <strong className="text-gray-50">Active</strong> — All 18 tools
+            available. Transcript, chat, turn, and insight events flow as{" "}
+            <Code>{"<channel>"}</Code> tags.
+          </li>
+          <li>
+            <strong className="text-gray-50">Leave</strong> — Call{" "}
+            <Code>leave_meeting</Code>. WebSocket closes, buffers clear.
+          </li>
+        </ol>
       </DocSection>
 
-      <DocSection title="Usage Examples">
+      <Collapsible title="Available Tools (18 total)" defaultOpen>
+        <div className="space-y-4">
+          <ToolSubGroup title="Lobby (no meeting required)">
+            {["list_meetings", "join_meeting", "create_meeting", "join_or_create_meeting"].map((t) => (
+              <Code key={t} block>{t}</Code>
+            ))}
+          </ToolSubGroup>
+          <ToolSubGroup title="Meeting (require active meeting)">
+            {[
+              "leave_meeting", "reply", "get_chat_messages", "accept_task",
+              "update_status", "raise_hand", "get_queue_status",
+              "mark_finished_speaking", "cancel_hand_raise", "get_speaking_status",
+              "get_participants", "request_context", "get_meeting_recap",
+              "get_entity_history",
+            ].map((t) => (
+              <Code key={t} block>{t}</Code>
+            ))}
+          </ToolSubGroup>
+        </div>
+      </Collapsible>
+
+      <Collapsible title="Channel Event Types">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-800 text-left text-gray-400">
+              <th className="pb-2 pr-4 font-medium">Gateway Event</th>
+              <th className="pb-2 pr-4 font-medium">Channel Topic</th>
+              <th className="pb-2 font-medium">Channel Type</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-800/50">
+            {[
+              ["transcript", "transcript", "transcript_segment"],
+              ["data.channel.insights.*", "insight", "Entity type (task, decision, etc.)"],
+              ["data.channel.chat", "chat", "chat_message"],
+              ["turn.queue.updated", "turn", "queue_updated"],
+              ["turn.speaker.changed", "turn", "speaker_changed"],
+              ["turn.your_turn", "turn", "your_turn"],
+              ["participant_update", "participant", "joined / left"],
+            ].map(([event, topic, type]) => (
+              <tr key={event}>
+                <td className="py-2 pr-4"><Code>{event}</Code></td>
+                <td className="py-2 pr-4 text-gray-400">{topic}</td>
+                <td className="py-2 text-gray-400">{type}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Collapsible>
+
+      <DocSection title="Usage">
         <p className="text-gray-400 text-sm mb-3">
-          Once configured, speak naturally in Claude Code:
+          Once the channel is running, speak naturally in Claude Code:
         </p>
         <CodeBlock>{`"Join the standup meeting"
 → join_or_create_meeting("Daily Standup")
 
-"What's being discussed right now?"
-→ get_transcript(last_n=20)
+"What's being discussed?"
+→ Transcript events are already streaming — Claude reads them directly
 
-"Raise my hand to ask about the API change"
-→ raise_hand(meeting_id, topic="API change question")
+"Raise my hand to ask about the API rollout"
+→ raise_hand(topic="API rollout timeline")
 
-"Send a chat: I'll look into the auth bug"
-→ send_chat_message(meeting_id, "I'll look into the auth bug")
+"Send a message: I'll handle the auth bug"
+→ reply("I'll handle the auth bug")
 
-"Create an action item: Review PR #42 before Friday"
-→ create_task(meeting_id, "Review PR #42 before Friday", priority="high")`}</CodeBlock>
+"What tasks came out of this meeting?"
+→ get_meeting_recap()`}</CodeBlock>
       </DocSection>
 
       <DocSection title="Verify Connection">
-        <CodeBlock>{`# In Claude Code
-"Check if the Kutana MCP server is available"
-→ Claude will call kutana_list_meetings() and return meeting list`}</CodeBlock>
+        <CodeBlock>{`# In Claude Code (with channel running)
+"List available Kutana meetings"
+→ Claude calls list_meetings() and returns the meeting list`}</CodeBlock>
         <Note>
-          If you see an auth error, double-check your <Code>CONVENE_API_KEY</Code> is exported and starts with <Code>cvn_</Code>.
+          If you see an auth error, verify your <Code>CONVENE_API_KEY</Code> in the
+          registration JSON starts with <Code>cvn_</Code>.
         </Note>
       </DocSection>
     </div>
   );
 }
 
-function OpenClawSkillSetup() {
+/* ── OpenClaw Setup (5G — rewritten) ─────────────────────────────────────── */
+
+function OpenClawSetup() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-50">OpenClaw Skill Setup</h1>
+        <h1 className="text-2xl font-bold text-gray-50">OpenClaw Plugin</h1>
         <p className="mt-2 text-gray-400">
-          The <Code>@kutana/openclaw-plugin</Code> gives OpenClaw agents native
-          Kutana tools in any channel — Slack, WhatsApp, and more.
+          The <Code>@kutana/openclaw-plugin</Code> registers native Kutana
+          meeting tools in the OpenClaw gateway, allowing any OpenClaw agent to
+          join meetings, read transcripts, manage turns, and create tasks.
         </p>
       </div>
+
+      <DocSection title="Prerequisites">
+        <ul className="list-disc list-inside space-y-1 text-gray-400 text-sm">
+          <li>OpenClaw 0.9 or later</li>
+          <li>
+            A Kutana API key (<Code>cvn_...</Code>) — generate one from{" "}
+            <strong className="text-gray-50">Settings &rarr; API Keys</strong> with
+            the <strong className="text-gray-50">Agent</strong> scope
+          </li>
+        </ul>
+      </DocSection>
 
       <DocSection title="Installation">
         <CodeBlock>{`openclaw plugins install @kutana/openclaw-plugin`}</CodeBlock>
@@ -522,27 +855,44 @@ function OpenClawSkillSetup() {
   entries:
     kutana:
       config:
-        apiKey: "cvn_..."           # Your Kutana API key
-        mcpUrl: "https://kutana.spark-b0f2.local/mcp"`}</CodeBlock>
+        apiKey: "cvn_..."                              # your Kutana API key
+        mcpUrl: "https://kutana.spark-b0f2.local/mcp"  # your Kutana instance URL`}</CodeBlock>
       </DocSection>
 
-      <DocSection title="Available Tools">
+      <DocSection title="Available Tools (17)">
         <p className="text-sm text-gray-400 mb-3">
-          All Kutana tools are available to agents via the plugin:
+          The plugin registers the following tools in the OpenClaw gateway:
         </p>
         <div className="space-y-4">
           <ToolSubGroup title="Meeting Management">
-            {["kutana_list_meetings", "kutana_join_meeting", "kutana_get_transcript", "kutana_create_task", "kutana_get_participants", "kutana_create_meeting"].map(t => (
+            {[
+              "kutana_list_meetings",
+              "kutana_create_meeting",
+              "kutana_join_meeting",
+              "kutana_leave_meeting",
+              "kutana_get_transcript",
+              "kutana_get_participants",
+              "kutana_create_task",
+              "kutana_get_meeting_status",
+            ].map((t) => (
               <Code key={t} block>{t}</Code>
             ))}
           </ToolSubGroup>
           <ToolSubGroup title="Turn Management">
-            {["kutana_raise_hand", "kutana_start_speaking", "kutana_mark_finished_speaking", "kutana_get_queue_status", "kutana_cancel_hand_raise"].map(t => (
+            {[
+              "kutana_raise_hand",
+              "kutana_start_speaking",
+              "kutana_speak",
+              "kutana_mark_finished_speaking",
+              "kutana_cancel_hand_raise",
+              "kutana_get_queue_status",
+              "kutana_get_speaking_status",
+            ].map((t) => (
               <Code key={t} block>{t}</Code>
             ))}
           </ToolSubGroup>
           <ToolSubGroup title="Chat">
-            {["kutana_send_chat_message", "kutana_get_chat_messages"].map(t => (
+            {["kutana_send_chat_message", "kutana_get_chat_messages"].map((t) => (
               <Code key={t} block>{t}</Code>
             ))}
           </ToolSubGroup>
@@ -551,111 +901,91 @@ function OpenClawSkillSetup() {
 
       <DocSection title="How It Works">
         <p>
-          The OpenClaw plugin connects to the Kutana MCP server on behalf of
-          agents in your OpenClaw channels. When an agent receives a message
-          mentioning a meeting or task, the plugin automatically invokes the
-          appropriate Kutana tool and returns the result to the channel.
+          The plugin connects to the Kutana MCP server via HTTP with Bearer token
+          authentication. When an OpenClaw agent invokes a Kutana tool, the plugin
+          forwards the call to the MCP server and returns the result to the agent.
         </p>
+        <CodeBlock>{`OpenClaw Agent
+    │  Native tool calls
+    ▼
+@kutana/openclaw-plugin
+    │  HTTP + Bearer token (JSON-RPC 2.0)
+    ▼
+Kutana MCP Server`}</CodeBlock>
+      </DocSection>
+
+      <DocSection title="Capabilities">
+        <p>
+          Pass a <Code>capabilities</Code> array to <Code>kutana_join_meeting</Code> to
+          control what the agent can do:
+        </p>
+        <table className="w-full text-sm mt-2">
+          <thead>
+            <tr className="border-b border-gray-800 text-left text-gray-400">
+              <th className="pb-2 pr-4 font-medium">Capability</th>
+              <th className="pb-2 font-medium">Effect</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-800/50">
+            {[
+              ["text_only", "Transcript and chat only — no audio processing (default)"],
+              ["voice_in", "Receive audio input"],
+              ["voice_out", "Send audio output"],
+              ["voice_bidirectional", "Full audio input and output"],
+              ["tts_enabled", "Agent can speak via text-to-speech"],
+            ].map(([cap, desc]) => (
+              <tr key={cap}>
+                <td className="py-2 pr-4"><Code>{cap}</Code></td>
+                <td className="py-2 text-gray-400">{desc}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </DocSection>
 
       <DocSection title="Turn Workflow">
         <CodeBlock>{`kutana_raise_hand(meeting_id, topic="...")
   → queue_position=0: floor is yours immediately
-  → queue_position>0: wait for turn_your_turn event
+  → queue_position>0: wait, poll with kutana_get_queue_status
 
 kutana_start_speaking(meeting_id)
-[speak via send_chat_message or voice]
+kutana_speak(meeting_id, text="What I want to say...")
 kutana_mark_finished_speaking(meeting_id)`}</CodeBlock>
       </DocSection>
 
       <DocSection title="Verify">
-        <p>Test the plugin by asking your agent in any channel:</p>
+        <p>Test the plugin by asking your agent:</p>
         <CodeBlock>{`@agent list my Kutana meetings`}</CodeBlock>
         <Note>
-          The agent calls <Code>kutana_list_meetings</Code> and returns all available meetings.
+          The agent calls <Code>kutana_list_meetings</Code> and returns all
+          available meetings.
         </Note>
       </DocSection>
     </div>
   );
 }
 
-function ManagedAgents() {
+/* ── Kutana Meeting Skill (5H — rewritten) ───────────────────────────────── */
+
+function KutanaMeetingSkill() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-50">Managed Agents</h1>
+        <h1 className="text-2xl font-bold text-gray-50">Kutana Meeting Skill</h1>
         <p className="mt-2 text-gray-400">
-          Managed agents are pre-built AI agents hosted by Kutana that you can
-          activate with one click. They handle common meeting tasks automatically.
+          The <Code>kutana-meeting</Code> skill is a{" "}
+          <Code>SKILL.md</Code> file that gives Claude Code agents natural
+          language instructions for participating in Kutana meetings. It activates
+          automatically when you mention meetings, standups, or transcripts.
         </p>
       </div>
 
-      <DocSection title="Available Managed Agents">
-        <div className="space-y-4">
-          <ManagedAgentCard
-            name="Meeting Scribe"
-            desc="Automatically transcribes meetings, extracts action items, and posts a structured summary to chat when the meeting ends."
-            tier="Pro"
-          />
-          <ManagedAgentCard
-            name="Task Tracker"
-            desc="Listens for commitments and deadlines during conversation. Creates tasks automatically and confirms them in chat."
-            tier="Pro"
-          />
-          <ManagedAgentCard
-            name="Meeting Coach"
-            desc="Provides real-time facilitation suggestions: time checks, agenda tracking, and participation balance alerts."
-            tier="Business"
-          />
-        </div>
-      </DocSection>
-
-      <DocSection title="Activating a Managed Agent">
+      <DocSection title="What Is a Skill?">
         <p>
-          Navigate to <strong className="text-gray-50">Agents → Managed</strong> in the dashboard,
-          select an agent template, and activate it. Managed agents automatically
-          join your meetings based on your configured preferences.
-        </p>
-        <Note>
-          Managed agents require a Pro plan or higher. Each plan tier includes
-          different managed agent credits.
-        </Note>
-      </DocSection>
-
-      <DocSection title="Custom vs. Managed">
-        <p>
-          <strong className="text-gray-50">Custom agents</strong> are your own AI agents
-          that connect via the MCP server or Claude Code Channel. You have full
-          control over their behavior and capabilities.
-        </p>
-        <p>
-          <strong className="text-gray-50">Managed agents</strong> are hosted by Kutana
-          and require no setup. They follow pre-built templates optimized for
-          common meeting workflows.
-        </p>
-      </DocSection>
-    </div>
-  );
-}
-
-function AgentSkillReference() {
-  return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-50">Agent Skill Reference</h1>
-        <p className="mt-2 text-gray-400">
-          Agent skills are reusable capability packages that give AI agents
-          access to Kutana meeting tools. Skills activate automatically based
-          on trigger phrases in conversation.
-        </p>
-      </div>
-
-      <DocSection title="What Are Skills?">
-        <p>
-          A skill is a <Code>SKILL.md</Code> file placed in your agent&apos;s skills
-          directory. It contains instructions and tool documentation that your agent
-          loads when a matching trigger phrase is detected — like mentioning a meeting,
-          standup, or transcript.
+          A skill is a <Code>SKILL.md</Code> file placed in your agent&apos;s
+          skills directory. It contains structured instructions that Claude Code
+          loads when a trigger phrase is detected — like mentioning a meeting,
+          standup, or action items.
         </p>
       </DocSection>
 
@@ -665,29 +995,48 @@ function AgentSkillReference() {
 cp skills/kutana-meeting/SKILL.md ~/.claude/skills/kutana-meeting/`}</CodeBlock>
         <p>
           The skill activates automatically when you mention meetings, standups,
-          calls, or ask about transcripts.
+          calls, hand raises, speakers, transcripts, action items, or ask to join
+          a meeting.
         </p>
         <Note>
-          Skills also require the Kutana MCP server to be configured. See the{" "}
-          <strong className="text-gray-50">MCP Server Reference</strong> for setup.
+          The skill requires the Kutana MCP server to be configured. See the{" "}
+          <strong className="text-gray-50">MCP Server Reference</strong> for
+          setup instructions.
         </Note>
       </DocSection>
 
-      <DocSection title="Available Skills">
-        <div className="space-y-3">
+      <DocSection title="What It Provides">
+        <div className="space-y-4">
           <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-            <span className="text-sm font-semibold text-gray-50">kutana-meeting</span>
+            <span className="text-sm font-semibold text-gray-50">Meeting Lifecycle</span>
             <p className="mt-1 text-xs text-gray-400">
-              Full meeting participation: join meetings, read transcripts,
-              manage turns, send chat messages, and create tasks — all from
-              within a Claude Code session.
+              Join meetings by title or ID, create new meetings, get meeting status,
+              and leave when done. The skill teaches agents to use{" "}
+              <Code>join_or_create_meeting</Code> for flexible joining.
             </p>
           </div>
           <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-            <span className="text-sm font-semibold text-gray-50">OpenClaw Plugin</span>
+            <span className="text-sm font-semibold text-gray-50">Turn Management</span>
             <p className="mt-1 text-xs text-gray-400">
-              Gives OpenClaw agents in any channel (Slack, WhatsApp) native
-              access to Kutana meeting tools via the plugin system.
+              Raise hand to enter the speaker queue, wait for your turn, confirm
+              the floor, speak, and release. The skill covers the full raise
+              &rarr; wait &rarr; start_speaking &rarr; finish flow.
+            </p>
+          </div>
+          <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+            <span className="text-sm font-semibold text-gray-50">Chat &amp; Transcript</span>
+            <p className="mt-1 text-xs text-gray-400">
+              Send typed chat messages (text, questions, action items, decisions),
+              read chat history, get transcript segments, and list participants.
+            </p>
+          </div>
+          <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+            <span className="text-sm font-semibold text-gray-50">Tasks &amp; Context</span>
+            <p className="mt-1 text-xs text-gray-400">
+              Create tasks with priority and description, browse meetings without
+              joining, and understand capability options like{" "}
+              <Code>listen</Code>, <Code>transcribe</Code>, and{" "}
+              <Code>tts_enabled</Code>.
             </p>
           </div>
         </div>
@@ -695,34 +1044,19 @@ cp skills/kutana-meeting/SKILL.md ~/.claude/skills/kutana-meeting/`}</CodeBlock>
 
       <DocSection title="Trigger Phrases">
         <p>
-          Skills activate when your agent detects relevant context. The
-          kutana-meeting skill triggers on:
+          The skill activates when your agent detects relevant context:
         </p>
         <div className="flex flex-wrap gap-2 mt-2">
-          {["meeting", "standup", "call", "transcript", "action items", "agenda"].map((t) => (
+          {["meeting", "kutana", "standup", "call", "hand raise", "speaker", "transcript", "action items", "join meeting"].map((t) => (
             <Code key={t} block>{t}</Code>
           ))}
         </div>
       </DocSection>
-
-      <DocSection title="Creating Custom Skills">
-        <p>
-          You can create your own skills by writing a <Code>SKILL.md</Code> file
-          with YAML frontmatter defining the name, description, and trigger patterns.
-          Place it in <Code>~/.claude/skills/your-skill/SKILL.md</Code>.
-        </p>
-        <CodeBlock>{`---
-name: my-kutana-skill
-description: Custom meeting automation skill
----
-
-# My Custom Skill
-
-Instructions for the agent go here...`}</CodeBlock>
-      </DocSection>
     </div>
   );
 }
+
+/* ── CLI Reference (5K — with subsection anchors) ────────────────────────── */
 
 function CliReference() {
   return (
@@ -736,6 +1070,7 @@ function CliReference() {
       </div>
 
       <DocSection title="Quick Install">
+        <h3 id="cli-install" className="sr-only">Install</h3>
         <CodeBlock>{`curl -LsSf https://kutana.ai/install.sh | bash`}</CodeBlock>
         <p>
           This installs <Code>git</Code> and <Code>uv</Code> if needed,
@@ -750,6 +1085,7 @@ uv tool install -e services/cli`}</CodeBlock>
       </DocSection>
 
       <DocSection title="Authentication">
+        <h3 id="cli-auth" className="sr-only">Authentication</h3>
         <CodeBlock>{`# Login with email/password
 kutana login
 
@@ -757,6 +1093,7 @@ kutana login
       </DocSection>
 
       <DocSection title="Commands">
+        <h3 id="cli-commands" className="sr-only">Commands</h3>
         <ToolGroup title="Meetings">
           <ToolRow name="kutana meetings list" params="" desc="List all meetings with status." />
           <ToolRow name="kutana meetings create" params='"Sprint Planning"' desc="Create a new meeting with the given title." />
@@ -780,6 +1117,7 @@ kutana login
       </DocSection>
 
       <DocSection title="Configuration File">
+        <h3 id="cli-config" className="sr-only">Configuration</h3>
         <p>Stored at <Code>~/.kutana/config.json</Code>:</p>
         <CodeBlock>{`{
   "api_url": "https://api-dev.kutana.ai",
@@ -791,92 +1129,59 @@ kutana login
   );
 }
 
-function FeedsReference() {
+/* ── Feeds Overview (5I) ─────────────────────────────────────────────────── */
+
+function FeedsOverview() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-50">Feeds Reference</h1>
+        <h1 className="text-2xl font-bold text-gray-50">Feeds</h1>
         <p className="mt-2 text-gray-400">
-          Feeds are bidirectional integrations that connect your Kutana meetings
-          to external platforms. Push meeting summaries to Slack, pull context
-          from Notion, or deliver recaps to Discord — all automatically.
+          Feeds are integrations that connect your Kutana meetings to external
+          platforms. Pull context in before a meeting starts, or push meeting
+          summaries out when it ends.
         </p>
       </div>
 
       <DocSection title="How It Works">
         <p>
-          When a meeting ends (or starts), Kutana automatically runs your
+          At the beginning and end of a meeting, Kutana automatically runs your
           configured Feeds. Each Feed is a short-lived AI agent that reads
           meeting data and delivers it to your chosen platform — or pulls
-          external context into the meeting before it begins.
+          external context into the meeting.
         </p>
-        <div className="mt-4 space-y-3">
+        <ul className="list-disc list-inside space-y-2 text-gray-400 text-sm mt-3">
+          <li>
+            <strong className="text-gray-50">Inbound (Pull)</strong> — Before a
+            meeting starts, a Feed agent fetches relevant context — a Slack
+            thread, Notion page, or GitHub issue — and injects it into the
+            meeting so participants are prepared.
+          </li>
+          <li>
+            <strong className="text-gray-50">Outbound (Push)</strong> — After a
+            meeting ends, a Feed agent reads the summary, tasks, and transcript,
+            then posts a formatted recap to Slack or other destinations.
+          </li>
+        </ul>
+      </DocSection>
+
+      <DocSection title="Examples">
+        <div className="space-y-3">
           <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-3">
-            <p className="text-sm font-medium text-gray-50">Outbound (push)</p>
+            <p className="text-sm font-medium text-gray-50">Inbound: Slack Thread</p>
             <p className="text-xs text-gray-400 mt-1">
-              After a meeting ends, a Feed agent reads the summary, tasks, and
-              transcript, then posts a formatted recap to Slack, Discord, or
-              other destinations.
+              Before a sprint planning meeting, pull the latest #engineering thread
+              so the team starts with full context on recent discussions.
             </p>
           </div>
           <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-3">
-            <p className="text-sm font-medium text-gray-50">Inbound (pull)</p>
+            <p className="text-sm font-medium text-gray-50">Outbound: Slack Recap</p>
             <p className="text-xs text-gray-400 mt-1">
-              Before a meeting starts, a Feed agent fetches relevant context — a
-              Slack thread, Notion page, or GitHub issue — and injects it into
-              the meeting.
-            </p>
-          </div>
-          <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-3">
-            <p className="text-sm font-medium text-gray-50">Bidirectional</p>
-            <p className="text-xs text-gray-400 mt-1">
-              A single Feed can pull context in at meeting start and push
-              results out at meeting end.
+              After a standup ends, post a summary with action items and blockers
+              to the #standup-notes channel.
             </p>
           </div>
         </div>
-      </DocSection>
-
-      <DocSection title="Supported Platforms">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-800 text-left text-gray-400">
-              <th className="pb-2 pr-4 font-medium">Platform</th>
-              <th className="pb-2 pr-4 font-medium">Status</th>
-              <th className="pb-2 font-medium">Delivery Type</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-800/50">
-            {[
-              ["Slack", "Available", "MCP Server"],
-              ["Discord", "Coming Soon", "Channel"],
-              ["Notion", "Planned", "MCP Server"],
-              ["GitHub", "Planned", "MCP Server"],
-            ].map(([platform, statusText, delivery]) => (
-              <tr key={platform}>
-                <td className="py-2 pr-4 text-gray-200">{platform}</td>
-                <td className="py-2 pr-4">
-                  <span className={`text-xs font-medium ${statusText === "Available" ? "text-green-400" : "text-gray-500"}`}>
-                    {statusText}
-                  </span>
-                </td>
-                <td className="py-2 text-gray-400">{delivery}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </DocSection>
-
-      <DocSection title="Getting Started">
-        <ol className="list-decimal list-inside space-y-2 text-gray-400 text-sm">
-          <li>Go to <strong className="text-gray-50">Feeds</strong> in the sidebar</li>
-          <li>Click <strong className="text-gray-50">Configure</strong> on a supported platform</li>
-          <li>
-            Fill in the configuration: name, platform, delivery type (MCP Server
-            or Channel), data types, and trigger
-          </li>
-          <li>Click <strong className="text-gray-50">Save Feed</strong></li>
-        </ol>
       </DocSection>
 
       <DocSection title="Data Types">
@@ -903,6 +1208,79 @@ function FeedsReference() {
         </table>
       </DocSection>
 
+      <DocSection title="Security">
+        <p>
+          Feed credentials (MCP auth tokens) are encrypted at rest and never
+          returned in API responses. You&apos;ll see a token hint (last 4 characters)
+          to confirm which credential is stored. Tokens are deleted immediately
+          when you remove a Feed.
+        </p>
+      </DocSection>
+    </div>
+  );
+}
+
+/* ── Feeds — Slack (5I) ──────────────────────────────────────────────────── */
+
+function FeedsSlack() {
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-50">Slack Feed</h1>
+        <p className="mt-2 text-gray-400">
+          Connect your Kutana meetings to Slack. Push meeting recaps to channels
+          or pull Slack threads into meetings as context.
+        </p>
+      </div>
+
+      <DocSection title="Setup">
+        <ol className="list-decimal list-inside space-y-2 text-gray-400 text-sm">
+          <li>
+            Go to <strong className="text-gray-50">Feeds</strong> in the sidebar
+          </li>
+          <li>
+            Click <strong className="text-gray-50">Configure</strong> on{" "}
+            <strong className="text-gray-50">Slack</strong>
+          </li>
+          <li>
+            Enter your Slack MCP server URL or bot token
+          </li>
+          <li>
+            Choose the delivery type: <strong className="text-gray-50">MCP Server</strong>
+          </li>
+          <li>
+            Select which data types to include (Summary, Tasks, Transcript, Decisions)
+          </li>
+          <li>
+            Set the trigger: after meeting ends, or manually
+          </li>
+          <li>
+            Click <strong className="text-gray-50">Save Feed</strong>
+          </li>
+        </ol>
+      </DocSection>
+
+      <DocSection title="What Gets Delivered">
+        <p>
+          When triggered, the Slack Feed agent posts a formatted message to your
+          configured channel. The message includes:
+        </p>
+        <ul className="list-disc list-inside space-y-1 text-gray-400 text-sm mt-2">
+          <li>Meeting title, duration, and participant list</li>
+          <li>Key discussion points and decisions</li>
+          <li>Action items with assignees</li>
+          <li>Condensed transcript (if selected)</li>
+        </ul>
+      </DocSection>
+
+      <DocSection title="Inbound Context">
+        <p>
+          To pull a Slack thread into a meeting, configure an inbound feed with
+          the Slack channel and thread URL. The Feed agent fetches the thread
+          before the meeting starts and makes it available to all participants.
+        </p>
+      </DocSection>
+
       <DocSection title="Triggers">
         <table className="w-full text-sm">
           <thead>
@@ -914,7 +1292,7 @@ function FeedsReference() {
           <tbody className="divide-y divide-gray-800/50">
             {[
               ["After meeting ends", "Automatically when the host ends the meeting"],
-              ["When participant leaves", "When any participant disconnects"],
+              ["Before meeting starts", "When the meeting is created or scheduled to begin"],
               ["Manually", "Only when you click 'Run Now' from the Feeds page"],
             ].map(([trigger, when]) => (
               <tr key={trigger}>
@@ -925,15 +1303,62 @@ function FeedsReference() {
           </tbody>
         </table>
       </DocSection>
+    </div>
+  );
+}
 
-      <DocSection title="Security">
-        <p>
-          Feed credentials (MCP auth tokens) are encrypted at rest and never
-          returned in API responses. You&apos;ll see a token hint (last 4 characters)
-          to confirm which credential is stored. Tokens are deleted immediately
-          when you remove a Feed.
+/* ── Feeds — Coming Soon (5I) ────────────────────────────────────────────── */
+
+function FeedsUpcoming() {
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-50">Coming Soon</h1>
+        <p className="mt-2 text-gray-400">
+          These Feed integrations are planned for upcoming releases.
         </p>
-      </DocSection>
+      </div>
+
+      <div className="space-y-4">
+        <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold text-gray-50">Discord</span>
+            <span className="rounded-md bg-gray-700/30 px-2 py-0.5 text-xs font-medium text-gray-400">
+              Coming Soon
+            </span>
+          </div>
+          <p className="text-xs text-gray-400">
+            Push meeting recaps to Discord channels via a Claude Code Channel
+            integration. Pull thread context from Discord into meetings.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold text-gray-50">Notion</span>
+            <span className="rounded-md bg-gray-700/30 px-2 py-0.5 text-xs font-medium text-gray-400">
+              Planned
+            </span>
+          </div>
+          <p className="text-xs text-gray-400">
+            Sync meeting summaries and action items to Notion databases. Pull
+            relevant Notion pages as context before meetings start.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold text-gray-50">GitHub</span>
+            <span className="rounded-md bg-gray-700/30 px-2 py-0.5 text-xs font-medium text-gray-400">
+              Planned
+            </span>
+          </div>
+          <p className="text-xs text-gray-400">
+            Create GitHub issues from meeting action items. Pull issue and PR
+            context into technical meetings automatically.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1033,24 +1458,38 @@ function IntegrationCard({
   );
 }
 
-function ManagedAgentCard({
+function AgentCard({
   name,
   desc,
   tier,
+  tierColor,
+  howItWorks,
 }: {
   name: string;
   desc: string;
   tier: string;
+  tierColor: "green" | "blue";
+  howItWorks: string;
 }) {
+  const colorClasses = tierColor === "green"
+    ? "bg-green-600/20 text-green-400"
+    : "bg-blue-600/20 text-blue-400";
+
   return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-      <div className="flex items-center justify-between mb-2">
+    <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4 space-y-3">
+      <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-gray-50">{name}</span>
-        <span className="rounded-md bg-blue-600/20 px-2 py-0.5 text-xs font-medium text-blue-400">
-          {tier}+
+        <span className={cn("rounded-md px-2 py-0.5 text-xs font-medium", colorClasses)}>
+          {tier}
         </span>
       </div>
       <p className="text-xs text-gray-400">{desc}</p>
+      <div className="border-t border-gray-800 pt-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-600 mb-1">
+          How it works
+        </p>
+        <p className="text-xs text-gray-500">{howItWorks}</p>
+      </div>
     </div>
   );
 }
