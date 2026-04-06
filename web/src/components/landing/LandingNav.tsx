@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
 
 const navLinks = [
-  { label: "Features", href: "#features" },
   { label: "How It Works", href: "#how-it-works" },
+  { label: "Features", href: "#features" },
   { label: "Pricing", href: "#pricing" },
   { label: "Use Cases", href: "#use-cases" },
+  { label: "Contact", href: "#contact" },
 ] as const;
 
 export default function LandingNav() {
