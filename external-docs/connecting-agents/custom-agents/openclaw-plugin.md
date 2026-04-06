@@ -1,6 +1,6 @@
 # OpenClaw Integration
 
-Connect your OpenClaw agents to Kutana AI meetings. Once installed, any OpenClaw agent can list meetings, join as a participant, read the live transcript, manage turns, send chat messages, and create tasks — from any channel OpenClaw supports (Slack, WhatsApp, Discord, and more).
+Connect your OpenClaw agents to Kutana AI meetings. Once installed, any OpenClaw agent can list meetings, join as a participant, read the live transcript, manage turns, send chat messages, and create tasks.
 
 ## Prerequisites
 
@@ -30,7 +30,7 @@ plugins:
     kutana:
       config:
         apiKey: "cvn_..."                              # your Kutana API key
-        mcpUrl: "http://kutana.spark-b0f2.local/mcp" # your Kutana instance URL
+        mcpUrl: "https://kutana.spark-b0f2.local/mcp"  # your Kutana instance URL
 ```
 
 ## Available Tools
@@ -46,6 +46,7 @@ plugins:
 | `kutana_get_transcript` | Get recent transcript segments |
 | `kutana_get_participants` | List meeting participants |
 | `kutana_create_task` | Create a task from meeting context |
+| `kutana_get_meeting_status` | Get comprehensive meeting state |
 
 ### Turn Management
 
@@ -54,8 +55,10 @@ plugins:
 | `kutana_raise_hand` | Request a turn to speak |
 | `kutana_get_queue_status` | See who is speaking and who is waiting |
 | `kutana_start_speaking` | Confirm you have the floor |
+| `kutana_speak` | Speak text in the meeting (handles turn management and TTS) |
 | `kutana_mark_finished_speaking` | Release the floor and advance the queue |
 | `kutana_cancel_hand_raise` | Withdraw from the speaker queue |
+| `kutana_get_speaking_status` | Check if you are currently the active speaker |
 
 ### Chat
 
@@ -71,14 +74,14 @@ To speak in a meeting:
 ```
 1. kutana_raise_hand(topic="your topic")
       → queue_position: 0  →  floor is yours immediately
-      → queue_position: N  →  wait for speaker.changed event
+      → queue_position: N  →  wait, poll kutana_get_queue_status
 
-2. kutana_get_queue_status()   # poll until it's your turn
+2. kutana_start_speaking(meeting_id)
 
-3. kutana_start_speaking(text="What I want to say...")
+3. kutana_speak(meeting_id, text="What I want to say...")
                                 # text is synthesized to voice via TTS
 
-4. kutana_mark_finished_speaking()   # release the floor
+4. kutana_mark_finished_speaking(meeting_id)   # release the floor
 ```
 
 ## Capabilities
@@ -88,11 +91,12 @@ Pass a `capabilities` array to `kutana_join_meeting` to control what the agent c
 | Capability | Effect |
 |------------|--------|
 | `text_only` | Transcript and chat only — no audio processing (default) |
+| `voice_in` | Receive audio input |
+| `voice_out` | Send audio output |
+| `voice_bidirectional` | Full audio input and output |
 | `tts_enabled` | Agent can speak via text-to-speech |
 
 ## Example Conversation
-
-In Slack:
 
 ```
 User:  @agent join the standup and tell me what's being discussed
@@ -109,7 +113,7 @@ Agent: [calls kutana_raise_hand(topic="API rollout timeline")]
        [polls kutana_get_queue_status until it's their turn]
        I now have the floor.
 
-       [calls kutana_start_speaking(text="What is the target date for the API rollout?")]
+       [calls kutana_speak(text="What is the target date for the API rollout?")]
        Asked the question. Releasing the floor.
 ```
 
@@ -122,8 +126,8 @@ integrations/openclaw-plugin/
 ├── openclaw.plugin.json    # Plugin manifest
 ├── package.json            # Node.js project (18+)
 ├── src/
-│   ├── index.ts           # Registers 13 tools
-│   └── kutana-client.ts  # HTTP client (Bearer token, JSON-RPC 2.0)
+│   ├── index.ts           # Registers 17 tools
+│   └── kutana-client.ts   # HTTP client (Bearer token, JSON-RPC 2.0)
 └── skills/
     └── kutana/
         └── SKILL.md       # Natural language guidance for agents
@@ -142,7 +146,7 @@ npm run build
 ## Architecture
 
 ```
-OpenClaw Agent (Slack / WhatsApp / Discord / ...)
+OpenClaw Agent
         │
         │  Native tool calls
         ▼
@@ -150,7 +154,7 @@ OpenClaw Agent (Slack / WhatsApp / Discord / ...)
         │
         │  HTTP + Bearer token (JSON-RPC 2.0)
         ▼
-Kutana MCP Server  (http://kutana.spark-b0f2.local/mcp)
+Kutana MCP Server  (https://kutana.spark-b0f2.local/mcp)
         │
         ├── REST API ──────► API Server
         └── WebSocket ─────► Agent Gateway
