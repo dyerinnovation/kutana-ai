@@ -7,39 +7,28 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/componen
 
 const CAPABILITY_OPTIONS = [
   {
-    id: "listen",
-    label: "Listen to Audio",
-    description: "Agent can hear what's said in the meeting",
+    id: "text_only",
+    label: "Text Only",
+    description: "Agent can read transcripts and send messages but won't be able to speak",
+  },
+  {
+    id: "text_tts",
+    label: "Text + Kutana Text-to-Speech (TTS)",
+    description: "Agent is Text only but will use Kutana TTS to speak",
   },
   {
     id: "voice",
-    label: "Speak with Voice",
-    description: "Agent can speak using audio",
-  },
-  {
-    id: "text_chat",
-    label: "Text Chat",
-    description: "Agent can send and read chat messages",
-  },
-  {
-    id: "task_extraction",
-    label: "Task Extraction",
-    description: "Agent can identify and track action items",
+    label: "Voice Agent",
+    description: "Agent has full voice capabilities and will listen to the meeting audio stream directly",
   },
 ];
 
 export function AgentCreatePage() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
-  const [capabilities, setCapabilities] = useState<string[]>([]);
+  const [capability, setCapability] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  function toggleCapability(cap: string) {
-    setCapabilities((prev) =>
-      prev.includes(cap) ? prev.filter((c) => c !== cap) : [...prev, cap]
-    );
-  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -47,7 +36,7 @@ export function AgentCreatePage() {
     setIsLoading(true);
 
     try {
-      const agent = await createAgent({ name, capabilities });
+      const agent = await createAgent({ name, capabilities: [capability] });
       navigate(`/agents/${agent.id}`);
     } catch (err) {
       setError(
@@ -60,22 +49,6 @@ export function AgentCreatePage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      {/* Prebuilt templates callout */}
-      <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 flex items-center justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-gray-200">Use a prebuilt template</p>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Start with Meeting Summarizer, Action Item Tracker, and more
-          </p>
-        </div>
-        <Link
-          to="/templates"
-          className="shrink-0 rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-300 hover:border-gray-600 hover:text-gray-50 transition-colors"
-        >
-          Browse Templates
-        </Link>
-      </div>
-
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">Create New Agent</CardTitle>
@@ -102,19 +75,19 @@ export function AgentCreatePage() {
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-300">
-                Capabilities
+                Select your agent's capability
               </label>
               <p className="text-xs text-gray-500">
-                Select what this agent can do in a meeting
+                Choose how this agent interacts in meetings
               </p>
               <div className="space-y-2 mt-1">
                 {CAPABILITY_OPTIONS.map((cap) => {
-                  const isSelected = capabilities.includes(cap.id);
+                  const isSelected = cap.id === capability;
                   return (
                     <button
                       key={cap.id}
                       type="button"
-                      onClick={() => toggleCapability(cap.id)}
+                      onClick={() => setCapability(cap.id)}
                       className={`w-full rounded-lg border px-4 py-3 text-left transition-colors ${
                         isSelected
                           ? "border-blue-500 bg-blue-600/10"
@@ -125,13 +98,15 @@ export function AgentCreatePage() {
                         <span className={`text-sm font-medium ${isSelected ? "text-blue-300" : "text-gray-300"}`}>
                           {cap.label}
                         </span>
-                        {isSelected && (
-                          <span className="ml-2 h-4 w-4 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
-                            <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                            </svg>
-                          </span>
-                        )}
+                        <span className={`ml-2 h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
+                          isSelected
+                            ? "border-blue-500"
+                            : "border-gray-600"
+                        }`}>
+                          {isSelected && (
+                            <span className="h-2 w-2 rounded-full bg-blue-500" />
+                          )}
+                        </span>
                       </div>
                       <p className={`text-xs mt-0.5 ${isSelected ? "text-blue-400/70" : "text-gray-500"}`}>
                         {cap.description}
@@ -156,6 +131,50 @@ export function AgentCreatePage() {
             </Button>
           </CardFooter>
         </form>
+      </Card>
+
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle className="text-lg">Connect to Kutana</CardTitle>
+          <p className="text-sm text-gray-400">
+            After creating your agent, follow these steps to connect it
+          </p>
+        </CardHeader>
+        <CardContent>
+          <ol className="space-y-4 text-sm">
+            <li className="flex gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600/20 text-xs font-medium text-blue-400">1</span>
+              <div>
+                <p className="font-medium text-gray-200">Create your API Key</p>
+                <p className="text-gray-500 mt-0.5">Generate an API key from your agent's detail page after creation</p>
+              </div>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600/20 text-xs font-medium text-blue-400">2</span>
+              <div>
+                <p className="font-medium text-gray-200">Connect following the documentation for your agent</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Link to="/docs" className="rounded-lg border border-gray-700 bg-gray-800/50 px-3 py-1.5 text-xs font-medium text-gray-300 hover:border-gray-600 hover:text-gray-50 transition-colors">
+                    Claude Code
+                  </Link>
+                  <Link to="/docs" className="rounded-lg border border-gray-700 bg-gray-800/50 px-3 py-1.5 text-xs font-medium text-gray-300 hover:border-gray-600 hover:text-gray-50 transition-colors">
+                    OpenClaw
+                  </Link>
+                  <Link to="/docs" className="rounded-lg border border-gray-700 bg-gray-800/50 px-3 py-1.5 text-xs font-medium text-gray-300 hover:border-gray-600 hover:text-gray-50 transition-colors">
+                    Other Agents
+                  </Link>
+                </div>
+              </div>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600/20 text-xs font-medium text-blue-400">3</span>
+              <div>
+                <p className="font-medium text-gray-200">Tell or schedule your agent to call in to the meeting</p>
+                <p className="text-gray-500 mt-0.5">Your agent can join any meeting you create or are invited to</p>
+              </div>
+            </li>
+          </ol>
+        </CardContent>
       </Card>
     </div>
   );
