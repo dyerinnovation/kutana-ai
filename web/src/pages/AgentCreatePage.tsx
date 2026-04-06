@@ -70,7 +70,7 @@ export function AgentCreatePage() {
         </div>
         <Link
           to="/templates"
-          className="shrink-0 rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-300 hover:border-gray-600 hover:text-white transition-colors"
+          className="shrink-0 rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-300 hover:border-gray-600 hover:text-gray-50 transition-colors"
         >
           Browse Templates
         </Link>

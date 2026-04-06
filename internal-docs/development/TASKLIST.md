@@ -299,27 +299,41 @@
 - [x] 🔗 BLOCK: Light Mode Accessibility
   - [x] Add accent color flips (cyan, green, yellow, red, blue) to `html[data-theme="light"]` in index.css
   - [x] DocsPage: replace all `text-white` with theme-aware `text-gray-50`
-  - [ ] Audit remaining pages for hardcoded light-on-dark colors
+  - [x] Audit remaining pages for hardcoded light-on-dark colors (AgentCreatePage fixed; others are white-on-colored-bg, intentional)
 
 - [x] 🔗 BLOCK: Docs Page Restructuring
   - [x] Restructure nav into "Connecting Your Agent" group (MCP Server, Claude Code Channel, OpenClaw Skill)
   - [x] Add Managed Agents section with agent template cards
   - [x] Fix sidebar responsive — hidden on mobile, dropdown select instead
-  - [ ] Add Feeds documentation reference or link
+  - [x] Add Agent Skill Reference section
+  - [x] Add CLI Reference section
+  - [x] Add Feeds Reference section
 
-- [ ] 🔗 BLOCK: Profile & Settings Page (future)
-  - [ ] Create ProfilePage.tsx — user photo, username, password modification
-  - [ ] API endpoints: PATCH /users/me, POST /users/me/password
+- [x] 🔗 BLOCK: Profile & Settings Page
+  - [x] Create ProfilePage.tsx — user photo (MinIO), username, password modification
+  - [x] API endpoints: PATCH /auth/users/me, POST /auth/users/me/password, POST/DELETE /auth/users/me/avatar
+  - [x] MinIO object storage via Bitnami Helm subchart (standalone)
+  - [x] S3-compatible storage utility (boto3) — swap to cloud via env vars
+  - [x] Alembic migration: add avatar_url to users table
+  - [x] AuthProvider: add refreshUser() for post-update sidebar sync
   - [ ] Agent management settings (default capabilities, API key management)
 
-- [ ] 🔗 BLOCK: Calendar View (future)
-  - [ ] Create CalendarPage.tsx with month grid view and meeting indicators
-  - [ ] Month picker navigation (prev/next month, today button)
-  - [ ] Click-to-schedule: clicking a day opens create meeting dialog
-  - [ ] External calendar export (.ics download per meeting)
-  - [ ] Google Calendar integration (OAuth + Calendar API)
+- [x] 🔗 BLOCK: Calendar View
+  - [x] Create CalendarPage.tsx with month grid view and meeting indicators
+  - [x] Month picker navigation (prev/next month, today button)
+  - [x] Click-to-schedule: clicking a day opens create meeting dialog
+  - [x] External calendar export (.ics download for all meetings)
+  - [x] Calendar nav item in sidebar
 
-- [ ] Feeds: audit modal content display for correctness
+- [x] Feeds: audit modal content display for correctness (confirmed correct)
+
+- [ ] 🔗 BLOCK: Google Calendar Integration (pre-launch)
+  - [ ] Google Cloud project setup (Calendar API, OAuth consent screen)
+  - [ ] Backend: OAuth callback endpoint, token storage (new DB columns)
+  - [ ] Backend: Calendar API client (create/update/delete events on meeting CRUD)
+  - [ ] Frontend: "Connect Google Calendar" button in settings
+  - [ ] Token refresh background job
+  - [ ] Two-way sync: meeting changes → calendar events
 
 ---
 

@@ -17,6 +17,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "email-validator>=2.0",
     "stripe>=15.0.1",
+    "boto3>=1.35",
 ]
 
 [tool.uv.sources]
