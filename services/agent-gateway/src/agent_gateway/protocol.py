@@ -214,6 +214,7 @@ class ParticipantUpdate(BaseModel):
     role: str
     connection_type: str | None = None
     source: str | None = None  # "agent", "claude-code", "human", "openclaw", etc.
+    capabilities: list[str] | None = None  # Granted capabilities (e.g. ["listen", "speak", "voice_in"])
 
 
 class ErrorMessage(BaseModel):

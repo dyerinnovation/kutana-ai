@@ -544,6 +544,7 @@ class AgentSessionHandler:
         role: str,
         connection_type: str | None = None,
         source: str | None = None,
+        capabilities: list[str] | None = None,
     ) -> None:
         """Send a participant update to the agent.
 
@@ -554,6 +555,7 @@ class AgentSessionHandler:
             role: Participant role.
             connection_type: How they're connected.
             source: Connection source (e.g. "agent", "claude-code", "human").
+            capabilities: Granted capabilities for the participant.
         """
         msg = ParticipantUpdate(
             action=action,
@@ -562,6 +564,7 @@ class AgentSessionHandler:
             role=role,
             connection_type=connection_type,
             source=source,
+            capabilities=capabilities,
         )
         await self._send(msg.model_dump(mode="json"))
 
@@ -584,6 +587,7 @@ class AgentSessionHandler:
                     name=self.agent_name,
                     role="agent",
                     connection_type="agent_gateway",
+                    capabilities=self.capabilities if action == "joined" else None,
                 )
             except Exception:
                 logger.warning(

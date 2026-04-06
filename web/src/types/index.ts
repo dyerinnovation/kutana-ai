@@ -76,7 +76,7 @@ export type GatewayMessage =
   | { type: "leave_meeting" }
   | { type: "audio_data"; data: string; sample_rate: number }
   | { type: "transcript"; meeting_id: string; speaker_id: string | null; speaker_name: string | null; text: string; start_time: number; end_time: number; confidence: number; is_final: boolean }
-  | { type: "participant_update"; action: string; participant_id: string; name: string; role: string }
+  | { type: "participant_update"; action: string; participant_id: string; name: string; role: string; capabilities?: string[] }
   | { type: "error"; code: string; message: string }
   | { type: "joined"; meeting_id: string; granted_capabilities: string[] }
   | { type: "left"; meeting_id: string }
@@ -117,6 +117,7 @@ export interface Participant {
   is_muted: boolean;
   avatar_url?: string;
   is_speaking?: boolean;
+  capabilities?: string[];
 }
 
 export interface AgentTemplate {

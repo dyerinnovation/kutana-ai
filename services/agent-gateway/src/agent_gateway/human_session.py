@@ -352,6 +352,7 @@ class HumanSessionHandler:
         role: str,
         connection_type: str | None = None,
         source: str | None = None,
+        capabilities: list[str] | None = None,
     ) -> None:
         """Send a participant join/leave notification to the browser.
 
@@ -362,6 +363,7 @@ class HumanSessionHandler:
             role: Participant role.
             connection_type: How they're connected.
             source: Connection source (e.g. "agent", "claude-code", "human").
+            capabilities: Granted capabilities for the participant.
         """
         msg = ParticipantUpdate(
             action=action,
@@ -370,6 +372,7 @@ class HumanSessionHandler:
             role=role,
             connection_type=connection_type,
             source=source,
+            capabilities=capabilities,
         )
         await self._send(msg.model_dump(mode="json"))
 
@@ -414,6 +417,7 @@ class HumanSessionHandler:
                     name=self.agent_name,
                     role="human",
                     connection_type="websocket",
+                    capabilities=self.capabilities if action == "joined" else None,
                 )
             except Exception:
                 logger.warning(
