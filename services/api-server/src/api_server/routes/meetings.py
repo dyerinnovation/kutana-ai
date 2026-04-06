@@ -8,13 +8,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api_server.auth_deps import CurrentUser, CurrentUserOrAgent
 from api_server.billing_deps import check_meeting_limit
 from api_server.deps import get_db_session
-from kutana_core.database.models import MeetingORM
+from kutana_core.database.models import MeetingInviteORM, MeetingORM, UserORM
 from kutana_core.models.meeting import MeetingStatus
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
@@ -120,7 +120,7 @@ async def list_meetings(
     _current_user: CurrentUserOrAgent,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> MeetingListResponse:
-    """List all meetings.
+    """List meetings the current user owns or is invited to.
 
     Args:
         _current_user: Authenticated user (required for access).
@@ -129,12 +129,28 @@ async def list_meetings(
     Returns:
         MeetingListResponse with meeting data.
     """
+    # User sees meetings they own OR are invited to
+    invite_exists = exists(
+        select(MeetingInviteORM.id).where(
+            MeetingInviteORM.meeting_id == MeetingORM.id,
+            MeetingInviteORM.user_id == _current_user.id,
+        )
+    )
+    ownership_filter = or_(
+        MeetingORM.owner_id == _current_user.id,
+        invite_exists,
+        # Include legacy meetings with no owner (created before this migration)
+        MeetingORM.owner_id.is_(None),
+    )
+
     result = await db.execute(
-        select(MeetingORM).order_by(MeetingORM.scheduled_at.desc())
+        select(MeetingORM).where(ownership_filter).order_by(MeetingORM.scheduled_at.desc())
     )
     meetings = result.scalars().all()
 
-    count_result = await db.execute(select(func.count()).select_from(MeetingORM))
+    count_result = await db.execute(
+        select(func.count()).select_from(MeetingORM).where(ownership_filter)
+    )
     total = count_result.scalar_one()
 
     return MeetingListResponse(
@@ -169,11 +185,22 @@ async def create_meeting(
         title=body.title,
         scheduled_at=body.scheduled_at,
         status=MeetingStatus.SCHEDULED.value,
+        owner_id=current_user.id,
     )
     db.add(meeting)
     current_user.meetings_this_month += 1
     await db.flush()
     await db.refresh(meeting)
+
+    # Auto-invite the owner
+    invite = MeetingInviteORM(
+        meeting_id=meeting.id,
+        user_id=current_user.id,
+        status="accepted",
+    )
+    db.add(invite)
+    await db.flush()
+
     return _to_response(meeting)
 
 
@@ -196,9 +223,7 @@ async def get_meeting(
     Raises:
         HTTPException: 404 if meeting not found.
     """
-    result = await db.execute(
-        select(MeetingORM).where(MeetingORM.id == meeting_id)
-    )
+    result = await db.execute(select(MeetingORM).where(MeetingORM.id == meeting_id))
     meeting = result.scalar_one_or_none()
     if meeting is None:
         raise HTTPException(
@@ -229,9 +254,7 @@ async def update_meeting(
     Raises:
         HTTPException: 404 if meeting not found.
     """
-    result = await db.execute(
-        select(MeetingORM).where(MeetingORM.id == meeting_id)
-    )
+    result = await db.execute(select(MeetingORM).where(MeetingORM.id == meeting_id))
     meeting = result.scalar_one_or_none()
     if meeting is None:
         raise HTTPException(
@@ -267,9 +290,7 @@ async def start_meeting(
     Raises:
         HTTPException: 404 if not found, 409 if not in scheduled status.
     """
-    result = await db.execute(
-        select(MeetingORM).where(MeetingORM.id == meeting_id)
-    )
+    result = await db.execute(select(MeetingORM).where(MeetingORM.id == meeting_id))
     meeting = result.scalar_one_or_none()
     if meeting is None:
         raise HTTPException(
@@ -309,9 +330,7 @@ async def end_meeting(
     Raises:
         HTTPException: 404 if not found, 409 if not in active status.
     """
-    result = await db.execute(
-        select(MeetingORM).where(MeetingORM.id == meeting_id)
-    )
+    result = await db.execute(select(MeetingORM).where(MeetingORM.id == meeting_id))
     meeting = result.scalar_one_or_none()
     if meeting is None:
         raise HTTPException(
@@ -330,3 +349,189 @@ async def end_meeting(
     await db.flush()
     await db.refresh(meeting)
     return _to_response(meeting)
+
+
+# ---------------------------------------------------------------------------
+# Invite schemas
+# ---------------------------------------------------------------------------
+
+
+class InviteRequest(BaseModel):
+    """Request body for inviting a user to a meeting.
+
+    Attributes:
+        email: Email address of the user to invite.
+    """
+
+    email: str
+
+
+class InviteResponse(BaseModel):
+    """Response model for a meeting invite.
+
+    Attributes:
+        id: Invite UUID.
+        meeting_id: Meeting UUID.
+        user_id: Invited user UUID.
+        email: Invited user email.
+        status: Invite status.
+        created_at: When the invite was created.
+    """
+
+    id: UUID
+    meeting_id: UUID
+    user_id: UUID
+    email: str
+    status: str
+    created_at: datetime
+
+
+class InviteListResponse(BaseModel):
+    """List of meeting invites.
+
+    Attributes:
+        items: List of invite response objects.
+    """
+
+    items: list[InviteResponse]
+
+
+# ---------------------------------------------------------------------------
+# Invite endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post("/{meeting_id}/invite", response_model=InviteResponse, status_code=201)
+async def invite_to_meeting(
+    meeting_id: UUID,
+    body: InviteRequest,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> InviteResponse:
+    """Invite a user to a meeting by email. Only the meeting owner can invite.
+
+    Args:
+        meeting_id: The UUID of the meeting.
+        body: The invite payload containing the user email.
+        current_user: Authenticated user (must be meeting owner).
+        db: Database session.
+
+    Returns:
+        InviteResponse with the created invite data.
+
+    Raises:
+        HTTPException: 404 if meeting or user not found, 403 if not owner,
+            409 if user is already invited.
+    """
+    # Look up meeting
+    result = await db.execute(select(MeetingORM).where(MeetingORM.id == meeting_id))
+    meeting = result.scalar_one_or_none()
+    if meeting is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meeting not found",
+        )
+
+    # Only the owner can invite
+    if meeting.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the meeting owner can send invitations",
+        )
+
+    # Look up invitee by email
+    user_result = await db.execute(select(UserORM).where(UserORM.email == body.email))
+    invitee = user_result.scalar_one_or_none()
+    if invitee is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No user found with email '{body.email}'",
+        )
+
+    # Check for existing invite
+    existing = await db.execute(
+        select(MeetingInviteORM).where(
+            MeetingInviteORM.meeting_id == meeting_id,
+            MeetingInviteORM.user_id == invitee.id,
+        )
+    )
+    if existing.scalar_one_or_none() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User is already invited to this meeting",
+        )
+
+    invite = MeetingInviteORM(
+        meeting_id=meeting_id,
+        user_id=invitee.id,
+        status="accepted",
+    )
+    db.add(invite)
+    await db.flush()
+    await db.refresh(invite)
+
+    return InviteResponse(
+        id=invite.id,
+        meeting_id=invite.meeting_id,
+        user_id=invite.user_id,
+        email=invitee.email,
+        status=invite.status,
+        created_at=invite.created_at,
+    )
+
+
+@router.get("/{meeting_id}/invites", response_model=InviteListResponse)
+async def list_meeting_invites(
+    meeting_id: UUID,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> InviteListResponse:
+    """List all invites for a meeting. Only the meeting owner can view.
+
+    Args:
+        meeting_id: The UUID of the meeting.
+        current_user: Authenticated user (must be meeting owner).
+        db: Database session.
+
+    Returns:
+        InviteListResponse with invite data.
+
+    Raises:
+        HTTPException: 404 if meeting not found, 403 if not owner.
+    """
+    # Look up meeting
+    result = await db.execute(select(MeetingORM).where(MeetingORM.id == meeting_id))
+    meeting = result.scalar_one_or_none()
+    if meeting is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meeting not found",
+        )
+
+    if meeting.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the meeting owner can view invitations",
+        )
+
+    invite_result = await db.execute(
+        select(MeetingInviteORM, UserORM.email)
+        .join(UserORM, MeetingInviteORM.user_id == UserORM.id)
+        .where(MeetingInviteORM.meeting_id == meeting_id)
+        .order_by(MeetingInviteORM.created_at)
+    )
+    rows = invite_result.all()
+
+    return InviteListResponse(
+        items=[
+            InviteResponse(
+                id=invite.id,
+                meeting_id=invite.meeting_id,
+                user_id=invite.user_id,
+                email=email,
+                status=invite.status,
+                created_at=invite.created_at,
+            )
+            for invite, email in rows
+        ]
+    )

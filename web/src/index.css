@@ -223,6 +223,13 @@ html[data-theme="light"] {
   background-clip: text;
 }
 
+/* Dark-mode visibility for native date/time picker icons */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
 /* Code / monospace block */
 .code-block {
   background: var(--color-gray-950);

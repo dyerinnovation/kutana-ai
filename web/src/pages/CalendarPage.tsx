@@ -23,7 +23,6 @@ export function CalendarPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [createTitle, setCreateTitle] = useState("");
   const [createTime, setCreateTime] = useState("09:00");
-  const [createPlatform, setCreatePlatform] = useState("kutana");
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
@@ -97,7 +96,6 @@ export function CalendarPage() {
     if (selectedDate) {
       setCreateTitle("");
       setCreateTime("09:00");
-      setCreatePlatform("kutana");
       setShowCreate(true);
     }
   }
@@ -112,7 +110,7 @@ export function CalendarPage() {
       dt.setHours(h, m, 0, 0);
       await createMeeting({
         title: createTitle,
-        platform: createPlatform,
+        platform: "kutana",
         scheduled_at: dt.toISOString(),
       });
       setShowCreate(false);
@@ -305,8 +303,7 @@ export function CalendarPage() {
                             {new Date(m.scheduled_at).toLocaleTimeString(
                               undefined,
                               { hour: "numeric", minute: "2-digit" }
-                            )}{" "}
-                            · {m.platform}
+                            )}
                           </p>
                         </div>
                         <span
@@ -356,21 +353,6 @@ export function CalendarPage() {
               onChange={(e) => setCreateTime(e.target.value)}
               required
             />
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-gray-300">
-                Platform
-              </label>
-              <select
-                className="flex h-10 w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-50 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                value={createPlatform}
-                onChange={(e) => setCreatePlatform(e.target.value)}
-              >
-                <option value="kutana">Kutana</option>
-                <option value="zoom">Zoom</option>
-                <option value="teams">Teams</option>
-                <option value="meet">Google Meet</option>
-              </select>
-            </div>
           </div>
           <DialogFooter>
             <Button

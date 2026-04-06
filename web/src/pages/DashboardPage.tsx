@@ -53,7 +53,7 @@ export function DashboardPage() {
         <>
           {/* Quick actions */}
           <div className="flex gap-3">
-            <Link to="/meetings">
+            <Link to="/meetings?create=true">
               <Button variant="outline">
                 <CalendarPlusIcon />
                 New Meeting

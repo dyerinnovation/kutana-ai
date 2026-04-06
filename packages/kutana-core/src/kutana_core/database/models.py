@@ -36,6 +36,7 @@ class MeetingORM(Base):
     __tablename__ = "meetings"
 
     id: Mapped[UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid4)
+    owner_id: Mapped[UUID | None] = mapped_column(sa.Uuid, ForeignKey("users.id"), nullable=True)
     platform: Mapped[str] = mapped_column(sa.String(50), nullable=False)
     dial_in_number: Mapped[str | None] = mapped_column(sa.String(50), nullable=True)
     meeting_code: Mapped[str | None] = mapped_column(sa.String(100), nullable=True)
@@ -63,7 +64,37 @@ class MeetingORM(Base):
         back_populates="meeting", lazy="selectin"
     )
 
-    __table_args__ = (Index("ix_meetings_status", "status"),)
+    __table_args__ = (
+        Index("ix_meetings_status", "status"),
+        Index("ix_meetings_owner_id", "owner_id"),
+    )
+
+
+class MeetingInviteORM(Base):
+    """Tracks which users are invited to which meetings.
+
+    Attributes:
+        id: Primary key UUID.
+        meeting_id: Foreign key to meetings table.
+        user_id: Foreign key to users table.
+        status: Invite status (accepted, pending, declined).
+        created_at: Record creation timestamp.
+    """
+
+    __tablename__ = "meeting_invites"
+
+    id: Mapped[UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid4)
+    meeting_id: Mapped[UUID] = mapped_column(sa.Uuid, ForeignKey("meetings.id"), nullable=False)
+    user_id: Mapped[UUID] = mapped_column(sa.Uuid, ForeignKey("users.id"), nullable=False)
+    status: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="accepted")
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+
+    __table_args__ = (
+        sa.UniqueConstraint("meeting_id", "user_id", name="uq_meeting_invite"),
+        Index("ix_meeting_invites_user_id", "user_id"),
+    )
 
 
 class ParticipantORM(Base):
@@ -248,12 +279,14 @@ class UserORM(Base):
     stripe_customer_id: Mapped[str | None] = mapped_column(
         sa.String(255), nullable=True, unique=True
     )
-    stripe_subscription_id: Mapped[str | None] = mapped_column(
-        sa.String(255), nullable=True
-    )
+    stripe_subscription_id: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
     subscription_status: Mapped[str] = mapped_column(
         sa.Enum(
-            "active", "past_due", "canceled", "trialing", "incomplete",
+            "active",
+            "past_due",
+            "canceled",
+            "trialing",
+            "incomplete",
             name="subscription_status",
         ),
         nullable=False,
@@ -265,9 +298,7 @@ class UserORM(Base):
     subscription_period_end: Mapped[datetime | None] = mapped_column(
         sa.DateTime(timezone=True), nullable=True
     )
-    meetings_this_month: Mapped[int] = mapped_column(
-        sa.Integer, nullable=False, server_default="0"
-    )
+    meetings_this_month: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default="0")
     billing_cycle_start: Mapped[datetime | None] = mapped_column(
         sa.DateTime(timezone=True), nullable=True
     )
