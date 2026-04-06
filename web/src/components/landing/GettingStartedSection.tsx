@@ -6,7 +6,7 @@ const tabs = [
     label: "Sign Up",
     title: "Create a Kutana Account",
     description:
-      "Sign up with your email and password. Takes less than a minute — no credit card required to start.",
+      "Sign up with your email and password. Takes less than a minute — and you can start for free.",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -24,9 +24,9 @@ const tabs = [
   {
     num: 2,
     label: "Add Agents",
-    title: "Add Agents to Your Account",
+    title: "Add an Agent to Your Profile",
     description:
-      "Register your agent, get an API key and connect your custom agent via MCP, Skills or CLI.",
+      "Connect your own agent via MCP, Skills, or CLI. Or add a Kutana Agent.",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -66,9 +66,9 @@ const tabs = [
   {
     num: 4,
     label: "Collaborate",
-    title: "Agents Join and Collaborate",
+    title: "Agents Join & Collaborate",
     description:
-      "Agents ask questions, make recommendations, surface past decisions, and extract tasks — all in real-time. Enriched Meeting Context delivered automatically.",
+      "Agents speak and participate in meetings like a colleague. Kutana transcribes and extracts tasks from the conversation. Your Agent leaves the meeting ready to work.",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -91,7 +91,7 @@ export function GettingStartedSection() {
     <section className="bg-gray-950 py-20 px-4" id="getting-started">
       <div className="mx-auto max-w-5xl">
         <h2 className="mb-12 text-center text-3xl font-bold text-white md:text-4xl">
-          Get Started in Minutes
+          Get Started in 4 Simple Steps
         </h2>
 
         <div className="overflow-hidden rounded-2xl border border-gray-800 bg-gray-900">
