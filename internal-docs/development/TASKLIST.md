@@ -282,6 +282,47 @@
 
 ---
 
+## UI Defect Fixes (from User Feedback — 2026-04-05)
+
+> Defects and improvements surfaced from user testing sessions.
+> Source: `testing/feedback/running-feedback.md`
+
+- [x] 🔗 BLOCK: Quick Text & Copy Fixes
+  - [x] Capitalize meeting status badges in DashboardPage + MeetingsPage
+  - [x] DocsPage: rename "MCP Tool Reference" → "MCP Server Reference"
+  - [x] DocsPage: rename "Claude Code Setup" → "Claude Code Channel Setup"
+  - [x] DocsPage: remove "Testing Scenarios" section (leaked internal docs)
+  - [x] DocsPage: remove "Direct WebSocket" integration card
+  - [x] DocsPage: remove "Recommended" / "Plugin" / "Advanced" badge labels
+  - [x] DocsPage: update Getting Started copy to match landing page
+
+- [x] 🔗 BLOCK: Light Mode Accessibility
+  - [x] Add accent color flips (cyan, green, yellow, red, blue) to `html[data-theme="light"]` in index.css
+  - [x] DocsPage: replace all `text-white` with theme-aware `text-gray-50`
+  - [ ] Audit remaining pages for hardcoded light-on-dark colors
+
+- [x] 🔗 BLOCK: Docs Page Restructuring
+  - [x] Restructure nav into "Connecting Your Agent" group (MCP Server, Claude Code Channel, OpenClaw Skill)
+  - [x] Add Managed Agents section with agent template cards
+  - [x] Fix sidebar responsive — hidden on mobile, dropdown select instead
+  - [ ] Add Feeds documentation reference or link
+
+- [ ] 🔗 BLOCK: Profile & Settings Page (future)
+  - [ ] Create ProfilePage.tsx — user photo, username, password modification
+  - [ ] API endpoints: PATCH /users/me, POST /users/me/password
+  - [ ] Agent management settings (default capabilities, API key management)
+
+- [ ] 🔗 BLOCK: Calendar View (future)
+  - [ ] Create CalendarPage.tsx with month grid view and meeting indicators
+  - [ ] Month picker navigation (prev/next month, today button)
+  - [ ] Click-to-schedule: clicking a day opens create meeting dialog
+  - [ ] External calendar export (.ics download per meeting)
+  - [ ] Google Calendar integration (OAuth + Calendar API)
+
+- [ ] Feeds: audit modal content display for correctness
+
+---
+
 ## Post-April: Scheduled Agent Participation (F2.9)
 
 > Autonomous agent joining recurring meetings on behalf of a user. Built on the existing MCP tool suite — no new protocol required.

@@ -154,7 +154,7 @@ export function MeetingsPage() {
                           : "bg-gray-600/20 text-gray-400 border border-gray-500/30"
                     }`}
                   >
-                    {meeting.status}
+                    {meeting.status.charAt(0).toUpperCase() + meeting.status.slice(1)}
                   </span>
                 </div>
               </CardHeader>

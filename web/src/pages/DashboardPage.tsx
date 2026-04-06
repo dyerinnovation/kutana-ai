@@ -105,7 +105,7 @@ export function DashboardPage() {
                             STATUS_STYLES[m.status] ?? STATUS_STYLES.scheduled
                           }`}
                         >
-                          {m.status}
+                          {m.status.charAt(0).toUpperCase() + m.status.slice(1)}
                         </span>
                       </li>
                     ))}

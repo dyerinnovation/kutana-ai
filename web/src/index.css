@@ -115,6 +115,14 @@ html[data-theme="light"] {
   --color-ink-800: #e4e4e7;
   --color-ink-900: #f4f4f5;
   --color-ink-950: #fafafa;
+
+  /* Accent flips for light mode readability */
+  --color-cyan-400: #0891b2;
+  --color-green-400: #059669;
+  --color-yellow-400: #d97706;
+  --color-red-400: #dc2626;
+  --color-blue-400: #047857;
+  --color-blue-300: #059669;
 }
 
 /* ─── Base layer ──────────────────────────────────────────────────────────── */
