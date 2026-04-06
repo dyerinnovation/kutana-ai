@@ -169,13 +169,15 @@ billing:
 # ---------------------------------------------------------------------------
 minio:
   enabled: true
-  mode: standalone
-  auth:
-    rootUser: kutana
-    rootPassword: kutana-minio-secret
+  image:
+    repository: minio/minio
+    tag: latest
   persistence:
     size: 10Gi
-  defaultBuckets: "kutana-uploads"
+  credentials:
+    rootUser: kutana
+    rootPassword: kutana-minio-secret
+  defaultBucket: "kutana-uploads"
 
 # S3-compatible storage config (consumed by api-server)
 storage:
