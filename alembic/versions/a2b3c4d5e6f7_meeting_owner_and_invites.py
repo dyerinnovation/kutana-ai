@@ -1,7 +1,7 @@
 """Add owner_id to meetings and create meeting_invites table.
 
 Revision ID: a2b3c4d5e6f7
-Revises: f7a8b9c0d1e2
+Revises: a0b1c2d3e4f5
 Create Date: 2026-04-05
 """
 
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 revision: str = "a2b3c4d5e6f7"
-down_revision: str = "f7a8b9c0d1e2"
+down_revision: str = "a0b1c2d3e4f5"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

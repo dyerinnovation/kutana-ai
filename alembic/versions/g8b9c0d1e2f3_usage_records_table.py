@@ -1,7 +1,7 @@
 """Add usage_records table for time-based metering.
 
 Revision ID: g8b9c0d1e2f3
-Revises: f7a8b9c0d1e2
+Revises: a2b3c4d5e6f7
 Create Date: 2026-04-05
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "g8b9c0d1e2f3"
-down_revision: str = "f7a8b9c0d1e2"
+down_revision: str = "a2b3c4d5e6f7"
 branch_labels: tuple[str, ...] | None = None
 depends_on: tuple[str, ...] | None = None
 
