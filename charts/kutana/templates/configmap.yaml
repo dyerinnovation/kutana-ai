@@ -28,7 +28,7 @@ data:
   CONVENE_MCP_URL: "http://mcp-server.{{ .Release.Namespace }}.svc:3001/"
   # Object storage (S3-compatible — MinIO in dev, cloud in prod)
   STORAGE_PROVIDER: {{ .Values.storage.provider | default "s3" | quote }}
-  STORAGE_ENDPOINT: "http://{{ .Release.Name }}-minio.{{ .Release.Namespace }}.svc:9000"
+  STORAGE_ENDPOINT: "http://minio.{{ .Release.Namespace }}.svc:9000"
   STORAGE_BUCKET: {{ .Values.storage.bucket | default "kutana-uploads" | quote }}
   STORAGE_REGION: {{ .Values.storage.region | default "us-east-1" | quote }}
   STORAGE_USE_SSL: {{ .Values.storage.useSSL | default "false" | quote }}
