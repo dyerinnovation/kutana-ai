@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import type { Meeting } from "@/types";
 import { listMeetings, createMeeting, startMeeting, endMeeting } from "@/api/meetings";
 import { Button } from "@/components/ui/Button";
@@ -14,6 +14,7 @@ import { Dialog, DialogTitle, DialogFooter } from "@/components/ui/Dialog";
 
 export function MeetingsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,13 +22,20 @@ export function MeetingsPage() {
   // Create meeting state
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState("");
-  const [platform, setPlatform] = useState("kutana");
   const [scheduledAt, setScheduledAt] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     loadMeetings();
   }, []);
+
+  // Auto-open create dialog when navigated with ?create=true
+  useEffect(() => {
+    if (searchParams.get("create") === "true") {
+      setShowCreate(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   async function loadMeetings() {
     try {
@@ -50,12 +58,11 @@ export function MeetingsPage() {
     try {
       await createMeeting({
         title,
-        platform,
+        platform: "kutana",
         scheduled_at: new Date(scheduledAt).toISOString(),
       });
       setShowCreate(false);
       setTitle("");
-      setPlatform("kutana");
       setScheduledAt("");
       await loadMeetings();
     } catch (err) {
@@ -141,9 +148,6 @@ export function MeetingsPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <CardTitle>{meeting.title}</CardTitle>
-                    <p className="text-xs text-gray-500 font-mono mt-1">
-                      {meeting.id}
-                    </p>
                   </div>
                   <span
                     className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${
@@ -161,10 +165,6 @@ export function MeetingsPage() {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div className="flex gap-6 text-sm text-gray-400">
-                    <div>
-                      <span className="text-gray-500">Platform: </span>
-                      {meeting.platform}
-                    </div>
                     <div>
                       <span className="text-gray-500">Scheduled: </span>
                       {formatDateTime(meeting.scheduled_at)}
@@ -218,21 +218,6 @@ export function MeetingsPage() {
               onChange={(e) => setTitle(e.target.value)}
               required
             />
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-gray-300">
-                Platform
-              </label>
-              <select
-                className="flex h-10 w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-50 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                value={platform}
-                onChange={(e) => setPlatform(e.target.value)}
-              >
-                <option value="kutana">Kutana</option>
-                <option value="zoom">Zoom</option>
-                <option value="teams">Teams</option>
-                <option value="meet">Google Meet</option>
-              </select>
-            </div>
             <Input
               label="Scheduled At"
               type="datetime-local"
