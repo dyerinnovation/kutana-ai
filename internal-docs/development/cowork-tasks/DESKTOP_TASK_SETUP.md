@@ -28,14 +28,14 @@
 | Frequency | Weekdays |
 | Time | 7:00 AM |
 | Model | Haiku |
-| Working Folder | `~/Documents/dev/kutana-ai` |
+| Working Folder | `~/Documents/dev/kutana-ai-dev` |
 
 **Prompt (copy/paste this exactly):**
 
 ```
-git pull origin main
-Follow the instructions in internal-docs/development/cowork-tasks/local-task-descriptions/morning-status-local.md exactly.
-Read CLAUDE.md first for project conventions.
+For each repo in this directory (kutana-ai, kutana-android, kutana-ios), run git pull origin main.
+Then follow the instructions in kutana-ai/internal-docs/development/cowork-tasks/local-task-descriptions/morning-status-local.md exactly.
+Read kutana-ai/CLAUDE.md first for project conventions.
 ```
 
 ---
@@ -49,14 +49,14 @@ Read CLAUDE.md first for project conventions.
 | Frequency | Custom: `0 */6 * * *` (every 6 hours) |
 | Time | N/A (cron handles it) |
 | Model | Haiku |
-| Working Folder | `~/Documents/dev/kutana-ai` |
+| Working Folder | `~/Documents/dev/kutana-ai-dev` |
 
 **Prompt:**
 
 ```
-git pull origin main
-Follow the instructions in internal-docs/development/cowork-tasks/local-task-descriptions/infra-health-check-local.md exactly.
-Read CLAUDE.md first for project conventions.
+cd kutana-ai && git pull origin main
+Follow the instructions in kutana-ai/internal-docs/development/cowork-tasks/local-task-descriptions/infra-health-check-local.md exactly.
+Read kutana-ai/CLAUDE.md first for project conventions.
 ```
 
 ---
@@ -70,14 +70,14 @@ Read CLAUDE.md first for project conventions.
 | Frequency | Weekly (Friday) |
 | Time | 4:00 PM |
 | Model | Opus |
-| Working Folder | `~/Documents/dev/kutana-ai` |
+| Working Folder | `~/Documents/dev/kutana-ai-dev` |
 
 **Prompt:**
 
 ```
-git pull origin main
-Follow the instructions in internal-docs/development/cowork-tasks/local-task-descriptions/weekly-architecture-review-local.md exactly.
-Read CLAUDE.md first for project conventions.
+cd kutana-ai && git pull origin main
+Follow the instructions in kutana-ai/internal-docs/development/cowork-tasks/local-task-descriptions/weekly-architecture-review-local.md exactly.
+Read kutana-ai/CLAUDE.md first for project conventions.
 ```
 
 ---
