@@ -11,18 +11,16 @@
 
 ## Latest Handoff
 
-**Author:** CoWork (scheduled)
-**Date:** 2026-03-26
-**What I did:** Implemented `🔗 BLOCK: Agent Gateway Polish` — multi-agent participant notifications in `AgentSessionHandler`, audio stream routing from control-plane to `AudioRouter`, and confirmed the structured data channel is already fully implemented.
-**Branch:** scheduled/2026-03-26-agent-gateway-polish
-**Block progress:** 3 of 3 sub-tasks complete
-**Merge status:** ❌ Merge FAILED — branch left unmerged (FUSE filesystem HEAD.lock held by concurrent session; merge blocked. Push and quality checks required on Mac: `git push origin scheduled/2026-03-26-agent-gateway-polish && git checkout main && git merge --no-ff scheduled/2026-03-26-agent-gateway-polish`)
+**Author:** Jonathan (manual session with Claude Code)
+**Date:** 2026-04-07
+**What I did:** TASKLIST audit — verified Voice Agent Audio Sidecar block and Agent Gateway Polish block are both fully implemented and merged to main. Checked off all completed items. Confirmed sidecar infrastructure: `/audio/connect` endpoint, `create_audio_token()` JWT auth, `AudioRouter` mixed-minus distribution, VAD silence monitor, `AudioSessionHandler` with backpressure queue, 723 lines of tests.
+**Branch:** main
+**Merge status:** ✅ All on main — gateway-polish (`764f1d2`) and audio sidecar (`3814863`) are ancestors of HEAD.
 **Warnings:**
-- ⚠️ Quality checks (ruff, mypy, pytest) must be run on Mac before merging — VM Python is 3.10, project requires 3.12+
-- ⚠️ `HumanSessionHandler.send_participant_update` needs `source: str | None = None` parameter added before merge — `AgentSessionHandler._broadcast_participant_update` passes `source=self.source` but the human handler's method doesn't accept it yet
-- ⚠️ `AudioRouter.route_audio` will silently drop audio for non-sidecar senders (requires sender in `_active_speakers`). The routing wiring is correct but audio will not flow until a `distribute_unconditional` method is added to AudioRouter. This is a future enhancement.
-- ⚠️ Phase 1 Milestone M2 (Redis → Task Extraction → PostgreSQL integration test) remains unchecked — requires Docker (PostgreSQL + Redis) which is unavailable in the CoWork VM. Jonathan must run this integration test manually on Mac.
-- Syntax check (ast.parse, Python 3.10) passed for all 4 modified/created files
+- ⚠️ Phase 1 Milestone M2 (Redis → Task Extraction → PostgreSQL integration test) remains unchecked — requires live database
+- ⚠️ Milestone M_APRIL E2E scenarios not yet run
+- ⚠️ Slack OAuth requires a Slack App to be created in the Slack API dashboard (browser task)
+- ⚠️ Worker Dockerfile still uses `npx -y` for `@modelcontextprotocol/server-slack` (should pre-install)
 **Dependencies introduced:** None
 
 ---
