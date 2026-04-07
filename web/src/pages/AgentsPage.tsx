@@ -179,8 +179,12 @@ export function AgentsPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="mb-3 line-clamp-2 text-xs text-gray-500 leading-relaxed">
-                      {agent.system_prompt || "No system prompt configured"}
+                    <p className="mb-3 text-xs font-medium text-gray-400">
+                      {agent.capabilities.includes("listen") && agent.capabilities.includes("speak")
+                        ? "Voice Agent"
+                        : agent.capabilities.includes("speak")
+                          ? "Text + Speech (Kutana TTS)"
+                          : "Text Only"}
                     </p>
                     {agent.capabilities.length > 0 && (
                       <div className="flex flex-wrap gap-1">
@@ -300,6 +304,25 @@ export function AgentsPage() {
             ))}
           </div>
         )}
+      </section>
+
+      {/* ── Feed Agents ─────────────────────────────────── */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight text-gray-50">
+            Feed Agents
+          </h2>
+          <p className="mt-0.5 text-sm text-gray-400">
+            Feed agents automatically pull data from your connected feeds into
+            meetings and push meeting insights to external platforms like Slack
+            and Discord.
+          </p>
+        </div>
+        <Link to="/feeds">
+          <Button variant="outline" size="sm">
+            Manage Feeds
+          </Button>
+        </Link>
       </section>
 
       {/* Activate Dialog */}

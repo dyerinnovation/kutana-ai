@@ -30,6 +30,11 @@ export function DashboardPage() {
     .filter((m) => m.status === "scheduled" || m.status === "active")
     .slice(0, 5);
 
+  const recentMeetings = meetings
+    .filter((m) => m.status === "completed")
+    .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime())
+    .slice(0, 5);
+
   return (
     <div className="space-y-6">
       {/* Welcome */}
@@ -86,27 +91,37 @@ export function DashboardPage() {
                 ) : (
                   <ul className="space-y-2">
                     {upcomingMeetings.map((m) => (
-                      <li key={m.id} className="flex items-center justify-between rounded-lg border border-gray-800 px-3 py-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-200 truncate">
-                            {m.title || "Untitled Meeting"}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(m.scheduled_at).toLocaleString(undefined, {
-                              month: "short",
-                              day: "numeric",
-                              hour: "numeric",
-                              minute: "2-digit",
-                            })}
-                          </p>
-                        </div>
-                        <span
-                          className={`ml-2 inline-flex flex-shrink-0 items-center rounded-md px-2 py-0.5 text-[10px] font-medium ${
-                            STATUS_STYLES[m.status] ?? STATUS_STYLES.scheduled
-                          }`}
+                      <li key={m.id}>
+                        <Link
+                          to={`/meetings/${m.id}/room`}
+                          className="flex items-center justify-between rounded-lg border border-gray-800 px-3 py-2 transition-colors hover:bg-gray-800/50"
                         >
-                          {m.status.charAt(0).toUpperCase() + m.status.slice(1)}
-                        </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-200 truncate">
+                              {m.title || "Untitled Meeting"}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(m.scheduled_at).toLocaleString(undefined, {
+                                month: "short",
+                                day: "numeric",
+                                hour: "numeric",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          </div>
+                          <div className="ml-2 flex items-center gap-2">
+                            {m.status === "active" && (
+                              <span className="text-[10px] font-medium text-green-400">Join</span>
+                            )}
+                            <span
+                              className={`inline-flex flex-shrink-0 items-center rounded-md px-2 py-0.5 text-[10px] font-medium ${
+                                STATUS_STYLES[m.status] ?? STATUS_STYLES.scheduled
+                              }`}
+                            >
+                              {m.status.charAt(0).toUpperCase() + m.status.slice(1)}
+                            </span>
+                          </div>
+                        </Link>
                       </li>
                     ))}
                   </ul>
@@ -149,7 +164,11 @@ export function DashboardPage() {
                             </p>
                           </div>
                           <span className="text-[10px] text-gray-500">
-                            {agent.capabilities.length} capabilities
+                            {agent.capabilities.includes("listen") && agent.capabilities.includes("speak")
+                              ? "Voice Agent"
+                              : agent.capabilities.includes("speak")
+                                ? "Text + Speech"
+                                : "Text Only"}
                           </span>
                         </Link>
                       </li>
@@ -164,6 +183,49 @@ export function DashboardPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Recent Meetings */}
+          {recentMeetings.length > 0 && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Recent Meetings</CardTitle>
+                  <Link to="/meetings" className="text-xs text-blue-400 hover:underline">
+                    View all
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {recentMeetings.map((m) => (
+                    <li key={m.id}>
+                      <Link
+                        to={`/meetings/${m.id}/room`}
+                        className="flex items-center justify-between rounded-lg border border-gray-800 px-3 py-2 transition-colors hover:bg-gray-800/50"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-200 truncate">
+                            {m.title || "Untitled Meeting"}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(m.scheduled_at).toLocaleString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                        </div>
+                        <span className="ml-2 text-[10px] font-medium text-gray-500">
+                          View Notes
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
     </div>

@@ -219,12 +219,21 @@ export function MeetingsPage() {
               required
             />
             <Input
-              label="Scheduled At"
+              label="Date & Time"
               type="datetime-local"
               value={scheduledAt}
               onChange={(e) => setScheduledAt(e.target.value)}
               required
             />
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-gray-300">
+                Description
+              </label>
+              <textarea
+                className="h-20 w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-50 placeholder:text-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 focus:outline-none resize-none"
+                placeholder="Meeting agenda or notes..."
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button
