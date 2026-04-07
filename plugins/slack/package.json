@@ -1,0 +1,7 @@
+{
+  "name": "@kutana/slack-mcp-plugin",
+  "private": true,
+  "dependencies": {
+    "@modelcontextprotocol/server-slack": "latest"
+  }
+}

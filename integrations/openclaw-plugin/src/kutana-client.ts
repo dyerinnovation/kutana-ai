@@ -248,7 +248,67 @@ export class KutanaClient {
     return this.callTool("send_chat_message", { meeting_id: meetingId, content, message_type: messageType });
   }
 
-  async getChatMessages(meetingId: string, limit: number = 50, messageType?: string): Promise<string> {
-    return this.callTool("get_chat_messages", { meeting_id: meetingId, limit, ...(messageType ? { message_type: messageType } : {}) });
+  async getChatMessages(meetingId: string, limit: number = 50, messageType?: string, since?: string): Promise<string> {
+    return this.callTool("get_chat_messages", { meeting_id: meetingId, limit, ...(messageType ? { message_type: messageType } : {}), ...(since ? { since } : {}) });
+  }
+
+  async leaveMeeting(): Promise<string> {
+    return this.callTool("leave_meeting", {});
+  }
+
+  async speak(meetingId: string, text: string): Promise<string> {
+    return this.callTool("speak", { meeting_id: meetingId, text });
+  }
+
+  async getMeetingStatus(meetingId: string): Promise<string> {
+    return this.callTool("get_meeting_status", { meeting_id: meetingId });
+  }
+
+  async getSpeakingStatus(meetingId: string): Promise<string> {
+    return this.callTool("get_speaking_status", { meeting_id: meetingId });
+  }
+
+  // Meeting lifecycle
+
+  async getTasks(meetingId: string): Promise<string> {
+    return this.callTool("get_tasks", { meeting_id: meetingId });
+  }
+
+  async getSummary(meetingId: string): Promise<string> {
+    return this.callTool("get_summary", { meeting_id: meetingId });
+  }
+
+  async setContext(meetingId: string, context: string): Promise<string> {
+    return this.callTool("set_context", { meeting_id: meetingId, context });
+  }
+
+  async startMeeting(meetingId: string): Promise<string> {
+    return this.callTool("start_meeting", { meeting_id: meetingId });
+  }
+
+  async endMeeting(meetingId: string): Promise<string> {
+    return this.callTool("end_meeting", { meeting_id: meetingId });
+  }
+
+  async joinOrCreateMeeting(title: string, capabilities?: string[]): Promise<string> {
+    return this.callTool("join_or_create_meeting", { title, ...(capabilities ? { capabilities } : {}) });
+  }
+
+  // Data channels
+
+  async subscribeChannel(channel: string): Promise<string> {
+    return this.callTool("subscribe_channel", { channel });
+  }
+
+  async publishToChannel(channel: string, payload: Record<string, unknown>): Promise<string> {
+    return this.callTool("publish_to_channel", { channel, payload });
+  }
+
+  async getChannelMessages(channel: string, lastN: number = 50): Promise<string> {
+    return this.callTool("get_channel_messages", { channel, last_n: lastN });
+  }
+
+  async getMeetingEvents(lastN: number = 50, eventType?: string): Promise<string> {
+    return this.callTool("get_meeting_events", { last_n: lastN, ...(eventType ? { event_type: eventType } : {}) });
   }
 }
