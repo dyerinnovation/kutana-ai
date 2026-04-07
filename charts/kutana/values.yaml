@@ -148,6 +148,8 @@ secrets:
   discordBotToken: ""
   stripeSecretKey: ""
   stripeWebhookSecret: ""
+  slackClientId: ""
+  slackClientSecret: ""
 
 # ---------------------------------------------------------------------------
 # Stripe Billing (non-secret config — populate from scripts/stripe_setup.py)

@@ -79,8 +79,8 @@ export function planLabel(tier: string): string {
 
 /** Returns the tier a user needs to upgrade to in order to use a feature. */
 export function upgradeTargetFor(
-  feature: "feeds" | "managed-agents" | "api-keys" | "more-feeds" | "more-agents",
+  feature: "feeds" | "managed-agents" | "api-keys" | "more-feeds" | "more-agents" | "premium-agents",
 ): PlanTier {
-  if (feature === "more-feeds" || feature === "more-agents") return "pro";
+  if (feature === "more-feeds" || feature === "more-agents" || feature === "premium-agents") return "pro";
   return "basic";
 }

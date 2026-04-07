@@ -571,6 +571,7 @@ class HostedAgentSessionORM(Base):
     meeting_id: Mapped[UUID] = mapped_column(sa.Uuid, ForeignKey("meetings.id"), nullable=False)
     status: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="active")
     anthropic_api_key_encrypted: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    system_prompt_override: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     started_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
     )
@@ -583,6 +584,60 @@ class HostedAgentSessionORM(Base):
         Index("ix_hosted_agent_sessions_user_id", "user_id"),
         Index("ix_hosted_agent_sessions_meeting_id", "meeting_id"),
         Index("ix_hosted_agent_sessions_status", "status"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Integration models (OAuth connections to external platforms)
+# ---------------------------------------------------------------------------
+
+
+class IntegrationORM(Base):
+    """ORM model for integrations table.
+
+    Stores OAuth connections to external platforms (Slack, Discord, etc.).
+    One integration per user per platform. Tokens are AES-256-GCM encrypted.
+
+    Attributes:
+        id: Primary key UUID.
+        user_id: Owner of this integration.
+        platform: Platform name (slack, discord, etc.).
+        external_team_id: External workspace/team ID.
+        external_team_name: External workspace/team display name.
+        bot_user_id: Bot user ID on the external platform.
+        access_token_encrypted: AES-256-GCM encrypted OAuth access token.
+        token_hint: Last 4 characters of the plaintext token for UI display.
+        scopes: Comma-separated OAuth scopes granted.
+        status: Integration status (active, revoked).
+        created_at: Record creation timestamp.
+        updated_at: Record update timestamp.
+    """
+
+    __tablename__ = "integrations"
+
+    id: Mapped[UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(sa.Uuid, ForeignKey("users.id"), nullable=False)
+    platform: Mapped[str] = mapped_column(sa.String(40), nullable=False)
+    external_team_id: Mapped[str | None] = mapped_column(sa.String(120), nullable=True)
+    external_team_name: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
+    bot_user_id: Mapped[str | None] = mapped_column(sa.String(120), nullable=True)
+    access_token_encrypted: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    token_hint: Mapped[str] = mapped_column(sa.String(8), nullable=False)
+    scopes: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    status: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="active")
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.func.now(),
+        onupdate=sa.func.now(),
+    )
+
+    __table_args__ = (
+        Index("ix_integrations_user_id", "user_id"),
+        Index("ix_integrations_user_platform", "user_id", "platform", unique=True),
     )
 
 
@@ -642,15 +697,20 @@ class FeedORM(Base):
         sa.DateTime(timezone=True), nullable=True
     )
     last_error: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    integration_id: Mapped[UUID | None] = mapped_column(
+        sa.Uuid, ForeignKey("integrations.id"), nullable=True
+    )
 
     runs: Mapped[list[FeedRunORM]] = relationship(back_populates="feed", lazy="selectin")
     secret: Mapped[FeedSecretORM | None] = relationship(
         back_populates="feed", uselist=False, lazy="selectin"
     )
+    integration: Mapped[IntegrationORM | None] = relationship(lazy="selectin")
 
     __table_args__ = (
         Index("ix_feeds_user_id", "user_id"),
         Index("ix_feeds_is_active", "is_active"),
+        Index("ix_feeds_integration_id", "integration_id"),
     )
 
 

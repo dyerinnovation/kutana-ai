@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import enum
-from datetime import datetime
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 
 class FeedDirection(enum.StrEnum):
@@ -58,9 +60,12 @@ class FeedCreate(FeedBase):
     Attributes:
         mcp_auth_token: Write-only MCP auth token. Never returned in responses.
             Encrypted before persistence.
+        integration_id: Optional OAuth integration UUID. When set, the feed
+            uses the integration's token instead of mcp_auth_token.
     """
 
     mcp_auth_token: str | None = None
+    integration_id: str | None = None
 
 
 class FeedUpdate(BaseModel):
@@ -113,6 +118,7 @@ class FeedRead(FeedBase):
     id: UUID
     user_id: UUID
     is_active: bool
+    integration_id: str | None = None
     created_at: datetime
     last_triggered_at: datetime | None = None
     last_error: str | None = None
