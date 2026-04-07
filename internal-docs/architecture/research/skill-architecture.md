@@ -23,44 +23,44 @@ The skill bundles four capability areas, each mapping to a group of MCP tools:
 
 | MCP Tool | Description |
 |----------|-------------|
-| `list_meetings` | Find available meetings to join |
-| `join_meeting` | Connect to a meeting via the agent gateway |
-| `leave_meeting` | Disconnect gracefully |
-| `join_or_create_meeting` | Find active meeting by title or create new |
-| `start_meeting_session` | Start a scheduled meeting |
-| `end_meeting_session` | End an active meeting |
-| `get_meeting_status` | Get comprehensive meeting state snapshot |
+| `kutana_list_meetings` | Find available meetings to join |
+| `kutana_join_meeting` | Connect to a meeting via the agent gateway |
+| `kutana_leave_meeting` | Disconnect gracefully |
+| `kutana_join_or_create_meeting` | Find active meeting by title or create new |
+| `kutana_start_meeting` | Start a scheduled meeting |
+| `kutana_end_meeting` | End an active meeting |
+| `kutana_get_meeting_status` | Get comprehensive meeting state snapshot |
 
 ### 2. Turn Management
 *Request the floor, check queue, signal when done.*
 
 | MCP Tool | Description |
 |----------|-------------|
-| `raise_hand` | Request to speak (normal or urgent priority) |
-| `get_queue_status` | See who's speaking and who's waiting |
-| `get_speaking_status` | Check your current speaking status |
-| `mark_finished_speaking` | Signal done, advance the queue |
-| `cancel_hand_raise` | Withdraw from the speaker queue |
+| `kutana_raise_hand` | Request to speak (normal or urgent priority) |
+| `kutana_get_queue_status` | See who's speaking and who's waiting |
+| `kutana_get_speaking_status` | Check your current speaking status |
+| `kutana_mark_finished_speaking` | Signal done, advance the queue |
+| `kutana_cancel_hand_raise` | Withdraw from the speaker queue |
 
 ### 3. Chat
 *Send and receive meeting chat messages.*
 
 | MCP Tool | Description |
 |----------|-------------|
-| `send_chat_message` | Post a message to meeting chat |
-| `get_chat_messages` | Read chat history with optional filters |
+| `kutana_send_chat_message` | Post a message to meeting chat |
+| `kutana_get_chat_messages` | Read chat history with optional filters |
 
 ### 4. Context
 *Access transcript and task information.*
 
 | MCP Tool | Description |
 |----------|-------------|
-| `get_transcript` | Read recent transcript segments |
-| `get_tasks` | Retrieve extracted tasks for a meeting |
-| `create_task` | Create a new meeting task |
-| `get_participants` | List current participants |
-| `subscribe_channel` | Subscribe to a data channel |
-| `publish_to_channel` | Publish to a data channel |
+| `kutana_get_transcript` | Read recent transcript segments |
+| `kutana_get_tasks` | Retrieve extracted tasks for a meeting |
+| `kutana_create_task` | Create a new meeting task |
+| `kutana_get_participants` | List current participants |
+| `kutana_subscribe_channel` | Subscribe to a data channel |
+| `kutana_publish_to_channel` | Publish to a data channel |
 
 ---
 

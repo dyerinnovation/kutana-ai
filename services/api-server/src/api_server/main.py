@@ -22,6 +22,7 @@ from api_server.routes.meetings import router as meetings_router
 from api_server.routes.summaries import router as summaries_router
 from api_server.routes.tasks import router as tasks_router
 from api_server.routes.token import router as token_router
+from api_server.routes.turns import router as turns_router
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -69,3 +70,4 @@ app.include_router(feeds_router, prefix="/v1")
 app.include_router(integrations_router, prefix="/v1")
 app.include_router(summaries_router, prefix="/v1")
 app.include_router(token_router, prefix="/v1")
+app.include_router(turns_router, prefix="/v1")

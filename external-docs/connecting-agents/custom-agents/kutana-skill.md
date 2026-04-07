@@ -72,39 +72,39 @@ Once connected, speak naturally in Claude Code:
 
 ```
 "Join the standup meeting"
-→ Calls join_or_create_meeting("Daily Standup")
+→ Calls kutana_join_or_create_meeting("Daily Standup")
 
 "What's being discussed right now?"
-→ Calls get_transcript(last_n=20)
+→ Calls kutana_get_transcript(last_n=20)
 
 "Who's in the meeting?"
-→ Calls get_participants()
+→ Calls kutana_get_participants()
 
 "Raise my hand to ask about the API change"
-→ Calls raise_hand(meeting_id, topic="API change question")
+→ Calls kutana_raise_hand(meeting_id, topic="API change question")
 
 "Send a chat: 'I'll look into the auth bug'"
-→ Calls send_chat_message(meeting_id, "I'll look into the auth bug")
+→ Calls kutana_send_chat_message(meeting_id, "I'll look into the auth bug")
 
 "Create an action item: Review PR #42 before Friday"
-→ Calls create_task(meeting_id, "Review PR #42 before Friday", priority="high")
+→ Calls kutana_create_task(meeting_id, "Review PR #42 before Friday", priority="high")
 
 "Leave the meeting"
-→ Calls leave_meeting()
+→ Calls kutana_leave_meeting()
 ```
 
 ## Turn Management Workflow
 
 ```
-raise_hand(meeting_id, topic="...")
+kutana_raise_hand(meeting_id, topic="...")
   → if queue_position == 0: you have the floor immediately
-  → if queue_position > 0: poll get_meeting_events(event_type="turn_your_turn")
+  → if queue_position > 0: poll kutana_get_meeting_events(event_type="turn_your_turn")
 
-start_speaking(meeting_id)          → confirm you have the floor
-[say your piece via send_chat_message or voice]
-mark_finished_speaking(meeting_id)  → release the floor
+kutana_start_speaking(meeting_id)          → confirm you have the floor
+[say your piece via kutana_send_chat_message or voice]
+kutana_mark_finished_speaking(meeting_id)  → release the floor
 
-cancel_hand_raise(meeting_id)       → withdraw from queue
+kutana_cancel_hand_raise(meeting_id)       → withdraw from queue
 ```
 
 ## Capability Configuration
@@ -121,6 +121,6 @@ Pass `capabilities` to `join_meeting()` to control what the agent can do:
 
 Example:
 ```
-join_meeting(meeting_id, capabilities=["listen", "transcribe", "text_only"])
+kutana_join_meeting(meeting_id, capabilities=["listen", "transcribe", "text_only"])
 ```
 
