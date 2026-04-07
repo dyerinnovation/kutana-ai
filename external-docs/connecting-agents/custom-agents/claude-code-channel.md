@@ -61,8 +61,7 @@ claude mcp add-json --scope user kutana '{
   "args": ["/path/to/kutana-ai/services/channel-server/src/server.ts"],
   "env": {
     "KUTANA_API_KEY": "cvn_your_key_here",
-    "KUTANA_API_URL": "wss://kutana.spark-b0f2.local/ws",
-    "KUTANA_HTTP_URL": "https://kutana.spark-b0f2.local",
+    "KUTANA_URL": "https://kutana.spark-b0f2.local",
     "KUTANA_TLS_REJECT_UNAUTHORIZED": "0",
     "KUTANA_AGENT_NAME": "Claude Code"
   }
@@ -98,8 +97,9 @@ You should see `kutana` listed with 18 tools available.
 | Variable | Required | Default | Description |
 |----------|:--------:|---------|-------------|
 | `KUTANA_API_KEY` | Yes | — | Agent API key (`cvn_...`) |
-| `KUTANA_API_URL` | No | `ws://localhost:8003` | Agent gateway WebSocket URL |
-| `KUTANA_HTTP_URL` | No | Derived from API URL | API server HTTP URL |
+| `KUTANA_URL` | No | — | Single base URL (e.g. `https://kutana.spark-b0f2.local`); derives both HTTP and WebSocket URLs |
+| `KUTANA_API_URL` | No | Derived from `KUTANA_URL` | Agent gateway WebSocket URL (overrides `KUTANA_URL`) |
+| `KUTANA_HTTP_URL` | No | Derived from `KUTANA_URL` | API server HTTP URL (overrides `KUTANA_URL`) |
 | `KUTANA_AGENT_NAME` | No | `Claude Code` | Your display name in meetings |
 | `KUTANA_AGENT_MODE` | No | `both` | Event filter (see [Agent modes](#agent-modes)) |
 | `KUTANA_ENTITY_FILTER` | No | — | Entity types for `selective` mode |
