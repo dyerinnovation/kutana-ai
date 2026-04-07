@@ -13,8 +13,10 @@
  *   KUTANA_API_KEY      — agent API key (from Kutana dashboard)
  *
  * Optional:
- *   KUTANA_API_URL      — WebSocket URL of the agent gateway
- *   KUTANA_HTTP_URL     — HTTP URL of the API server
+ *   KUTANA_URL          — single base URL (e.g. https://kutana.spark-b0f2.local);
+ *                         derives both WebSocket and HTTP URLs automatically
+ *   KUTANA_API_URL      — WebSocket URL of the agent gateway (overrides KUTANA_URL)
+ *   KUTANA_HTTP_URL     — HTTP URL of the API server (overrides KUTANA_URL)
  *   KUTANA_AGENT_MODE   — transcript | insights | both | selective
  *   KUTANA_ENTITY_FILTER — comma-separated entity types for selective mode
  *   KUTANA_TLS_REJECT_UNAUTHORIZED — set "0" to allow self-signed certs (default)
