@@ -22,7 +22,7 @@ Build autonomous Claude agents that participate in Kutana AI meetings. Agents co
 
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
-export CONVENE_API_KEY="cvn_..."
+export KUTANA_API_KEY="cvn_..."
 ```
 
 ### 2. Install and run
@@ -45,7 +45,7 @@ from claude_agent_sdk import Agent, AgentConfig, MCPServerConfig
 kutana_mcp = MCPServerConfig(
     name="kutana",
     url="http://kutana.spark-b0f2.local/mcp",
-    headers={"Authorization": f"Bearer {os.environ['CONVENE_API_KEY']}"},
+    headers={"Authorization": f"Bearer {os.environ['KUTANA_API_KEY']}"},
 )
 
 config = AgentConfig(
@@ -71,16 +71,16 @@ asyncio.run(main())
 If your Kutana instance is at a different URL, override it:
 
 ```bash
-export CONVENE_MCP_URL="https://your-kutana-host.com/mcp"
+export KUTANA_MCP_URL="https://your-kutana-host.com/mcp"
 ```
 
 ```python
-url = os.environ.get("CONVENE_MCP_URL", "http://kutana.spark-b0f2.local/mcp")
+url = os.environ.get("KUTANA_MCP_URL", "http://kutana.spark-b0f2.local/mcp")
 
 kutana_mcp = MCPServerConfig(
     name="kutana",
     url=url,
-    headers={"Authorization": f"Bearer {os.environ['CONVENE_API_KEY']}"},
+    headers={"Authorization": f"Bearer {os.environ['KUTANA_API_KEY']}"},
 )
 ```
 

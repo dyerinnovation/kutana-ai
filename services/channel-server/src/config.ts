@@ -37,27 +37,27 @@ export interface ChannelServerConfig {
  * are non-empty before starting the server.
  */
 export function loadConfig(): ChannelServerConfig {
-  const rawApiUrl = process.env["CONVENE_API_URL"] ?? "ws://localhost:8003";
+  const rawApiUrl = process.env["KUTANA_API_URL"] ?? "ws://localhost:8003";
 
   // Derive HTTP URL: prefer explicit override, otherwise convert ws:// → http://
   const rawHttpUrl =
-    process.env["CONVENE_HTTP_URL"] ?? deriveHttpUrl(rawApiUrl);
+    process.env["KUTANA_HTTP_URL"] ?? deriveHttpUrl(rawApiUrl);
 
-  const rawMode = process.env["CONVENE_AGENT_MODE"] ?? "both";
+  const rawMode = process.env["KUTANA_AGENT_MODE"] ?? "both";
   const agentMode = parseAgentMode(rawMode);
 
-  const rawFilter = process.env["CONVENE_ENTITY_FILTER"] ?? "";
+  const rawFilter = process.env["KUTANA_ENTITY_FILTER"] ?? "";
   const entityFilter = parseEntityFilter(rawFilter);
 
-  const rawTls = process.env["CONVENE_TLS_REJECT_UNAUTHORIZED"] ?? "0";
+  const rawTls = process.env["KUTANA_TLS_REJECT_UNAUTHORIZED"] ?? "0";
   const tlsRejectUnauthorized = rawTls !== "0";
 
   return {
     kutanaApiUrl: rawApiUrl,
     kutanaHttpUrl: rawHttpUrl,
-    kutanaApiKey: process.env["CONVENE_API_KEY"] ?? "",
-    kutanaBearerToken: process.env["CONVENE_BEARER_TOKEN"] ?? "",
-    kutanaAgentName: process.env["CONVENE_AGENT_NAME"] ?? "Claude Code",
+    kutanaApiKey: process.env["KUTANA_API_KEY"] ?? "",
+    kutanaBearerToken: process.env["KUTANA_BEARER_TOKEN"] ?? "",
+    kutanaAgentName: process.env["KUTANA_AGENT_NAME"] ?? "Claude Code",
     agentMode,
     entityFilter,
     tlsRejectUnauthorized,
@@ -89,7 +89,7 @@ function parseAgentMode(raw: string): AgentMode {
     return raw as AgentMode;
   }
   process.stderr.write(
-    `[channel-server] Unknown CONVENE_AGENT_MODE "${raw}", defaulting to "both"\n`,
+    `[channel-server] Unknown KUTANA_AGENT_MODE "${raw}", defaulting to "both"\n`,
   );
   return "both";
 }

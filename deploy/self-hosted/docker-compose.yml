@@ -17,9 +17,9 @@
 version: "3.9"
 
 x-common-env: &common-env
-  CONVENE_MESSAGE_BUS: nats
+  KUTANA_MESSAGE_BUS: nats
   NATS_URL: nats://nats:4222
-  NATS_STREAM_NAME: CONVENE
+  NATS_STREAM_NAME: KUTANA
   DATABASE_URL: postgresql+asyncpg://kutana:${POSTGRES_PASSWORD:-kutana}@postgres:5432/kutana
   REDIS_URL: redis://redis:6379/0
   ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}

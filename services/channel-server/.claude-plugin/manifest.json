@@ -9,16 +9,16 @@
     "command": "bun",
     "args": ["./src/server.ts"],
     "env": {
-      "CONVENE_API_URL": "ws://localhost:8003",
-      "CONVENE_HTTP_URL": "http://localhost:8000",
-      "CONVENE_MEETING_ID": "",
-      "CONVENE_AGENT_MODE": "both",
-      "CONVENE_ENTITY_FILTER": "",
-      "CONVENE_AGENT_NAME": "Claude Code",
-      "CONVENE_BEARER_TOKEN": ""
+      "KUTANA_API_URL": "ws://localhost:8003",
+      "KUTANA_HTTP_URL": "http://localhost:8000",
+      "KUTANA_MEETING_ID": "",
+      "KUTANA_AGENT_MODE": "both",
+      "KUTANA_ENTITY_FILTER": "",
+      "KUTANA_AGENT_NAME": "Claude Code",
+      "KUTANA_BEARER_TOKEN": ""
     }
   },
-  "requiredEnv": ["CONVENE_API_KEY", "CONVENE_MEETING_ID"],
+  "requiredEnv": ["KUTANA_API_KEY", "KUTANA_MEETING_ID"],
   "capabilities": ["claude/channel", "tools", "resources"],
   "tools": [
     "reply",

@@ -466,8 +466,8 @@ class TestCreateFromEnv:
     """Tests for the create_message_bus_from_env helper."""
 
     def test_defaults_to_redis(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Returns a RedisStreamsMessageBus when CONVENE_MESSAGE_BUS is unset."""
-        monkeypatch.delenv("CONVENE_MESSAGE_BUS", raising=False)
+        """Returns a RedisStreamsMessageBus when KUTANA_MESSAGE_BUS is unset."""
+        monkeypatch.delenv("KUTANA_MESSAGE_BUS", raising=False)
         monkeypatch.delenv("REDIS_URL", raising=False)
         bus = create_message_bus_from_env()
         assert isinstance(bus, RedisStreamsMessageBus)
@@ -475,7 +475,7 @@ class TestCreateFromEnv:
 
     def test_respects_redis_url(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Uses REDIS_URL when set."""
-        monkeypatch.setenv("CONVENE_MESSAGE_BUS", "redis")
+        monkeypatch.setenv("KUTANA_MESSAGE_BUS", "redis")
         monkeypatch.setenv("REDIS_URL", "redis://prod-redis:6379/2")
         bus = create_message_bus_from_env()
         assert bus._url == "redis://prod-redis:6379/2"
@@ -483,7 +483,7 @@ class TestCreateFromEnv:
     def test_unsupported_backend_raises(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Raises ValueError for unsupported CONVENE_MESSAGE_BUS values."""
-        monkeypatch.setenv("CONVENE_MESSAGE_BUS", "kafka")
+        """Raises ValueError for unsupported KUTANA_MESSAGE_BUS values."""
+        monkeypatch.setenv("KUTANA_MESSAGE_BUS", "kafka")
         with pytest.raises(ValueError, match="Unsupported"):
             create_message_bus_from_env()

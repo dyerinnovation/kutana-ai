@@ -85,7 +85,7 @@ from claude_agent_sdk import ClaudeAgent
 async def main():
     agent = ClaudeAgent(
         mcp_url="https://kutana.example.com/mcp",
-        api_key="cvn_live_abc123",
+        api_key="ktn_live_abc123",
     )
     async with agent.meeting("quarterly-review") as meeting:
         async for event in meeting.events():
@@ -216,7 +216,7 @@ Returns a paginated list of meetings the authenticated user has access to.
 
 \`\`\`bash
 curl https://kutana.example.com/api/v1/meetings \
-  -H "Authorization: Bearer cvn_live_abc123" \
+  -H "Authorization: Bearer ktn_live_abc123" \
   -G --data-urlencode "status=active"
 \`\`\`
 
@@ -254,7 +254,7 @@ curl https://kutana.example.com/api/v1/meetings \
 
 \`\`\`bash
 curl https://kutana.example.com/api/v1/meetings/mtg_01HXN4B7KXYZ \
-  -H "Authorization: Bearer cvn_live_abc123"
+  -H "Authorization: Bearer ktn_live_abc123"
 \`\`\`
 
 **Example response**
@@ -315,8 +315,8 @@ pip install claude-agent-sdk
 
 \`\`\`python
 # ~/.kutana/config.json  or  environment variable
-CONVENE_API_KEY=cvn_live_abc123
-CONVENE_MCP_URL=https://kutana.example.com/mcp
+KUTANA_API_KEY=ktn_live_abc123
+KUTANA_MCP_URL=https://kutana.example.com/mcp
 \`\`\`
 
 ## Quickstart
@@ -329,7 +329,7 @@ from claude_agent_sdk import ClaudeAgent, MCPServerConfig
 
 mcp_config = MCPServerConfig(
     url="https://kutana.example.com/mcp",
-    headers={"Authorization": "Bearer cvn_live_abc123"},
+    headers={"Authorization": "Bearer ktn_live_abc123"},
 )
 
 agent = ClaudeAgent(mcp_servers=[mcp_config])
@@ -380,13 +380,13 @@ What events does it respond to? What does it output?
 
 \`\`\`python
 # examples/action-tracker/main.py
-# Full, runnable example — copy this file and set CONVENE_API_KEY
+# Full, runnable example — copy this file and set KUTANA_API_KEY
 
 import asyncio
 import os
 from claude_agent_sdk import ClaudeAgent, MCPServerConfig
 
-API_KEY = os.environ["CONVENE_API_KEY"]
+API_KEY = os.environ["KUTANA_API_KEY"]
 
 mcp = MCPServerConfig(
     url="https://kutana.example.com/mcp",
@@ -422,7 +422,7 @@ Walk through the key lines of the example with annotations:
 ## Running It
 
 \`\`\`bash
-export CONVENE_API_KEY=cvn_live_abc123
+export KUTANA_API_KEY=ktn_live_abc123
 python main.py
 \`\`\`
 

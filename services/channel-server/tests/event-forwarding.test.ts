@@ -569,7 +569,7 @@ describe("participant tracking", () => {
 // ---------------------------------------------------------------------------
 
 describe("bearer token auth", () => {
-  it("skips API key exchange when CONVENE_BEARER_TOKEN is set", async () => {
+  it("skips API key exchange when KUTANA_BEARER_TOKEN is set", async () => {
     const config = makeConfig({ kutanaBearerToken: "pre-issued-jwt" });
 
     const fetchSpy = vi.spyOn(globalThis, "fetch");

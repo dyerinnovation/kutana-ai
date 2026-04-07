@@ -1,10 +1,10 @@
 {
   "mcpServers": {
-    "convene": {
+    "kutana": {
       "type": "streamableHttp",
-      "url": "https://convene.spark-b0f2.local/mcp",
+      "url": "https://kutana.spark-b0f2.local/mcp",
       "headers": {
-        "Authorization": "Bearer ${CONVENE_API_KEY}"
+        "Authorization": "Bearer ${KUTANA_API_KEY}"
       }
     }
   }

@@ -92,9 +92,6 @@ export class KutanaClient {
     const resp = await fetch(url, {
       method: "POST",
       headers: { "X-API-Key": this.config.kutanaApiKey },
-      ...(this.config.tlsRejectUnauthorized
-        ? {}
-        : { tls: { rejectUnauthorized: false } }),
     });
 
     if (!resp.ok) {
@@ -179,9 +176,6 @@ export class KutanaClient {
     const url = `${this.config.kutanaHttpUrl}/api/v1/meetings`;
     const resp = await fetch(url, {
       headers: { "X-API-Key": this.config.kutanaApiKey },
-      ...(this.config.tlsRejectUnauthorized
-        ? {}
-        : { tls: { rejectUnauthorized: false } }),
     });
 
     if (!resp.ok) {
@@ -208,9 +202,6 @@ export class KutanaClient {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ title, platform: "kutana" }),
-      ...(this.config.tlsRejectUnauthorized
-        ? {}
-        : { tls: { rejectUnauthorized: false } }),
     });
 
     if (!resp.ok) {

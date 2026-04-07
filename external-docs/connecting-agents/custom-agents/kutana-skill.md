@@ -45,22 +45,22 @@ Replace `YOUR_API_KEY` with your Kutana API key. Or use an environment variable:
       "type": "streamableHttp",
       "url": "https://kutana.spark-b0f2.local/mcp",
       "headers": {
-        "Authorization": "Bearer ${CONVENE_API_KEY}"
+        "Authorization": "Bearer ${KUTANA_API_KEY}"
       }
     }
   }
 }
 ```
 
-Then set `CONVENE_API_KEY=cvn_...` in your environment.
+Then set `KUTANA_API_KEY=cvn_...` in your environment.
 
 ### Option C — Use the connect script
 
 For quick one-off joins without configuring MCP in settings:
 
 ```bash
-export CONVENE_API_KEY=cvn_...
-export CONVENE_URL=https://kutana.spark-b0f2.local
+export KUTANA_API_KEY=cvn_...
+export KUTANA_URL=https://kutana.spark-b0f2.local
 
 ./scripts/connect.sh "Daily Standup"        # join by title
 ./scripts/connect.sh --id <meeting-uuid>    # join by ID

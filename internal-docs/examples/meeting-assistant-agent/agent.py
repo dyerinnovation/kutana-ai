@@ -5,7 +5,7 @@ Multiple agent templates available: assistant, summarizer, action-tracker, decis
 
 Usage:
     export ANTHROPIC_API_KEY=sk-ant-...
-    export CONVENE_API_KEY=cvn_...
+    export KUTANA_API_KEY=ktn_...
     python agent.py
     python agent.py --template summarizer
     python agent.py --system-prompt "Custom prompt here..."
@@ -152,17 +152,17 @@ async def main() -> None:
         sys.exit(1)
 
     mcp_url = os.environ.get(
-        "CONVENE_MCP_URL", "http://kutana.spark-b0f2.local/mcp"
+        "KUTANA_MCP_URL", "http://kutana.spark-b0f2.local/mcp"
     )
-    api_key = os.environ.get("CONVENE_API_KEY", "")
+    api_key = os.environ.get("KUTANA_API_KEY", "")
 
     if not api_key:
         print(
-            "CONVENE_API_KEY not set.\n\n"
+            "KUTANA_API_KEY not set.\n\n"
             "Get a key from your Kutana instance:\n"
             "  Settings → API Keys → Generate Key (scope: Agent)\n\n"
             "Then:\n"
-            "  export CONVENE_API_KEY=cvn_..."
+            "  export KUTANA_API_KEY=ktn_..."
         )
         sys.exit(1)
 

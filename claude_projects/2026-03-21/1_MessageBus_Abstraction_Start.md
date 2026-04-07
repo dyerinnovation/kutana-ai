@@ -67,8 +67,8 @@ class Subscription:
 - Add `ProviderType.MESSAGE_BUS = "message_bus"` to StrEnum
 - Register `RedisStreamsMessageBus` as `"redis"` in `_build_default_registry()`
 
-### CONVENE_MESSAGE_BUS env var
-- Helper `create_message_bus_from_env()` reads `CONVENE_MESSAGE_BUS` (default: `"redis"`) and `REDIS_URL` to instantiate the correct provider from the registry.
+### KUTANA_MESSAGE_BUS env var
+- Helper `create_message_bus_from_env()` reads `KUTANA_MESSAGE_BUS` (default: `"redis"`) and `REDIS_URL` to instantiate the correct provider from the registry.
 
 ## Recovery Notes
 - Project root: `/Users/jonathandyer/Documents/Dyer_Innovation/dev/kutana-ai`

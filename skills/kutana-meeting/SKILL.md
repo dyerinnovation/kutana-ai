@@ -20,7 +20,7 @@ To connect Claude Code to Kutana:
       "type": "streamableHttp",
       "url": "https://kutana.spark-b0f2.local/mcp",
       "headers": {
-        "Authorization": "Bearer ${CONVENE_API_KEY}"
+        "Authorization": "Bearer ${KUTANA_API_KEY}"
       }
     }
   }
@@ -29,7 +29,7 @@ To connect Claude Code to Kutana:
 
 **Step 2 — Set your API key environment variable:**
 ```bash
-export CONVENE_API_KEY=cvn_...
+export KUTANA_API_KEY=cvn_...
 ```
 Get your key from the [Kutana dashboard](https://kutana.spark-b0f2.local) → your agent → API Keys → Generate Key.
 

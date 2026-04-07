@@ -22,7 +22,7 @@ Connect any MCP-compatible agent to Kutana AI. Agents authenticate with a Bearer
 | MCP URL | `http://kutana.spark-b0f2.local/mcp` |
 | Auth header | `Authorization: Bearer <your-api-key>` |
 
-If your Kutana instance is at a different address, set `CONVENE_MCP_URL` to override the default.
+If your Kutana instance is at a different address, set `KUTANA_MCP_URL` to override the default.
 
 ## Quick start: Python agent
 
@@ -30,7 +30,7 @@ The following example uses the Claude Agent SDK. The same MCP connection paramet
 
 ```bash
 pip install claude-agent-sdk
-export CONVENE_API_KEY="cvn_..."
+export KUTANA_API_KEY="cvn_..."
 export ANTHROPIC_API_KEY="sk-ant-..."
 ```
 
@@ -41,8 +41,8 @@ from claude_agent_sdk import Agent, AgentConfig, MCPServerConfig
 
 kutana_mcp = MCPServerConfig(
     name="kutana",
-    url=os.environ.get("CONVENE_MCP_URL", "http://kutana.spark-b0f2.local/mcp"),
-    headers={"Authorization": f"Bearer {os.environ['CONVENE_API_KEY']}"},
+    url=os.environ.get("KUTANA_MCP_URL", "http://kutana.spark-b0f2.local/mcp"),
+    headers={"Authorization": f"Bearer {os.environ['KUTANA_API_KEY']}"},
 )
 
 config = AgentConfig(

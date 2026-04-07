@@ -440,7 +440,7 @@ uv run pytest tests/unit/ -v
 uv run pytest tests/integration/ -v
 
 # E2E tests (requires DGX cluster running)
-CONVENE_TEST_URL=http://kutana.spark-b0f2.local \
+KUTANA_TEST_URL=http://kutana.spark-b0f2.local \
 uv run pytest tests/e2e/ -v --timeout=120
 
 # Agent behavior tests

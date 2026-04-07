@@ -27,7 +27,7 @@ Common labels
 {{- define "kutana.labels" -}}
 helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/part-of: convene
+app.kubernetes.io/part-of: kutana
 {{- end }}
 
 {{/*

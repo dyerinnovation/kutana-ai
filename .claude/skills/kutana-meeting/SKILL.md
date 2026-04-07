@@ -11,7 +11,7 @@ description: >
 ## Setup
 
 MCP server is configured at `https://kutana.spark-b0f2.local/mcp` (K3s cluster).
-Add to `.claude/settings.json` with `Authorization: Bearer ${CONVENE_API_KEY}`.
+Add to `.claude/settings.json` with `Authorization: Bearer ${KUTANA_API_KEY}`.
 
 ## Joining a Meeting
 

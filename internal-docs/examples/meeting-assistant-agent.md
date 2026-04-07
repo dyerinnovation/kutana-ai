@@ -49,7 +49,7 @@ kutana keys generate <AGENT_ID>
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
-export CONVENE_API_KEY=cvn_...   # From step 2
+export KUTANA_API_KEY=cvn_...   # From step 2
 
 cd internal-docs/examples/meeting-assistant-agent
 uv run python agent.py
@@ -104,14 +104,14 @@ For Claude Desktop or Claude Code, add the Kutana MCP server to your settings:
       "type": "streamableHttp",
       "url": "https://kutana.spark-b0f2.local/mcp",
       "headers": {
-        "Authorization": "Bearer ${CONVENE_API_KEY}"
+        "Authorization": "Bearer ${KUTANA_API_KEY}"
       }
     }
   }
 }
 ```
 
-Set `CONVENE_API_KEY=cvn_...` in your environment, then open Claude Code and say "Join the meeting on Kutana".
+Set `KUTANA_API_KEY=cvn_...` in your environment, then open Claude Code and say "Join the meeting on Kutana".
 
 ## Other Integration Options
 

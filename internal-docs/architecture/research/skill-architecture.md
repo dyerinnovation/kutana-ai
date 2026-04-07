@@ -103,16 +103,16 @@ capabilities:
   - chat
   - context
 requires:
-  - env: CONVENE_API_KEY
+  - env: KUTANA_API_KEY
     description: API key from your Kutana dashboard (Settings → API Keys)
-  - env: CONVENE_API_URL
+  - env: KUTANA_API_URL
     description: Base URL of your Kutana API server (default: https://api.kutana.ai)
-  - env: CONVENE_GATEWAY_WS_URL
+  - env: KUTANA_GATEWAY_WS_URL
     description: WebSocket URL for the agent gateway (default: ws://api.kutana.ai/gateway)
   - service: kutana-mcp-server
     description: Kutana MCP server must be running and reachable
 mcp_compatible: true
-mcp_server_url: "${CONVENE_MCP_URL:-http://localhost:3001/mcp}"
+mcp_server_url: "${KUTANA_MCP_URL:-http://localhost:3001/mcp}"
 frameworks:
   - openclaw
   - claude-agent-sdk
@@ -187,7 +187,7 @@ kutana-mcp-server (FastMCP, port 3001)
 
 ### Authentication Flow
 
-1. Agent starts with `CONVENE_API_KEY` in environment
+1. Agent starts with `KUTANA_API_KEY` in environment
 2. MCP server exchanges API key for short-lived JWT via `POST /token/mcp`
 3. JWT is validated on every MCP tool call
 4. For gateway operations, a separate gateway JWT is exchanged via `POST /token/gateway`
@@ -202,21 +202,21 @@ kutana-mcp-server (FastMCP, port 3001)
 
 set -euo pipefail
 
-: "${CONVENE_API_KEY:?CONVENE_API_KEY must be set}"
-: "${CONVENE_API_URL:=http://localhost:8000}"
-: "${CONVENE_GATEWAY_WS_URL:=ws://localhost:8003}"
-: "${CONVENE_MCP_PORT:=3001}"
+: "${KUTANA_API_KEY:?KUTANA_API_KEY must be set}"
+: "${KUTANA_API_URL:=http://localhost:8000}"
+: "${KUTANA_GATEWAY_WS_URL:=ws://localhost:8003}"
+: "${KUTANA_MCP_PORT:=3001}"
 
 docker run --rm -d \
   --name kutana-mcp \
-  -p "${CONVENE_MCP_PORT}:3001" \
-  -e MCP_API_KEY="${CONVENE_API_KEY}" \
-  -e API_BASE_URL="${CONVENE_API_URL}" \
-  -e GATEWAY_WS_URL="${CONVENE_GATEWAY_WS_URL}" \
+  -p "${KUTANA_MCP_PORT}:3001" \
+  -e MCP_API_KEY="${KUTANA_API_KEY}" \
+  -e API_BASE_URL="${KUTANA_API_URL}" \
+  -e GATEWAY_WS_URL="${KUTANA_GATEWAY_WS_URL}" \
   ghcr.io/dyerinnovation/kutana-mcp-server:latest
 
-echo "Kutana MCP server started on port ${CONVENE_MCP_PORT}"
-echo "MCP endpoint: http://localhost:${CONVENE_MCP_PORT}/mcp"
+echo "Kutana MCP server started on port ${KUTANA_MCP_PORT}"
+echo "MCP endpoint: http://localhost:${KUTANA_MCP_PORT}/mcp"
 ```
 
 ---

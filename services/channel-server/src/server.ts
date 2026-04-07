@@ -10,16 +10,17 @@
  *   bun src/server.ts
  *
  * Required environment variables:
- *   CONVENE_API_KEY      — agent API key (from Kutana dashboard)
+ *   KUTANA_API_KEY      — agent API key (from Kutana dashboard)
  *
  * Optional:
- *   CONVENE_API_URL      — WebSocket URL of the agent gateway
- *   CONVENE_HTTP_URL     — HTTP URL of the API server
- *   CONVENE_AGENT_MODE   — transcript | insights | both | selective
- *   CONVENE_ENTITY_FILTER — comma-separated entity types for selective mode
- *   CONVENE_TLS_REJECT_UNAUTHORIZED — set "0" to allow self-signed certs (default)
+ *   KUTANA_API_URL      — WebSocket URL of the agent gateway
+ *   KUTANA_HTTP_URL     — HTTP URL of the API server
+ *   KUTANA_AGENT_MODE   — transcript | insights | both | selective
+ *   KUTANA_ENTITY_FILTER — comma-separated entity types for selective mode
+ *   KUTANA_TLS_REJECT_UNAUTHORIZED — set "0" to allow self-signed certs (default)
  */
 
+import { fileURLToPath } from "url";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import type { ServerCapabilities } from "@modelcontextprotocol/sdk/types.js";
@@ -119,7 +120,7 @@ async function main(): Promise<void> {
 
   if (!config.kutanaApiKey) {
     process.stderr.write(
-      "[channel-server] Error: CONVENE_API_KEY environment variable is required\n",
+      "[channel-server] Error: KUTANA_API_KEY environment variable is required\n",
     );
     process.exit(1);
   }
@@ -169,8 +170,9 @@ async function main(): Promise<void> {
 }
 
 // Only run main() when this file is the entry point (not when imported by tests).
-const isEntryPoint =
-  (import.meta as unknown as { main?: boolean }).main ?? false;
+// Uses process.argv[1] check instead of Bun-specific import.meta.main so it
+// works under both Bun and Node.js/tsx.
+const isEntryPoint = process.argv[1] === fileURLToPath(import.meta.url);
 if (isEntryPoint) {
   main().catch((err: unknown) => {
     process.stderr.write(`[channel-server] Fatal: ${String(err)}\n`);

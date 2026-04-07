@@ -370,7 +370,7 @@ curl -X POST http://localhost:8080/v1/audio/transcriptions \
 ### 5.3 Configure in Kutana AI
 ```bash
 # Add to .env:
-echo 'CONVENE_STT_PROVIDER=whisper-local' >> ~/projects/kutana-ai/.env
+echo 'KUTANA_STT_PROVIDER=whisper-local' >> ~/projects/kutana-ai/.env
 echo 'WHISPER_SERVER_URL=http://host.docker.internal:8080' >> ~/projects/kutana-ai/.env
 
 # Restart audio service to pick up the change

@@ -15,7 +15,7 @@ from kutana_core.messaging import MessageBus, Message
 from kutana_providers.messaging import create_message_bus_from_env
 
 # At startup
-bus = create_message_bus_from_env()  # reads CONVENE_MESSAGE_BUS + REDIS_URL
+bus = create_message_bus_from_env()  # reads KUTANA_MESSAGE_BUS + REDIS_URL
 
 # Publish
 msg_id = await bus.publish(

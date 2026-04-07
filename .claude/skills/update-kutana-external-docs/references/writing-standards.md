@@ -109,7 +109,7 @@ response = client.create_meeting(title="Standup")
 import os
 from kutana import KutanaClient
 
-client = KutanaClient(api_key=os.environ["CONVENE_API_KEY"])
+client = KutanaClient(api_key=os.environ["KUTANA_API_KEY"])
 
 meeting = client.meetings.create(
     title="Weekly Standup",
@@ -126,7 +126,7 @@ Use realistic-looking IDs, timestamps, names, and data. Avoid `foo`, `bar`,
 | Avoid | Prefer |
 |---|---|
 | `meeting_id = "abc"` | `meeting_id = "mtg_01HXN4B7KXYZ"` |
-| `api_key = "YOUR_KEY"` | `api_key = os.environ["CONVENE_API_KEY"]` |
+| `api_key = "YOUR_KEY"` | `api_key = os.environ["KUTANA_API_KEY"]` |
 | `name = "test user"` | `name = "Sarah Chen"` |
 | `time = "2024-01-01"` | `time = "2026-04-01T09:00:00Z"` |
 
@@ -216,7 +216,7 @@ Every API reference page must document errors. For each error:
 ```markdown
 | Status | Code | Description | Resolution |
 |---|---|---|---|
-| `401` | `invalid_api_key` | API key is missing or invalid | Check `CONVENE_API_KEY` |
+| `401` | `invalid_api_key` | API key is missing or invalid | Check `KUTANA_API_KEY` |
 | `403` | `meeting_access_denied` | User not authorized for this meeting | Verify the meeting ID and your account permissions |
 | `404` | `meeting_not_found` | No meeting with this ID | Check the ID; the meeting may have been deleted |
 | `429` | `rate_limit_exceeded` | Too many requests | Retry after the `Retry-After` header value |

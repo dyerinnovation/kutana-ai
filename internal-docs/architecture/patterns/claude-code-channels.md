@@ -114,10 +114,10 @@ claude mcp add-json --scope user kutana '{
   "command": "bun",
   "args": ["/path/to/services/channel-server/src/server.ts"],
   "env": {
-    "CONVENE_API_KEY": "cvn_...",
-    "CONVENE_API_URL": "wss://kutana.spark-b0f2.local/ws",
-    "CONVENE_HTTP_URL": "https://kutana.spark-b0f2.local",
-    "CONVENE_TLS_REJECT_UNAUTHORIZED": "0"
+    "KUTANA_API_KEY": "cvn_...",
+    "KUTANA_API_URL": "wss://kutana.spark-b0f2.local/ws",
+    "KUTANA_HTTP_URL": "https://kutana.spark-b0f2.local",
+    "KUTANA_TLS_REJECT_UNAUTHORIZED": "0"
   }
 }'
 ```
@@ -132,7 +132,7 @@ claude --dangerously-load-development-channels server:kutana
 
 `server:kutana` references the server registered with `claude mcp add-json`. This flag is required during the research preview for custom (non-plugin) channels — without it, tools load but push events (`notifications/claude/channel`) are silently dropped. Published plugins use `--channels plugin:name@publisher` instead.
 
-No `CONVENE_MEETING_ID` needed — meetings are joined dynamically via tools.
+No `KUTANA_MEETING_ID` needed — meetings are joined dynamically via tools.
 
 ### Event Mapping
 
@@ -181,8 +181,8 @@ services/channel-server/
 ## Technical Notes
 
 - **stdio vs HTTP:** The channel plugin uses stdio because it runs as a subprocess. The separate HTTP MCP server (`services/mcp-server/`) remains available for remote agents that can't run a local process.
-- **Auth:** The plugin reads `CONVENE_API_KEY` from env and exchanges it for a gateway JWT via `POST /api/v1/token/gateway`. The gateway JWT is used for WebSocket connections. For HTTP API calls (list/create meetings), the plugin sends the raw API key via `X-API-Key` header — the meetings endpoints accept both Bearer JWT (browser users) and X-API-Key (agents) via the `CurrentUserOrAgent` dependency.
-- **TLS:** Self-signed certs are common in dev. Set `CONVENE_TLS_REJECT_UNAUTHORIZED=0` (default) to accept them. The plugin sets `NODE_TLS_REJECT_UNAUTHORIZED=0` at startup.
+- **Auth:** The plugin reads `KUTANA_API_KEY` from env and exchanges it for a gateway JWT via `POST /api/v1/token/gateway`. The gateway JWT is used for WebSocket connections. For HTTP API calls (list/create meetings), the plugin sends the raw API key via `X-API-Key` header — the meetings endpoints accept both Bearer JWT (browser users) and X-API-Key (agents) via the `CurrentUserOrAgent` dependency.
+- **TLS:** Self-signed certs are common in dev. Set `KUTANA_TLS_REJECT_UNAUTHORIZED=0` (default) to accept them. The plugin sets `NODE_TLS_REJECT_UNAUTHORIZED=0` at startup.
 - **MCP registration:** The server must be registered via `claude mcp add-json` (managed registry), not manually in `~/.claude/settings.json`. The `--dangerously-load-development-channels` flag only finds servers in the managed registry.
 - **Research preview:** Custom channels require `--dangerously-load-development-channels server:kutana` at launch. This bypasses the channel allowlist (which only includes published Anthropic plugins like Discord, Telegram). This flag may be removed or renamed when channels graduate from preview.
 - **Reconnection:** Not yet implemented. If the WebSocket drops, use `leave_meeting` + `join_meeting` to reconnect. Missed events can be recovered via the HTTP MCP server's `kutana_get_meeting_events`.

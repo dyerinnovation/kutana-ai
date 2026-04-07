@@ -120,7 +120,7 @@ export function AgentDetailPage() {
             type: "streamableHttp",
             url: "https://kutana.spark-b0f2.local/mcp",
             headers: {
-              Authorization: `Bearer ${rawKey ?? "${CONVENE_API_KEY}"}`,
+              Authorization: `Bearer ${rawKey ?? "${KUTANA_API_KEY}"}`,
             },
           },
         },
@@ -133,7 +133,7 @@ export function AgentDetailPage() {
   function getEnvSetup(rawKey?: string): string {
     return [
       "# Set this environment variable, then restart Claude Code:",
-      `export CONVENE_API_KEY=${rawKey ?? "cvn_..."}`,
+      `export KUTANA_API_KEY=${rawKey ?? "cvn_..."}`,
     ].join("\n");
   }
 

@@ -26,8 +26,8 @@ _DATABASE_URL = os.environ.get(
     "postgresql+asyncpg://kutana:kutana@localhost:5432/kutana",
 )
 _REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-_KUTANA_MCP_URL = os.environ.get("CONVENE_MCP_URL", "http://localhost:3001/mcp")
-_KUTANA_MCP_TOKEN = os.environ.get("CONVENE_MCP_TOKEN", "")
+_KUTANA_MCP_URL = os.environ.get("KUTANA_MCP_URL", "http://localhost:3001/mcp")
+_KUTANA_MCP_TOKEN = os.environ.get("KUTANA_MCP_TOKEN", "")
 
 _engine = create_async_engine(_DATABASE_URL, pool_pre_ping=True)
 _session_factory: async_sessionmaker[AsyncSession] = async_sessionmaker(

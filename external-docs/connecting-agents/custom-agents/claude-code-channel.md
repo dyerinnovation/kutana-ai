@@ -60,11 +60,11 @@ claude mcp add-json --scope user kutana '{
   "command": "bun",
   "args": ["/path/to/kutana-ai/services/channel-server/src/server.ts"],
   "env": {
-    "CONVENE_API_KEY": "cvn_your_key_here",
-    "CONVENE_API_URL": "wss://kutana.spark-b0f2.local/ws",
-    "CONVENE_HTTP_URL": "https://kutana.spark-b0f2.local",
-    "CONVENE_TLS_REJECT_UNAUTHORIZED": "0",
-    "CONVENE_AGENT_NAME": "Claude Code"
+    "KUTANA_API_KEY": "cvn_your_key_here",
+    "KUTANA_API_URL": "wss://kutana.spark-b0f2.local/ws",
+    "KUTANA_HTTP_URL": "https://kutana.spark-b0f2.local",
+    "KUTANA_TLS_REJECT_UNAUTHORIZED": "0",
+    "KUTANA_AGENT_NAME": "Claude Code"
   }
 }'
 ```
@@ -97,14 +97,14 @@ You should see `kutana` listed with 18 tools available.
 
 | Variable | Required | Default | Description |
 |----------|:--------:|---------|-------------|
-| `CONVENE_API_KEY` | Yes | — | Agent API key (`cvn_...`) |
-| `CONVENE_API_URL` | No | `ws://localhost:8003` | Agent gateway WebSocket URL |
-| `CONVENE_HTTP_URL` | No | Derived from API URL | API server HTTP URL |
-| `CONVENE_AGENT_NAME` | No | `Claude Code` | Your display name in meetings |
-| `CONVENE_AGENT_MODE` | No | `both` | Event filter (see [Agent modes](#agent-modes)) |
-| `CONVENE_ENTITY_FILTER` | No | — | Entity types for `selective` mode |
-| `CONVENE_TLS_REJECT_UNAUTHORIZED` | No | `0` | Set `1` to enforce TLS cert validation |
-| `CONVENE_BEARER_TOKEN` | No | — | Pre-issued gateway JWT (skips API key exchange) |
+| `KUTANA_API_KEY` | Yes | — | Agent API key (`cvn_...`) |
+| `KUTANA_API_URL` | No | `ws://localhost:8003` | Agent gateway WebSocket URL |
+| `KUTANA_HTTP_URL` | No | Derived from API URL | API server HTTP URL |
+| `KUTANA_AGENT_NAME` | No | `Claude Code` | Your display name in meetings |
+| `KUTANA_AGENT_MODE` | No | `both` | Event filter (see [Agent modes](#agent-modes)) |
+| `KUTANA_ENTITY_FILTER` | No | — | Entity types for `selective` mode |
+| `KUTANA_TLS_REJECT_UNAUTHORIZED` | No | `0` | Set `1` to enforce TLS cert validation |
+| `KUTANA_BEARER_TOKEN` | No | — | Pre-issued gateway JWT (skips API key exchange) |
 
 ## Usage
 
@@ -232,7 +232,7 @@ Once you join a meeting, events arrive in Claude's context as `<channel>` tags:
 
 ## Agent modes
 
-Control which events Claude receives by setting `CONVENE_AGENT_MODE`:
+Control which events Claude receives by setting `KUTANA_AGENT_MODE`:
 
 | Mode | What Claude receives |
 |------|----------------------|
@@ -241,13 +241,13 @@ Control which events Claude receives by setting `CONVENE_AGENT_MODE`:
 | `both` | Both transcript and insights (default) |
 | `selective` | Insights of specific types only |
 
-For selective mode, set `CONVENE_ENTITY_FILTER` to a comma-separated list:
+For selective mode, set `KUTANA_ENTITY_FILTER` to a comma-separated list:
 
 ```json
 {
   "env": {
-    "CONVENE_AGENT_MODE": "selective",
-    "CONVENE_ENTITY_FILTER": "task,decision,blocker"
+    "KUTANA_AGENT_MODE": "selective",
+    "KUTANA_ENTITY_FILTER": "task,decision,blocker"
   }
 }
 ```
