@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { Meeting } from "@/types";
 import { listMeetings, createMeeting } from "@/api/meetings";
 import { Button } from "@/components/ui/Button";
@@ -88,7 +88,7 @@ function statusBlockColor(status: string) {
 /* ─── Component ──────────────────────────────────────────────────────────── */
 
 export function CalendarPage() {
-  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -102,6 +102,26 @@ export function CalendarPage() {
   const [createTitle, setCreateTitle] = useState("");
   const [createTime, setCreateTime] = useState("09:00");
   const [isCreating, setIsCreating] = useState(false);
+
+  // Current time indicator (updates every minute)
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Hover indicator for time grid
+  const [hoverInfo, setHoverInfo] = useState<{ col: number; hour: number } | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  // Drag-to-create state
+  const [dragStart, setDragStart] = useState<{ col: number; hour: number } | null>(null);
+  const [dragEnd, setDragEnd] = useState<{ col: number; hour: number } | null>(null);
+  const isDragging = dragStart !== null;
+
+  // Schedule meeting dialog — extended fields
+  const [createDescription, setCreateDescription] = useState("");
+  const [createEndTime, setCreateEndTime] = useState("10:00");
 
   useEffect(() => {
     loadMeetings();
@@ -217,12 +237,17 @@ export function CalendarPage() {
     ? (meetingsByDate.get(selectedKey) ?? [])
     : [];
 
-  function openSchedule(date?: Date, time?: string) {
+  function openSchedule(date?: Date, time?: string, endTime?: string) {
     const d = date ?? selectedDate;
     if (!d) return;
     if (date) setSelectedDate(date);
     setCreateTitle("");
+    setCreateDescription("");
     setCreateTime(time ?? "09:00");
+    setCreateEndTime(endTime ?? (() => {
+      const startH = parseInt(time ?? "09", 10);
+      return `${String(Math.min(startH + 1, HOUR_END)).padStart(2, "0")}:00`;
+    })());
     setShowCreate(true);
   }
 
@@ -299,9 +324,37 @@ export function CalendarPage() {
 
             {/* Time rows */}
             <div
+              ref={gridRef}
               className="grid relative"
               style={{
                 gridTemplateColumns: `60px repeat(${columnDates.length}, 1fr)`,
+              }}
+              onMouseMove={(e) => {
+                if (!gridRef.current) return;
+                const rect = gridRef.current.getBoundingClientRect();
+                const y = e.clientY - rect.top;
+                const totalHeight = hours.length * hourHeight;
+                if (y < 0 || y > totalHeight) { setHoverInfo(null); return; }
+                const hour = HOUR_START + Math.floor(y / hourHeight);
+                const x = e.clientX - rect.left;
+                const colWidth = (rect.width - 60) / columnDates.length;
+                const col = Math.floor((x - 60) / colWidth);
+                if (col < 0 || col >= columnDates.length) { setHoverInfo(null); return; }
+                setHoverInfo({ col, hour });
+              }}
+              onMouseLeave={() => { setHoverInfo(null); if (isDragging) { setDragStart(null); setDragEnd(null); } }}
+              onMouseUp={() => {
+                if (dragStart && dragEnd) {
+                  const startH = Math.min(dragStart.hour, dragEnd.hour);
+                  const endH = Math.max(dragStart.hour, dragEnd.hour) + 1;
+                  openSchedule(
+                    columnDates[dragStart.col],
+                    `${String(startH).padStart(2, "0")}:00`,
+                    `${String(Math.min(endH, HOUR_END)).padStart(2, "0")}:00`
+                  );
+                }
+                setDragStart(null);
+                setDragEnd(null);
               }}
             >
               {/* Hour labels + horizontal lines */}
@@ -309,7 +362,7 @@ export function CalendarPage() {
                 {hours.map((h) => (
                   <div
                     key={h}
-                    className="border-b border-gray-800/50 text-right pr-2 text-[10px] text-gray-500"
+                    className="border-b-2 border-gray-800 text-right pr-2 text-[10px] text-gray-500"
                     style={{ height: `${hourHeight}px` }}
                   >
                     {formatTimeSlot(h)}
@@ -318,27 +371,52 @@ export function CalendarPage() {
               </div>
 
               {/* Day columns */}
-              {columnDates.map((d) => {
+              {columnDates.map((d, colIdx) => {
                 const key = formatDateKey(d);
                 const dayMeetings = meetingsByDate.get(key) ?? [];
+                const isHoveredCol = hoverInfo?.col === colIdx;
+
+                // Drag selection highlight range
+                const dragMinH = dragStart && dragEnd && dragStart.col === colIdx
+                  ? Math.min(dragStart.hour, dragEnd.hour) : null;
+                const dragMaxH = dragStart && dragEnd && dragStart.col === colIdx
+                  ? Math.max(dragStart.hour, dragEnd.hour) : null;
 
                 return (
-                  <div key={key} className="relative border-l border-gray-800/50">
+                  <div key={key} className="relative border-l-2 border-gray-800 select-none">
                     {/* Grid lines */}
-                    {hours.map((h) => (
-                      <button
-                        key={h}
-                        type="button"
-                        className="block w-full border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors"
-                        style={{ height: `${hourHeight}px` }}
-                        onClick={() =>
-                          openSchedule(
-                            d,
-                            `${String(h).padStart(2, "0")}:00`
-                          )
-                        }
-                      />
-                    ))}
+                    {hours.map((h) => {
+                      const inDragRange = dragMinH !== null && dragMaxH !== null && h >= dragMinH && h <= dragMaxH;
+                      return (
+                        <div
+                          key={h}
+                          className={cn(
+                            "block w-full border-b-2 border-gray-800 transition-colors cursor-pointer",
+                            inDragRange
+                              ? "bg-blue-600/20"
+                              : isHoveredCol && hoverInfo?.hour === h
+                                ? "bg-blue-600/10"
+                                : "hover:bg-gray-800/30"
+                          )}
+                          style={{ height: `${hourHeight}px` }}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setDragStart({ col: colIdx, hour: h });
+                            setDragEnd({ col: colIdx, hour: h });
+                          }}
+                          onMouseEnter={() => {
+                            if (isDragging && dragStart?.col === colIdx) {
+                              setDragEnd({ col: colIdx, hour: h });
+                            }
+                          }}
+                          onClick={() => {
+                            if (!isDragging) {
+                              openSchedule(d, `${String(h).padStart(2, "0")}:00`);
+                            }
+                          }}
+                        />
+                      );
+                    })}
 
                     {/* Meeting blocks */}
                     {dayMeetings.map((m) => {
@@ -379,6 +457,33 @@ export function CalendarPage() {
                   </div>
                 );
               })}
+
+              {/* Current time indicator line */}
+              {(() => {
+                const nowHour = now.getHours() + now.getMinutes() / 60;
+                if (nowHour < HOUR_START || nowHour >= HOUR_END) return null;
+                const topPx = (nowHour - HOUR_START) * hourHeight;
+                // Check if today is visible in the current columns
+                const todayCol = columnDates.findIndex(
+                  (d) => formatDateKey(d) === formatDateKey(now)
+                );
+                if (todayCol < 0) return null;
+                return (
+                  <div
+                    className="absolute pointer-events-none"
+                    style={{
+                      top: `${topPx}px`,
+                      left: "60px",
+                      right: 0,
+                      height: 0,
+                    }}
+                  >
+                    <div className="relative w-full border-t-2 border-red-500">
+                      <div className="absolute -left-1 -top-1.5 h-3 w-3 rounded-full bg-red-500" />
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </CardContent>
@@ -396,7 +501,7 @@ export function CalendarPage() {
         <div className="flex items-center gap-2">
           {/* View mode toggle */}
           <div className="flex rounded-lg border border-gray-700 overflow-hidden">
-            {(["month", "week", "workweek", "day"] as const).map((mode) => (
+            {(["day", "week", "workweek", "month"] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
@@ -628,6 +733,7 @@ export function CalendarPage() {
           <DialogTitle>
             Schedule Meeting —{" "}
             {selectedDate?.toLocaleDateString(undefined, {
+              weekday: "short",
               month: "short",
               day: "numeric",
             })}
@@ -640,13 +746,32 @@ export function CalendarPage() {
               onChange={(e) => setCreateTitle(e.target.value)}
               required
             />
-            <Input
-              label="Time"
-              type="time"
-              value={createTime}
-              onChange={(e) => setCreateTime(e.target.value)}
-              required
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Start"
+                type="time"
+                value={createTime}
+                onChange={(e) => setCreateTime(e.target.value)}
+                required
+              />
+              <Input
+                label="End"
+                type="time"
+                value={createEndTime}
+                onChange={(e) => setCreateEndTime(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-gray-300">
+                Description
+              </label>
+              <textarea
+                className="h-20 w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-50 placeholder:text-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 focus:outline-none resize-none"
+                placeholder="Meeting agenda or notes..."
+                value={createDescription}
+                onChange={(e) => setCreateDescription(e.target.value)}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button

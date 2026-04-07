@@ -23,7 +23,6 @@ data:
   AGENT_GATEWAY_JWT_SECRET: "kutana-dev-secret-2026"
   AGENT_GATEWAY_WHISPER_API_URL: ""
   AGENT_GATEWAY_TTS_PROVIDER: {{ .Values.agentGateway.ttsProvider | default "cartesia" | quote }}
-  AGENT_GATEWAY_TTS_CARTESIA_API_KEY: {{ .Values.agentGateway.ttsCartesiaApiKey | default "" | quote }}
   # Worker (feed dispatcher/runner)
   KUTANA_MCP_URL: "http://mcp-server.{{ .Release.Namespace }}.svc:3001/"
   # Object storage (S3-compatible — MinIO in dev, cloud in prod)

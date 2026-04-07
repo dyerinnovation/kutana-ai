@@ -57,6 +57,9 @@ export class KutanaClient {
   private isInQueue = false;
   private chatIndex = 0;
 
+  /** Recent chat message keys for deduplication (dual Streams + Pub/Sub delivery). */
+  private recentChatKeys = new Set<string>();
+
   constructor(
     private readonly config: ChannelServerConfig,
     /** Allows injecting a mock WebSocket in tests. */
@@ -501,21 +504,33 @@ export class KutanaClient {
     }
 
     // Chat channel — agent data channel messages (via EventRelay)
-    // AND chat.message.received events (via ChatBridge, e.g. from browser users)
+    // AND chat.message.received events (via ChatBridge, e.g. from browser users).
+    // Both paths deliver the same logical message, so deduplicate by sender+text.
     if (et === "data.channel.chat" || et === "chat.message.received") {
       const p = event.payload as Record<string, unknown> | undefined;
       if (p) {
+        const sender = String(p["sender_name"] ?? p["from"] ?? "Unknown");
+        const text = String(
+          p["content"] ?? (
+            p["payload"] != null
+              ? ((p["payload"] as Record<string, unknown>)["text"] ?? "")
+              : (p["text"] ?? "")
+          ),
+        );
+
+        // Deduplicate: skip if we've seen the same sender+text within the last 5 s.
+        const dedupeKey = `${sender}\0${text}`;
+        if (this.recentChatKeys.has(dedupeKey)) {
+          return;
+        }
+        this.recentChatKeys.add(dedupeKey);
+        setTimeout(() => this.recentChatKeys.delete(dedupeKey), 5_000);
+
         const msg: ChatMessage = {
           index: this.chatIndex++,
-          sender_name: String(p["sender_name"] ?? p["from"] ?? "Unknown"),
+          sender_name: sender,
           sender_session_id: String(p["sender_session_id"] ?? p["sender_id"] ?? ""),
-          text: String(
-            p["content"] ?? (
-              p["payload"] != null
-                ? ((p["payload"] as Record<string, unknown>)["text"] ?? "")
-                : (p["text"] ?? "")
-            ),
-          ),
+          text,
           timestamp: String(p["sent_at"] ?? new Date().toISOString()),
         };
         this.chatBuffer.push(msg);

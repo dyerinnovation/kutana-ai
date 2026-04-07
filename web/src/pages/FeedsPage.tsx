@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import type { Feed, FeedCreate } from "@/types";
 import { listFeeds, createFeed, updateFeed, toggleFeed, triggerFeed } from "@/api/feeds";
 import { Button } from "@/components/ui/Button";
@@ -13,6 +14,49 @@ import { Dialog, DialogTitle, DialogFooter } from "@/components/ui/Dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { FEED_LIMIT, upgradeTargetFor } from "@/lib/planLimits";
 import { UpgradeBadge } from "@/components/UpgradeBadge";
+
+/* ── Platform Icons ─────────────────────────────────────── */
+
+function SlackIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" strokeWidth="1.5" fill="none" />
+      <text x="12" y="16.5" textAnchor="middle" fill="currentColor" fontSize="13" fontWeight="bold" fontFamily="sans-serif">#</text>
+    </svg>
+  );
+}
+
+function DiscordIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M19.27 5.33C17.94 4.71 16.5 4.26 15 4a.09.09 0 0 0-.07.03c-.18.33-.39.76-.53 1.09a16.09 16.09 0 0 0-4.8 0c-.14-.34-.36-.76-.54-1.09c-.01-.02-.04-.03-.07-.03c-1.5.26-2.93.71-4.27 1.33c-.01 0-.02.01-.03.02c-2.72 4.07-3.47 8.03-3.1 11.95c0 .02.01.04.03.05c1.8 1.32 3.53 2.12 5.24 2.65c.03.01.06 0 .07-.02c.4-.55.76-1.13 1.07-1.74c.02-.04 0-.08-.04-.09c-.57-.22-1.11-.48-1.64-.78c-.04-.02-.04-.08-.01-.11c.11-.08.22-.17.33-.25c.02-.02.05-.02.07-.01c3.44 1.57 7.15 1.57 10.55 0c.02-.01.05-.01.07.01c.11.09.22.17.33.26c.04.03.04.09-.01.11c-.52.31-1.07.56-1.64.78c-.04.01-.05.06-.04.09c.32.61.68 1.19 1.07 1.74c.03.01.06.02.09.01c1.72-.53 3.45-1.33 5.25-2.65c.02-.01.03-.03.03-.05c.44-4.53-.73-8.46-3.1-11.95c-.01-.01-.02-.02-.04-.02zM8.52 14.91c-1.03 0-1.89-.95-1.89-2.12s.84-2.12 1.89-2.12c1.06 0 1.9.96 1.89 2.12c0 1.17-.84 2.12-1.89 2.12zm6.97 0c-1.03 0-1.89-.95-1.89-2.12s.84-2.12 1.89-2.12c1.06 0 1.9.96 1.89 2.12c0 1.17-.83 2.12-1.89 2.12z" />
+    </svg>
+  );
+}
+
+function DefaultPlatformIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" xmlns="http://www.w3.org/2000/svg">
+      <path d="M14.5 2H15a2 2 0 0 1 2 2v1.5a2 2 0 0 1-2 2h-1.5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
+      <path d="M9.5 9.5H10a2 2 0 0 1 2 2V13a2 2 0 0 1-2 2H9.5a2 2 0 0 1-2-2v-1.5a2 2 0 0 1 2-2z" />
+      <path d="M14.5 16.5H15a2 2 0 0 1 2 2V20a2 2 0 0 1-2 2h-1.5a2 2 0 0 1-2-2v-1.5a2 2 0 0 1 2-2z" />
+      <path d="M15 5.5h3.5a2 2 0 0 1 2 2V11" />
+      <path d="M9.5 11.5H6a2 2 0 0 0-2 2V17" />
+      <path d="M13 13v1.5a2 2 0 0 1 2 2" />
+    </svg>
+  );
+}
+
+function PlatformIcon({ platform, className = "h-4 w-4" }: { platform: string; className?: string }) {
+  switch (platform) {
+    case "slack":
+      return <SlackIcon className={className} />;
+    case "discord":
+      return <DiscordIcon className={className} />;
+    default:
+      return <DefaultPlatformIcon className={className} />;
+  }
+}
 
 const DATA_TYPE_OPTIONS = [
   { value: "summary", label: "Summary" },
@@ -60,7 +104,7 @@ const INTEGRATIONS: Integration[] = [
     id: "discord",
     name: "Discord",
     description: "Share meeting notes and updates with your Discord server.",
-    status: "available",
+    status: "coming_soon",
     platform: "discord",
   },
   {
@@ -259,6 +303,15 @@ export function FeedsPage() {
           <p className="mt-0.5 text-sm text-gray-400">
             Connect meetings to external platforms — push summaries, pull context.
           </p>
+          <Link
+            to="/docs/feeds"
+            className="mt-1 inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            Learn more about Feeds
+            <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M5.22 14.78a.75.75 0 0 1 0-1.06l7.22-7.22H8.75a.75.75 0 0 1 0-1.5h5.5a.75.75 0 0 1 .75.75v5.5a.75.75 0 0 1-1.5 0V7.06l-7.22 7.22a.75.75 0 0 1-1.06 0z" clipRule="evenodd" />
+            </svg>
+          </Link>
         </div>
 
         {feedsLoading && (
@@ -302,8 +355,8 @@ export function FeedsPage() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-600/15 text-sm font-semibold text-blue-400">
-                        {feed.name.charAt(0).toUpperCase()}
+                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-600/15 text-blue-400">
+                        <PlatformIcon platform={feed.platform} className="h-4 w-4" />
                       </div>
                       <div>
                         <CardTitle className="pt-0.5">{feed.name}</CardTitle>
@@ -446,10 +499,61 @@ export function FeedsPage() {
       <Dialog open={modalOpen} onClose={closeModal}>
         <form onSubmit={handleSave}>
           <DialogTitle>
-            {editingFeed ? `Edit Feed: ${editingFeed.name}` : "Create Feed"}
+            {editingFeed ? (
+              `Edit Feed: ${editingFeed.name}`
+            ) : (
+              <span className="inline-flex items-center gap-2">
+                <PlatformIcon platform={form.platform} className="h-5 w-5 text-blue-400" />
+                Create {INTEGRATIONS.find((i) => i.platform === form.platform)?.name ?? form.platform} Feed
+              </span>
+            )}
           </DialogTitle>
 
           <div className="space-y-4">
+            {/* Platform selection cards (create mode only) */}
+            {!editingFeed && (
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium uppercase tracking-widest text-gray-400">
+                  Platform
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {INTEGRATIONS.filter((i) => i.status === "available" || i.status === "coming_soon").map((integration) => {
+                    const isSelected = form.platform === integration.platform;
+                    const isDisabled = integration.status !== "available";
+                    return (
+                      <button
+                        key={integration.id}
+                        type="button"
+                        disabled={isDisabled}
+                        onClick={() =>
+                          setForm((p) => ({
+                            ...p,
+                            platform: integration.platform,
+                            delivery_type: PLATFORM_DELIVERY[integration.platform] ?? "mcp",
+                          }))
+                        }
+                        className={`relative flex items-center gap-3 rounded-lg border px-3 py-3 text-left text-sm transition-all ${
+                          isSelected
+                            ? "border-blue-500 bg-blue-600/10 text-gray-50"
+                            : isDisabled
+                              ? "cursor-not-allowed border-gray-800 bg-gray-900/50 text-gray-500"
+                              : "border-gray-700 bg-gray-900 text-gray-300 hover:border-gray-600 hover:bg-gray-800"
+                        }`}
+                      >
+                        <PlatformIcon platform={integration.platform} className="h-5 w-5 flex-shrink-0" />
+                        <span className="font-medium">{integration.name}</span>
+                        {isDisabled && (
+                          <span className="ml-auto inline-flex items-center rounded-md bg-yellow-600/20 px-1.5 py-0.5 text-[10px] font-medium text-yellow-400 border border-yellow-500/30">
+                            Coming Soon
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Name */}
             <Input
               label="Name"
@@ -458,27 +562,6 @@ export function FeedsPage() {
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
               required
             />
-
-            {/* Platform */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-medium uppercase tracking-widest text-gray-400">
-                Platform
-              </label>
-              <select
-                className="flex h-9 w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-50 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50"
-                value={form.platform}
-                onChange={(e) => {
-                  const platform = e.target.value;
-                  setForm((p) => ({
-                    ...p,
-                    platform,
-                    delivery_type: PLATFORM_DELIVERY[platform] ?? "mcp",
-                  }));
-                }}
-              >
-                <option value="slack">Slack</option>
-              </select>
-            </div>
 
             {/* Direction */}
             <div className="space-y-1.5">

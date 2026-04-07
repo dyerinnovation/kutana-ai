@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, type FormEvent } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import type { Agent, AgentKey, KeyCreateResponse } from "@/types";
 import {
   getAgent,
@@ -110,31 +110,6 @@ export function AgentDetailPage() {
     navigator.clipboard.writeText(text);
     setCopiedField(field);
     setTimeout(() => setCopiedField(null), 2000);
-  }
-
-  function getMcpConfig(rawKey?: string): string {
-    return JSON.stringify(
-      {
-        mcpServers: {
-          kutana: {
-            type: "streamableHttp",
-            url: "https://kutana.spark-b0f2.local/mcp",
-            headers: {
-              Authorization: `Bearer ${rawKey ?? "${KUTANA_API_KEY}"}`,
-            },
-          },
-        },
-      },
-      null,
-      2
-    );
-  }
-
-  function getEnvSetup(rawKey?: string): string {
-    return [
-      "# Set this environment variable, then restart Claude Code:",
-      `export KUTANA_API_KEY=${rawKey ?? "cvn_..."}`,
-    ].join("\n");
   }
 
   if (isLoading) {
@@ -320,67 +295,67 @@ export function AgentDetailPage() {
         </CardContent>
       </Card>
 
-      {/* MCP Configuration */}
+      {/* Connect to Kutana */}
       <Card>
         <CardHeader>
           <CardTitle>Connect to Kutana</CardTitle>
           <p className="text-sm text-gray-400">
-            Add the Kutana MCP server to your Claude Code or MCP client settings.
-            Your API key authenticates requests — no Docker or server setup required.
+            Choose an integration method to connect your agent. Your API key
+            authenticates requests — no Docker or server setup required.
           </p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <h4 className="text-sm font-medium text-gray-400 mb-1">
-              1. Add to <code className="text-xs bg-gray-800 px-1 py-0.5 rounded">~/.claude/settings.json</code>
-            </h4>
-            <p className="text-xs text-gray-500 mb-2">
-              The capabilities you configured above control what this agent can do. Your API key is what connects it.
-            </p>
-            <div className="relative">
-              <pre className="overflow-x-auto rounded-lg bg-gray-950 border border-gray-800 p-4 text-sm font-mono text-gray-300">
-                {getMcpConfig(newKey?.raw_key)}
-              </pre>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="absolute top-2 right-2"
-                onClick={() =>
-                  copyToClipboard(getMcpConfig(newKey?.raw_key), "mcp_config")
-                }
-              >
-                {copiedField === "mcp_config" ? "Copied!" : "Copy"}
-              </Button>
-            </div>
-            {!newKey && (
-              <p className="mt-2 text-xs text-gray-500">
-                Generate an API key above to see your key pre-filled in the config.
-              </p>
-            )}
-          </div>
-          <div>
-            <h4 className="text-sm font-medium text-gray-400 mb-2">
-              2. Set your API key environment variable
-            </h4>
-            <div className="relative">
-              <pre className="overflow-x-auto rounded-lg bg-gray-950 border border-gray-800 p-4 text-sm font-mono text-gray-300">
-                {getEnvSetup(newKey?.raw_key)}
-              </pre>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="absolute top-2 right-2"
-                onClick={() =>
-                  copyToClipboard(getEnvSetup(newKey?.raw_key), "env_setup")
-                }
-              >
-                {copiedField === "env_setup" ? "Copied!" : "Copy"}
-              </Button>
-            </div>
-          </div>
-          <div className="rounded-lg border border-gray-800 bg-gray-900/50 px-4 py-3 text-sm text-gray-400">
-            <p className="font-medium text-gray-300 mb-1">Then in Claude Code:</p>
-            <p>Open a new session and say <span className="font-mono text-blue-400">"Join the meeting on Kutana"</span></p>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card className="border-gray-800 bg-gray-900/50">
+              <CardHeader>
+                <CardTitle className="text-base">Claude Code</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-400 mb-4">
+                  Connect via the channel server integration for Claude Code
+                  agents.
+                </p>
+                <Link to="/docs/connecting-agents/claude-code-channel">
+                  <Button variant="outline" size="sm" className="w-full">
+                    View Guide
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card className="border-gray-800 bg-gray-900/50">
+              <CardHeader>
+                <CardTitle className="text-base">OpenClaw</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-400 mb-4">
+                  Use the OpenClaw skill to connect agents with built-in meeting
+                  capabilities.
+                </p>
+                <Link to="/docs/connecting-agents/kutana-skill">
+                  <Button variant="outline" size="sm" className="w-full">
+                    View Guide
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card className="border-gray-800 bg-gray-900/50">
+              <CardHeader>
+                <CardTitle className="text-base">Other Agents (MCP)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-400 mb-4">
+                  Connect any MCP-compatible agent using the generic quickstart
+                  guide.
+                </p>
+                <Link to="/docs/connecting-agents/mcp-quickstart">
+                  <Button variant="outline" size="sm" className="w-full">
+                    View Guide
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
           </div>
         </CardContent>
       </Card>
