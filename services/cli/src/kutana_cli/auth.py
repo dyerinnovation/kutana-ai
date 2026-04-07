@@ -8,7 +8,7 @@ from typing import Any
 import click
 
 from kutana_cli.client import KutanaClient
-from kutana_cli.config import get_api_url, load_config, save_config
+from kutana_cli.config import discover_endpoints, get_api_url, load_config, save_config
 from kutana_cli.output import output, print_error
 
 
@@ -33,6 +33,15 @@ def login(ctx: click.Context, url: str, api_key: str) -> None:
     config["url"] = url.rstrip("/")
     config["api_key"] = api_key
 
+    # Discover API and WebSocket endpoints
+    try:
+        endpoints = asyncio.run(discover_endpoints(url))
+        config["api_url"] = endpoints["api_url"]
+        config["ws_url"] = endpoints["ws_url"]
+    except Exception as exc:
+        print_error(f"Endpoint discovery failed: {exc}")
+        return  # unreachable -- print_error exits
+
     api_url = get_api_url(config)
 
     try:
@@ -47,6 +56,8 @@ def login(ctx: click.Context, url: str, api_key: str) -> None:
         {
             "status": "authenticated",
             "url": config["url"],
+            "api_url": config.get("api_url"),
+            "ws_url": config.get("ws_url"),
             "api_key": _mask_key(api_key),
             "agent_config_id": result.get("agent_config_id"),
             "name": result.get("name"),

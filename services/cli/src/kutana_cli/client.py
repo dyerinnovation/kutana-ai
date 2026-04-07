@@ -26,7 +26,7 @@ class KutanaClient:
     if no valid token is cached.
 
     Attributes:
-        base_url: API server base URL (e.g. ``https://dev.kutana.ai/api``).
+        base_url: API server base URL (e.g. ``https://api.kutana.ai``).
         api_key: Agent API key.
     """
 

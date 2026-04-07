@@ -68,6 +68,109 @@ export function loadConfig(): ChannelServerConfig {
 }
 
 // ---------------------------------------------------------------------------
+// Endpoint discovery
+// ---------------------------------------------------------------------------
+
+interface DiscoveredEndpoints {
+  api: string;
+  ws: string;
+}
+
+/**
+ * Fetch endpoint URLs from a well-known discovery document.
+ *
+ * Tries `{baseUrl}/.well-known/kutana.json` first; on failure falls back
+ * to a convention-based derivation (prepend `api.` / `ws.` to the domain).
+ */
+async function discoverEndpoints(
+  baseUrl: string,
+): Promise<DiscoveredEndpoints> {
+  const discoveryUrl = `${baseUrl.replace(/\/+$/, "")}/.well-known/kutana.json`;
+
+  try {
+    const resp = await fetch(discoveryUrl, {
+      signal: AbortSignal.timeout(5_000),
+    });
+
+    if (resp.ok) {
+      const data = (await resp.json()) as DiscoveredEndpoints;
+      process.stderr.write(
+        `[channel-server] Discovery: api=${data.api}, ws=${data.ws}\n`,
+      );
+      return data;
+    }
+
+    process.stderr.write(
+      `[channel-server] Discovery failed (${resp.status.toString()}), using convention fallback\n`,
+    );
+  } catch (err) {
+    process.stderr.write(
+      `[channel-server] Discovery fetch error: ${String(err)}, using convention fallback\n`,
+    );
+  }
+
+  // Convention fallback: prepend api./ws. to the domain
+  return conventionFallback(baseUrl);
+}
+
+/** Derive API and WS URLs by prepending `api.` / `ws.` to the domain. */
+function conventionFallback(baseUrl: string): DiscoveredEndpoints {
+  const url = new URL(baseUrl);
+  const apiScheme = url.protocol; // "https:" or "http:"
+  const wsScheme = url.protocol === "https:" ? "wss:" : "ws:";
+
+  const api = `${apiScheme}//api.${url.host}`;
+  const ws = `${wsScheme}//ws.${url.host}`;
+
+  process.stderr.write(
+    `[channel-server] Convention fallback: api=${api}, ws=${ws}\n`,
+  );
+  return { api, ws };
+}
+
+/**
+ * Resolve final endpoint URLs via discovery.
+ *
+ * Call this after `loadConfig()` but before authenticating.
+ * Mutates the config in place.
+ *
+ * **Precedence:**
+ * 1. Explicit env vars (`KUTANA_HTTP_URL`, `KUTANA_API_URL`) — highest, skip discovery
+ * 2. Discovery from `{KUTANA_URL}/.well-known/kutana.json`
+ * 3. Convention fallback (prepend `api.`/`ws.` to domain)
+ * 4. Local defaults (`http://localhost:8000`, `ws://localhost:8003`) — already set by loadConfig
+ */
+export async function resolveEndpoints(
+  config: ChannelServerConfig,
+): Promise<void> {
+  const hasExplicitHttp = !!process.env["KUTANA_HTTP_URL"];
+  const hasExplicitWs = !!process.env["KUTANA_API_URL"];
+  const baseUrl = process.env["KUTANA_URL"] ?? "";
+
+  // If both explicit URLs are set, skip discovery entirely
+  if (hasExplicitHttp && hasExplicitWs) {
+    process.stderr.write(
+      "[channel-server] Explicit KUTANA_HTTP_URL and KUTANA_API_URL set, skipping discovery\n",
+    );
+    return;
+  }
+
+  // No base URL to discover from — keep loadConfig defaults
+  if (!baseUrl) {
+    return;
+  }
+
+  const endpoints = await discoverEndpoints(baseUrl);
+
+  if (!hasExplicitHttp) {
+    config.kutanaHttpUrl = endpoints.api;
+  }
+  if (!hasExplicitWs) {
+    config.kutanaApiUrl = endpoints.ws;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 

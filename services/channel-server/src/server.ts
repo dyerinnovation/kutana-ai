@@ -27,7 +27,7 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import type { ServerCapabilities } from "@modelcontextprotocol/sdk/types.js";
 import { KutanaClient } from "./kutana-client.js";
-import { loadConfig } from "./config.js";
+import { loadConfig, resolveEndpoints } from "./config.js";
 import { registerTools } from "./tools.js";
 import {
   registerResources,
@@ -131,6 +131,9 @@ async function main(): Promise<void> {
   if (!config.tlsRejectUnauthorized) {
     process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
   }
+
+  // Resolve endpoints via discovery before creating the client
+  await resolveEndpoints(config);
 
   const { server, client } = createServer(config);
 

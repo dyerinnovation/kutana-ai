@@ -22,7 +22,7 @@ spec:
     - host: {{ .Values.ingress.host }}
       http:
         paths:
-          # API Server — /api/...
+          # API Server — /api/... (legacy path, rewrites to strip /api)
           - path: /api(/|$)(.*)
             pathType: ImplementationSpecific
             backend:
@@ -46,6 +46,38 @@ spec:
                 name: mcp-server
                 port:
                   number: 3001
+---
+# Direct /v1 route — no rewrite needed since api-server mounts routes at /v1.
+# Separate Ingress because the main internal ingress uses rewrite-target: /$2
+# which would strip the /v1 prefix.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "kutana.fullname" . }}-v1
+  labels:
+    {{- include "kutana.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host }}
+      secretName: {{ .Values.ingress.tls.secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: /v1
+            pathType: Prefix
+            backend:
+              service:
+                name: api-server
+                port:
+                  number: 8000
 ---
 {{- if .Values.ingress.publicHosts }}
 # Public API subdomain — api-dev.kutana.ai → api-server at root (no /api rewrite).
