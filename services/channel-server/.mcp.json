@@ -4,8 +4,7 @@
       "command": "bun",
       "args": ["./src/server.ts"],
       "env": {
-        "KUTANA_API_URL": "ws://localhost:8003",
-        "KUTANA_HTTP_URL": "http://localhost:8000",
+        "KUTANA_URL": "http://localhost:8000",
         "KUTANA_MEETING_ID": "",
         "KUTANA_AGENT_NAME": "Claude Code",
         "KUTANA_BEARER_TOKEN": ""

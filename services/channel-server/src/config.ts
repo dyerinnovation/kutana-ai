@@ -37,11 +37,14 @@ export interface ChannelServerConfig {
  * are non-empty before starting the server.
  */
 export function loadConfig(): ChannelServerConfig {
-  const rawApiUrl = process.env["KUTANA_API_URL"] ?? "ws://localhost:8003";
+  const rawBaseUrl = process.env["KUTANA_URL"] ?? "";
+  const rawApiUrl =
+    process.env["KUTANA_API_URL"] ??
+    (rawBaseUrl ? deriveWsUrl(rawBaseUrl) : "ws://localhost:8003");
 
-  // Derive HTTP URL: prefer explicit override, otherwise convert ws:// → http://
+  // Derive HTTP URL: KUTANA_HTTP_URL > KUTANA_URL > derived from WS URL
   const rawHttpUrl =
-    process.env["KUTANA_HTTP_URL"] ?? deriveHttpUrl(rawApiUrl);
+    process.env["KUTANA_HTTP_URL"] ?? (rawBaseUrl || deriveHttpUrl(rawApiUrl));
 
   const rawMode = process.env["KUTANA_AGENT_MODE"] ?? "both";
   const agentMode = parseAgentMode(rawMode);
@@ -67,6 +70,14 @@ export function loadConfig(): ChannelServerConfig {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function deriveWsUrl(httpUrl: string): string {
+  return (
+    httpUrl
+      .replace(/^https:\/\//, "wss://")
+      .replace(/^http:\/\//, "ws://") + "/ws"
+  );
+}
 
 function deriveHttpUrl(wsUrl: string): string {
   // ws://host:port → http://host:port
