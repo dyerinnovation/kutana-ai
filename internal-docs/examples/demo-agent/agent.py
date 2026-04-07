@@ -6,8 +6,8 @@ with tool use to respond intelligently.
 
 Usage:
     export ANTHROPIC_API_KEY=sk-ant-...
-    export CONVENE_API_KEY=cvn_...
-    export CONVENE_API_URL=http://localhost:8000
+    export KUTANA_API_KEY=ktn_...
+    export KUTANA_API_URL=http://localhost:8000
     python agent.py --meeting-id <uuid>
 """
 
@@ -85,7 +85,7 @@ class DemoAgent:
     Attributes:
         meeting_id: UUID of the meeting to join.
         kutana_api_url: Base URL of the Kutana AI API server.
-        kutana_api_key: Agent API key (cvn_...) for token exchange.
+        kutana_api_key: Agent API key (ktn_...) for token exchange.
         gateway_url: WebSocket URL of the agent gateway.
         anthropic_api_key: Anthropic API key for Claude.
     """
@@ -397,13 +397,13 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--api-url",
-        default=os.environ.get("CONVENE_API_URL", "http://localhost:8000"),
-        help="Kutana AI API server URL (default: $CONVENE_API_URL or http://localhost:8000)",
+        default=os.environ.get("KUTANA_API_URL", "http://localhost:8000"),
+        help="Kutana AI API server URL (default: $KUTANA_API_URL or http://localhost:8000)",
     )
     parser.add_argument(
         "--gateway-url",
-        default=os.environ.get("CONVENE_GATEWAY_URL", "ws://localhost:8003"),
-        help="Agent gateway WebSocket URL (default: $CONVENE_GATEWAY_URL or ws://localhost:8003)",
+        default=os.environ.get("KUTANA_GATEWAY_URL", "ws://localhost:8003"),
+        help="Agent gateway WebSocket URL (default: $KUTANA_GATEWAY_URL or ws://localhost:8003)",
     )
     return parser.parse_args()
 
@@ -413,17 +413,17 @@ async def main() -> None:
     args = _parse_args()
 
     anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    kutana_api_key = os.environ.get("CONVENE_API_KEY", "")
+    kutana_api_key = os.environ.get("KUTANA_API_KEY", "")
 
     if not anthropic_api_key:
         print("ANTHROPIC_API_KEY is not set. Export it before running.")
         sys.exit(1)
     if not kutana_api_key:
         print(
-            "CONVENE_API_KEY is not set.\n"
+            "KUTANA_API_KEY is not set.\n"
             "Generate one via the dashboard or API:\n"
             "  POST /api/v1/agents/{id}/keys\n"
-            "Then: export CONVENE_API_KEY=cvn_..."
+            "Then: export KUTANA_API_KEY=ktn_..."
         )
         sys.exit(1)
 

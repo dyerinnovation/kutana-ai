@@ -31,8 +31,8 @@ capabilities:
   - chat
   - context
 requires:
-  - env: CONVENE_API_KEY
-  - env: CONVENE_API_URL
+  - env: KUTANA_API_KEY
+  - env: KUTANA_API_URL
 mcp_compatible: true
 frameworks: [openclaw, claude-agent-sdk, generic]
 ---

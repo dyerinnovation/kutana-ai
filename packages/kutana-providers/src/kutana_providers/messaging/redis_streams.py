@@ -330,7 +330,7 @@ class RedisStreamsMessageBus(MessageBus):
 def create_message_bus_from_env() -> MessageBus:
     """Create a MessageBus instance from environment variables.
 
-    Reads ``CONVENE_MESSAGE_BUS`` to select the backend provider, then reads
+    Reads ``KUTANA_MESSAGE_BUS`` to select the backend provider, then reads
     provider-specific environment variables to configure it.
 
     Supported backends:
@@ -358,12 +358,12 @@ def create_message_bus_from_env() -> MessageBus:
         A configured MessageBus provider instance.
 
     Raises:
-        ValueError: If ``CONVENE_MESSAGE_BUS`` names an unsupported backend.
+        ValueError: If ``KUTANA_MESSAGE_BUS`` names an unsupported backend.
     """
     import os
 
 
-    backend = os.getenv("CONVENE_MESSAGE_BUS", "redis").lower()
+    backend = os.getenv("KUTANA_MESSAGE_BUS", "redis").lower()
 
     if backend == "redis":
         redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -397,7 +397,7 @@ def create_message_bus_from_env() -> MessageBus:
 
     supported = ", ".join(["redis", "aws-sns-sqs", "gcp-pubsub", "nats"])
     msg = (
-        f"Unsupported CONVENE_MESSAGE_BUS value: {backend!r}. "
+        f"Unsupported KUTANA_MESSAGE_BUS value: {backend!r}. "
         f"Supported backends: {supported}"
     )
     raise ValueError(msg)

@@ -18,7 +18,7 @@
 version: "3.9"
 
 x-common-env: &common-env
-  CONVENE_MESSAGE_BUS: aws-sns-sqs
+  KUTANA_MESSAGE_BUS: aws-sns-sqs
   AWS_REGION: ${AWS_REGION:-us-east-1}
   AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
   AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}

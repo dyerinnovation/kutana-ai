@@ -15,7 +15,7 @@ class MessageBus(ABC):
     Implementations support publish/subscribe semantics with optional consumer
     group load balancing and at-least-once delivery acknowledgment. Services
     depend only on this interface; the concrete backend is resolved at startup
-    from the ``CONVENE_MESSAGE_BUS`` environment variable via the provider
+    from the ``KUTANA_MESSAGE_BUS`` environment variable via the provider
     registry.
 
     Example:

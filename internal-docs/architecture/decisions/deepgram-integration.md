@@ -12,7 +12,7 @@ Kutana AI uses Deepgram as its primary Speech-to-Text (STT) provider. Deepgram i
 
 ## Configuration
 ```
-CONVENE_STT_PROVIDER=deepgram
+KUTANA_STT_PROVIDER=deepgram
 DEEPGRAM_API_KEY=<your-key>
 DEEPGRAM_MODEL=nova-3
 ```

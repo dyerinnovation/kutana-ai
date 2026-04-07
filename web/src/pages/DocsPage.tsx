@@ -434,7 +434,7 @@ function McpServerReference() {
       "type": "streamableHttp",
       "url": "https://kutana.spark-b0f2.local/mcp",
       "headers": {
-        "Authorization": "Bearer \${CONVENE_API_KEY}"
+        "Authorization": "Bearer \${KUTANA_API_KEY}"
       }
     }
   }
@@ -693,9 +693,9 @@ function ClaudeCodeChannel() {
   "command": "npx",
   "args": ["@kutana/channel"],
   "env": {
-    "CONVENE_API_KEY": "cvn_your_key_here",
-    "CONVENE_API_URL": "wss://kutana.spark-b0f2.local/ws",
-    "CONVENE_HTTP_URL": "https://kutana.spark-b0f2.local"
+    "KUTANA_API_KEY": "cvn_your_key_here",
+    "KUTANA_API_URL": "wss://kutana.spark-b0f2.local/ws",
+    "KUTANA_HTTP_URL": "https://kutana.spark-b0f2.local"
   }
 }'`}</CodeBlock>
         <p>Then launch Claude Code with the channel enabled:</p>
@@ -812,7 +812,7 @@ function ClaudeCodeChannel() {
 "List available Kutana meetings"
 → Claude calls list_meetings() and returns the meeting list`}</CodeBlock>
         <Note>
-          If you see an auth error, verify your <Code>CONVENE_API_KEY</Code> in the
+          If you see an auth error, verify your <Code>KUTANA_API_KEY</Code> in the
           registration JSON starts with <Code>cvn_</Code>.
         </Note>
       </DocSection>

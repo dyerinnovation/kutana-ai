@@ -6,17 +6,17 @@
 #   ./scripts/connect.sh --id <meeting_uuid>    # join by ID
 #
 # Required env vars:
-#   CONVENE_API_KEY   — API key from the Kutana dashboard
-#   CONVENE_URL       — Base URL (default: https://kutana.spark-b0f2.local)
+#   KUTANA_API_KEY   — API key from the Kutana dashboard
+#   KUTANA_URL       — Base URL (default: https://kutana.spark-b0f2.local)
 
 set -euo pipefail
 
-CONVENE_URL="${CONVENE_URL:-https://kutana.spark-b0f2.local}"
-MCP_URL="${CONVENE_URL}/mcp"
+KUTANA_URL="${KUTANA_URL:-https://kutana.spark-b0f2.local}"
+MCP_URL="${KUTANA_URL}/mcp"
 
-if [[ -z "${CONVENE_API_KEY:-}" ]]; then
-  echo "Error: CONVENE_API_KEY is not set." >&2
-  echo "  export CONVENE_API_KEY=cvn_..." >&2
+if [[ -z "${KUTANA_API_KEY:-}" ]]; then
+  echo "Error: KUTANA_API_KEY is not set." >&2
+  echo "  export KUTANA_API_KEY=cvn_..." >&2
   exit 1
 fi
 
@@ -49,13 +49,13 @@ fi
 # ── Step 1: Exchange API key for MCP JWT ────────────────────────────────────
 echo "Authenticating with Kutana API..."
 TOKEN_RESPONSE=$(curl -sf -X POST \
-  "${CONVENE_URL}/api/v1/token/mcp" \
-  -H "X-API-Key: ${CONVENE_API_KEY}" \
+  "${KUTANA_URL}/api/v1/token/mcp" \
+  -H "X-API-Key: ${KUTANA_API_KEY}" \
   -H "Content-Type: application/json")
 
 MCP_TOKEN=$(echo "$TOKEN_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])" 2>/dev/null || true)
 if [[ -z "$MCP_TOKEN" ]]; then
-  echo "Error: Failed to obtain MCP token. Check CONVENE_API_KEY and CONVENE_URL." >&2
+  echo "Error: Failed to obtain MCP token. Check KUTANA_API_KEY and KUTANA_URL." >&2
   echo "Response: $TOKEN_RESPONSE" >&2
   exit 1
 fi

@@ -24,7 +24,7 @@ API_KEY=$(curl -s -X POST "https://kutana.spark-b0f2.local/api/v1/agents/$AGENT_
 ### Step 2: Set Environment Variable
 
 ```bash
-export CONVENE_API_KEY=cvn_...
+export KUTANA_API_KEY=cvn_...
 ```
 
 ### Step 3: Add to MCP Client Config
@@ -36,7 +36,7 @@ export CONVENE_API_KEY=cvn_...
       "type": "streamableHttp",
       "url": "https://kutana.spark-b0f2.local/mcp",
       "headers": {
-        "Authorization": "Bearer ${CONVENE_API_KEY}"
+        "Authorization": "Bearer ${KUTANA_API_KEY}"
       }
     }
   }
@@ -49,7 +49,7 @@ For SDK-based agents that need a short-lived JWT, exchange the API key:
 
 ```bash
 MCP_TOKEN=$(curl -s https://kutana.spark-b0f2.local/api/v1/token/mcp \
-  -H "X-API-Key: $CONVENE_API_KEY" \
+  -H "X-API-Key: $KUTANA_API_KEY" \
   | jq -r '.token')
 ```
 

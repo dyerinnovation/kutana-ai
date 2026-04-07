@@ -59,7 +59,7 @@ them via `kutana_get_meeting_events`.
       "type": "http",
       "url": "http://kutana.spark-b0f2.local/mcp",
       "headers": {
-        "Authorization": "Bearer ${CONVENE_API_KEY}"
+        "Authorization": "Bearer ${KUTANA_API_KEY}"
       }
     }
   }
@@ -75,21 +75,21 @@ For local development:
       "type": "http",
       "url": "http://localhost:3001/mcp",
       "headers": {
-        "Authorization": "Bearer ${CONVENE_API_KEY}"
+        "Authorization": "Bearer ${KUTANA_API_KEY}"
       }
     }
   }
 }
 ```
 
-The `CONVENE_API_KEY` environment variable must be set in the shell where Claude Code launches.
+The `KUTANA_API_KEY` environment variable must be set in the shell where Claude Code launches.
 
 ### Environment Variables
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `CONVENE_API_KEY` | Workspace API key from dashboard | `cvn_live_abc123...` |
-| `CONVENE_MCP_URL` | MCP server URL (optional override) | `http://localhost:3001/mcp` |
+| `KUTANA_API_KEY` | Workspace API key from dashboard | `cvn_live_abc123...` |
+| `KUTANA_MCP_URL` | MCP server URL (optional override) | `http://localhost:3001/mcp` |
 
 ---
 
@@ -297,7 +297,7 @@ messages = await mcp.call_tool("kutana_get_channel_messages", {
 
 ```bash
 # Add to your shell profile
-export CONVENE_API_KEY="cvn_live_..."
+export KUTANA_API_KEY="cvn_live_..."
 ```
 
 Then add the MCP server to `~/.claude/settings.json`:
@@ -309,7 +309,7 @@ Then add the MCP server to `~/.claude/settings.json`:
       "type": "http",
       "url": "http://kutana.spark-b0f2.local/mcp",
       "headers": {
-        "Authorization": "Bearer ${CONVENE_API_KEY}"
+        "Authorization": "Bearer ${KUTANA_API_KEY}"
       }
     }
   }
@@ -376,7 +376,7 @@ Any MCP-compatible tool or plugin can integrate with Kutana using the same patte
 5. Call `kutana_leave_meeting` on cleanup
 
 For OpenClaw plugins specifically, set `mcp_compatible: true` in your skill frontmatter and
-reference the MCP server URL as `"${CONVENE_MCP_URL:-http://localhost:3001/mcp}"`.
+reference the MCP server URL as `"${KUTANA_MCP_URL:-http://localhost:3001/mcp}"`.
 
 ---
 

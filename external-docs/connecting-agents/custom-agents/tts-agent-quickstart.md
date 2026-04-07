@@ -23,7 +23,7 @@ Each TTS-enabled agent gets a distinct voice from the voice pool, so multiple ag
 
 ```bash
 pip install claude-agent-sdk
-export CONVENE_API_KEY="cvn_..."
+export KUTANA_API_KEY="cvn_..."
 export ANTHROPIC_API_KEY="sk-ant-..."
 ```
 
@@ -39,7 +39,7 @@ async def main():
             mcp_servers=[
                 MCPServerConfig(
                     url="http://kutana.spark-b0f2.local/mcp",
-                    headers={"Authorization": f"Bearer {os.environ['CONVENE_API_KEY']}"},
+                    headers={"Authorization": f"Bearer {os.environ['KUTANA_API_KEY']}"},
                 ),
             ],
         ),

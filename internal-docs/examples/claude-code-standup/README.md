@@ -28,7 +28,7 @@ A step-by-step demo showing Claude Code joining a Kutana AI standup meeting as a
 Add to your shell profile (`~/.zshrc` or `~/.bashrc`):
 
 ```bash
-export CONVENE_API_KEY="cvn_your_key_here"
+export KUTANA_API_KEY="cvn_your_key_here"
 ```
 
 Reload your shell:
@@ -48,7 +48,7 @@ Edit `~/.claude/settings.json` and add the `kutana` entry under `mcpServers`:
       "type": "http",
       "url": "http://kutana.spark-b0f2.local/mcp",
       "headers": {
-        "Authorization": "Bearer ${CONVENE_API_KEY}"
+        "Authorization": "Bearer ${KUTANA_API_KEY}"
       }
     }
   }
@@ -327,7 +327,7 @@ The agent tile updates in real time — a green pulse ring appears when the agen
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
 | `kutana` not listed in `/mcp` | Settings not saved or Claude Code not restarted | Save `settings.json` and restart |
-| `401 Unauthorized` on tool calls | API key not set or expired | Re-export `CONVENE_API_KEY` |
+| `401 Unauthorized` on tool calls | API key not set or expired | Re-export `KUTANA_API_KEY` |
 | Agent not visible in participant grid | Agent gateway not running | Check `kubectl logs -n kutana deploy/agent-gateway` |
 | `tts_not_enabled` error on start_speaking | Joined without `tts_enabled` capability | Leave and rejoin with `capabilities=["text_only", "tts_enabled"]` |
 | Cue never detected | Transcript polling too slow | Decrease poll interval; check STT pipeline is running |

@@ -8,8 +8,8 @@ data:
   DATABASE_URL: {{ include "kutana.databaseUrl" . | quote }}
   DATABASE_URL_SYNC: {{ include "kutana.databaseUrlSync" . | quote }}
   REDIS_URL: {{ include "kutana.redisUrl" . | quote }}
-  CONVENE_DOMAIN: {{ .Values.global.domain | quote }}
-  CONVENE_MESSAGE_BUS: "redis"
+  KUTANA_DOMAIN: {{ .Values.global.domain | quote }}
+  KUTANA_MESSAGE_BUS: "redis"
   STT_PROVIDER: "deepgram"
   LOG_LEVEL: "info"
   CORS_ORIGINS: {{ .Values.apiServer.corsOrigins | default "http://localhost:3000,http://localhost:5173,https://dev.kutana.ai,https://kutana.spark-b0f2.local" | quote }}
@@ -25,7 +25,7 @@ data:
   AGENT_GATEWAY_TTS_PROVIDER: {{ .Values.agentGateway.ttsProvider | default "cartesia" | quote }}
   AGENT_GATEWAY_TTS_CARTESIA_API_KEY: {{ .Values.agentGateway.ttsCartesiaApiKey | default "" | quote }}
   # Worker (feed dispatcher/runner)
-  CONVENE_MCP_URL: "http://mcp-server.{{ .Release.Namespace }}.svc:3001/"
+  KUTANA_MCP_URL: "http://mcp-server.{{ .Release.Namespace }}.svc:3001/"
   # Object storage (S3-compatible — MinIO in dev, cloud in prod)
   STORAGE_PROVIDER: {{ .Values.storage.provider | default "s3" | quote }}
   STORAGE_ENDPOINT: "http://minio.{{ .Release.Namespace }}.svc:9000"

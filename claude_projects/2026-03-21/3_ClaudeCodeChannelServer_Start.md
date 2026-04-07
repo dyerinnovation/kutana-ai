@@ -17,7 +17,7 @@ services/channel-server/
 ├── .mcp.json                  # MCP server registration for Claude Code
 ├── src/
 │   ├── types.ts               # TypeScript types (mirrors Python kutana-core types)
-│   ├── config.ts              # Config from env vars (CONVENE_API_URL, API_KEY, etc.)
+│   ├── config.ts              # Config from env vars (KUTANA_API_URL, API_KEY, etc.)
 │   ├── kutana-client.ts      # WebSocket client → agent gateway (auth, join, listen)
 │   ├── tools.ts               # MCP tools: reply, accept_task, update_status, etc.
 │   ├── resources.ts           # MCP resources: platform context, meeting context
@@ -51,17 +51,17 @@ services/channel-server/
 | `transcript` | Transcript segments only |
 | `insights` | Extracted entities only |
 | `both` | Both transcript + entities |
-| `selective` | Entities matching `CONVENE_ENTITY_FILTER` only |
+| `selective` | Entities matching `KUTANA_ENTITY_FILTER` only |
 
 ## Environment Variables
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CONVENE_API_URL` | `ws://localhost:8003` | Agent gateway WebSocket URL |
-| `CONVENE_HTTP_URL` | `http://localhost:8000` | API server HTTP URL (for auth) |
-| `CONVENE_API_KEY` | (required) | Agent API key |
-| `CONVENE_MEETING_ID` | (required) | Meeting UUID to join |
-| `CONVENE_AGENT_MODE` | `both` | `transcript\|insights\|both\|selective` |
-| `CONVENE_ENTITY_FILTER` | `` | Comma-separated entity types for selective mode |
+| `KUTANA_API_URL` | `ws://localhost:8003` | Agent gateway WebSocket URL |
+| `KUTANA_HTTP_URL` | `http://localhost:8000` | API server HTTP URL (for auth) |
+| `KUTANA_API_KEY` | (required) | Agent API key |
+| `KUTANA_MEETING_ID` | (required) | Meeting UUID to join |
+| `KUTANA_AGENT_MODE` | `both` | `transcript\|insights\|both\|selective` |
+| `KUTANA_ENTITY_FILTER` | `` | Comma-separated entity types for selective mode |
 
 ## MCP Tools
 | Tool | Description |
@@ -82,8 +82,8 @@ services/channel-server/
 ## Recovery Notes (if Claude disconnects)
 - Recreate `services/channel-server/` directory
 - Follow architecture above: types → config → kutana-client → tools → resources → server
-- Key protocol: WebSocket to `{CONVENE_API_URL}/agent/connect?token={jwt}`, send `join_meeting`
+- Key protocol: WebSocket to `{KUTANA_API_URL}/agent/connect?token={jwt}`, send `join_meeting`
 - Tools use `server.setRequestHandler(ListToolsRequestSchema/CallToolRequestSchema, ...)`
 - Resources use `server.setRequestHandler(ListResourcesRequestSchema/ReadResourceRequestSchema, ...)`
-- Channel notifications via `server.notification({ method: "notifications/message", params: { level: "info", logger: "convene/{topic}", data: content } })`
+- Channel notifications via `server.notification({ method: "notifications/message", params: { level: "info", logger: "kutana/{topic}", data: content } })`
 - Type-check: `bun run tsc --noEmit`; Tests: `bun run vitest`

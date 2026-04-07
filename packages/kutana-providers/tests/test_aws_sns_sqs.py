@@ -406,7 +406,7 @@ class TestCreateFromEnvAWS:
 
     def test_create_sqs_bus_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """create_message_bus_from_env() returns SQSMessageBus for aws-sns-sqs."""
-        monkeypatch.setenv("CONVENE_MESSAGE_BUS", "aws-sns-sqs")
+        monkeypatch.setenv("KUTANA_MESSAGE_BUS", "aws-sns-sqs")
         monkeypatch.setenv("AWS_REGION", "eu-west-1")
         monkeypatch.delenv("AWS_ACCESS_KEY_ID", raising=False)
         monkeypatch.delenv("AWS_SECRET_ACCESS_KEY", raising=False)
@@ -420,7 +420,7 @@ class TestCreateFromEnvAWS:
 
     def test_create_nats_bus_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """create_message_bus_from_env() returns NATSMessageBus for nats."""
-        monkeypatch.setenv("CONVENE_MESSAGE_BUS", "nats")
+        monkeypatch.setenv("KUTANA_MESSAGE_BUS", "nats")
         monkeypatch.setenv("NATS_URL", "nats://myhost:4222")
 
         from kutana_providers.messaging.nats_jetstream import NATSMessageBus
@@ -434,7 +434,7 @@ class TestCreateFromEnvAWS:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """create_message_bus_from_env() raises ValueError for unknown backend."""
-        monkeypatch.setenv("CONVENE_MESSAGE_BUS", "rabbit-mq")
+        monkeypatch.setenv("KUTANA_MESSAGE_BUS", "rabbit-mq")
 
         from kutana_providers.messaging.redis_streams import create_message_bus_from_env
 

@@ -291,7 +291,7 @@ class TestCreateFromEnvGCP:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """create_message_bus_from_env() returns PubSubMessageBus for gcp-pubsub."""
-        monkeypatch.setenv("CONVENE_MESSAGE_BUS", "gcp-pubsub")
+        monkeypatch.setenv("KUTANA_MESSAGE_BUS", "gcp-pubsub")
         monkeypatch.setenv("GCP_PROJECT_ID", "my-gcp-project")
 
         from kutana_providers.messaging.gcp_pubsub import PubSubMessageBus

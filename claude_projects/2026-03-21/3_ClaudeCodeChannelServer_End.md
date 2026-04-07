@@ -10,8 +10,8 @@
   `GatewayMessage`, `ChannelMessage`, `AgentMode`, `EntityType`.
 
 - **`src/config.ts`** — `ChannelServerConfig` interface and `loadConfig()` reading from env vars
-  (`CONVENE_API_URL`, `CONVENE_HTTP_URL`, `CONVENE_API_KEY`, `CONVENE_MEETING_ID`,
-  `CONVENE_AGENT_MODE`, `CONVENE_ENTITY_FILTER`). HTTP URL derived from WS URL (port 8003→8000).
+  (`KUTANA_API_URL`, `KUTANA_HTTP_URL`, `KUTANA_API_KEY`, `KUTANA_MEETING_ID`,
+  `KUTANA_AGENT_MODE`, `KUTANA_ENTITY_FILTER`). HTTP URL derived from WS URL (port 8003→8000).
 
 - **`src/kutana-client.ts`** — `KutanaClient` WebSocket client:
   - Authenticates via `POST /api/v1/token/gateway` with `X-API-Key`
@@ -40,7 +40,7 @@
   - `createServer()` factory exported for tests
   - `claude/channel` declared in capabilities (type-extended `ServerCapabilities`)
   - `instructions` field passed via spread into `Server` options (MCP 2024-11-05+)
-  - Kutana events → `notifications/message` (level=info, logger=`convene/{topic}`)
+  - Kutana events → `notifications/message` (level=info, logger=`kutana/{topic}`)
   - `isEntryPoint` guard using `(import.meta as unknown as { main?: boolean }).main`
     to prevent `main()` running when imported by Vitest
   - Graceful shutdown on SIGINT/SIGTERM
@@ -92,5 +92,5 @@
   runtime in MCP 2024-11-05+ servers. The SDK stores it in `this._instructions`.
 
 - **`server.notification()` for channel events** — standard `notifications/message` with
-  `level: "info"` and `logger: "convene/{topic}"` is the reliable, spec-compliant way to push
+  `level: "info"` and `logger: "kutana/{topic}"` is the reliable, spec-compliant way to push
   channel context. The `claude/channel` capability declaration signals intent to Claude Code.
