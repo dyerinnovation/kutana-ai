@@ -150,8 +150,112 @@ export default function register(ctx: PluginContext): void {
     if (!meetingId) return "Error: meeting_id is required";
     const limit = (params.limit as number) ?? 50;
     const messageType = params.message_type as string | undefined;
-    return await client.getChatMessages(meetingId, limit, messageType);
+    const since = params.since as string | undefined;
+    return await client.getChatMessages(meetingId, limit, messageType, since);
   });
 
-  ctx.logger.info("Kutana AI plugin registered with 13 tools");
+  ctx.registerTool("kutana_leave_meeting", async () => {
+    await ensureAuth();
+    return await client.leaveMeeting();
+  });
+
+  ctx.registerTool("kutana_speak", async (params) => {
+    await ensureAuth();
+    const meetingId = params.meeting_id as string;
+    const text = params.text as string;
+    if (!meetingId || !text) return "Error: meeting_id and text are required";
+    return await client.speak(meetingId, text);
+  });
+
+  ctx.registerTool("kutana_get_meeting_status", async (params) => {
+    await ensureAuth();
+    const meetingId = params.meeting_id as string;
+    if (!meetingId) return "Error: meeting_id is required";
+    return await client.getMeetingStatus(meetingId);
+  });
+
+  ctx.registerTool("kutana_get_speaking_status", async (params) => {
+    await ensureAuth();
+    const meetingId = params.meeting_id as string;
+    if (!meetingId) return "Error: meeting_id is required";
+    return await client.getSpeakingStatus(meetingId);
+  });
+
+  // Meeting lifecycle tools
+  ctx.registerTool("kutana_get_tasks", async (params) => {
+    await ensureAuth();
+    const meetingId = params.meeting_id as string;
+    if (!meetingId) return "Error: meeting_id is required";
+    return await client.getTasks(meetingId);
+  });
+
+  ctx.registerTool("kutana_get_summary", async (params) => {
+    await ensureAuth();
+    const meetingId = params.meeting_id as string;
+    if (!meetingId) return "Error: meeting_id is required";
+    return await client.getSummary(meetingId);
+  });
+
+  ctx.registerTool("kutana_set_context", async (params) => {
+    await ensureAuth();
+    const meetingId = params.meeting_id as string;
+    const context = params.context as string;
+    if (!meetingId || !context) return "Error: meeting_id and context are required";
+    return await client.setContext(meetingId, context);
+  });
+
+  ctx.registerTool("kutana_start_meeting", async (params) => {
+    await ensureAuth();
+    const meetingId = params.meeting_id as string;
+    if (!meetingId) return "Error: meeting_id is required";
+    return await client.startMeeting(meetingId);
+  });
+
+  ctx.registerTool("kutana_end_meeting", async (params) => {
+    await ensureAuth();
+    const meetingId = params.meeting_id as string;
+    if (!meetingId) return "Error: meeting_id is required";
+    return await client.endMeeting(meetingId);
+  });
+
+  ctx.registerTool("kutana_join_or_create_meeting", async (params) => {
+    await ensureAuth();
+    const title = params.title as string;
+    if (!title) return "Error: title is required";
+    const capabilities = params.capabilities as string[] | undefined;
+    return await client.joinOrCreateMeeting(title, capabilities);
+  });
+
+  // Data channel tools
+  ctx.registerTool("kutana_subscribe_channel", async (params) => {
+    await ensureAuth();
+    const channel = params.channel as string;
+    if (!channel) return "Error: channel is required";
+    return await client.subscribeChannel(channel);
+  });
+
+  ctx.registerTool("kutana_publish_to_channel", async (params) => {
+    await ensureAuth();
+    const channel = params.channel as string;
+    const payload = params.payload as Record<string, unknown>;
+    if (!channel || !payload) return "Error: channel and payload are required";
+    return await client.publishToChannel(channel, payload);
+  });
+
+  ctx.registerTool("kutana_get_channel_messages", async (params) => {
+    await ensureAuth();
+    const channel = params.channel as string;
+    if (!channel) return "Error: channel is required";
+    const lastN = (params.last_n as number) ?? 50;
+    return await client.getChannelMessages(channel, lastN);
+  });
+
+  ctx.registerTool("kutana_get_meeting_events", async (params) => {
+    await ensureAuth();
+    const lastN = (params.last_n as number) ?? 50;
+    const eventType = params.event_type as string | undefined;
+    return await client.getMeetingEvents(lastN, eventType);
+  });
+
+  ctx.logger.info("Kutana AI plugin registered with 27 tools");
 }

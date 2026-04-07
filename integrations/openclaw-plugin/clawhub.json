@@ -1,0 +1,8 @@
+{
+  "slug": "kutana-ai",
+  "name": "Kutana AI Meeting Assistant",
+  "version": "1.0.0",
+  "description": "Join Kutana AI meetings, manage turns, chat, and extract tasks.",
+  "tags": ["meetings", "productivity", "ai-agents", "collaboration"],
+  "skills": ["skills/kutana"]
+}

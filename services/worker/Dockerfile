@@ -23,6 +23,12 @@ COPY plugins/discord/package.json plugins/discord/bun.lock* ./
 RUN bun install --frozen-lockfile 2>/dev/null || bun install
 COPY plugins/discord/ ./
 
+# Slack (MCP server for OAuth feeds)
+WORKDIR /plugins/slack
+COPY plugins/slack/package.json plugins/slack/bun.lock* ./
+RUN bun install --frozen-lockfile 2>/dev/null || bun install
+COPY plugins/slack/ ./
+
 # Stage 3: Lean runtime image
 FROM python:3.13-slim
 

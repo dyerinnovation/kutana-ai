@@ -332,6 +332,25 @@
 
 ---
 
+## CLI & Skill Distribution
+
+> `kutana` CLI, meeting skill, and OpenClaw plugin distribution.
+> **Pattern doc:** `internal-docs/architecture/patterns/cli-mcp-skill.md`
+
+- [x] Design CLI / MCP / Skill architecture (3 integration paths)
+- [x] Implement Kutana CLI (`services/cli/`) — auth, meetings, chat, transcript, tasks, turns
+- [ ] Implement `kutana mcp` subcommand (stdio MCP server mode)
+- [ ] Implement `kutana join/leave/speak` (WebSocket session commands)
+- [x] Rewrite meeting skill for CLI-first workflows (SKILL.md + references)
+- [x] Update OpenClaw plugin manifest (16 → 27 tools)
+- [x] Set up ClawHub distribution (clawhub.json, CHANGELOG, publish script)
+- [x] Create `plugins/slack/` + update Worker Dockerfile
+- [x] Update SlackOAuthAdapter (npx → bun local path)
+- [ ] Publish to ClawHub registry
+- [ ] Add kutana-cli to PyPI
+
+---
+
 ## Post-April: Scheduled Agent Participation (F2.9)
 
 > Autonomous agent joining recurring meetings on behalf of a user. Built on the existing MCP tool suite — no new protocol required.

@@ -222,8 +222,8 @@ class SlackOAuthAdapter(ChannelAdapter):
         """
         return [
             StdioMCPServerConfig(
-                command="npx",
-                args=["-y", "@modelcontextprotocol/server-slack"],
+                command="bun",
+                args=["/app/plugins/slack/server.ts"],
                 env={"SLACK_BOT_TOKEN": self._bot_token},
             )
         ]
