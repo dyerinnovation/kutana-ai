@@ -17,6 +17,7 @@ from api_server.routes.auth import router as auth_router
 from api_server.routes.billing import router as billing_router
 from api_server.routes.feeds import router as feeds_router
 from api_server.routes.health import router as health_router
+from api_server.routes.integrations import router as integrations_router
 from api_server.routes.meetings import router as meetings_router
 from api_server.routes.summaries import router as summaries_router
 from api_server.routes.tasks import router as tasks_router
@@ -65,5 +66,6 @@ app.include_router(agents_router, prefix="/v1")
 app.include_router(agent_keys_router, prefix="/v1")
 app.include_router(agent_templates_router, prefix="/v1")
 app.include_router(feeds_router, prefix="/v1")
+app.include_router(integrations_router, prefix="/v1")
 app.include_router(summaries_router, prefix="/v1")
 app.include_router(token_router, prefix="/v1")

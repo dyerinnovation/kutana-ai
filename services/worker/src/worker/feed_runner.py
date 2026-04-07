@@ -20,7 +20,7 @@ from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import ResponseError
 from sqlalchemy import select
 
-from kutana_core.database.models import FeedORM, FeedRunORM, FeedSecretORM
+from kutana_core.database.models import FeedORM, FeedRunORM, FeedSecretORM, IntegrationORM
 from kutana_core.encryption import decrypt_value
 from kutana_core.feeds.adapters import build_adapter
 from worker.feed_agent import run_feed
@@ -240,9 +240,27 @@ class FeedRunner:
                     await session.commit()
                     return
 
+            # Load integration token if feed uses OAuth
+            integration_token: str | None = None
+            if feed.integration_id is not None:
+                int_result = await session.execute(
+                    select(IntegrationORM).where(IntegrationORM.id == feed.integration_id)
+                )
+                integration = int_result.scalar_one_or_none()
+                if integration is not None and integration.status == "active":
+                    try:
+                        integration_token = decrypt_value(integration.access_token_encrypted)
+                    except ValueError:
+                        logger.exception("Failed to decrypt integration token for feed %s", feed_id)
+                        run.status = "failed"
+                        run.error = "Integration token decryption failed"
+                        run.finished_at = datetime.now(tz=UTC)
+                        await session.commit()
+                        return
+
             # Build adapter
             try:
-                adapter = build_adapter(feed, decrypted_token)
+                adapter = build_adapter(feed, decrypted_token, integration_token)
             except ValueError as e:
                 logger.error("Failed to build adapter for feed %s: %s", feed_id, e)
                 run.status = "failed"

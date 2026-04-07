@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
-import type { Feed, FeedCreate } from "@/types";
+import { Link, useSearchParams } from "react-router-dom";
+import type { Feed, FeedCreate, Integration as IntegrationType, SlackChannel } from "@/types";
 import { listFeeds, createFeed, updateFeed, toggleFeed, triggerFeed } from "@/api/feeds";
+import { listIntegrations, connectSlack, listSlackChannels } from "@/api/integrations";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import {
@@ -84,7 +85,7 @@ const TRIGGER_OPTIONS = [
   { value: "scheduled", label: "Scheduled" },
 ] as const;
 
-interface Integration {
+interface PlatformCatalogEntry {
   id: string;
   name: string;
   description: string;
@@ -92,7 +93,7 @@ interface Integration {
   platform: string;
 }
 
-const INTEGRATIONS: Integration[] = [
+const INTEGRATIONS: PlatformCatalogEntry[] = [
   {
     id: "slack",
     name: "Slack",
@@ -142,7 +143,7 @@ const DIRECTION_ARROW: Record<string, string> = {
 };
 
 const PLATFORM_DELIVERY: Record<string, "channel" | "mcp"> = {
-  slack: "mcp",
+  slack: "channel",
   notion: "mcp",
   github: "mcp",
   discord: "channel",
@@ -166,6 +167,7 @@ const EMPTY_FORM: FeedCreate = {
 
 export function FeedsPage() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const feedLimit = user
     ? FEED_LIMIT[user.plan_tier as keyof typeof FEED_LIMIT]
     : 0;
@@ -176,6 +178,12 @@ export function FeedsPage() {
   const [feedsLoading, setFeedsLoading] = useState(true);
   const [feedsError, setFeedsError] = useState<string | null>(null);
 
+  // Integrations state (OAuth connections)
+  const [integrations, setIntegrations] = useState<IntegrationType[]>([]);
+  const [slackChannels, setSlackChannels] = useState<SlackChannel[]>([]);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [slackConnected, setSlackConnected] = useState(false);
+
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editingFeed, setEditingFeed] = useState<Feed | null>(null);
@@ -183,9 +191,53 @@ export function FeedsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const slackIntegration = integrations.find(
+    (i) => i.platform === "slack" && i.status === "active",
+  );
+
   useEffect(() => {
     loadFeeds();
+    loadIntegrations();
   }, []);
+
+  // Detect OAuth callback redirect
+  useEffect(() => {
+    if (searchParams.get("slack") === "connected") {
+      setSlackConnected(true);
+      setSearchParams({}, { replace: true });
+      loadIntegrations();
+      setTimeout(() => setSlackConnected(false), 5_000);
+    }
+  }, [searchParams, setSearchParams]);
+
+  async function loadIntegrations() {
+    try {
+      const data = await listIntegrations();
+      setIntegrations(data);
+      const hasSlack = data.some((i) => i.platform === "slack" && i.status === "active");
+      if (hasSlack) {
+        try {
+          const channels = await listSlackChannels();
+          setSlackChannels(channels);
+        } catch {
+          setSlackChannels([]);
+        }
+      }
+    } catch {
+      setIntegrations([]);
+    }
+  }
+
+  async function handleConnectSlack() {
+    setIsConnecting(true);
+    try {
+      const { authorize_url } = await connectSlack();
+      window.location.href = authorize_url;
+    } catch (err) {
+      setFeedsError(err instanceof Error ? err.message : "Failed to connect Slack");
+      setIsConnecting(false);
+    }
+  }
 
   function loadFeeds() {
     setFeedsLoading(true);
@@ -241,6 +293,7 @@ export function FeedsPage() {
         channel_name: form.delivery_type === "channel" ? form.channel_name : undefined,
         meeting_tag: form.meeting_tag || undefined,
         context_types: form.context_types?.length ? form.context_types : undefined,
+        integration_id: form.platform === "slack" && slackIntegration ? slackIntegration.id : undefined,
       };
       if (editingFeed) {
         await updateFeed(editingFeed.id, payload);
@@ -318,6 +371,12 @@ export function FeedsPage() {
           <div className="flex items-center justify-center py-12 text-sm text-gray-500">
             <SpinnerIcon />
             Loading feeds...
+          </div>
+        )}
+
+        {slackConnected && (
+          <div className="rounded-lg border border-green-500/30 bg-green-600/10 px-4 py-3 text-sm text-green-400">
+            Slack connected successfully! You can now create Slack feeds.
           </div>
         )}
 
@@ -590,8 +649,60 @@ export function FeedsPage() {
               </div>
             </div>
 
-            {/* Conditional: Channel name */}
-            {form.delivery_type === "channel" && (
+            {/* Conditional: Slack OAuth connection */}
+            {form.platform === "slack" && (
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium uppercase tracking-widest text-gray-400">
+                  Slack Connection
+                </label>
+                {slackIntegration ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-600/10 px-3 py-2 text-sm">
+                      <svg className="h-4 w-4 text-green-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+                      </svg>
+                      <span className="text-green-400">
+                        Connected to {slackIntegration.external_team_name ?? "Slack"}
+                      </span>
+                    </div>
+                    {slackChannels.length > 0 && (
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-medium text-gray-400">Channel</label>
+                        <select
+                          className="flex h-10 w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-50 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          value={form.channel_name ?? ""}
+                          onChange={(e) => setForm((p) => ({ ...p, channel_name: e.target.value }))}
+                        >
+                          <option value="">Select a channel</option>
+                          {slackChannels.map((ch) => (
+                            <option key={ch.id} value={ch.name}>
+                              #{ch.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-3 rounded-lg border border-gray-700 bg-gray-900/50 px-4 py-6">
+                    <p className="text-sm text-gray-400">
+                      Connect your Slack workspace to create feeds
+                    </p>
+                    <Button
+                      type="button"
+                      onClick={handleConnectSlack}
+                      disabled={isConnecting}
+                    >
+                      <SlackIcon className="h-4 w-4" />
+                      {isConnecting ? "Connecting..." : "Connect Slack"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Conditional: Channel name (non-Slack channel feeds) */}
+            {form.delivery_type === "channel" && form.platform !== "slack" && (
               <Input
                 label="Channel Name"
                 placeholder="#meeting-notes"
@@ -602,7 +713,7 @@ export function FeedsPage() {
               />
             )}
 
-            {/* Conditional: MCP fields */}
+            {/* Conditional: MCP fields (non-Slack MCP feeds) */}
             {form.delivery_type === "mcp" && (
               <>
                 <Input

@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
 from functools import lru_cache
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 from fastapi import Depends
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -17,6 +16,9 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from api_server.event_publisher import EventPublisher
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +70,12 @@ class Settings(BaseSettings):
     billing_success_url: str = "http://localhost:5173/settings/billing?status=success"
     billing_cancel_url: str = "http://localhost:5173/pricing?status=cancel"
     billing_portal_return_url: str = "http://localhost:5173/settings/billing"
+
+    # Slack OAuth
+    slack_client_id: str = ""
+    slack_client_secret: str = ""
+    slack_redirect_uri: str = ""
+    frontend_url: str = "http://localhost:5173"
 
 
 @lru_cache(maxsize=1)

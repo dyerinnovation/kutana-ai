@@ -15,7 +15,8 @@ export async function getTemplate(id: string): Promise<AgentTemplate> {
 export async function activateTemplate(
   templateId: string,
   meetingId: string,
-  anthropicApiKey?: string
+  anthropicApiKey?: string,
+  systemPromptOverride?: string,
 ): Promise<HostedSession> {
   return apiFetch<HostedSession>(
     `/agent-templates/${templateId}/activate`,
@@ -24,6 +25,7 @@ export async function activateTemplate(
       body: JSON.stringify({
         meeting_id: meetingId,
         anthropic_api_key: anthropicApiKey || null,
+        system_prompt_override: systemPromptOverride || null,
       }),
     }
   );

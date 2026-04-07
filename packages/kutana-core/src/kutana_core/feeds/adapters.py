@@ -193,6 +193,58 @@ class ClaudeCodeChannelAdapter(ChannelAdapter):
         )
 
 
+class SlackOAuthAdapter(ChannelAdapter):
+    """Adapter for Slack via OAuth bot token + stdio MCP subprocess.
+
+    Uses ``@modelcontextprotocol/server-slack`` as a stdio subprocess,
+    injecting the stored OAuth bot token via environment variables.
+
+    Attributes:
+        _bot_token: Decrypted Slack xoxb- bot token.
+        _channel_name: Optional channel name for prompt context.
+    """
+
+    def __init__(self, bot_token: str, channel_name: str = "") -> None:
+        """Initialise the Slack OAuth adapter.
+
+        Args:
+            bot_token: Decrypted Slack bot token (xoxb-...).
+            channel_name: Optional channel name for prompt context.
+        """
+        self._bot_token = bot_token
+        self._channel_name = channel_name
+
+    def mcp_servers(self) -> list[MCPServerConfig | StdioMCPServerConfig]:
+        """Return a stdio config for the Slack MCP server package.
+
+        Returns:
+            Single-element list with the stdio subprocess config.
+        """
+        return [
+            StdioMCPServerConfig(
+                command="npx",
+                args=["-y", "@modelcontextprotocol/server-slack"],
+                env={"SLACK_BOT_TOKEN": self._bot_token},
+            )
+        ]
+
+    def system_prompt_suffix(self, direction: FeedDirection) -> str:
+        """Generate Slack-specific prompt suffix.
+
+        Args:
+            direction: The feed direction.
+
+        Returns:
+            Prompt suffix string with Slack tool instructions.
+        """
+        channel_hint = f" in the '{self._channel_name}' channel" if self._channel_name else ""
+        if direction == FeedDirection.INBOUND:
+            return f"Use the Slack MCP tools to fetch context{channel_hint}."
+        if direction == FeedDirection.OUTBOUND:
+            return f"Use the Slack MCP tools to deliver the content{channel_hint}."
+        return f"Use the Slack MCP tools to pull context and deliver results{channel_hint}."
+
+
 # ---------------------------------------------------------------------------
 # Adapter registry
 # ---------------------------------------------------------------------------
@@ -207,13 +259,20 @@ ADAPTER_REGISTRY: dict[str, type[ChannelAdapter]] = {
 }
 
 
-def build_adapter(feed: FeedORM, decrypted_token: str | None = None) -> ChannelAdapter:
+def build_adapter(
+    feed: FeedORM,
+    decrypted_token: str | None = None,
+    integration_token: str | None = None,
+) -> ChannelAdapter:
     """Build the appropriate ChannelAdapter for a feed.
 
     Args:
         feed: The feed ORM row with platform and delivery config.
         decrypted_token: The decrypted auth token (required for MCP feeds,
             used as bot token for channel feeds).
+        integration_token: Decrypted OAuth token from an Integration row.
+            When provided for Slack feeds, uses SlackOAuthAdapter instead
+            of MCPChannelAdapter.
 
     Returns:
         An instantiated ChannelAdapter.
@@ -222,6 +281,10 @@ def build_adapter(feed: FeedORM, decrypted_token: str | None = None) -> ChannelA
         ValueError: If the platform is not in the registry.
         ValueError: If required fields are missing for the adapter type.
     """
+    # OAuth integration path — currently Slack only
+    if feed.integration_id is not None and integration_token and feed.platform == "slack":
+        return SlackOAuthAdapter(integration_token, feed.channel_name or "")
+
     cls = ADAPTER_REGISTRY.get(feed.platform)
     if cls is None:
         msg = f"Unknown platform '{feed.platform}'. Supported: {list(ADAPTER_REGISTRY.keys())}"

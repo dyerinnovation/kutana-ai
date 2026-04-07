@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 from datetime import UTC
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from api_server.auth_deps import CurrentUser
+from api_server.auth_deps import CurrentUser  # noqa: TC001 — runtime dep for FastAPI DI
 from api_server.billing_deps import MANAGED_AGENT_MIN_TIER, require_tier
 from api_server.deps import get_db_session
 from kutana_core.database.models import (
@@ -18,6 +17,9 @@ from kutana_core.database.models import (
     HostedAgentSessionORM,
     MeetingORM,
 )
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/agent-templates", tags=["agent-templates"])
 
@@ -47,6 +49,7 @@ class ActivateRequest(BaseModel):
 
     meeting_id: str
     anthropic_api_key: str | None = None
+    system_prompt_override: str | None = None
 
 
 class HostedSessionResponse(BaseModel):
@@ -57,6 +60,7 @@ class HostedSessionResponse(BaseModel):
     meeting_id: str
     status: str
     started_at: str
+    system_prompt_override: str | None = None
 
     class Config:
         from_attributes = True
@@ -120,9 +124,7 @@ async def get_template(
     Raises:
         HTTPException: 404 if not found.
     """
-    result = await db.execute(
-        select(AgentTemplateORM).where(AgentTemplateORM.id == template_id)
-    )
+    result = await db.execute(select(AgentTemplateORM).where(AgentTemplateORM.id == template_id))
     template = result.scalar_one_or_none()
     if template is None:
         raise HTTPException(
@@ -165,9 +167,7 @@ async def activate_template(
     """
     require_tier(user, MANAGED_AGENT_MIN_TIER)
     # Verify template exists
-    t_result = await db.execute(
-        select(AgentTemplateORM).where(AgentTemplateORM.id == template_id)
-    )
+    t_result = await db.execute(select(AgentTemplateORM).where(AgentTemplateORM.id == template_id))
     template = t_result.scalar_one_or_none()
     if template is None:
         raise HTTPException(
@@ -175,10 +175,12 @@ async def activate_template(
             detail="Template not found",
         )
 
+    # Premium templates require Pro+ tier
+    if template.is_premium:
+        require_tier(user, "pro")
+
     # Verify meeting exists
-    m_result = await db.execute(
-        select(MeetingORM).where(MeetingORM.id == body.meeting_id)
-    )
+    m_result = await db.execute(select(MeetingORM).where(MeetingORM.id == body.meeting_id))
     meeting = m_result.scalar_one_or_none()
     if meeting is None:
         raise HTTPException(
@@ -192,6 +194,7 @@ async def activate_template(
         meeting_id=meeting.id,
         status="active",
         anthropic_api_key_encrypted=body.anthropic_api_key,
+        system_prompt_override=body.system_prompt_override,
     )
     db.add(session)
     await db.flush()

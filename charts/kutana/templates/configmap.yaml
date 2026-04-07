@@ -42,3 +42,6 @@ data:
   STRIPE_PRICE_PRO_YEARLY: {{ .Values.billing.priceProYearly | quote }}
   STRIPE_PRICE_BUSINESS_MONTHLY: {{ .Values.billing.priceBusinessMonthly | quote }}
   STRIPE_PRICE_BUSINESS_YEARLY: {{ .Values.billing.priceBusinessYearly | quote }}
+  # Slack OAuth
+  SLACK_REDIRECT_URI: "https://{{ .Values.global.domain }}/api/v1/integrations/slack/callback"
+  FRONTEND_URL: "https://{{ .Values.global.domain }}"

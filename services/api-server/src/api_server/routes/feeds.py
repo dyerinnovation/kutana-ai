@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from api_server.auth_deps import CurrentUser  # noqa: TC001 — runtime dep for FastAPI DI
 from api_server.billing_deps import check_feed_limit
@@ -19,6 +18,9 @@ from api_server.event_publisher import EventPublisher  # noqa: TC001 — runtime
 from kutana_core.database.models import FeedORM, FeedRunORM, FeedSecretORM
 from kutana_core.events.definitions import FeedCreated, FeedDeleted, FeedUpdated
 from kutana_core.models.feed import FeedCreate, FeedRead, FeedRunRead, FeedUpdate
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/feeds", tags=["feeds"])
 
@@ -96,6 +98,7 @@ def _orm_to_read(feed: FeedORM) -> FeedRead:
         trigger=feed.trigger,
         meeting_tag=feed.meeting_tag,
         is_active=feed.is_active,
+        integration_id=str(feed.integration_id) if feed.integration_id else None,
         created_at=feed.created_at,
         last_triggered_at=feed.last_triggered_at,
         last_error=feed.last_error,
@@ -242,6 +245,7 @@ async def create_feed(
         context_types=body.context_types,
         trigger=body.trigger,
         meeting_tag=body.meeting_tag,
+        integration_id=body.integration_id,
     )
     db.add(feed)
     await db.flush()

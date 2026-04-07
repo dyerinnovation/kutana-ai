@@ -137,6 +137,22 @@ export interface HostedSession {
   meeting_id: string;
   status: string;
   started_at: string;
+  system_prompt_override: string | null;
+}
+
+export interface Integration {
+  id: string;
+  platform: string;
+  external_team_id: string | null;
+  external_team_name: string | null;
+  status: string;
+  created_at: string;
+}
+
+export interface SlackChannel {
+  id: string;
+  name: string;
+  is_member: boolean;
 }
 
 export interface Feed {
@@ -153,6 +169,7 @@ export interface Feed {
   trigger: string;
   meeting_tag: string | null;
   is_active: boolean;
+  integration_id: string | null;
   created_at: string;
   updated_at: string;
   last_triggered_at: string | null;
@@ -172,6 +189,7 @@ export interface FeedCreate {
   context_types?: string[];
   trigger: string;
   meeting_tag?: string;
+  integration_id?: string;
 }
 
 export interface FeedRun {

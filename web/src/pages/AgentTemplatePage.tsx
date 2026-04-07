@@ -1,8 +1,7 @@
-import { useEffect, useState, type FormEvent } from "react";
-import type { AgentTemplate, Meeting } from "@/types";
-import { listTemplates, activateTemplate } from "@/api/agentTemplates";
+import { useEffect, useState } from "react";
+import type { AgentTemplate } from "@/types";
+import { listTemplates } from "@/api/agentTemplates";
 import { formatCapability } from "@/lib/capabilities";
-import { listMeetings } from "@/api/meetings";
 import { Button } from "@/components/ui/Button";
 import {
   Card,
@@ -10,7 +9,7 @@ import {
   CardTitle,
   CardContent,
 } from "@/components/ui/Card";
-import { Dialog, DialogTitle, DialogFooter } from "@/components/ui/Dialog";
+import { ActivateTemplateDialog } from "@/components/ActivateTemplateDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { MANAGED_AGENT_MIN_TIER, meetsTier } from "@/lib/planLimits";
 import { UpgradeBadge } from "@/components/UpgradeBadge";
@@ -44,9 +43,6 @@ export function AgentTemplatePage() {
   const [activateTarget, setActivateTarget] = useState<AgentTemplate | null>(
     null
   );
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const [selectedMeetingId, setSelectedMeetingId] = useState("");
-  const [isActivating, setIsActivating] = useState(false);
 
   useEffect(() => {
     loadTemplates();
@@ -65,39 +61,6 @@ export function AgentTemplatePage() {
       setTemplates([]);
     } finally {
       setIsLoading(false);
-    }
-  }
-
-  async function openActivateModal(template: AgentTemplate) {
-    setActivateTarget(template);
-    setSelectedMeetingId("");
-    try {
-      const res = await listMeetings();
-      setMeetings(
-        res.items.filter(
-          (m) => m.status === "scheduled" || m.status === "active"
-        )
-      );
-    } catch {
-      setMeetings([]);
-    }
-  }
-
-  async function handleActivate(e: FormEvent) {
-    e.preventDefault();
-    if (!activateTarget || !selectedMeetingId) return;
-
-    setIsActivating(true);
-    setError(null);
-    try {
-      await activateTemplate(activateTarget.id, selectedMeetingId);
-      setActivateTarget(null);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to activate template"
-      );
-    } finally {
-      setIsActivating(false);
     }
   }
 
@@ -185,22 +148,26 @@ export function AgentTemplatePage() {
                 )}
                 <div className="flex items-center justify-between">
                   {template.is_premium && (
-                    <span className="text-xs text-yellow-400 font-medium">
-                      Premium
-                    </span>
+                    meetsTier(user, "pro")
+                      ? <span className="inline-flex items-center rounded-md bg-blue-600/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 text-xs font-medium">Pro</span>
+                      : <UpgradeBadge requiredTier="pro" />
                   )}
-                  {canActivate ? (
+                  {!canActivate ? (
+                    <div className="ml-auto">
+                      <UpgradeBadge requiredTier={MANAGED_AGENT_MIN_TIER} />
+                    </div>
+                  ) : template.is_premium && !meetsTier(user, "pro") ? (
+                    <Button size="sm" disabled className="ml-auto" title="Upgrade to Pro to activate">
+                      Activate
+                    </Button>
+                  ) : (
                     <Button
                       size="sm"
-                      onClick={() => openActivateModal(template)}
+                      onClick={() => setActivateTarget(template)}
                       className="ml-auto"
                     >
                       Activate
                     </Button>
-                  ) : (
-                    <div className="ml-auto">
-                      <UpgradeBadge requiredTier={MANAGED_AGENT_MIN_TIER} />
-                    </div>
                   )}
                 </div>
               </CardContent>
@@ -209,58 +176,10 @@ export function AgentTemplatePage() {
         </div>
       )}
 
-      {/* Activate Dialog */}
-      <Dialog
-        open={activateTarget !== null}
+      <ActivateTemplateDialog
+        template={activateTarget}
         onClose={() => setActivateTarget(null)}
-      >
-        <form onSubmit={handleActivate}>
-          <DialogTitle>
-            Activate: {activateTarget?.name}
-          </DialogTitle>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-gray-300">
-                Meeting
-              </label>
-              {meetings.length === 0 ? (
-                <p className="text-sm text-gray-500">
-                  No active or scheduled meetings available.
-                </p>
-              ) : (
-                <select
-                  className="flex h-10 w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-50 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  value={selectedMeetingId}
-                  onChange={(e) => setSelectedMeetingId(e.target.value)}
-                  required
-                >
-                  <option value="">Select a meeting</option>
-                  {meetings.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.title} ({m.status})
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setActivateTarget(null)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isActivating || !selectedMeetingId}
-            >
-              {isActivating ? "Activating..." : "Activate Agent"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </Dialog>
+      />
     </div>
   );
 }
