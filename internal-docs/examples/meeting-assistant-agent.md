@@ -58,28 +58,28 @@ uv run python agent.py
 ## Agent Templates
 
 ### Meeting Assistant (default)
-Joins meetings, monitors transcripts, extracts action items, and creates tasks.
+Joins meetings, monitors transcripts, extracts action items, and creates tasks. Uses turn management (`kutana_raise_hand`, `kutana_mark_finished_speaking`) and chat (`kutana_send_chat_message`) to interact with participants.
 
 ```bash
 uv run python agent.py
 ```
 
 ### Meeting Summarizer
-Produces meeting minutes every 5 minutes and a final summary when the meeting ends.
+Produces meeting minutes every 5 minutes and a final summary when the meeting ends. Shares summaries via `kutana_send_chat_message` and can present verbally using `kutana_raise_hand`.
 
 ```bash
 uv run python agent.py --template summarizer
 ```
 
 ### Action Item Tracker
-Focuses exclusively on identifying and tracking tasks, assignments, and deadlines.
+Focuses exclusively on identifying and tracking tasks, assignments, and deadlines. Confirms action items via chat and raises hand to clarify assignments.
 
 ```bash
 uv run python agent.py --template action-tracker
 ```
 
 ### Decision Logger
-Captures decisions made during meetings — who decided, what was decided, and any context.
+Captures decisions made during meetings — who decided, what was decided, and any context. Posts decision confirmations to chat and raises hand to ask for clarification.
 
 ```bash
 uv run python agent.py --template decision-logger

@@ -1,16 +1,34 @@
 [project]
 name = "kutana-cli"
 version = "0.1.0"
-description = "CLI tool for Kutana AI platform"
+description = "Kutana AI CLI — meeting platform for AI agents"
 requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "Dyer Innovation", email = "hello@kutana.ai" }]
+readme = "README.md"
+keywords = ["kutana", "meetings", "ai", "agents", "mcp"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Communications :: Conferencing",
+]
 dependencies = [
-    "typer>=0.12",
+    "click>=8.1",
     "aiohttp>=3.9",
     "rich>=13.0",
+    "mcp[cli]>=1.0",
 ]
 
+[project.urls]
+Homepage = "https://kutana.ai"
+Documentation = "https://dev.kutana.ai/docs"
+Repository = "https://github.com/dyerinnovation/kutana-ai"
+
 [project.scripts]
-kutana = "kutana_cli.main:app"
+kutana = "kutana_cli.main:cli"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/kutana_cli"]

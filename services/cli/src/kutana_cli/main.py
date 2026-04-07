@@ -1,234 +1,83 @@
-"""Kutana CLI — command-line interface for the Kutana AI platform."""
+"""Kutana CLI entry point -- Click group with global options."""
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import sys
 
-import typer
-from rich.console import Console
-from rich.table import Table
+import click
 
-from kutana_cli.api import ApiError, KutanaClient, run_async
-from kutana_cli.config import get_token, load_config, save_config
+from kutana_cli.auth import auth
+from kutana_cli.config import get_api_url, load_config
+from kutana_cli.mcp_cmd import mcp
+from kutana_cli.meetings import meetings
+from kutana_cli.output import print_error
+from kutana_cli.session import chat, join, leave, participants, speak, status, transcript
+from kutana_cli.tasks import tasks
+from kutana_cli.turns import turn
 
-app = typer.Typer(
-    name="kutana",
-    help="CLI for the Kutana AI meeting platform.",
-    no_args_is_help=True,
+
+@click.group()
+@click.option(
+    "--url",
+    envvar="KUTANA_URL",
+    default=None,
+    help="Kutana server URL (overrides config).",
 )
-agents_app = typer.Typer(help="Manage agents.", no_args_is_help=True)
-meetings_app = typer.Typer(help="Manage meetings.", no_args_is_help=True)
-keys_app = typer.Typer(help="Manage API keys.", no_args_is_help=True)
-
-app.add_typer(agents_app, name="agents")
-app.add_typer(meetings_app, name="meetings")
-app.add_typer(keys_app, name="keys")
-
-console = Console()
-
-
-def _require_auth() -> None:
-    """Exit with an error if the user is not logged in."""
-    if not get_token():
-        console.print("[red]Not logged in. Run 'kutana login' first.[/red]")
-        raise typer.Exit(1)
-
-
-# ---------------------------------------------------------------------------
-# Login
-# ---------------------------------------------------------------------------
-
-
-@app.command()
-def login(
-    email: str = typer.Option(..., prompt=True, help="Your email address."),
-    password: str = typer.Option(
-        ..., prompt=True, hide_input=True, help="Your password."
-    ),
-    api_url: str = typer.Option(
-        "http://localhost:8000", "--api-url", help="Kutana API base URL."
-    ),
-) -> None:
-    """Authenticate with the Kutana API and store credentials."""
-    client = KutanaClient(base_url=api_url)
-    try:
-        result = run_async(client.login(email, password))
-    except ApiError as exc:
-        console.print(f"[red]Login failed: {exc.detail}[/red]")
-        raise typer.Exit(1) from exc
+@click.option(
+    "--api-key",
+    envvar="KUTANA_API_KEY",
+    default=None,
+    help="API key (overrides config).",
+)
+@click.option(
+    "--json/--pretty",
+    "use_json",
+    default=True,
+    help="Output format: --json (default) or --pretty.",
+)
+@click.pass_context
+def cli(ctx: click.Context, url: str | None, api_key: str | None, use_json: bool) -> None:
+    """Kutana AI -- meeting intelligence from the command line."""
+    ctx.ensure_object(dict)
 
     config = load_config()
-    config["api_url"] = api_url
-    config["token"] = result["token"]
-    save_config(config)
 
-    user = result["user"]
-    console.print(f"[green]Logged in as {user['name']} ({user['email']})[/green]")
+    # CLI args / env vars override saved config
+    if url:
+        config["url"] = url
+    if api_key:
+        config["api_key"] = api_key
 
-
-@app.command()
-def status() -> None:
-    """Show current authentication status."""
-    config = load_config()
-    token = config.get("token")
-    api_url = config.get("api_url", "http://localhost:8000")
-    if token:
-        console.print(f"[green]Authenticated[/green] — API: {api_url}")
-    else:
-        console.print("[yellow]Not authenticated. Run 'kutana login'.[/yellow]")
+    ctx.obj["config"] = config
+    ctx.obj["use_json"] = use_json
+    ctx.obj["api_url"] = get_api_url(config)
 
 
-@app.command()
-def logout() -> None:
-    """Clear stored credentials."""
-    config = load_config()
-    config["token"] = None
-    save_config(config)
-    console.print("[green]Logged out.[/green]")
+# Register subcommand groups
+cli.add_command(auth)
+cli.add_command(meetings)
+cli.add_command(tasks)
+cli.add_command(turn)
+cli.add_command(mcp)
+
+# Register top-level session commands
+cli.add_command(join)
+cli.add_command(leave)
+cli.add_command(speak)
+cli.add_command(chat)
+cli.add_command(transcript)
+cli.add_command(participants)
+cli.add_command(status)
 
 
-# ---------------------------------------------------------------------------
-# Agents
-# ---------------------------------------------------------------------------
-
-
-@agents_app.command("list")
-def agents_list() -> None:
-    """List your agents."""
-    _require_auth()
-    client = KutanaClient()
+def main() -> None:
+    """CLI entry point for direct invocation."""
     try:
-        result = run_async(client.list_agents())
-    except ApiError as exc:
-        console.print(f"[red]Error: {exc.detail}[/red]")
-        raise typer.Exit(1) from exc
-
-    items = result.get("items", [])
-    if not items:
-        console.print("[dim]No agents found.[/dim]")
-        return
-
-    table = Table(title="Agents")
-    table.add_column("ID", style="cyan")
-    table.add_column("Name", style="green")
-    table.add_column("Capabilities")
-    table.add_column("Created")
-
-    for agent in items:
-        caps = ", ".join(agent.get("capabilities", [])) or "—"
-        created = agent.get("created_at", "")[:19]
-        table.add_row(str(agent["id"]), agent["name"], caps, created)
-
-    console.print(table)
-
-
-@agents_app.command("create")
-def agents_create(
-    name: str = typer.Argument(..., help="Agent name."),
-    system_prompt: str = typer.Option(
-        "You are a helpful meeting assistant.",
-        "--prompt",
-        "-p",
-        help="System prompt for the agent.",
-    ),
-) -> None:
-    """Create a new agent."""
-    _require_auth()
-    client = KutanaClient()
-    try:
-        agent = run_async(client.create_agent(name, system_prompt))
-    except ApiError as exc:
-        console.print(f"[red]Error: {exc.detail}[/red]")
-        raise typer.Exit(1) from exc
-
-    console.print(f"[green]Agent created:[/green] {agent['name']} (ID: {agent['id']})")
-
-
-# ---------------------------------------------------------------------------
-# Meetings
-# ---------------------------------------------------------------------------
-
-
-@meetings_app.command("list")
-def meetings_list() -> None:
-    """List meetings."""
-    _require_auth()
-    client = KutanaClient()
-    try:
-        result = run_async(client.list_meetings())
-    except ApiError as exc:
-        console.print(f"[red]Error: {exc.detail}[/red]")
-        raise typer.Exit(1) from exc
-
-    items = result.get("items", [])
-    if not items:
-        console.print("[dim]No meetings found.[/dim]")
-        return
-
-    table = Table(title="Meetings")
-    table.add_column("ID", style="cyan")
-    table.add_column("Title", style="green")
-    table.add_column("Status")
-    table.add_column("Scheduled")
-
-    for meeting in items:
-        title = meeting.get("title") or "—"
-        scheduled = meeting.get("scheduled_at", "")[:19]
-        table.add_row(str(meeting["id"]), title, meeting["status"], scheduled)
-
-    console.print(table)
-
-
-@meetings_app.command("create")
-def meetings_create(
-    title: str = typer.Argument(..., help="Meeting title."),
-    scheduled_at: str = typer.Option(
-        None,
-        "--at",
-        help="ISO 8601 datetime (defaults to now).",
-    ),
-) -> None:
-    """Create a new meeting."""
-    _require_auth()
-    if scheduled_at is None:
-        scheduled_at = datetime.now(tz=timezone.utc).isoformat()
-
-    client = KutanaClient()
-    try:
-        meeting = run_async(client.create_meeting(title, scheduled_at))
-    except ApiError as exc:
-        console.print(f"[red]Error: {exc.detail}[/red]")
-        raise typer.Exit(1) from exc
-
-    console.print(
-        f"[green]Meeting created:[/green] {meeting.get('title', 'Untitled')} "
-        f"(ID: {meeting['id']})"
-    )
-
-
-# ---------------------------------------------------------------------------
-# API Keys
-# ---------------------------------------------------------------------------
-
-
-@keys_app.command("generate")
-def keys_generate(
-    agent_id: str = typer.Argument(..., help="Agent UUID."),
-    name: str = typer.Option("default", "--name", "-n", help="Key name."),
-) -> None:
-    """Generate a new API key for an agent."""
-    _require_auth()
-    client = KutanaClient()
-    try:
-        key = run_async(client.generate_key(agent_id, name))
-    except ApiError as exc:
-        console.print(f"[red]Error: {exc.detail}[/red]")
-        raise typer.Exit(1) from exc
-
-    console.print("[green]API key generated.[/green]")
-    console.print(f"[bold yellow]Key: {key['raw_key']}[/bold yellow]")
-    console.print("[dim]Save this key — it will not be shown again.[/dim]")
+        cli()
+    except Exception as exc:
+        print_error(str(exc))
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    app()
+    main()

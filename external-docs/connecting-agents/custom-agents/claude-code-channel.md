@@ -113,14 +113,14 @@ You should see `kutana` listed with 18 tools available.
 ```
 You:          What meetings are available?
 
-Claude Code:  [calls list_meetings]
+Claude Code:  [calls kutana_list_meetings]
               Found 2 meetings:
               - "Architecture Review" (active) — 5ccf4fbd-...
               - "Weekly Standup" (scheduled) — b419d06f-...
 
 You:          Join the Architecture Review.
 
-Claude Code:  [calls join_meeting]
+Claude Code:  [calls kutana_join_meeting]
               Joined. Receiving real-time transcript and events.
 ```
 
@@ -129,7 +129,7 @@ Claude Code:  [calls join_meeting]
 ```
 You:          Start a meeting called "Sprint Planning".
 
-Claude Code:  [calls join_or_create_meeting]
+Claude Code:  [calls kutana_join_or_create_meeting]
               Created and joined "Sprint Planning".
 ```
 
@@ -140,7 +140,7 @@ Once joined, transcript and chat events flow into Claude's context automatically
 ```
 You:          What action items have come up?
 
-Claude Code:  [calls get_meeting_recap]
+Claude Code:  [calls kutana_get_tasks]
               3 tasks identified so far:
               1. Alice — finalize API spec by Thursday
               2. Bob — schedule infrastructure review
@@ -148,8 +148,8 @@ Claude Code:  [calls get_meeting_recap]
 
 You:          Claim the docs task and let the meeting know.
 
-Claude Code:  [calls accept_task, then reply]
-              Task accepted. Sent: "I'll take the deployment docs update."
+Claude Code:  [calls kutana_create_task, then kutana_send_chat_message]
+              Task created. Sent: "I'll take the deployment docs update."
 ```
 
 ### Leave
@@ -157,7 +157,7 @@ Claude Code:  [calls accept_task, then reply]
 ```
 You:          Leave the meeting.
 
-Claude Code:  [calls leave_meeting]
+Claude Code:  [calls kutana_leave_meeting]
               Left meeting 5ccf4fbd-...
 ```
 
@@ -167,44 +167,51 @@ Claude Code:  [calls leave_meeting]
 
 | Tool | Description |
 |------|-------------|
-| `list_meetings` | List available meetings with their IDs and status |
-| `join_meeting` | Join a meeting by ID — starts receiving real-time events |
-| `create_meeting` | Create a new meeting |
-| `join_or_create_meeting` | Find an active meeting by title, or create and join one |
-| `leave_meeting` | Leave the current meeting and stop receiving events |
+| `kutana_list_meetings` | List available meetings with their IDs and status |
+| `kutana_join_meeting` | Join a meeting by ID — starts receiving real-time events |
+| `kutana_create_meeting` | Create a new meeting |
+| `kutana_join_or_create_meeting` | Find an active meeting by title, or create and join one |
+| `kutana_leave_meeting` | Leave the current meeting and stop receiving events |
+| `kutana_start_meeting` | Start a scheduled meeting |
+| `kutana_end_meeting` | End an active meeting |
+| `kutana_get_meeting_status` | Get comprehensive meeting state snapshot |
 
 ### Chat
 
 | Tool | Description |
 |------|-------------|
-| `reply` | Send a message to the meeting chat |
-| `get_chat_messages` | Read recent chat history |
+| `kutana_send_chat_message` | Send a message to the meeting chat |
+| `kutana_get_chat_messages` | Read recent chat history |
 
 ### Turn management
 
 | Tool | Description |
 |------|-------------|
-| `raise_hand` | Request a turn to speak (joins the speaker queue) |
-| `get_queue_status` | See who is speaking and who is waiting |
-| `mark_finished_speaking` | Release the floor after speaking |
-| `cancel_hand_raise` | Withdraw from the speaker queue |
-| `get_speaking_status` | Check your current speaking/queue status |
+| `kutana_raise_hand` | Request a turn to speak (joins the speaker queue) |
+| `kutana_get_queue_status` | See who is speaking and who is waiting |
+| `kutana_get_speaking_status` | Check your current speaking/queue status |
+| `kutana_mark_finished_speaking` | Release the floor after speaking |
+| `kutana_cancel_hand_raise` | Withdraw from the speaker queue |
+| `kutana_start_speaking` | Speak via TTS (text → synthesized voice) |
 
-### Tasks
-
-| Tool | Description |
-|------|-------------|
-| `accept_task` | Claim a task extracted from the meeting |
-| `update_status` | Report progress on a claimed task |
-
-### Transcript and insights
+### Tasks & context
 
 | Tool | Description |
 |------|-------------|
-| `request_context` | Search the transcript buffer by keyword |
-| `get_meeting_recap` | Structured recap: tasks, decisions, key points, open questions |
-| `get_entity_history` | Retrieve extracted entities by type |
-| `get_participants` | List current meeting participants |
+| `kutana_get_tasks` | Retrieve extracted tasks for the meeting |
+| `kutana_create_task` | Create a new task from the meeting |
+| `kutana_get_transcript` | Read recent transcript segments |
+| `kutana_get_participants` | List current meeting participants |
+| `kutana_get_summary` | Get meeting summary |
+| `kutana_get_meeting_events` | Poll buffered meeting events |
+
+### Channels
+
+| Tool | Description |
+|------|-------------|
+| `kutana_subscribe_channel` | Subscribe to a named data channel |
+| `kutana_publish_to_channel` | Publish data to a channel |
+| `kutana_get_channel_messages` | Read buffered channel messages |
 
 ## Resources
 

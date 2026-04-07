@@ -1447,15 +1447,17 @@ version = "0.1.0"
 source = { editable = "services/cli" }
 dependencies = [
     { name = "aiohttp" },
+    { name = "click" },
+    { name = "mcp", extra = ["cli"] },
     { name = "rich" },
-    { name = "typer" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.9" },
+    { name = "click", specifier = ">=8.1" },
+    { name = "mcp", extras = ["cli"], specifier = ">=1.0" },
     { name = "rich", specifier = ">=13.0" },
-    { name = "typer", specifier = ">=0.12" },
 ]
 
 [[package]]
