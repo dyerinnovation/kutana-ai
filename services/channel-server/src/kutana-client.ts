@@ -91,7 +91,7 @@ export class KutanaClient {
       return;
     }
 
-    const url = `${this.config.kutanaHttpUrl}/api/v1/token/gateway`;
+    const url = `${this.config.kutanaHttpUrl}/v1/token/gateway`;
     const resp = await fetch(url, {
       method: "POST",
       headers: { "X-API-Key": this.config.kutanaApiKey },
@@ -176,7 +176,7 @@ export class KutanaClient {
       await this.authenticate();
     }
 
-    const url = `${this.config.kutanaHttpUrl}/api/v1/meetings`;
+    const url = `${this.config.kutanaHttpUrl}/v1/meetings`;
     const resp = await fetch(url, {
       headers: { "X-API-Key": this.config.kutanaApiKey },
     });
@@ -197,7 +197,7 @@ export class KutanaClient {
       await this.authenticate();
     }
 
-    const url = `${this.config.kutanaHttpUrl}/api/v1/meetings`;
+    const url = `${this.config.kutanaHttpUrl}/v1/meetings`;
     const resp = await fetch(url, {
       method: "POST",
       headers: {

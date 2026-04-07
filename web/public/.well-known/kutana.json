@@ -1,0 +1,5 @@
+{
+  "api": "https://api-dev.kutana.ai",
+  "ws": "wss://ws-dev.kutana.ai",
+  "version": "v1"
+}
