@@ -34,7 +34,7 @@ class CartesiaTTS(TTSProvider):
         self,
         api_key: str,
         voice_id: str = "default",
-        model_id: str = "sonic-english",
+        model_id: str = "sonic-3",
     ) -> None:
         """Initialize the Cartesia TTS provider.
 

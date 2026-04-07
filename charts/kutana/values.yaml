@@ -52,6 +52,7 @@ agentGateway:
   image:
     tag: latest
   ttsProvider: cartesia
+  ttsCartesiaModel: "sonic-3"
   ttsCartesiaApiKey: ""
   resources:
     requests:
