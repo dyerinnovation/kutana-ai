@@ -2,6 +2,9 @@
 
 > Local version of the morning status task. Runs as a Claude Code Desktop scheduled task
 > with full local filesystem and SSH access.
+>
+> Working folder is `~/Documents/dev/kutana-ai-dev`. Iterate through all repos in that
+> directory (kutana-ai, kutana-android, kutana-ios) — pull and check git activity for each.
 
 ---
 
@@ -14,20 +17,25 @@ to the filesystem, SSH, and the Obsidian vault on the external SSD.
 
 ## Process
 
-1. Pull latest:
+1. Pull latest from all repos:
    ```bash
-   cd ~/Documents/dev/kutana-ai && git pull origin main
+   for repo in kutana-ai kutana-android kutana-ios; do
+     echo "=== $repo ===" && cd ~/Documents/dev/kutana-ai-dev/$repo && git pull origin main
+   done
    ```
 
-2. Read current state:
-   - Read `CLAUDE.md` for conventions
-   - Read `internal-docs/development/HANDOFF.md` for warnings
-   - Read `internal-docs/development/TASKLIST.md` — identify next 3 unchecked items
+2. Read current state (from kutana-ai):
+   - Read `kutana-ai/CLAUDE.md` for conventions
+   - Read `kutana-ai/internal-docs/development/HANDOFF.md` for warnings
+   - Read `kutana-ai/internal-docs/development/TASKLIST.md` — identify next 3 unchecked items
 
-3. Git activity (last 24h):
+3. Git activity (last 24h) — check all repos:
    ```bash
-   git log --oneline --since='24 hours ago'
-   git diff --stat HEAD~5..HEAD 2>/dev/null || echo "Less than 5 commits"
+   for repo in kutana-ai kutana-android kutana-ios; do
+     echo "=== $repo ===" && cd ~/Documents/dev/kutana-ai-dev/$repo
+     git log --oneline --since='24 hours ago'
+     git diff --stat HEAD~5..HEAD 2>/dev/null || echo "Less than 5 commits"
+   done
    ```
 
 4. DGX health check:
