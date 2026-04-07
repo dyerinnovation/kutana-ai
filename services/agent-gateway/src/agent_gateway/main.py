@@ -137,7 +137,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if _tts_provider_name == "cartesia" and _settings.tts_cartesia_api_key:
         from kutana_providers.tts.cartesia_tts import CartesiaTTS
 
-        _raw_tts_provider = CartesiaTTS(api_key=_settings.tts_cartesia_api_key)
+        _raw_tts_provider = CartesiaTTS(
+            api_key=_settings.tts_cartesia_api_key,
+            model_id=_settings.tts_cartesia_model,
+        )
         logger.info("TTS provider: Cartesia")
     elif _tts_provider_name == "elevenlabs" and _settings.tts_elevenlabs_api_key:
         from kutana_providers.tts.elevenlabs_tts import ElevenLabsTTS

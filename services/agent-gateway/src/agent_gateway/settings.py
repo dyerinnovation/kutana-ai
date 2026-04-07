@@ -52,6 +52,7 @@ class AgentGatewaySettings(BaseSettings):
     # TTS settings
     tts_provider: str = "piper"  # piper | cartesia | elevenlabs
     tts_cartesia_api_key: str = ""
+    tts_cartesia_model: str = "sonic-3"
     tts_elevenlabs_api_key: str = ""
     tts_char_limit: int = 100_000
     tts_default_voice: str = "en_US-lessac-medium"
