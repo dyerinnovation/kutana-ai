@@ -29,14 +29,12 @@ this to configure audio routing for the session.
 | Value | Audio In | Audio Out | Use Case |
 |-------|----------|-----------|----------|
 | `text_only` | Transcript feed only | None | Chat bots, task extractors |
-| `voice_in` | Raw PCM16 stream | None | Transcription agents, listeners |
-| `voice_out` | Transcript feed only | PCM16 stream | Announcement agents, narrators |
-| `voice_bidirectional` | Raw PCM16 stream | PCM16 stream | Full voice agents |
 | `tts_enabled` | Transcript feed only | TTS-generated PCM16 | Text agents with TTS voice output |
+| `voice` | Raw PCM16 stream | PCM16 stream | Full voice agents (custom STT, voice cloning) |
 
-`tts_enabled` is mutually exclusive with `voice_out` and `voice_bidirectional`. It signals that
-the gateway should accept text output from the agent and synthesize it via TTS before mixing into
-the room.
+`tts_enabled` is mutually exclusive with `voice`. It signals that the gateway should accept text
+output from the agent and synthesize it via TTS before mixing into the room. Agents that only need
+one direction of raw audio can use `voice` and simply not send or not read.
 
 ### Join Message
 
@@ -48,7 +46,7 @@ forwarded via the `AgentIdentity` WebSocket message:
   "type": "join_meeting",
   "meeting_id": "abc123",
   "capabilities": {
-    "audio": "voice_bidirectional",
+    "audio": "voice",
     "sidecar_port": 8004
   }
 }
@@ -60,7 +58,7 @@ For MCP-based agents, the capability is passed as a parameter to `kutana_join_me
 # Via MCP tool call
 result = await mcp.call_tool("kutana_join_meeting", {
     "meeting_id": "abc123",
-    "audio_capability": "voice_bidirectional"
+    "audio_capability": "voice"
 })
 # Returns: {"session_id": "...", "sidecar_ws_url": "ws://..."}
 ```

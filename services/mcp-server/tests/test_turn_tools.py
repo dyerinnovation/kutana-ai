@@ -511,8 +511,8 @@ async def test_join_meeting_text_only_default_capabilities() -> None:
 
 
 @pytest.mark.asyncio
-async def test_join_meeting_voice_in_returns_audio_fields() -> None:
-    """kutana_join_meeting returns audio_ws_url and audio_token for voice_in."""
+async def test_join_meeting_voice_returns_audio_fields() -> None:
+    """kutana_join_meeting returns audio_ws_url and audio_token for voice."""
     async def fake_connect_and_join(
         meeting_id: str,
         capabilities: list[str] | None = None,
@@ -539,7 +539,7 @@ async def test_join_meeting_voice_in_returns_audio_fields() -> None:
     ):
         from mcp_server.main import kutana_join_meeting
         result = json.loads(
-            await kutana_join_meeting(str(TEST_MEETING_ID), capabilities=["voice_in"])
+            await kutana_join_meeting(str(TEST_MEETING_ID), capabilities=["voice"])
         )
 
     assert "audio_ws_url" in result
@@ -584,8 +584,8 @@ async def test_join_meeting_text_only_no_audio_fields() -> None:
 
 
 @pytest.mark.asyncio
-async def test_join_meeting_voice_bidirectional_includes_speak_cap() -> None:
-    """kutana_join_meeting maps voice_bidirectional to include speak capability."""
+async def test_join_meeting_voice_includes_speak_cap() -> None:
+    """kutana_join_meeting maps voice to include speak capability."""
     mapped_caps: list[str] = []
 
     async def fake_connect_and_join(
@@ -611,7 +611,7 @@ async def test_join_meeting_voice_bidirectional_includes_speak_cap() -> None:
         patch("mcp_server.main.GatewayClient", return_value=mock_gw),
     ):
         from mcp_server.main import kutana_join_meeting
-        await kutana_join_meeting(str(TEST_MEETING_ID), capabilities=["voice_bidirectional"])
+        await kutana_join_meeting(str(TEST_MEETING_ID), capabilities=["voice"])
 
     assert "speak" in mapped_caps
     assert "listen" in mapped_caps

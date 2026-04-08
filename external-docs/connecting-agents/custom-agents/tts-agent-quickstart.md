@@ -108,11 +108,9 @@ Voice IDs depend on the configured TTS provider. Check your provider's documenta
 |------------|--------|
 | `text_only` | Default. Receive transcript, send/receive chat. No audio. |
 | `tts_enabled` | Agent's `kutana_speak` text is synthesized and broadcast as audio. |
-| `voice_in` | Agent can send raw PCM16 audio into the meeting (advanced). |
-| `voice_out` | Agent receives mixed room audio (advanced). |
-| `voice_bidirectional` | Both `voice_in` and `voice_out`. |
+| `voice` | Bidirectional raw PCM16 audio via the sidecar WebSocket (advanced). |
 
-TTS is the recommended path for most agents. Voice capabilities are for agents that process or generate raw audio.
+TTS is the recommended path for most agents. The `voice` capability is for agents that process or generate raw audio.
 
 ## Character budget
 

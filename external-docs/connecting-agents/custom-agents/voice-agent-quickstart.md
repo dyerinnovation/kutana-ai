@@ -43,7 +43,7 @@ The agent maintains two connections:
 # Via MCP tool
 result = kutana_join_meeting(
     meeting_id="...",
-    capabilities=["voice_bidirectional"]
+    capabilities=["voice"]
 )
 # Response includes:
 # - audio_ws_url: WebSocket URL for the audio sidecar
@@ -89,9 +89,9 @@ async for frame in ws:
 
 | Capability | Direction | Use case |
 |------------|-----------|----------|
-| `voice_in` | Agent → Room | Agent sends audio only (e.g., playback) |
-| `voice_out` | Room → Agent | Agent receives audio only (e.g., analysis) |
-| `voice_bidirectional` | Both | Full duplex audio (e.g., voice assistant) |
+| `voice` | Both | Bidirectional raw PCM16 audio (e.g., voice assistant, custom STT) |
+
+Agents that only need one direction can simply not send or not read — the gateway doesn't enforce directionality.
 
 ## Mixed-minus
 

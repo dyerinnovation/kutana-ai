@@ -35,8 +35,7 @@ def _make_identity(
         "listen",
         "transcribe",
         "speak",
-        "voice_in",
-        "voice_out",
+        "voice",
     ]
     return identity
 
@@ -104,25 +103,25 @@ class TestCapabilityGrant:
         assert set(sent["granted_capabilities"]) == {"listen", "transcribe"}
 
     @pytest.mark.asyncio
-    async def test_voice_in_grants_voice_capability(self) -> None:
-        """Agent requesting voice_in gets voice_in in granted capabilities."""
+    async def test_voice_grants_voice_capability(self) -> None:
+        """Agent requesting voice gets voice in granted capabilities."""
         handler, ws = _make_handler()
         msg = JoinMeeting(
             meeting_id=_MEETING_ID,
-            capabilities=["listen", "transcribe", "voice_in"],
+            capabilities=["listen", "transcribe", "voice"],
         )
         await handler._handle_join(msg)
 
         sent = ws.send_json.call_args[0][0]
-        assert "voice_in" in sent["granted_capabilities"]
+        assert "voice" in sent["granted_capabilities"]
 
     @pytest.mark.asyncio
-    async def test_voice_in_returns_audio_sidecar_url(self) -> None:
+    async def test_voice_returns_audio_sidecar_url(self) -> None:
         """Voice-capable agents receive audio_ws_url and audio_token in Joined."""
         handler, ws = _make_handler()
         msg = JoinMeeting(
             meeting_id=_MEETING_ID,
-            capabilities=["listen", "transcribe", "voice_in"],
+            capabilities=["listen", "transcribe", "voice"],
         )
         await handler._handle_join(msg)
 
@@ -152,7 +151,7 @@ class TestCapabilityGrant:
         handler, ws = _make_handler(identity=identity)
         msg = JoinMeeting(
             meeting_id=_MEETING_ID,
-            capabilities=["listen", "transcribe", "speak", "voice_in"],
+            capabilities=["listen", "transcribe", "speak", "voice"],
         )
         await handler._handle_join(msg)
 
@@ -160,7 +159,7 @@ class TestCapabilityGrant:
         granted = set(sent["granted_capabilities"])
         assert granted == {"listen", "transcribe"}
         assert "speak" not in granted
-        assert "voice_in" not in granted
+        assert "voice" not in granted
 
 
 # ---------------------------------------------------------------------------
@@ -177,23 +176,11 @@ class TestAudioCapabilityInference:
         result = handler._infer_audio_capability(tts_enabled=False)
         assert result == "text_only"
 
-    def test_voice_in(self) -> None:
+    def test_voice(self) -> None:
         handler, _ = _make_handler()
-        handler.capabilities = ["listen", "transcribe", "voice_in"]
+        handler.capabilities = ["listen", "transcribe", "voice"]
         result = handler._infer_audio_capability(tts_enabled=False)
-        assert result == "voice_in"
-
-    def test_voice_out(self) -> None:
-        handler, _ = _make_handler()
-        handler.capabilities = ["listen", "transcribe", "voice_out"]
-        result = handler._infer_audio_capability(tts_enabled=False)
-        assert result == "voice_out"
-
-    def test_voice_bidirectional(self) -> None:
-        handler, _ = _make_handler()
-        handler.capabilities = ["listen", "transcribe", "voice_in", "voice_out"]
-        result = handler._infer_audio_capability(tts_enabled=False)
-        assert result == "voice_bidirectional"
+        assert result == "voice"
 
     def test_tts_enabled(self) -> None:
         handler, _ = _make_handler()
@@ -201,12 +188,12 @@ class TestAudioCapabilityInference:
         result = handler._infer_audio_capability(tts_enabled=True)
         assert result == "tts_enabled"
 
-    def test_voice_in_overrides_tts(self) -> None:
-        """voice_in takes precedence over tts_enabled."""
+    def test_voice_overrides_tts(self) -> None:
+        """voice takes precedence over tts_enabled."""
         handler, _ = _make_handler()
-        handler.capabilities = ["listen", "transcribe", "voice_in"]
+        handler.capabilities = ["listen", "transcribe", "voice"]
         result = handler._infer_audio_capability(tts_enabled=True)
-        assert result == "voice_in"
+        assert result == "voice"
 
 
 # ---------------------------------------------------------------------------
@@ -226,7 +213,7 @@ class TestParticipantEvent:
 
         msg = JoinMeeting(
             meeting_id=_MEETING_ID,
-            capabilities=["listen", "transcribe", "voice_in"],
+            capabilities=["listen", "transcribe", "voice"],
         )
         await handler._handle_join(msg)
 
@@ -247,8 +234,8 @@ class TestParticipantEvent:
         assert participant_call is not None, "participant.joined event not published"
         payload = json.loads(participant_call["payload"])
         assert "capabilities" in payload
-        assert "voice_in" in payload["capabilities"]
-        assert payload["audio_capability"] == "voice_in"
+        assert "voice" in payload["capabilities"]
+        assert payload["audio_capability"] == "voice"
 
     @pytest.mark.asyncio
     async def test_participant_joined_event_text_only(self) -> None:
@@ -299,11 +286,11 @@ class TestParticipantUpdateBroadcast:
 
         msg = JoinMeeting(
             meeting_id=_MEETING_ID,
-            capabilities=["listen", "transcribe", "voice_in"],
+            capabilities=["listen", "transcribe", "voice"],
         )
         await handler._handle_join(msg)
 
         other_session.send_participant_update.assert_called_once()
         call_kwargs = other_session.send_participant_update.call_args[1]
         assert call_kwargs["action"] == "joined"
-        assert "voice_in" in call_kwargs["capabilities"]
+        assert "voice" in call_kwargs["capabilities"]

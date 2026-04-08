@@ -20,7 +20,7 @@
         },
         "capabilities": {
           "type": "array",
-          "description": "Agent capabilities: text_only (default), voice_in, voice_out, voice_bidirectional, tts_enabled",
+          "description": "Agent capabilities: text_only (default), tts_enabled, voice",
           "required": false
         },
         "tts_voice_id": {
@@ -304,7 +304,7 @@
         },
         "capabilities": {
           "type": "array",
-          "description": "Agent capabilities: text_only (default), voice_in, voice_out, voice_bidirectional, tts_enabled",
+          "description": "Agent capabilities: text_only (default), tts_enabled, voice",
           "required": false
         }
       }

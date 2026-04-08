@@ -20,7 +20,7 @@ def _make_identity(
     return AgentIdentity(
         agent_config_id=agent_config_id or uuid4(),
         name=name,
-        capabilities=capabilities or ["voice_in", "voice_out"],
+        capabilities=capabilities or ["voice"],
     )
 
 

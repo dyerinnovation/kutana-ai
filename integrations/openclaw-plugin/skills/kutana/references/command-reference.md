@@ -104,8 +104,7 @@ kutana join <meeting_id> [--capabilities <level>]
 
 - `text_only` -- chat and data channel only, no audio
 - `tts_enabled` -- adds text-to-speech output
-- `voice_in` -- adds voice input (microphone)
-- `voice_bidirectional` -- full duplex audio
+- `voice` -- bidirectional raw PCM16 audio via the sidecar WebSocket
 
 **Output:**
 

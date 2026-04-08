@@ -154,9 +154,8 @@ result = await mcp.call_tool("kutana_join_meeting", {
 | `text_only` | Transcript feed via poll | Chat, tasks, turn management |
 | `tts_enabled` | Transcript feed via poll | Chat + synthesized speech |
 
-Claude Code does not support `voice_in`, `voice_out`, or `voice_bidirectional` — those require
-a binary WebSocket audio sidecar that Claude Code's MCP transport does not provide. TTS is the
-correct voice mechanism for Claude Code.
+Claude Code does not support `voice` — that requires a binary WebSocket audio sidecar that Claude
+Code's MCP transport does not provide. TTS is the correct voice mechanism for Claude Code.
 
 The `source: "claude-code"` field is propagated in participant events so that other participants
 can distinguish Claude Code from other agent types.

@@ -91,10 +91,8 @@ Pass a `capabilities` array to `kutana_join_meeting` to control what the agent c
 | Capability | Effect |
 |------------|--------|
 | `text_only` | Transcript and chat only — no audio processing (default) |
-| `voice_in` | Receive audio input |
-| `voice_out` | Send audio output |
-| `voice_bidirectional` | Full audio input and output |
 | `tts_enabled` | Agent can speak via text-to-speech |
+| `voice` | Bidirectional raw PCM16 audio via the sidecar WebSocket (advanced) |
 
 ## Example Conversation
 

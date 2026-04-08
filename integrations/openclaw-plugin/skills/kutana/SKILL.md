@@ -82,12 +82,11 @@ kutana leave
 
 **Capability levels** (choose the minimum you need):
 
-| Capability          | Chat | Transcript | TTS | Voice In |
-|---------------------|------|------------|-----|----------|
-| `text_only`         | yes  | yes        | no  | no       |
-| `tts_enabled`       | yes  | yes        | yes | no       |
-| `voice_in`          | yes  | yes        | yes | yes      |
-| `voice_bidirectional` | yes | yes       | yes | yes      |
+| Capability          | Chat | Transcript | TTS | Raw Audio |
+|---------------------|------|------------|-----|-----------|
+| `text_only`         | yes  | yes        | no  | no        |
+| `tts_enabled`       | yes  | yes        | yes | no        |
+| `voice`             | yes  | yes        | no  | yes       |
 
 ### Meeting Status
 

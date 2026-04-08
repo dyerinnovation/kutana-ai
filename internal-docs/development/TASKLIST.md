@@ -151,7 +151,7 @@
 - [x] 🔗 BLOCK: TTS Pipeline — Gateway TTS Engine (P0) ✅
 
 - [ ] 🔗 BLOCK: Agent Capability Declaration (P0)
-  - [ ] Extend `kutana_join_meeting` with `audio_capability` parameter (`text_only`, `voice_in`, `voice_out`, `voice_bidirectional`, `tts_enabled`)
+  - [ ] Extend `kutana_join_meeting` with `audio_capability` parameter (`text_only`, `tts_enabled`, `voice`)
   - [ ] Extend `kutana_join_meeting` with `tts_voice_id` optional override parameter
   - [ ] Gateway routes audio based on declared capability at join time
   - [ ] Participant events include `audio_capability` field for visibility

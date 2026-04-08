@@ -33,7 +33,7 @@ def _make_identity() -> MagicMock:
     identity.agent_config_id = _AGENT_CONFIG_ID
     identity.name = "VoiceAgent"
     identity.source = "agent"
-    identity.capabilities = ["listen", "transcribe", "voice_in", "voice_out"]
+    identity.capabilities = ["listen", "transcribe", "voice"]
     return identity
 
 

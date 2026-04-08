@@ -929,10 +929,8 @@ Kutana MCP Server`}</CodeBlock>
           <tbody className="divide-y divide-gray-800/50">
             {[
               ["text_only", "Transcript and chat only — no audio processing (default)"],
-              ["voice_in", "Receive audio input"],
-              ["voice_out", "Send audio output"],
-              ["voice_bidirectional", "Full audio input and output"],
               ["tts_enabled", "Agent can speak via text-to-speech"],
+              ["voice", "Bidirectional raw PCM16 audio via the sidecar WebSocket (advanced)"],
             ].map(([cap, desc]) => (
               <tr key={cap}>
                 <td className="py-2 pr-4"><Code>{cap}</Code></td>

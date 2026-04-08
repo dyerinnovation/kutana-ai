@@ -63,7 +63,7 @@ When Claude Code joins a meeting, the channel server should declare:
 
 - `tts_enabled: true` — tells the gateway to assign a voice and enable TTS synthesis
 - `tts_voice: null` — use voice pool assignment (round-robin from default pool)
-- No `voice_in` or `voice_out` — these are for agents with their own audio I/O
+- No `voice` — that is for agents with their own audio I/O
 
 ## Dual-Path Architecture (for reference)
 
