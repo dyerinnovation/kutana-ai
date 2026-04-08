@@ -8,8 +8,11 @@ from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
 
+from api_server.deps import get_settings
 from api_server.middleware import setup_cors
+from api_server.observability import setup_logging, setup_prometheus, setup_sentry
 from api_server.rate_limit import RateLimitMiddleware
+from api_server.request_id import RequestIdMiddleware
 from api_server.routes.agent_keys import router as agent_keys_router
 from api_server.routes.agent_templates import router as agent_templates_router
 from api_server.routes.agents import router as agents_router
@@ -26,6 +29,11 @@ from api_server.routes.turns import router as turns_router
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+
+# Initialise observability before anything else
+_settings = get_settings()
+setup_logging(log_format=_settings.log_format)
+setup_sentry(dsn=_settings.sentry_dsn, service_name="api-server")
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +64,9 @@ app = FastAPI(
 )
 
 setup_cors(app)
+app.add_middleware(RequestIdMiddleware)
 app.add_middleware(RateLimitMiddleware)
+setup_prometheus(app)
 
 app.include_router(health_router)
 app.include_router(auth_router, prefix="/v1")
