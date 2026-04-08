@@ -1,4 +1,5 @@
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
@@ -16,101 +17,159 @@ const navItems = [
 export function Layout() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location]);
+
+  // Prevent body scroll when sidebar is open on mobile
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [sidebarOpen]);
+
+  const sidebarInner = (
+    <>
+      {/* Logo / wordmark */}
+      <div className="flex h-14 items-center gap-3 border-b border-gray-800 px-4">
+        <KutanaKMark size={26} />
+        <span className="text-sm font-semibold tracking-tight text-gray-50">
+          Kutana{" "}
+          <span className="text-blue-400">AI</span>
+        </span>
+        {/* Close button — mobile only */}
+        <button
+          onClick={() => setSidebarOpen(false)}
+          className="ml-auto rounded-lg p-1.5 text-gray-400 hover:bg-gray-800 hover:text-gray-200 transition-colors md:hidden"
+          aria-label="Close sidebar"
+        >
+          <XCloseIcon />
+        </button>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 space-y-0.5 p-2 pt-3">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === "/"}
+            className={({ isActive }: { isActive: boolean }) =>
+              cn(
+                "group flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-medium",
+                "transition-all duration-150",
+                isActive
+                  ? "border-blue-600/25 bg-blue-600/12 text-gray-50"
+                  : "border-transparent text-gray-400 hover:bg-gray-800 hover:text-gray-100"
+              )
+            }
+          >
+            <item.icon />
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
+
+      {/* User / sign-out / theme toggle */}
+      <div className="border-t border-gray-800 p-3 space-y-1">
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-sm text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-200"
+        >
+          {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+          <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+        </button>
+
+        {/* User row */}
+        <div className="flex items-center gap-3 rounded-lg px-2 py-2">
+          <Link
+            to="/settings/profile"
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-gradient-brand text-[11px] font-semibold text-white overflow-hidden transition-opacity hover:opacity-80"
+          >
+            {user?.avatar_url ? (
+              <img src={user.avatar_url} alt={user.name} className="h-full w-full object-cover" />
+            ) : (
+              user?.name?.charAt(0).toUpperCase() ?? "?"
+            )}
+          </Link>
+
+          <div className="flex-1 min-w-0">
+            <Link to="/settings/profile" className="block truncate text-xs font-medium text-gray-200 hover:text-gray-50 transition-colors">
+              {user?.name}
+            </Link>
+            <p className="truncate text-[11px] text-gray-500">{user?.email}</p>
+            {user && (
+              <Link
+                to="/settings/billing"
+                className="mt-1 inline-flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium text-blue-300 transition-colors hover:bg-blue-500/20"
+              >
+                {user.plan_tier.charAt(0).toUpperCase() + user.plan_tier.slice(1)}
+                {user.subscription_status === "trialing" && " · Trial"}
+                {user.subscription_status === "past_due" && " · Past due"}
+              </Link>
+            )}
+          </div>
+
+          <button
+            onClick={logout}
+            title="Sign out"
+            className="flex-shrink-0 rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-800 hover:text-gray-200"
+          >
+            <SignOutIcon />
+          </button>
+        </div>
+      </div>
+    </>
+  );
 
   return (
     <div className="flex h-screen bg-gray-950">
-      {/* ── Sidebar ──────────────────────────────────────────────── */}
-      <aside className="flex w-60 flex-col border-r border-gray-800 bg-gray-950">
+      {/* Mobile top bar */}
+      <div className="fixed top-0 left-0 right-0 z-40 flex h-14 items-center gap-3 border-b border-gray-800 bg-gray-950 px-4 md:hidden">
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-800 hover:text-gray-200 transition-colors"
+          aria-label="Open sidebar"
+        >
+          <MenuBarIcon />
+        </button>
+        <KutanaKMark size={24} />
+        <span className="text-sm font-semibold tracking-tight text-gray-50">
+          Kutana <span className="text-blue-400">AI</span>
+        </span>
+      </div>
 
-        {/* Logo / wordmark */}
-        <div className="flex h-14 items-center gap-3 border-b border-gray-800 px-4">
-          <KutanaKMark size={26} />
-          <span className="text-sm font-semibold tracking-tight text-gray-50">
-            Kutana{" "}
-            <span className="text-blue-400">AI</span>
-          </span>
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <aside className="absolute left-0 top-0 h-full w-60 flex flex-col bg-gray-950 border-r border-gray-800 shadow-2xl">
+            {sidebarInner}
+          </aside>
         </div>
+      )}
 
-        {/* Navigation */}
-        <nav className="flex-1 space-y-0.5 p-2 pt-3">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === "/"}
-              className={({ isActive }: { isActive: boolean }) =>
-                cn(
-                  "group flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-medium",
-                  "transition-all duration-150",
-                  isActive
-                    ? "border-blue-600/25 bg-blue-600/12 text-gray-50"
-                    : "border-transparent text-gray-400 hover:bg-gray-800 hover:text-gray-100"
-                )
-              }
-            >
-              <item.icon />
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-
-        {/* User / sign-out / theme toggle */}
-        <div className="border-t border-gray-800 p-3 space-y-1">
-          {/* Theme toggle */}
-          <button
-            onClick={toggleTheme}
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-sm text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-200"
-          >
-            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
-            <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
-          </button>
-
-          {/* User row */}
-          <div className="flex items-center gap-3 rounded-lg px-2 py-2">
-            {/* Avatar — links to profile */}
-            <Link
-              to="/settings/profile"
-              className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-gradient-brand text-[11px] font-semibold text-white overflow-hidden transition-opacity hover:opacity-80"
-            >
-              {user?.avatar_url ? (
-                <img src={user.avatar_url} alt={user.name} className="h-full w-full object-cover" />
-              ) : (
-                user?.name?.charAt(0).toUpperCase() ?? "?"
-              )}
-            </Link>
-
-            <div className="flex-1 min-w-0">
-              <Link to="/settings/profile" className="block truncate text-xs font-medium text-gray-200 hover:text-gray-50 transition-colors">
-                {user?.name}
-              </Link>
-              <p className="truncate text-[11px] text-gray-500">{user?.email}</p>
-              {user && (
-                <Link
-                  to="/settings/billing"
-                  className="mt-1 inline-flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium text-blue-300 transition-colors hover:bg-blue-500/20"
-                >
-                  {user.plan_tier.charAt(0).toUpperCase() + user.plan_tier.slice(1)}
-                  {user.subscription_status === "trialing" && " · Trial"}
-                  {user.subscription_status === "past_due" && " · Past due"}
-                </Link>
-              )}
-            </div>
-
-            {/* Sign out — icon button */}
-            <button
-              onClick={logout}
-              title="Sign out"
-              className="flex-shrink-0 rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-800 hover:text-gray-200"
-            >
-              <SignOutIcon />
-            </button>
-          </div>
-        </div>
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex w-60 flex-col border-r border-gray-800 bg-gray-950">
+        {sidebarInner}
       </aside>
 
-      {/* ── Main content ─────────────────────────────────────────── */}
-      <main className="flex-1 overflow-y-auto bg-ambient-brand p-6">
+      {/* Main content — with top padding on mobile for the fixed bar */}
+      <main className="flex-1 overflow-y-auto bg-ambient-brand p-6 pt-20 md:pt-6">
         <Outlet />
       </main>
     </div>
@@ -257,6 +316,22 @@ function MoonIcon() {
   return (
     <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+    </svg>
+  );
+}
+
+function MenuBarIcon() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+    </svg>
+  );
+}
+
+function XCloseIcon() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
     </svg>
   );
 }

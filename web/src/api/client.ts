@@ -1,3 +1,5 @@
+import { showToast } from "@/components/Toast";
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 
 export class ApiError extends Error {
@@ -46,7 +48,11 @@ export async function apiFetch<T>(
     } catch {
       // Use default message
     }
-    throw new ApiError(response.status, message);
+    const err = new ApiError(response.status, message);
+    if (response.status !== 401) {
+      showToast(message);
+    }
+    throw err;
   }
 
   // Handle 204 No Content

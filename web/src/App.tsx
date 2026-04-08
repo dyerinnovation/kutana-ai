@@ -18,6 +18,7 @@ import { PricingPage } from "@/pages/PricingPage";
 import { BillingPage } from "@/pages/BillingPage";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { CalendarPage } from "@/pages/CalendarPage";
+import { NotFoundPage } from "@/pages/NotFoundPage";
 
 export default function App() {
   return (
@@ -65,6 +66,9 @@ export default function App() {
         <Route path="/settings/billing" element={<BillingPage />} />
         <Route path="/settings/profile" element={<ProfilePage />} />
       </Route>
+
+      {/* Catch-all 404 */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
