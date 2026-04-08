@@ -384,6 +384,59 @@ export default function MeetingDiagramSection() {
 
   const stage = stages[current];
 
+  /* ---------- Flow line alignment refs ---------- */
+  const feedColRef = useRef<HTMLDivElement>(null);
+  const flowInColRef = useRef<HTMLDivElement>(null);
+  const agentColRef = useRef<HTMLDivElement>(null);
+  const flowOutColRef = useRef<HTMLDivElement>(null);
+
+  const alignFlowLines = useCallback(() => {
+    const feedNodes = feedColRef.current?.querySelectorAll<HTMLElement>("[data-feed-node]");
+    const flowInCol = flowInColRef.current;
+    const feedLines = flowInCol?.querySelectorAll<HTMLElement>("[data-flow-in]");
+    if (flowInCol && feedNodes && feedLines && feedNodes.length > 0) {
+      const first = feedNodes[0].getBoundingClientRect();
+      const last = feedNodes[feedNodes.length - 1].getBoundingClientRect();
+      flowInCol.style.height = `${last.bottom - first.top}px`;
+      const colRect = flowInCol.getBoundingClientRect();
+      feedLines.forEach((line, i) => {
+        if (feedNodes[i]) {
+          const nodeRect = feedNodes[i].getBoundingClientRect();
+          const centerY = nodeRect.top + nodeRect.height / 2;
+          line.style.top = `${centerY - colRect.top - 1.5}px`;
+        }
+      });
+    }
+    const agentNodes = agentColRef.current?.querySelectorAll<HTMLElement>("[data-agent-node]");
+    const flowOutCol = flowOutColRef.current;
+    const agentWraps = flowOutCol?.querySelectorAll<HTMLElement>("[data-flow-out]");
+    if (flowOutCol && agentNodes && agentWraps && agentNodes.length > 0) {
+      const first = agentNodes[0].getBoundingClientRect();
+      const last = agentNodes[agentNodes.length - 1].getBoundingClientRect();
+      flowOutCol.style.height = `${last.bottom - first.top}px`;
+      const colRect = flowOutCol.getBoundingClientRect();
+      agentWraps.forEach((wrap, i) => {
+        if (agentNodes[i]) {
+          const nodeRect = agentNodes[i].getBoundingClientRect();
+          const centerY = nodeRect.top + nodeRect.height / 2;
+          const wrapH = wrap.getBoundingClientRect().height;
+          wrap.style.top = `${centerY - colRect.top - wrapH / 2}px`;
+        }
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(alignFlowLines);
+    });
+    window.addEventListener("resize", alignFlowLines);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", alignFlowLines);
+    };
+  }, [alignFlowLines, current]);
+
   /* ---------- Update dynamic bubble text ---------- */
   useEffect(() => {
     if (stage.bubbleText) {
@@ -745,10 +798,11 @@ export default function MeetingDiagramSection() {
                 <div className="text-[0.8rem] font-bold uppercase tracking-[0.12em] text-center mb-1.5 pb-1.5 border-b border-white/[0.06] text-green-600/70">
                   Feeds
                 </div>
-                <div className="grid grid-rows-4 gap-2 flex-1 max-[540px]:grid-rows-none max-[540px]:grid-cols-4 max-[540px]:justify-center max-[540px]:flex-wrap">
+                <div ref={feedColRef} className="grid grid-rows-4 gap-2 flex-1 max-[540px]:grid-rows-none max-[540px]:grid-cols-4 max-[540px]:justify-center max-[540px]:flex-wrap">
                   {feedItems.map((feed, i) => (
                     <div
                       key={i}
+                      data-feed-node
                       onClick={() => handleClickFeed(i)}
                       className={`bg-slate-800/70 border rounded-lg p-[6px_6px_4px] text-center cursor-pointer transition-all duration-[350ms] ${
                         stage.feeds.includes(i)
@@ -767,15 +821,15 @@ export default function MeetingDiagramSection() {
                 </div>
               </div>
 
-              {/* Feed flow lines */}
-              <div className="flex flex-col px-0.5 self-start relative max-[540px]:hidden" style={{ alignSelf: "start" }}>
+              {/* Feed flow lines — positioned by JS alignFlowLines */}
+              <div ref={flowInColRef} className="flex flex-col px-0.5 self-center relative max-[540px]:hidden">
                 {[0, 1, 2, 3].map((i) => (
                   <div
                     key={i}
+                    data-flow-in
                     className={`md-flow-line md-flow-in h-[3px] rounded-sm bg-white/[0.06] absolute left-0.5 right-0.5 ${
                       stage.flowIn.includes(i) ? "md-flowing" : ""
                     } ${isReverse ? "md-flow-reverse" : ""}`}
-                    style={{ top: `calc(${i} * 25% + 12.5%)` }}
                   />
                 ))}
               </div>
@@ -906,10 +960,10 @@ export default function MeetingDiagramSection() {
                 </div>
               </div>
 
-              {/* Agent flow lines (with protocol labels) */}
-              <div className="flex flex-col px-0.5 self-start relative max-[540px]:hidden" style={{ alignSelf: "start", justifyContent: "space-around", display: "flex", height: "100%" }}>
+              {/* Agent flow lines (with protocol labels) — positioned by JS alignFlowLines */}
+              <div ref={flowOutColRef} className="flex flex-col px-0.5 self-center relative max-[540px]:hidden">
                 {[0, 1, 2].map((i) => (
-                  <div key={i} className="relative flex flex-col items-stretch gap-[3px]" style={{ position: "absolute", left: "2px", right: "2px", top: `calc(${i} * 33.33% + 16.67%)` }}>
+                  <div key={i} data-flow-out className="relative flex flex-col items-stretch gap-[3px]" style={{ position: "absolute", left: "2px", right: "2px" }}>
                     <div className="text-[0.6rem] font-bold uppercase tracking-[0.07em] text-teal-500/75 text-center whitespace-nowrap leading-none max-[700px]:hidden">
                       {protocolLabels[i]}
                     </div>
@@ -927,10 +981,11 @@ export default function MeetingDiagramSection() {
                 <div className="text-[0.8rem] font-bold uppercase tracking-[0.12em] text-center mb-1.5 pb-1.5 border-b border-white/[0.06] text-violet-400/70 px-2">
                   Your Agents
                 </div>
-                <div className="grid grid-rows-3 gap-2 flex-1 px-2 max-[540px]:grid-rows-none max-[540px]:grid-cols-3 max-[540px]:justify-center max-[540px]:flex-wrap">
+                <div ref={agentColRef} className="grid grid-rows-3 gap-2 flex-1 px-2 max-[540px]:grid-rows-none max-[540px]:grid-cols-3 max-[540px]:justify-center max-[540px]:flex-wrap">
                   {agentConnItems.map((agent, i) => (
                     <div
                       key={i}
+                      data-agent-node
                       onClick={() => handleClickAgent(i)}
                       className={`bg-slate-800/70 border rounded-lg p-[6px_6px_4px] text-center cursor-pointer transition-all duration-[350ms] ${
                         stage.agents.includes(i)
