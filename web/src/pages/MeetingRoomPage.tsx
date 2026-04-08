@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { getMeetingToken } from "@/api/meetings";
 import { Button } from "@/components/ui/Button";
+import { SpeakerQueuePanel } from "@/components/meeting/SpeakerQueuePanel";
 import type {
   TranscriptSegment,
   Participant,
@@ -10,6 +11,8 @@ import type {
   TtsAudioPayload,
   ChatMessage,
   TurnQueueEntry,
+  TurnQueuePayload,
+  TurnSpeakerChangedPayload,
 } from "@/types";
 
 const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -83,6 +86,12 @@ export function MeetingRoomPage() {
   const workletRef = useRef<AudioWorkletNode | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const participantsRef = useRef<Participant[]>([]);
+
+  // Keep participantsRef in sync for use in event handlers
+  useEffect(() => {
+    participantsRef.current = participants;
+  }, [participants]);
 
   // Auto-scroll transcript panel
   useEffect(() => {
@@ -242,40 +251,71 @@ export function MeetingRoomPage() {
       case "error":
         setError(msg.message);
         break;
-      case "event":
+      case "event": {
+        const evPayload = msg.payload as Record<string, unknown>;
         if (msg.event_type === "tts.audio") {
-          void playTtsAudio(msg.payload as unknown as TtsAudioPayload);
+          void playTtsAudio(evPayload as unknown as TtsAudioPayload);
         } else if (msg.event_type === "chat.message.received") {
-          const p = msg.payload as Record<string, unknown>;
           const cm: ChatMessage = {
-            id: `${p.sender_id}-${p.timestamp ?? Date.now()}`,
-            sender_id: p.sender_id as string,
-            sender_name: p.sender_name as string,
-            text: (p.content ?? p.text) as string,
-            timestamp: (p.timestamp as number) ?? Date.now() / 1000,
-            is_agent: (p.is_agent as boolean) ?? false,
+            id: `${evPayload.sender_id}-${evPayload.timestamp ?? Date.now()}`,
+            sender_id: evPayload.sender_id as string,
+            sender_name: evPayload.sender_name as string,
+            text: (evPayload.content ?? evPayload.text) as string,
+            timestamp: (evPayload.timestamp as number) ?? Date.now() / 1000,
+            is_agent: (evPayload.is_agent as boolean) ?? false,
           };
-          // Skip if this is our own message (already added optimistically)
           if (cm.sender_id !== user?.id) {
             setChatMessages((prev) => [...prev, cm]);
             if (cm.is_agent) setRightTab("chat");
           }
+        } else if (msg.event_type === "turn.speaker.changed") {
+          const tp = evPayload as unknown as TurnSpeakerChangedPayload;
+          if (tp.new_speaker_id) {
+            setActiveSpeaker(() => {
+              const name = participantsRef.current.find((p) => p.id === tp.new_speaker_id)?.name ?? "Speaker";
+              return { id: tp.new_speaker_id!, name };
+            });
+          } else {
+            setActiveSpeaker(null);
+          }
+        } else if (msg.event_type === "turn.queue.updated") {
+          const qp = evPayload as unknown as TurnQueuePayload;
+          const enriched = qp.queue.map((entry) => ({
+            ...entry,
+            name: participantsRef.current.find((p) => p.id === entry.participant_id)?.name ?? "Unknown",
+          }));
+          setTurnQueue(enriched);
+          if (qp.active_speaker_id) {
+            setActiveSpeaker((prev) => {
+              if (prev?.id === qp.active_speaker_id) return prev;
+              const name = participantsRef.current.find((p) => p.id === qp.active_speaker_id)?.name ?? "Speaker";
+              return { id: qp.active_speaker_id!, name };
+            });
+          }
+        } else if (msg.event_type === "turn.your_turn") {
+          setYourTurnAlert(true);
+          setHandRaised(false);
+        } else if (msg.event_type === "turn.speaking.started") {
+          const sp = evPayload as { participant_id: string };
+          setSpeakingNames((prev) => {
+            const name = participantsRef.current.find((p) => p.id === sp.participant_id)?.name;
+            if (name) return new Set([...prev, name]);
+            return prev;
+          });
+        } else if (msg.event_type === "turn.speaker.finished") {
+          const fp = evPayload as { participant_id: string };
+          setSpeakingNames((prev) => {
+            const name = participantsRef.current.find((p) => p.id === fp.participant_id)?.name;
+            if (name) {
+              const next = new Set(prev);
+              next.delete(name);
+              return next;
+            }
+            return prev;
+          });
         }
         break;
-      case "turn.speaker.changed":
-        if (msg.speaker_id && msg.speaker_name) {
-          setActiveSpeaker({ id: msg.speaker_id, name: msg.speaker_name });
-        } else {
-          setActiveSpeaker(null);
-        }
-        break;
-      case "turn.queue.updated":
-        setTurnQueue(msg.queue);
-        break;
-      case "turn.your_turn":
-        setYourTurnAlert(true);
-        setHandRaised(false);
-        break;
+      }
       case "chat": {
         const cm: ChatMessage = {
           id: `${msg.sender_id}-${msg.timestamp}`,
@@ -447,6 +487,13 @@ export function MeetingRoomPage() {
     navigate("/meetings");
   }
 
+  function finishedSpeaking() {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: "finished_speaking" }));
+    }
+    setYourTurnAlert(false);
+  }
+
   function sendChat() {
     if (!chatInput.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
     wsRef.current.send(JSON.stringify({ type: "chat", text: chatInput.trim() }));
@@ -515,33 +562,15 @@ export function MeetingRoomPage() {
         </div>
       )}
 
-      {/* Active speaker strip */}
-      {activeSpeaker && (
-        <div className="mb-3 flex items-center gap-2 rounded-lg border border-emerald-700/50 bg-emerald-950/40 px-3 py-2">
-          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs text-gray-400">Speaking:</span>
-          <span className="text-xs font-semibold text-emerald-300">{activeSpeaker.name}</span>
-        </div>
-      )}
-
-      {/* Turn queue strip — shown only when there are queued speakers */}
-      {turnQueue.length > 0 && (
-        <div className="mb-3 flex items-center gap-2 rounded-lg border border-amber-700/40 bg-amber-950/30 px-3 py-2">
-          <HandIcon className="h-3.5 w-3.5 text-amber-400 flex-shrink-0" />
-          <span className="text-xs text-gray-400 flex-shrink-0">Queue:</span>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {turnQueue.map((entry, i) => (
-              <span
-                key={entry.participant_id}
-                className="inline-flex items-center gap-1 rounded-full bg-amber-900/50 border border-amber-700/50 px-2 py-0.5 text-xs text-amber-300"
-              >
-                <span className="text-amber-500">{i + 1}.</span>
-                {entry.name}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Speaker queue panel */}
+      <SpeakerQueuePanel
+        activeSpeaker={activeSpeaker}
+        queue={turnQueue}
+        participants={participants}
+        currentUserId={user?.id}
+        isMyTurn={yourTurnAlert || activeSpeaker?.id === user?.id}
+        onFinishedSpeaking={finishedSpeaking}
+      />
 
       {/* Main content: participants (main) + sidebar (transcript/chat) */}
       <div className="flex flex-col md:flex-row flex-1 gap-4 min-h-0">
@@ -582,15 +611,18 @@ export function MeetingRoomPage() {
               const isAgent = isAgentParticipant(p);
               const isActive = activeSpeaker?.id === p.id;
               const isSpeakingViaTts = speakingNames.has(p.name);
+              const hasHandRaised = turnQueue.some((q) => q.participant_id === p.id);
               return (
                 <div
                   key={p.id}
                   className={`relative flex flex-col items-center justify-center ${getTileHeight(totalCount)} w-full rounded-xl border p-4 transition-colors ${
                     isActive || isSpeakingViaTts
                       ? "border-emerald-500/60 bg-emerald-950/30"
-                      : isAgent
-                        ? "border-violet-700/40 bg-gray-900/50"
-                        : "border-gray-800 bg-gray-900/50"
+                      : hasHandRaised
+                        ? "border-amber-600/40 bg-amber-950/20"
+                        : isAgent
+                          ? "border-violet-700/40 bg-gray-900/50"
+                          : "border-gray-800 bg-gray-900/50"
                   }`}
                 >
                   <div className="relative mb-3">
@@ -630,6 +662,11 @@ export function MeetingRoomPage() {
                       </span>
                     )}
                   </div>
+                  {hasHandRaised && (
+                    <div className="absolute top-3 left-3 text-amber-400" title="Hand raised">
+                      <HandIcon className="h-4 w-4" />
+                    </div>
+                  )}
                   {p.is_muted && (
                     <div className="absolute top-3 right-3 text-red-400" title="Muted">
                       <MicOffIconSmall />
@@ -783,6 +820,15 @@ export function MeetingRoomPage() {
           <HandIcon className="h-4 w-4 mr-1.5" />
           {handRaised ? "Lower Hand" : "Raise Hand"}
         </Button>
+        {(yourTurnAlert || activeSpeaker?.id === user?.id) && (
+          <Button
+            variant="outline"
+            onClick={finishedSpeaking}
+            className="border-emerald-500/60 text-emerald-400 hover:bg-emerald-900/20"
+          >
+            <CheckIcon /> Done Speaking
+          </Button>
+        )}
         <Button variant="destructive" onClick={handleLeave}>
           <LeaveIcon /> Leave
         </Button>
@@ -951,6 +997,15 @@ function HandIcon({ className }: { className?: string }) {
         strokeLinejoin="round"
         d="M10.05 4.575a1.575 1.575 0 1 0-3.15 0v3m3.15-3v-1.5a1.575 1.575 0 0 1 3.15 0v1.5m0 0v-1.5a1.575 1.575 0 0 1 3.15 0v1.5m0 0a1.575 1.575 0 0 1 3.15 0V12a4.5 4.5 0 0 1-4.5 4.5 1.5 1.5 0 0 1-1.5-1.5V12H6.9a1.575 1.575 0 0 0-.45 3.083L8.25 18v.75a2.25 2.25 0 0 0 2.25 2.25h6a2.25 2.25 0 0 0 2.25-2.25v-.75l1.8-2.917A1.575 1.575 0 0 0 20.1 12V7.575a1.575 1.575 0 0 0-3.15 0"
       />
+    </svg>
+  );
+}
+
+/** Checkmark icon for "done speaking" button */
+function CheckIcon() {
+  return (
+    <svg className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
     </svg>
   );
 }
