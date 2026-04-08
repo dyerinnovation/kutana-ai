@@ -270,6 +270,18 @@ class UserORM(Base):
     is_active: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=True)
     avatar_url: Mapped[str | None] = mapped_column(sa.String(512), nullable=True)
 
+    # Auth security
+    email_verified: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, server_default="false")
+    email_verification_token: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
+    password_reset_token: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
+    password_reset_expires: Mapped[datetime | None] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
+    failed_login_attempts: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default="0")
+    locked_until: Mapped[datetime | None] = mapped_column(
+        sa.DateTime(timezone=True), nullable=True
+    )
+
     # Billing & subscription
     plan_tier: Mapped[str] = mapped_column(
         sa.Enum("basic", "pro", "business", "enterprise", name="plan_tier"),
