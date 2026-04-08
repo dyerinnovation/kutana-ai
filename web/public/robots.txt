@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /settings/
+
+Sitemap: https://dev.kutana.ai/sitemap.xml
