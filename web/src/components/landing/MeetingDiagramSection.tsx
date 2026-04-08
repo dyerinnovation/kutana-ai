@@ -455,7 +455,7 @@ export default function MeetingDiagramSection() {
       if (!pausedRef.current && inViewRef.current) {
         setCurrent((prev) => (prev + 1) % stages.length);
       }
-    }, 4000);
+    }, 2500);
   }, [stages.length]);
 
   useEffect(() => {
@@ -729,7 +729,7 @@ export default function MeetingDiagramSection() {
           >
             {/* Stage label */}
             <div className="flex justify-center mb-8 min-h-[72px] items-center">
-              <div className="flex items-center gap-4 bg-teal-500/[0.08] border border-teal-500/20 px-7 py-4 rounded-2xl max-w-[900px] w-full transition-all duration-[400ms] relative z-30">
+              <div className="flex items-center gap-4 bg-teal-500/[0.08] border border-teal-500/20 px-7 py-4 rounded-2xl max-w-[900px] w-full transition-all duration-[250ms] relative z-30">
                 <span className="inline-flex items-center justify-center w-10 h-10 bg-teal-500/25 rounded-full text-lg font-extrabold shrink-0 text-teal-500">
                   {stage.num}
                 </span>
@@ -780,7 +780,7 @@ export default function MeetingDiagramSection() {
                   {[0, 1, 2].map((i) => (
                     <div
                       key={i}
-                      className={`md-human-flow-line w-[3px] h-10 rounded-sm transition-colors duration-[400ms] ${
+                      className={`md-human-flow-line w-[3px] h-10 rounded-sm transition-colors duration-[250ms] ${
                         stage.humanFlow ? "md-flowing" : "bg-slate-400/[0.12]"
                       } ${isReverse ? "md-flow-reverse" : ""}`}
                     />
@@ -804,7 +804,7 @@ export default function MeetingDiagramSection() {
                       key={i}
                       data-feed-node
                       onClick={() => handleClickFeed(i)}
-                      className={`bg-slate-800/70 border rounded-lg p-[6px_6px_4px] text-center cursor-pointer transition-all duration-[350ms] ${
+                      className={`bg-slate-800/70 border rounded-lg p-[6px_6px_4px] text-center cursor-pointer transition-all duration-[250ms] ${
                         stage.feeds.includes(i)
                           ? "border-green-600 bg-green-600/[0.12] shadow-[0_0_14px_rgba(22,163,74,0.25)]"
                           : "border-white/[0.08] hover:border-green-600/50 hover:bg-green-600/[0.08]"
@@ -837,7 +837,7 @@ export default function MeetingDiagramSection() {
               {/* CENTER: Meeting box */}
               <div className="px-2">
                 <div
-                  className={`bg-slate-950/95 border rounded-2xl overflow-hidden transition-all duration-[400ms] ${
+                  className={`bg-slate-950/95 border rounded-2xl overflow-hidden transition-all duration-[250ms] ${
                     stage.meetingActive
                       ? "border-green-600 shadow-[0_0_30px_rgba(22,163,74,0.15)]"
                       : "border-green-600/25"
@@ -987,7 +987,7 @@ export default function MeetingDiagramSection() {
                       key={i}
                       data-agent-node
                       onClick={() => handleClickAgent(i)}
-                      className={`bg-slate-800/70 border rounded-lg p-[6px_6px_4px] text-center cursor-pointer transition-all duration-[350ms] ${
+                      className={`bg-slate-800/70 border rounded-lg p-[6px_6px_4px] text-center cursor-pointer transition-all duration-[250ms] ${
                         stage.agents.includes(i)
                           ? "border-violet-600/90 bg-violet-600/[0.12] shadow-[0_0_14px_rgba(124,58,237,0.25)]"
                           : "border-white/[0.08] hover:border-violet-600/50 hover:bg-violet-600/[0.08]"
@@ -1015,7 +1015,7 @@ export default function MeetingDiagramSection() {
                   {[0, 1, 2].map((i) => (
                     <div
                       key={i}
-                      className={`md-managed-vline w-[3px] h-10 rounded-sm transition-colors duration-[400ms] ${
+                      className={`md-managed-vline w-[3px] h-10 rounded-sm transition-colors duration-[250ms] ${
                         stage.managedFlowing ? "md-flowing" : "bg-violet-600/20"
                       }`}
                     />
@@ -1142,7 +1142,7 @@ function Participant({
       {/* Bubble */}
       {bubbleContent && (
         <div
-          className={`absolute bottom-[calc(100%+6px)] left-1/2 bg-slate-950/[0.98] border rounded-[10px] py-[7px] px-[11px] text-[0.75rem] text-white/95 text-center leading-tight z-[200] transition-all duration-[400ms] pointer-events-none ${borderClass} ${
+          className={`absolute bottom-[calc(100%+6px)] left-1/2 bg-slate-950/[0.98] border rounded-[10px] py-[7px] px-[11px] text-[0.75rem] text-white/95 text-center leading-tight z-[200] transition-all duration-[250ms] pointer-events-none ${borderClass} ${
             isEdge ? "w-[150px] max-w-[150px] px-[7px]" : "w-[240px] max-w-[240px]"
           } ${
             speaking
@@ -1160,12 +1160,12 @@ function Participant({
       {/* Orb */}
       <div className="relative w-[52px] h-[52px]">
         <div
-          className={`absolute inset-[-5px] rounded-full border-2 border-transparent z-[2] pointer-events-none transition-all duration-[400ms] ${
+          className={`absolute inset-[-5px] rounded-full border-2 border-transparent z-[2] pointer-events-none transition-all duration-[250ms] ${
             speaking ? speakingClass : ""
           }`}
         />
         <div
-          className={`absolute inset-0 rounded-full flex items-center justify-center transition-all duration-[400ms] ${
+          className={`absolute inset-0 rounded-full flex items-center justify-center transition-all duration-[250ms] ${
             isPurple
               ? "bg-violet-600/10 border border-violet-600/35 text-violet-400/90"
               : "bg-slate-800/90 border border-white/10 text-slate-400/80"
