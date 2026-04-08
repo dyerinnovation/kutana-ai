@@ -980,51 +980,6 @@ async def kutana_get_meeting_events(last_n: int = 50, event_type: str | None = N
 
 
 @mcp.tool()
-async def start_speaking(meeting_id: str) -> str:
-    """Confirm you have the floor and are now actively speaking.
-
-    Call this after raise_hand() returns queue_position=0 (immediate promotion)
-    or after receiving a turn_your_turn event from get_meeting_events().
-
-    This is a state-check / acknowledgement step in the turn workflow:
-      raise_hand → [wait for turn_your_turn] → start_speaking → [speak] → mark_finished_speaking
-
-    Args:
-        meeting_id: UUID of the meeting.
-
-    Returns:
-        JSON with status "speaking" if you are the active speaker, or an
-        error with guidance if you are not yet the active speaker.
-    """
-    identity = await _ensure_authenticated()
-    tm = _get_turn_manager()
-    mid = UUID(meeting_id)
-    pid = identity.agent_config_id
-
-    status = await tm.get_speaking_status(mid, pid)
-    if not status.is_speaking:
-        queue_info = ""
-        if status.in_queue and status.queue_position is not None:
-            queue_info = f" You are #{status.queue_position} in queue."
-        return json.dumps(
-            {
-                "error": f"Not the active speaker.{queue_info} "
-                "Call raise_hand() and wait for a turn_your_turn event.",
-                "is_in_queue": status.in_queue,
-                "queue_position": status.queue_position,
-            }
-        )
-
-    return json.dumps(
-        {
-            "status": "speaking",
-            "meeting_id": meeting_id,
-            "message": "You have the floor. Call mark_finished_speaking() when done.",
-        }
-    )
-
-
-@mcp.tool()
 async def kutana_raise_hand(
     meeting_id: str,
     priority: str = "normal",

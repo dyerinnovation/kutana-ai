@@ -43,6 +43,7 @@ TOOL_RATE_LIMITS: dict[str, tuple[int, int]] = {
     "get_chat_messages": (30, 60),
     "get_meeting_events": (30, 60),
     "get_channel_messages": (30, 60),
+    "speak": (10, 60),
 }
 
 _DEFAULT_LIMIT = (60, 60)  # 60 req / 60 sec for unlisted tools
@@ -86,14 +87,13 @@ class RateLimiter(ABC):
         Returns:
             JSON string with ``error`` and ``retry_after`` keys.
         """
-        return json.dumps({
-            "error": "rate_limit_exceeded",
-            "message": (
-                f"Too many calls to '{tool_name}'. "
-                f"Retry after {retry_after} seconds."
-            ),
-            "retry_after_seconds": retry_after,
-        })
+        return json.dumps(
+            {
+                "error": "rate_limit_exceeded",
+                "message": (f"Too many calls to '{tool_name}'. Retry after {retry_after} seconds."),
+                "retry_after_seconds": retry_after,
+            }
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -135,9 +135,7 @@ class RedisRateLimiter(RateLimiter):
         Returns:
             ``(allowed, retry_after_seconds)``
         """
-        max_requests, window_seconds = TOOL_RATE_LIMITS.get(
-            tool_name, _DEFAULT_LIMIT
-        )
+        max_requests, window_seconds = TOOL_RATE_LIMITS.get(tool_name, _DEFAULT_LIMIT)
 
         r = await self._get_redis()
         key = f"kutana:rate_limit:{agent_id}:{tool_name}"
@@ -146,10 +144,10 @@ class RedisRateLimiter(RateLimiter):
 
         try:
             pipe = r.pipeline()
-            pipe.zremrangebyscore(key, 0, window_start)   # drop expired
-            pipe.zadd(key, {str(now): now})               # record this call
-            pipe.zcard(key)                               # count in window
-            pipe.expire(key, window_seconds + 1)          # auto-expire key
+            pipe.zremrangebyscore(key, 0, window_start)  # drop expired
+            pipe.zadd(key, {str(now): now})  # record this call
+            pipe.zcard(key)  # count in window
+            pipe.expire(key, window_seconds + 1)  # auto-expire key
             results = await pipe.execute()
 
             count: int = results[2]

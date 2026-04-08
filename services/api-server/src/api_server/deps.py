@@ -77,6 +77,11 @@ class Settings(BaseSettings):
     slack_redirect_uri: str = ""
     frontend_url: str = "http://localhost:5173"
 
+    # Observability
+    sentry_dsn: str = ""
+    slack_webhook_url: str = ""
+    log_format: str = "json"  # "json" or "text"
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
