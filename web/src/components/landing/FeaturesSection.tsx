@@ -114,7 +114,7 @@ export function FeaturesSection() {
   return (
     <section
       id="features"
-      className="relative py-24 bg-gradient-to-br from-emerald-950/20 to-teal-950/10"
+      className="relative py-24"
     >
       <div className="max-w-7xl mx-auto px-6">
         {/* Section heading */}

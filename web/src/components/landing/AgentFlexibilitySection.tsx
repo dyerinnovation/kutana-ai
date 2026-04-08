@@ -168,7 +168,7 @@ export default function AgentFlexibilitySection() {
 
   return (
     <section
-      className="bg-slate-950 py-24 px-4"
+      className="py-24 px-4"
       onMouseEnter={() => {
         pausedRef.current = true;
       }}

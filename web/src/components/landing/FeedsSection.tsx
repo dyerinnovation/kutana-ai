@@ -74,7 +74,7 @@ const feeds: FeedCard[] = [
 
 export function FeedsSection() {
   return (
-    <section className="relative py-24 bg-gradient-to-br from-emerald-950/20 to-teal-950/10">
+    <section className="relative py-24">
       <div className="max-w-7xl mx-auto px-6">
         {/* Section heading */}
         <h2 className="text-3xl md:text-4xl font-bold text-center text-white mb-4">

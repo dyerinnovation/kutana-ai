@@ -78,7 +78,7 @@ export function UseCasesSection() {
   const slide = slides[current];
 
   return (
-    <section className="bg-gray-950 py-20 px-4" id="use-cases">
+    <section className="py-20 px-4" id="use-cases">
       <div className="mx-auto max-w-4xl">
         <h2 className="mb-12 text-center text-3xl font-bold text-white md:text-4xl">
           Use Cases for Kutana
