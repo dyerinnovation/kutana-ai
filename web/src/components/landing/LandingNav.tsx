@@ -16,8 +16,8 @@ export default function LandingNav() {
         {/* Logo */}
         <div className="flex items-center gap-2">
           <KutanaKMark size={36} />
-          <span className="text-2xl font-extrabold text-white">
-            Kutana <span style={{ color: "#9B30FF" }}>AI</span>
+          <span className="text-2xl font-extrabold" style={{ color: "#16A34A" }}>
+            Kutana AI
           </span>
         </div>
 
