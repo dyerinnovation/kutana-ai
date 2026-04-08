@@ -14,11 +14,19 @@ import { SecuritySection } from "@/components/landing/SecuritySection";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 
 export function LandingPage() {
-  // Force dark body background so backdrop-blur nav doesn't pick up light-mode body
+  // Landing page is always dark — force data-theme="dark" so all gray/slate/ink
+  // CSS variables resolve to dark-mode values regardless of OS or app theme
   useEffect(() => {
-    const prev = document.body.style.backgroundColor;
+    const html = document.documentElement;
+    const prevTheme = html.getAttribute("data-theme");
+    const prevBg = document.body.style.backgroundColor;
+    html.setAttribute("data-theme", "dark");
     document.body.style.backgroundColor = "#09090b";
-    return () => { document.body.style.backgroundColor = prev; };
+    return () => {
+      if (prevTheme) html.setAttribute("data-theme", prevTheme);
+      else html.removeAttribute("data-theme");
+      document.body.style.backgroundColor = prevBg;
+    };
   }, []);
 
   return (
