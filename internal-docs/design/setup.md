@@ -8,7 +8,7 @@ The design language is inspired by dev-tools brands (Vercel dark, Supabase green
 
 | Token | Value | Usage |
 |---|---|---|
-| `brand-500` | `#10B981` | Primary — buttons, active states, focus rings |
+| `brand-500` | `#16A34A` | Primary — buttons, active states, focus rings |
 | `brand-400` | `#34d399` | Text accent — links, labels, badges |
 | `brand-600` | `#059669` | Hover, pressed states |
 | `brand-300` | `#6ee7b7` | Light accent on dark backgrounds |
@@ -36,7 +36,7 @@ In dark mode `gray-950` is the darkest background; in light mode the scale inver
 
 | Role | Token | Value |
 |---|---|---|
-| Success | `success-500` | `#10b981` (same as brand) |
+| Success | `success-500` | `#16a34a` (same as brand) |
 | Error | `danger-500` | `#ef4444` |
 | Warning | `warning-500` | `#f59e0b` |
 | Info | `info-500` | `#06b6d4` |
@@ -64,7 +64,7 @@ Defined in `web/src/index.css`:
 | `shadow-glow-brand` | Green glow ring — dialogs, logo on auth pages |
 | `shadow-glow-brand-sm` | Smaller glow — button hover |
 | `card-interactive` | Hover: green border tint + lift |
-| `text-gradient-brand` | `#6ee7b7 → #10b981` text gradient |
+| `text-gradient-brand` | `#6ee7b7 → #16a34a` text gradient |
 | `code-block` | Monospace block using CSS variables |
 
 ---

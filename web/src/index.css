@@ -17,7 +17,7 @@
   --color-gray-900: #18181b;
   --color-gray-950: #09090b;
 
-  /* ─── Blue scale → signal green / emerald (#10B981) ──────────────────
+  /* ─── Blue scale → signal green / emerald (#16A34A) ──────────────────
      Overrides Tailwind's blue so every existing blue-* class picks up
      the brand green automatically (buttons, focus rings, links, badges).
   ─────────────────────────────────────────────────────────────────────── */
@@ -26,7 +26,7 @@
   --color-blue-200: #a7f3d0;
   --color-blue-300: #6ee7b7;
   --color-blue-400: #34d399;
-  --color-blue-500: #10b981;
+  --color-blue-500: #16a34a;
   --color-blue-600: #059669;
   --color-blue-700: #047857;
   --color-blue-800: #065f46;
@@ -39,7 +39,7 @@
   --color-brand-200: #a7f3d0;
   --color-brand-300: #6ee7b7;
   --color-brand-400: #34d399;
-  --color-brand-500: #10b981;
+  --color-brand-500: #16a34a;
   --color-brand-600: #059669;
   --color-brand-700: #047857;
   --color-brand-800: #065f46;
@@ -63,7 +63,7 @@
      Success intentionally reuses the brand emerald palette.
   ─────────────────────────────────────────────────────────────────────── */
   --color-success-400: #34d399;
-  --color-success-500: #10b981;
+  --color-success-500: #16a34a;
   --color-success-600: #059669;
   --color-success-900: #064e3b;
   --color-success-950: #022c22;
@@ -217,7 +217,7 @@ html[data-theme="light"] {
 
 /* Text gradient */
 .text-gradient-brand {
-  background: linear-gradient(135deg, #6ee7b7 0%, #10b981 100%);
+  background: linear-gradient(135deg, #6ee7b7 0%, #16a34a 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
