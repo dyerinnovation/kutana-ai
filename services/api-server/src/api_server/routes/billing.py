@@ -27,12 +27,12 @@ from typing import Annotated, Literal
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002 — runtime dep for FastAPI DI
 
 from api_server.auth_deps import CurrentUser  # noqa: TC001 — runtime dep for FastAPI DI
 from api_server.deps import Settings, get_db_session, get_settings
-from kutana_core.database.models import UserORM
+from kutana_core.database.models import UsageRecordORM, UserORM
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +99,38 @@ class SubscriptionResponse(BaseModel):
     subscription_period_end: datetime | None
     meetings_this_month: int
     has_payment_method: bool
+
+
+class UsageBreakdown(BaseModel):
+    """Usage data for a single resource type in a billing period.
+
+    Attributes:
+        resource_type: "agent" or "feed".
+        billing_period: Period string in YYYY-MM format.
+        total_seconds: Total usage in seconds.
+        total_minutes: Total usage in minutes (convenience field).
+        record_count: Number of individual usage records.
+    """
+
+    resource_type: str
+    billing_period: str
+    total_seconds: int
+    total_minutes: float
+    record_count: int
+
+
+class UsageResponse(BaseModel):
+    """Aggregated usage data for the authenticated user.
+
+    Attributes:
+        billing_period: The billing period these records cover (YYYY-MM).
+        breakdowns: Per-resource-type usage breakdowns.
+        meetings_this_month: Meeting count for the current billing cycle.
+    """
+
+    billing_period: str
+    breakdowns: list[UsageBreakdown]
+    meetings_this_month: int
 
 
 # ---------------------------------------------------------------------------
@@ -329,6 +361,63 @@ async def get_subscription(current_user: CurrentUser) -> SubscriptionResponse:
         subscription_period_end=current_user.subscription_period_end,
         meetings_this_month=current_user.meetings_this_month,
         has_payment_method=current_user.stripe_customer_id is not None,
+    )
+
+
+@router.get("/usage", response_model=UsageResponse)
+async def get_usage(
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    period: str | None = None,
+) -> UsageResponse:
+    """Return aggregated usage data for the authenticated user.
+
+    Groups :class:`~kutana_core.database.models.UsageRecordORM` records by
+    ``resource_type`` for the requested billing period.
+
+    Args:
+        current_user: Authenticated user.
+        db: Database session.
+        period: Billing period in ``YYYY-MM`` format. Defaults to the
+            current month.
+
+    Returns:
+        Aggregated usage breakdowns and meeting count.
+    """
+    if period is None:
+        period = datetime.now(tz=UTC).strftime("%Y-%m")
+
+    rows = (
+        await db.execute(
+            select(
+                UsageRecordORM.resource_type,
+                UsageRecordORM.billing_period,
+                func.coalesce(func.sum(UsageRecordORM.duration_seconds), 0).label("total_seconds"),
+                func.count().label("record_count"),
+            )
+            .where(
+                UsageRecordORM.user_id == current_user.id,
+                UsageRecordORM.billing_period == period,
+            )
+            .group_by(UsageRecordORM.resource_type, UsageRecordORM.billing_period)
+        )
+    ).all()
+
+    breakdowns = [
+        UsageBreakdown(
+            resource_type=row.resource_type,
+            billing_period=row.billing_period,
+            total_seconds=row.total_seconds,
+            total_minutes=round(row.total_seconds / 60, 1),
+            record_count=row.record_count,
+        )
+        for row in rows
+    ]
+
+    return UsageResponse(
+        billing_period=period,
+        breakdowns=breakdowns,
+        meetings_this_month=current_user.meetings_this_month,
     )
 
 

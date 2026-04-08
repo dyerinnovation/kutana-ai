@@ -46,3 +46,7 @@ data:
   # Slack OAuth
   SLACK_REDIRECT_URI: "https://{{ .Values.global.domain }}/api/v1/integrations/slack/callback"
   FRONTEND_URL: "https://{{ .Values.global.domain }}"
+  # Observability
+  SENTRY_DSN: {{ .Values.observability.sentryDsn | default "" | quote }}
+  SLACK_WEBHOOK_URL: {{ .Values.observability.slackWebhookUrl | default "" | quote }}
+  LOG_FORMAT: {{ .Values.observability.logFormat | default "json" | quote }}

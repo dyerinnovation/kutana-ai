@@ -45,3 +45,22 @@ export async function createPortalSession(): Promise<PortalSessionResponse> {
 export async function getSubscription(): Promise<SubscriptionResponse> {
   return apiFetch<SubscriptionResponse>("/billing/subscription");
 }
+
+export interface UsageBreakdown {
+  resource_type: string;
+  billing_period: string;
+  total_seconds: number;
+  total_minutes: number;
+  record_count: number;
+}
+
+export interface UsageResponse {
+  billing_period: string;
+  breakdowns: UsageBreakdown[];
+  meetings_this_month: number;
+}
+
+export async function getUsage(period?: string): Promise<UsageResponse> {
+  const params = period ? `?period=${period}` : "";
+  return apiFetch<UsageResponse>(`/billing/usage${params}`);
+}
