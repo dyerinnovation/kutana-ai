@@ -27,7 +27,7 @@ const linkColumns = [
 
 export function LandingFooter() {
   return (
-    <footer className="bg-gray-950 border-t border-gray-800 px-4 py-16">
+    <footer className="border-t border-gray-800 px-4 py-16">
       <div className="mx-auto max-w-5xl">
         <div className="mb-12 grid gap-8 sm:grid-cols-2 md:grid-cols-3">
           {linkColumns.map((col, i) => (

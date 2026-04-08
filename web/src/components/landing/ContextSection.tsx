@@ -50,7 +50,7 @@ function StepItem({
 
 export default function ContextSection() {
   return (
-    <section className="bg-slate-950 px-6 py-24">
+    <section className="px-6 py-24">
       <div className="max-w-[1000px] mx-auto">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-white">
           Stop Being the Middleman Between Meeting Context &amp; Your{" "}

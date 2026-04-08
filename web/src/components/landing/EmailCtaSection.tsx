@@ -11,7 +11,7 @@ export function EmailCtaSection() {
   }
 
   return (
-    <section id="contact" className="relative py-24 bg-gradient-to-br from-emerald-950/20 to-teal-950/10">
+    <section id="contact" className="relative py-24">
       <div className="max-w-3xl mx-auto px-6 text-center">
         <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
           Ready to transform your meetings?

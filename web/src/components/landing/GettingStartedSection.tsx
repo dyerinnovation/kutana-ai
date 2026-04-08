@@ -88,7 +88,7 @@ export function GettingStartedSection() {
   const [activeTab, setActiveTab] = useState(0);
 
   return (
-    <section className="bg-gray-950 py-20 px-4" id="getting-started">
+    <section className="py-20 px-4" id="getting-started">
       <div className="mx-auto max-w-5xl">
         <h2 className="mb-12 text-center text-3xl font-bold text-white md:text-4xl">
           Get Started in 4 Simple Steps

@@ -1,7 +1,7 @@
 export function SecuritySection() {
   return (
     <section
-      className="bg-gradient-to-br from-emerald-950/20 to-teal-950/10 py-20 px-4"
+      className="py-20 px-4"
       id="security"
     >
       <div className="mx-auto max-w-3xl">
