@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import {
   createPortalSession,
   getSubscription,
+  getUsage,
   type SubscriptionResponse,
+  type UsageResponse,
 } from "@/api/billing";
 import {
   AGENT_MINUTES_PER_MONTH,
@@ -51,13 +53,17 @@ function daysUntil(iso: string | null): number | null {
 
 export function BillingPage() {
   const [sub, setSub] = useState<SubscriptionResponse | null>(null);
+  const [usage, setUsage] = useState<UsageResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getSubscription()
-      .then(setSub)
+    Promise.all([getSubscription(), getUsage()])
+      .then(([subData, usageData]) => {
+        setSub(subData);
+        setUsage(usageData);
+      })
       .catch((err) =>
         setError(err instanceof Error ? err.message : "Failed to load"),
       )
@@ -172,18 +178,18 @@ export function BillingPage() {
         </div>
       </div>
 
-      {/* Time-based usage — TODO: wire to GET /api/billing/usage once the endpoint exists */}
+      {/* Time-based usage */}
       <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-6">
         <h2 className="text-lg font-semibold text-gray-50">Usage This Month</h2>
         <div className="mt-4 space-y-5">
           <UsageMeter
             label="Agent time"
-            usedMinutes={0}
+            usedMinutes={usage?.breakdowns.find((b) => b.resource_type === "agent")?.total_minutes ?? 0}
             limitMinutes={AGENT_MINUTES_PER_MONTH[(sub.plan_tier as PlanTier) ?? "basic"]}
           />
           <UsageMeter
             label="Feed time"
-            usedMinutes={0}
+            usedMinutes={usage?.breakdowns.find((b) => b.resource_type === "feed")?.total_minutes ?? 0}
             limitMinutes={FEED_MINUTES_PER_MONTH[(sub.plan_tier as PlanTier) ?? "basic"]}
           />
         </div>
