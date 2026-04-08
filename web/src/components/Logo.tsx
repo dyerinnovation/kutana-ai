@@ -1,4 +1,35 @@
 /**
+ * Kutana AI "K" logo mark — green rounded rect with a bold white K.
+ * Used in the landing page nav and the in-app sidebar.
+ */
+export function KutanaKMark({ size = 36, className }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 40 40"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-label="Kutana AI"
+    >
+      <rect width="40" height="40" rx="8" ry="8" fill="#10B981" />
+      <text
+        x="20"
+        y="29"
+        textAnchor="middle"
+        fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+        fontSize="23"
+        fontWeight="800"
+        fill="white"
+      >
+        K
+      </text>
+    </svg>
+  );
+}
+
+/**
  * Kutana AI logo mark — a C-arc ring with an AI node dot in the gap.
  *
  * Concept: the arc represents meeting participants arranged in a circle

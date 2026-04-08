@@ -14,7 +14,7 @@ import { LandingFooter } from "@/components/landing/LandingFooter";
 
 export function LandingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 to-[#131318] text-white">
+    <div className="min-h-screen text-white" style={{ background: "linear-gradient(135deg, #09090b 0%, #131318 100%)" }}>
       <LandingNav />
       <HeroSection />
       <MeetingDiagramSection />

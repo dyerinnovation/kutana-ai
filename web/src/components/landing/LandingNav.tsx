@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { KutanaKMark } from "@/components/Logo";
 
 const navLinks = [
   { label: "How It Works", href: "#how-it-works" },
@@ -13,9 +14,12 @@ export default function LandingNav() {
     <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-slate-900/80 border-b border-white/10">
       <div className="flex items-center justify-between max-w-7xl mx-auto px-6 py-4">
         {/* Logo */}
-        <span className="text-2xl font-extrabold bg-gradient-to-br from-green-600 to-teal-500 bg-clip-text text-transparent">
-          Kutana AI
-        </span>
+        <div className="flex items-center gap-2">
+          <KutanaKMark size={36} />
+          <span className="text-2xl font-extrabold text-white">
+            Kutana <span style={{ color: "#9B30FF" }}>AI</span>
+          </span>
+        </div>
 
         {/* Nav links - hidden on mobile */}
         <ul className="hidden md:flex items-center gap-8 list-none">
