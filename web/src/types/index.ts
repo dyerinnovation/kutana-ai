@@ -3,6 +3,7 @@ export interface User {
   email: string;
   name: string;
   avatar_url: string | null;
+  email_verified: boolean;
   plan_tier: "basic" | "pro" | "business" | "enterprise";
   subscription_status: "active" | "past_due" | "canceled" | "trialing" | "incomplete";
   trial_ends_at: string | null;

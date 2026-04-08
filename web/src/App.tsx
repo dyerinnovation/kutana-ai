@@ -18,6 +18,9 @@ import { PricingPage } from "@/pages/PricingPage";
 import { BillingPage } from "@/pages/BillingPage";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { CalendarPage } from "@/pages/CalendarPage";
+import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
+import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
+import { VerifyEmailPage } from "@/pages/VerifyEmailPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 
 export default function App() {
@@ -27,6 +30,9 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/pricing" element={<PricingPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       {/* Home: landing page for guests, dashboard for authenticated users */}
       <Route

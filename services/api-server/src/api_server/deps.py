@@ -71,6 +71,11 @@ class Settings(BaseSettings):
     billing_cancel_url: str = "http://localhost:5173/pricing?status=cancel"
     billing_portal_return_url: str = "http://localhost:5173/settings/billing"
 
+    # SMTP (SendGrid / SES)
+    smtp_host: str = ""
+    smtp_from: str = "noreply@kutana.ai"
+    smtp_api_key: str = ""
+
     # Slack OAuth
     slack_client_id: str = ""
     slack_client_secret: str = ""
