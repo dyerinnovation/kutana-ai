@@ -7,9 +7,10 @@ Create Date: 2026-03-07
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "c4d5e6f7a8b9"

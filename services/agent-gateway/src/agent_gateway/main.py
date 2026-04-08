@@ -16,6 +16,7 @@ logging.basicConfig(
 )
 from typing import TYPE_CHECKING, Any
 
+import redis.asyncio as redis_async
 from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import (
@@ -23,8 +24,6 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-
-import redis.asyncio as redis_async
 
 from agent_gateway.agent_session import AgentSessionHandler
 from agent_gateway.audio_bridge import AudioBridge

@@ -5,7 +5,7 @@ Multiple agent templates available: assistant, summarizer, action-tracker, decis
 
 Usage:
     export ANTHROPIC_API_KEY=sk-ant-...
-    export KUTANA_API_KEY=ktn_...
+    export KUTANA_API_KEY=cvn_...
     python agent.py
     python agent.py --template summarizer
     python agent.py --system-prompt "Custom prompt here..."
@@ -42,7 +42,7 @@ TEMPLATES: dict[str, str] = {
 
 ### Meeting Lifecycle
 - kutana_list_meetings() — Find meetings to join
-- kutana_join_meeting(meeting_id) — Connect to a meeting
+- kutana_join_meeting(meeting_id, capabilities) — Connect to a meeting (capabilities: ["text_only"], ["tts_enabled"], etc.)
 - kutana_join_or_create_meeting(title) — Join active meeting or create new
 - kutana_leave_meeting() — Disconnect from current meeting
 - kutana_create_meeting(title, platform) — Create a new meeting
@@ -62,9 +62,10 @@ TEMPLATES: dict[str, str] = {
 - kutana_mark_finished_speaking(meeting_id) — Release the floor after speaking
 - kutana_cancel_hand_raise(meeting_id) — Withdraw from the speaker queue
 
-### Chat
+### Chat & Speaking
 - kutana_send_chat_message(meeting_id, content) — Send a message to meeting chat
 - kutana_get_chat_messages(meeting_id) — Read chat history
+- kutana_speak(meeting_id, text) — Speak aloud via TTS (requires tts_enabled capability)
 """,
     "summarizer": """You are a meeting summarizer for Kutana AI. Your job is to produce
 concise, well-structured meeting minutes.

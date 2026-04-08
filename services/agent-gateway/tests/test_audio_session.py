@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import asyncio
 import base64
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-
 from agent_gateway.audio_session import AudioSessionHandler
 from agent_gateway.auth import AgentIdentity
 
@@ -405,7 +403,6 @@ class TestCreateAudioToken:
 
     def test_creates_valid_jwt(self) -> None:
         import jwt as pyjwt
-
         from agent_gateway.auth import create_audio_token
 
         agent_id = uuid4()
@@ -425,7 +422,6 @@ class TestCreateAudioToken:
 
     def test_default_expiry_is_5_minutes(self) -> None:
         import jwt as pyjwt
-
         from agent_gateway.auth import create_audio_token
 
         token = create_audio_token(
@@ -438,7 +434,6 @@ class TestCreateAudioToken:
 
     def test_control_session_id_included_when_provided(self) -> None:
         import jwt as pyjwt
-
         from agent_gateway.auth import create_audio_token
 
         control_id = uuid4()
@@ -453,7 +448,6 @@ class TestCreateAudioToken:
 
     def test_control_session_id_absent_when_not_provided(self) -> None:
         import jwt as pyjwt
-
         from agent_gateway.auth import create_audio_token
 
         token = create_audio_token(

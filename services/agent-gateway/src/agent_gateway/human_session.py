@@ -119,8 +119,8 @@ class HumanSessionHandler:
                 continue
             role = "human" if getattr(session, "source", "") == "human" else "agent"
             participant_id = (
-                getattr(session, "_identity", None)
-                and getattr(session._identity, "agent_config_id", session.session_id)
+                (getattr(session, "_identity", None)
+                and getattr(session._identity, "agent_config_id", session.session_id))
                 or session.session_id
             )
             try:
@@ -148,7 +148,6 @@ class HumanSessionHandler:
                 await self._dispatch(data)
         except Exception as e:
             from fastapi import WebSocketDisconnect
-            from starlette.websockets import WebSocketState
             if isinstance(e, WebSocketDisconnect):
                 logger.warning(
                     "Human session %s disconnected (code=%s)",

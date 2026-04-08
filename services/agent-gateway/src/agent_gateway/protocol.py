@@ -32,9 +32,8 @@ class Capability(enum.StrEnum):
     TRANSCRIBE = "transcribe"
     EXTRACT_TASKS = "extract_tasks"
     DATA_ONLY = "data_only"
-    # Voice capabilities — enable the /audio/connect sidecar
-    VOICE_IN = "voice_in"   # agent can send audio into the meeting
-    VOICE_OUT = "voice_out"  # agent can receive mixed audio from the meeting
+    # Voice capability — enables the /audio/connect sidecar (bidirectional PCM16)
+    VOICE = "voice"
 
 
 # ---------------------------------------------------------------------------
@@ -92,10 +91,12 @@ class LowerHand(BaseModel):
 
 
 class StartSpeaking(BaseModel):
-    """Signal that the active speaker has started actively speaking.
+    """Signal that the agent has started speaking.
 
-    Sent after receiving turn_your_turn to indicate the agent has begun
-    speaking content (as opposed to just being promoted to the active slot).
+    For turn-managed agents: sent after receiving turn_your_turn to indicate
+    the agent has begun speaking content.
+    For TTS agents: activates TTS mode so subsequent SpokenText messages
+    are synthesized and broadcast as audio.
     """
 
     type: Literal["start_speaking"] = "start_speaking"
@@ -122,16 +123,6 @@ class SubscribeChannel(BaseModel):
 
     type: Literal["subscribe_channel"] = "subscribe_channel"
     channels: list[str]
-
-
-class StartSpeaking(BaseModel):
-    """Signal that a TTS-enabled agent is about to speak.
-
-    Activates TTS mode for the session. Subsequent SpokenText messages
-    are synthesized and broadcast as audio to all meeting participants.
-    """
-
-    type: Literal["start_speaking"] = "start_speaking"
 
 
 class SpokenText(BaseModel):
@@ -169,7 +160,7 @@ class Joined(BaseModel):
     room_name: str | None = None
     participants: list[dict[str, Any]] = Field(default_factory=list)
     granted_capabilities: list[str] = Field(default_factory=list)
-    # Audio sidecar — only present when voice_in or voice_out is granted.
+    # Audio sidecar — only present when voice capability is granted.
     audio_ws_url: str | None = None   # Full WebSocket URL including token + meeting_id
     audio_token: str | None = None    # Short-lived JWT for /audio/connect
 
@@ -214,7 +205,7 @@ class ParticipantUpdate(BaseModel):
     role: str
     connection_type: str | None = None
     source: str | None = None  # "agent", "claude-code", "human", "openclaw", etc.
-    capabilities: list[str] | None = None  # Granted capabilities (e.g. ["listen", "speak", "voice_in"])
+    capabilities: list[str] | None = None  # Granted capabilities (e.g. ["listen", "speak", "voice"])
 
 
 class ErrorMessage(BaseModel):
@@ -275,7 +266,6 @@ CLIENT_MESSAGE_TYPES = {
     "finished_speaking": FinishedSpeaking,
     "get_queue": GetQueue,
     "subscribe_channel": SubscribeChannel,
-    "start_speaking": StartSpeaking,
     "spoken_text": SpokenText,
     "stop_speaking": StopSpeaking,
 }

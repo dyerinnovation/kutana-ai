@@ -7,12 +7,12 @@ import time
 from typing import Annotated
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, Header, Request, status
+from agent_gateway.auth import create_agent_token
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent_gateway.auth import create_agent_token
 from api_server.auth_deps import CurrentUser, validate_api_key
 from api_server.deps import Settings, get_db_session, get_settings
 from kutana_core.database.models import (

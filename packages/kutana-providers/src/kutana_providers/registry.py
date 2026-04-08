@@ -129,7 +129,6 @@ def _build_default_registry() -> ProviderRegistry:
     """
     from kutana_providers.chat.redis_chat_store import RedisChatStore
     from kutana_providers.extraction.llm_extractor import LLMExtractor
-    from kutana_providers.turn_management.redis_turn_manager import RedisTurnManager
     from kutana_providers.llm.anthropic_llm import AnthropicLLM
     from kutana_providers.llm.groq_llm import GroqLLM
     from kutana_providers.llm.ollama_llm import OllamaLLM
@@ -144,6 +143,7 @@ def _build_default_registry() -> ProviderRegistry:
     from kutana_providers.tts.cartesia_tts import CartesiaTTS
     from kutana_providers.tts.elevenlabs_tts import ElevenLabsTTS
     from kutana_providers.tts.piper_tts import PiperTTS
+    from kutana_providers.turn_management.redis_turn_manager import RedisTurnManager
 
     registry = ProviderRegistry()
 

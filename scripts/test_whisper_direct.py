@@ -79,9 +79,9 @@ async def main() -> None:
                 log(f"Response size:   {len(body)} bytes")
                 log(f"Elapsed:         {elapsed:.2f}s")
                 log("")
-                log(f"Body (first 500 chars):")
+                log("Body (first 500 chars):")
                 print(body[:500], flush=True)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             elapsed = time.monotonic() - t0
             log(f"TIMED OUT after {elapsed:.2f}s")
         except aiohttp.ClientError as e:

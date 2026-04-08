@@ -205,9 +205,7 @@ class AgentSessionHandler:
         # Build audio sidecar URL + token for voice-capable agents
         audio_ws_url: str | None = None
         audio_token: str | None = None
-        if self._jwt_secret and (
-            "voice_in" in self.capabilities or "voice_out" in self.capabilities
-        ):
+        if self._jwt_secret and "voice" in self.capabilities:
             audio_token = create_audio_token(
                 agent_config_id=self._identity.agent_config_id,
                 meeting_id=msg.meeting_id,
@@ -732,26 +730,14 @@ class AgentSessionHandler:
     def _infer_audio_capability(self, tts_enabled: bool) -> str:
         """Infer the high-level audio capability from granted capabilities.
 
-        Maps the gateway-level capability set back to the MCP-level
-        audio capability name for inclusion in participant events.
-
         Args:
             tts_enabled: Whether TTS was requested at join time.
 
         Returns:
-            One of: text_only, voice_in, voice_out, voice_bidirectional,
-            tts_enabled.
+            One of: text_only, tts_enabled, voice.
         """
-        caps = set(self.capabilities)
-        has_voice_in = "voice_in" in caps
-        has_voice_out = "voice_out" in caps
-
-        if has_voice_in and has_voice_out:
-            return "voice_bidirectional"
-        if has_voice_in:
-            return "voice_in"
-        if has_voice_out:
-            return "voice_out"
+        if "voice" in self.capabilities:
+            return "voice"
         if tts_enabled:
             return "tts_enabled"
         return "text_only"

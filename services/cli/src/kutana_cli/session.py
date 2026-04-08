@@ -51,7 +51,7 @@ def _require_session() -> dict[str, Any]:
 @click.option(
     "--capabilities",
     default="text_only",
-    help="Capabilities to request (e.g. text_only, voice_in, tts_enabled).",
+    help="Capabilities to request (e.g. text_only, voice, tts_enabled).",
 )
 @click.pass_context
 def join(ctx: click.Context, meeting_id: str, capabilities: str) -> None:

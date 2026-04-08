@@ -31,7 +31,7 @@ import math
 import struct
 import sys
 import wave
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
@@ -129,7 +129,7 @@ async def run_e2e_test(
     duration_s = len(audio_bytes) / (SAMPLE_RATE * SAMPLE_WIDTH)
     messages: list[dict[str, Any]] = []
     result: dict[str, Any] = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "meeting_id": str(meeting_id),
         "gateway_url": gateway_url,
         "audio_file": audio_file_path,

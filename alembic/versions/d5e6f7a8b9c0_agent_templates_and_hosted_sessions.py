@@ -7,11 +7,12 @@ Create Date: 2026-03-26
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB
+
+from alembic import op
 
 revision: str = "d5e6f7a8b9c0"
 down_revision: str | None = "c4d5e6f7a8b9"

@@ -427,7 +427,7 @@ async def main() -> None:
         )
         sys.exit(1)
 
-    print(f"Kutana AI Demo Agent")
+    print("Kutana AI Demo Agent")
     print(f"  Meeting ID : {args.meeting_id}")
     print(f"  API URL    : {args.api_url}")
     print(f"  Gateway URL: {args.gateway_url}")

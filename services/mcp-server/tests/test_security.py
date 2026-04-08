@@ -7,11 +7,10 @@ These tests are pure unit tests — no Redis, no HTTP, no external services.
 from __future__ import annotations
 
 import json
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
-
 from mcp_server.auth import MCPIdentity
 from mcp_server.security.rate_limit import NoOpRateLimiter, RedisRateLimiter
 from mcp_server.security.sanitization import (

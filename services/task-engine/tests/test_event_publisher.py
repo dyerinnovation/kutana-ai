@@ -6,7 +6,7 @@ All tests use a mocked Redis client — no live Redis connection is made.
 from __future__ import annotations
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
@@ -49,9 +49,10 @@ class TestEventPublisherPublish:
 
     async def test_publish_calls_xadd(self) -> None:
         """publish() calls redis.xadd with the correct stream key."""
+        from datetime import UTC, datetime
+
         from kutana_core.events.definitions import TaskCreated
         from kutana_core.models.task import Task, TaskPriority, TaskStatus
-        from datetime import UTC, datetime
 
         publisher, mock_redis = _make_publisher()
 
@@ -74,9 +75,10 @@ class TestEventPublisherPublish:
 
     async def test_publish_includes_event_type_field(self) -> None:
         """Stream entry includes the correct event_type field."""
+        from datetime import UTC, datetime
+
         from kutana_core.events.definitions import TaskCreated
         from kutana_core.models.task import Task, TaskPriority, TaskStatus
-        from datetime import UTC, datetime
 
         publisher, mock_redis = _make_publisher()
 
@@ -98,9 +100,10 @@ class TestEventPublisherPublish:
 
     async def test_publish_payload_is_valid_json(self) -> None:
         """The payload field is valid JSON containing event data."""
+        from datetime import UTC, datetime
+
         from kutana_core.events.definitions import TaskCreated
         from kutana_core.models.task import Task, TaskPriority, TaskStatus
-        from datetime import UTC, datetime
 
         publisher, mock_redis = _make_publisher()
 
@@ -125,9 +128,10 @@ class TestEventPublisherPublish:
 
     async def test_publish_returns_entry_id(self) -> None:
         """publish() returns the Redis entry ID from xadd."""
+        from datetime import UTC, datetime
+
         from kutana_core.events.definitions import TaskCreated
         from kutana_core.models.task import Task, TaskPriority, TaskStatus
-        from datetime import UTC, datetime
 
         publisher, mock_redis = _make_publisher()
         mock_redis.xadd.return_value = "9999999999-0"
@@ -148,9 +152,10 @@ class TestEventPublisherPublish:
 
     async def test_publish_task_updated_event(self) -> None:
         """publish() works correctly for task.updated events."""
+        from datetime import UTC, datetime
+
         from kutana_core.events.definitions import TaskUpdated
         from kutana_core.models.task import Task, TaskPriority, TaskStatus
-        from datetime import UTC, datetime
 
         publisher, mock_redis = _make_publisher()
 

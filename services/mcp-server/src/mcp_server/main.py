@@ -88,14 +88,12 @@ _rate_limiter: RedisRateLimiter | None = None
 # Map MCP-level capability names to gateway-level capability strings.
 _MCP_CAPABILITY_MAP: dict[str, list[str]] = {
     "text_only": ["listen", "transcribe"],
-    "voice_in": ["listen", "transcribe", "speak"],
-    "voice_out": ["listen", "transcribe"],
-    "voice_bidirectional": ["listen", "transcribe", "speak"],
+    "voice": ["listen", "transcribe", "speak", "voice"],
     "tts_enabled": ["listen", "transcribe"],
 }
 
 # Capabilities that require audio connection details in the join response.
-_VOICE_CAPABILITIES: frozenset[str] = frozenset({"voice_in", "voice_bidirectional"})
+_VOICE_CAPABILITIES: frozenset[str] = frozenset({"voice"})
 
 
 def _map_capabilities(mcp_caps: list[str]) -> list[str]:
@@ -296,10 +294,10 @@ async def kutana_join_meeting(
     Args:
         meeting_id: UUID of the meeting to join.
         capabilities: Optional list of agent capabilities to request.
-                      Valid values: "text_only" (default), "voice_in",
-                      "voice_out", "voice_bidirectional", "tts_enabled".
-                      For voice_in / voice_bidirectional the response includes
-                      audio_ws_url and audio_token for sending audio frames.
+                      Valid values: "text_only" (default), "voice",
+                      "tts_enabled".
+                      For voice the response includes audio_ws_url and
+                      audio_token for bidirectional PCM16 audio.
         tts_voice_id: Optional TTS voice ID override. When set with "tts_enabled"
                       capability, the agent uses this specific voice instead of
                       being assigned one from the voice pool. Check your TTS

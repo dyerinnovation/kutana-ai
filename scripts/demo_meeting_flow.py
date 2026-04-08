@@ -272,7 +272,7 @@ async def demo_meeting_flow(audio_path: Path | None = None) -> bool:
                     while asyncio.get_event_loop().time() < deadline:
                         try:
                             msg = await asyncio.wait_for(ws.receive(), timeout=1.0)
-                        except asyncio.TimeoutError:
+                        except TimeoutError:
                             continue
                         if msg.type == aiohttp.WSMsgType.TEXT:
                             data = json.loads(msg.data)

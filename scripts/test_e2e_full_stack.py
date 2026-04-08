@@ -22,10 +22,8 @@ Requires:
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import sys
-import time
 from datetime import UTC, datetime
 from uuid import uuid4
 

@@ -19,8 +19,8 @@ import redis.asyncio as aioredis
 from kutana_core.models.chat import ChatMessageType
 
 if TYPE_CHECKING:
-    from kutana_core.interfaces.chat_store import ChatStore
     from agent_gateway.connection_manager import ConnectionManager
+    from kutana_core.interfaces.chat_store import ChatStore
 
 logger = logging.getLogger(__name__)
 

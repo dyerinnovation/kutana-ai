@@ -13,8 +13,8 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 if TYPE_CHECKING:
-    from kutana_core.interfaces.turn_manager import TurnManager
     from agent_gateway.connection_manager import ConnectionManager
+    from kutana_core.interfaces.turn_manager import TurnManager
 
 logger = logging.getLogger(__name__)
 

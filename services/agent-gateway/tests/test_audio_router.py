@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-
 from agent_gateway.audio_router import AudioRouter
 
 

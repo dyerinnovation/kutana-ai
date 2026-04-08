@@ -12,8 +12,7 @@ Usage:
 import argparse
 import json
 import subprocess
-import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -152,8 +151,8 @@ def generate_report(
     streams_status: tuple[str, str],
 ) -> str:
     """Generate a markdown health report."""
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
+    date_str = datetime.now(UTC).strftime("%Y-%m-%d")
 
     lines = [
         f"# Log Monitor Report — {date_str}",
@@ -227,7 +226,7 @@ def main() -> None:
     if args.output:
         output_dir = Path(args.output)
         output_dir.mkdir(parents=True, exist_ok=True)
-        date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        date_str = datetime.now(UTC).strftime("%Y-%m-%d")
         output_file = output_dir / f"log-monitor-{date_str}.md"
         output_file.write_text(report)
         print(f"\nReport saved to {output_file}")
