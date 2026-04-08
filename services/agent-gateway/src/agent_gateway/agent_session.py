@@ -97,6 +97,7 @@ class AgentSessionHandler:
         self.subscribed_channels: set[str] = set()
         self.tts_enabled: bool = False
         self.tts_voice: str | None = None
+        self.audio_capability: str | None = None  # MCP-level audio capability declaration
         self._tts_active: bool = False  # True while agent is mid-utterance
         self._connected_at: datetime = datetime.now(tz=UTC)
 
@@ -185,12 +186,13 @@ class AgentSessionHandler:
         if self._audio_bridge is not None:
             await self._audio_bridge.ensure_pipeline(msg.meeting_id)
 
+        # Infer high-level audio capability from granted capabilities
+        self.audio_capability = self._infer_audio_capability(msg.tts_enabled)
+
         # TTS voice assignment
         if msg.tts_enabled and self._tts_bridge is not None:
             self.tts_enabled = True
-            self.tts_voice = self._tts_bridge.assign_voice(
-                self.session_id, msg.tts_voice
-            )
+            self.tts_voice = self._tts_bridge.assign_voice(self.session_id, msg.tts_voice)
             logger.info(
                 "TTS enabled for agent %s (voice=%s)",
                 self.agent_name,
@@ -290,13 +292,15 @@ class AgentSessionHandler:
         if self._manager.redis is not None:
             import json as _json
 
-            event_payload = _json.dumps({
-                "meeting_id": str(self.meeting_id),
-                "sender_session_id": str(self.session_id),
-                "sender_name": self.agent_name,
-                "channel": msg.channel,
-                "payload": msg.payload,
-            })
+            event_payload = _json.dumps(
+                {
+                    "meeting_id": str(self.meeting_id),
+                    "sender_session_id": str(self.session_id),
+                    "sender_name": self.agent_name,
+                    "channel": msg.channel,
+                    "payload": msg.payload,
+                }
+            )
             try:
                 await self._manager.redis.xadd(
                     "kutana:events",
@@ -314,19 +318,25 @@ class AgentSessionHandler:
             # Also broadcast chat messages via Redis Pub/Sub so the
             # ChatBridge delivers them to browser (human) sessions.
             if msg.channel == "chat":
-                text = msg.payload.get("text", "") if isinstance(msg.payload, dict) else str(msg.payload)
-                notification = _json.dumps({
-                    "meeting_id": str(self.meeting_id),
-                    "message_id": str(uuid4()),
-                    "sender_id": str(self.session_id),
-                    "sender_name": self.agent_name,
-                    "content": text,
-                    "text": text,
-                    "message_type": "text",
-                    "is_agent": True,
-                    "sent_at": datetime.now(tz=UTC).isoformat(),
-                    "sequence": 0,
-                })
+                text = (
+                    msg.payload.get("text", "")
+                    if isinstance(msg.payload, dict)
+                    else str(msg.payload)
+                )
+                notification = _json.dumps(
+                    {
+                        "meeting_id": str(self.meeting_id),
+                        "message_id": str(uuid4()),
+                        "sender_id": str(self.session_id),
+                        "sender_name": self.agent_name,
+                        "content": text,
+                        "text": text,
+                        "message_type": "text",
+                        "is_agent": True,
+                        "sent_at": datetime.now(tz=UTC).isoformat(),
+                        "sequence": 0,
+                    }
+                )
                 try:
                     await self._manager.redis.publish("kutana:chat", notification)
                 except Exception:
@@ -614,6 +624,8 @@ class AgentSessionHandler:
                 name=self.agent_name,
                 role="agent",
                 connection_type="agent_gateway",
+                capabilities=self.capabilities,
+                audio_capability=self.audio_capability,
             )
         else:
             event = ParticipantLeft(
@@ -717,6 +729,33 @@ class AgentSessionHandler:
         )
         logger.debug("TTS speaking stopped for agent %s", self.agent_name)
 
+    def _infer_audio_capability(self, tts_enabled: bool) -> str:
+        """Infer the high-level audio capability from granted capabilities.
+
+        Maps the gateway-level capability set back to the MCP-level
+        audio capability name for inclusion in participant events.
+
+        Args:
+            tts_enabled: Whether TTS was requested at join time.
+
+        Returns:
+            One of: text_only, voice_in, voice_out, voice_bidirectional,
+            tts_enabled.
+        """
+        caps = set(self.capabilities)
+        has_voice_in = "voice_in" in caps
+        has_voice_out = "voice_out" in caps
+
+        if has_voice_in and has_voice_out:
+            return "voice_bidirectional"
+        if has_voice_in:
+            return "voice_in"
+        if has_voice_out:
+            return "voice_out"
+        if tts_enabled:
+            return "tts_enabled"
+        return "text_only"
+
     async def _cleanup(self) -> None:
         """Clean up session state on disconnect."""
         if self.meeting_id is not None:
@@ -758,13 +797,9 @@ class AgentSessionHandler:
                 )
                 db.add(record)
                 await db.commit()
-                logger.debug(
-                    "Persisted agent session %s (join)", self.session_id
-                )
+                logger.debug("Persisted agent session %s (join)", self.session_id)
         except Exception:
-            logger.exception(
-                "Failed to persist agent session join for %s", self.session_id
-            )
+            logger.exception("Failed to persist agent session join for %s", self.session_id)
 
     async def _persist_leave(self) -> None:
         """Update AgentSessionORM record when leaving a meeting."""
@@ -786,10 +821,6 @@ class AgentSessionHandler:
                     )
                 )
                 await db.commit()
-                logger.debug(
-                    "Persisted agent session %s (leave)", self.session_id
-                )
+                logger.debug("Persisted agent session %s (leave)", self.session_id)
         except Exception:
-            logger.exception(
-                "Failed to persist agent session leave for %s", self.session_id
-            )
+            logger.exception("Failed to persist agent session leave for %s", self.session_id)

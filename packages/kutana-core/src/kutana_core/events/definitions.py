@@ -174,6 +174,9 @@ class ParticipantJoined(BaseEvent):
         name: Display name of the participant.
         role: Participant role.
         connection_type: How the participant is connected.
+        capabilities: Granted capabilities (e.g. listen, speak, voice_in).
+        audio_capability: High-level audio capability declaration
+            (text_only, voice_in, voice_out, voice_bidirectional, tts_enabled).
     """
 
     event_type: ClassVar[str] = "participant.joined"
@@ -182,6 +185,8 @@ class ParticipantJoined(BaseEvent):
     name: str
     role: str
     connection_type: str | None = None
+    capabilities: list[str] | None = None
+    audio_capability: str | None = None
 
 
 class ParticipantLeft(BaseEvent):
