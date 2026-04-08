@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import sys
 from contextlib import asynccontextmanager
+from uuid import UUID as _UUID
 
 # Enable application-level logging so session events are visible in docker logs
 logging.basicConfig(
@@ -66,12 +68,23 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     Yields:
         Control back to the ASGI server while the app is running.
     """
-    global _settings, _connection_manager, _event_relay, _audio_bridge, _turn_bridge, _chat_bridge, _tts_bridge, _db_session_factory, _redis_client
+    global \
+        _settings, \
+        _connection_manager, \
+        _event_relay, \
+        _audio_bridge, \
+        _turn_bridge, \
+        _chat_bridge, \
+        _tts_bridge, \
+        _db_session_factory, \
+        _redis_client
 
     _settings = AgentGatewaySettings()
     logger.info(
         "Gateway settings: stt_provider=%s, whisper_api_url=%s, redis_url=%s",
-        _settings.stt_provider, _settings.whisper_api_url, _settings.redis_url,
+        _settings.stt_provider,
+        _settings.whisper_api_url,
+        _settings.redis_url,
     )
 
     # Database session factory for agent session persistence
@@ -445,8 +458,6 @@ async def audio_connect(
         return
 
     # Parse and validate meeting_id
-    from uuid import UUID as _UUID
-
     try:
         parsed_meeting_id = _UUID(meeting_id)
     except ValueError:
@@ -488,4 +499,120 @@ async def audio_connect(
         logger.exception("Error in audio session %s", audio_session.session_id)
     finally:
         # Clean up the router if it has no remaining sessions
+        await _connection_manager.cleanup_audio_router(parsed_meeting_id)
+
+
+# ---------------------------------------------------------------------------
+# v1 Audio sidecar — Bearer JWT, session_id as path param
+# ---------------------------------------------------------------------------
+
+
+@app.websocket("/v1/audio/{session_id}")
+async def audio_connect_v1(
+    websocket: WebSocket,
+    session_id: str,
+    audio_format: str = Query("pcm16", description="Audio format: pcm16 or opus"),
+) -> None:
+    """WebSocket endpoint for agent audio streaming (v1 sidecar).
+
+    Uses Bearer JWT from the first WebSocket message for authentication
+    instead of query-string tokens. The control-plane session_id is passed
+    as a path parameter so the audio session can be linked back to the
+    agent's /agent/connect session.
+
+    Handshake:
+        1. Client connects to /v1/audio/{session_id}?audio_format=pcm16
+        2. Client sends: { "type": "auth", "token": "<audio_jwt>", "meeting_id": "<uuid>" }
+        3. Server validates and responds with audio_session_joined or closes.
+
+    After handshake the protocol is identical to /audio/connect.
+
+    Args:
+        websocket: The incoming WebSocket connection.
+        session_id: Control-plane session ID (from /agent/connect Joined response).
+        audio_format: Negotiated audio format (pcm16 or opus).
+    """
+    if _settings is None or _connection_manager is None:
+        await websocket.accept()
+        await websocket.close(code=1011, reason="Service not initialized")
+        return
+
+    # Validate audio_format early
+    if audio_format not in ("pcm16", "opus"):
+        await websocket.accept()
+        await websocket.close(
+            code=4003,
+            reason="invalid_format: supported formats are pcm16, opus",
+        )
+        return
+
+    await websocket.accept()
+
+    # Wait for auth message
+    try:
+        raw = await websocket.receive_text()
+        data = json.loads(raw)
+    except Exception:
+        await websocket.close(code=4001, reason="Expected JSON auth message")
+        return
+
+    if data.get("type") != "auth" or not data.get("token") or not data.get("meeting_id"):
+        await websocket.close(
+            code=4001,
+            reason="First message must be: { type: 'auth', token: '...', meeting_id: '...' }",
+        )
+        return
+
+    # Validate Bearer token
+    try:
+        identity = validate_token(
+            data["token"],
+            _settings.jwt_secret,
+            _settings.jwt_algorithm,
+        )
+    except AuthError as e:
+        await websocket.close(code=4001, reason=f"{e.code}: {e.message}")
+        return
+
+    # Parse meeting_id
+    try:
+        parsed_meeting_id = _UUID(data["meeting_id"])
+    except ValueError:
+        await websocket.close(code=4003, reason="invalid_meeting_id: must be a valid UUID")
+        return
+
+    # Parse control-plane session_id
+    try:
+        parsed_session_id = _UUID(session_id)
+    except ValueError:
+        await websocket.close(code=4003, reason="invalid_session_id: must be a valid UUID")
+        return
+
+    # Get or create the per-meeting AudioRouter
+    audio_router = _connection_manager.get_or_create_audio_router(parsed_meeting_id)
+
+    audio_session = AudioSessionHandler(
+        websocket=websocket,
+        identity=identity,
+        meeting_id=parsed_meeting_id,
+        audio_router=audio_router,
+        audio_format=audio_format,
+        control_session_id=parsed_session_id,
+    )
+
+    logger.info(
+        "Audio v1 session connecting: agent=%s, meeting=%s, control_session=%s, format=%s",
+        identity.name,
+        parsed_meeting_id,
+        parsed_session_id,
+        audio_format,
+    )
+
+    try:
+        await audio_session.handle()
+    except WebSocketDisconnect:
+        logger.info("Audio v1 session %s disconnected normally", audio_session.session_id)
+    except Exception:
+        logger.exception("Error in audio v1 session %s", audio_session.session_id)
+    finally:
         await _connection_manager.cleanup_audio_router(parsed_meeting_id)

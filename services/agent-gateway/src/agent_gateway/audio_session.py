@@ -22,6 +22,10 @@ logger = logging.getLogger(__name__)
 # A bounded outbound queue prevents memory growth if the client is slow.
 _OUTBOUND_QUEUE_MAX = 200
 
+# PCM16 LE 16kHz mono, 20ms frame = 16000 * 2 bytes * 0.020 = 640 bytes
+_SILENCE_FRAME_BYTES = b"\x00" * 640
+_FRAME_INTERVAL_S = 0.020  # 20ms
+
 
 class AudioSessionHandler:
     """Manages a single /audio/connect WebSocket connection.
@@ -73,6 +77,7 @@ class AudioSessionHandler:
         self._outbound_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(
             maxsize=_OUTBOUND_QUEUE_MAX
         )
+        self._received_audio_this_tick = False  # Reset each 20ms tick
 
     # ------------------------------------------------------------------
     # Main entry point
@@ -98,18 +103,24 @@ class AudioSessionHandler:
         )
 
         # Confirm the session to the client immediately
-        await self._send_direct({
-            "type": "audio_session_joined",
-            "session_id": str(self.session_id),
-            "meeting_id": str(self.meeting_id),
-            "format": self.audio_format,
-        })
+        await self._send_direct(
+            {
+                "type": "audio_session_joined",
+                "session_id": str(self.session_id),
+                "meeting_id": str(self.meeting_id),
+                "format": self.audio_format,
+            }
+        )
 
-        # Run inbound + outbound loops concurrently.
-        # The outbound task is cancelled when inbound exits (WS closed / error).
+        # Run inbound + outbound + silence-clock loops concurrently.
+        # The outbound/clock tasks are cancelled when inbound exits.
         outbound_task = asyncio.create_task(
             self._outbound_loop(),
             name=f"audio-outbound-{self.session_id}",
+        )
+        silence_task = asyncio.create_task(
+            self._silence_clock(),
+            name=f"audio-silence-{self.session_id}",
         )
         try:
             await self._inbound_loop()
@@ -121,8 +132,11 @@ class AudioSessionHandler:
             )
         finally:
             outbound_task.cancel()
+            silence_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await outbound_task
+            with contextlib.suppress(asyncio.CancelledError):
+                await silence_task
             # Drain any messages that were enqueued but not yet sent
             await self._drain_outbound()
             await self._cleanup()
@@ -158,9 +172,7 @@ class AudioSessionHandler:
         elif msg_type == "ping":
             await self._enqueue({"type": "pong"})
         else:
-            await self._send_error(
-                "unknown_type", f"Unknown audio message type: {msg_type!r}"
-            )
+            await self._send_error("unknown_type", f"Unknown audio message type: {msg_type!r}")
 
     async def _handle_audio_data(self, data: dict[str, Any]) -> None:
         """Handle an audio_data frame from the client.
@@ -292,6 +304,33 @@ class AudioSessionHandler:
         await self._enqueue({"type": "error", "code": code, "message": message})
 
     # ------------------------------------------------------------------
+    # Silence clock — continuous 20ms streaming
+    # ------------------------------------------------------------------
+
+    async def _silence_clock(self) -> None:
+        """Send continuous 20ms audio frames to the agent.
+
+        Every 20ms, if no mixed audio was received from the router
+        during this tick, enqueue a silence frame (640 zero bytes).
+        This provides a constant audio clock for voice agents that
+        need a steady stream of input frames.
+        """
+        try:
+            while True:
+                await asyncio.sleep(_FRAME_INTERVAL_S)
+                if not self._received_audio_this_tick:
+                    self._enqueue_nowait(
+                        {
+                            "type": "mixed_audio",
+                            "data": base64.b64encode(_SILENCE_FRAME_BYTES).decode(),
+                            "speakers": [],
+                        }
+                    )
+                self._received_audio_this_tick = False
+        except asyncio.CancelledError:
+            pass
+
+    # ------------------------------------------------------------------
     # Callbacks from AudioRouter
     # ------------------------------------------------------------------
 
@@ -303,17 +342,21 @@ class AudioSessionHandler:
         """Called by the router to deliver mixed audio to this session.
 
         Enqueues a mixed_audio frame. Frames are dropped when the outbound
-        queue is full (backpressure protection).
+        queue is full (backpressure protection). Sets the received flag so
+        the silence clock skips this tick.
 
         Args:
             audio_bytes: PCM16 audio bytes from another participant.
             speakers: Participant IDs whose audio is included in this frame.
         """
-        self._enqueue_nowait({
-            "type": "mixed_audio",
-            "data": base64.b64encode(audio_bytes).decode(),
-            "speakers": speakers,
-        })
+        self._received_audio_this_tick = True
+        self._enqueue_nowait(
+            {
+                "type": "mixed_audio",
+                "data": base64.b64encode(audio_bytes).decode(),
+                "speakers": speakers,
+            }
+        )
 
     async def send_speaker_changed(
         self,
@@ -326,11 +369,13 @@ class AudioSessionHandler:
             participant_id: The participant whose speaking state changed.
             action: "started" or "stopped".
         """
-        self._enqueue_nowait({
-            "type": "speaker_changed",
-            "participant_id": participant_id,
-            "action": action,
-        })
+        self._enqueue_nowait(
+            {
+                "type": "speaker_changed",
+                "participant_id": participant_id,
+                "action": action,
+            }
+        )
 
     async def on_vad_silence_timeout(self) -> None:
         """Called by the router when VAD detects this session has gone silent.
