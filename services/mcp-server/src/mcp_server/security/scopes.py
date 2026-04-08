@@ -77,6 +77,7 @@ TOOL_REQUIRED_SCOPE: dict[str, str] = {
     "raise_hand": SCOPE_TURNS_MANAGE,
     "mark_finished_speaking": SCOPE_TURNS_MANAGE,
     "cancel_hand_raise": SCOPE_TURNS_MANAGE,
+    "speak": SCOPE_TURNS_MANAGE,
     # Task creation — requires explicit grant
     "create_task": SCOPE_TASKS_WRITE,
 }
@@ -108,12 +109,14 @@ def require_scope(identity: MCPIdentity, tool_name: str) -> str | None:
         required,
         identity.scopes,
     )
-    return json.dumps({
-        "error": "insufficient_scope",
-        "message": (
-            f"Scope '{required}' is required to call '{tool_name}'. "
-            "Contact your administrator to grant additional scopes."
-        ),
-        "required_scope": required,
-        "granted_scopes": identity.scopes,
-    })
+    return json.dumps(
+        {
+            "error": "insufficient_scope",
+            "message": (
+                f"Scope '{required}' is required to call '{tool_name}'. "
+                "Contact your administrator to grant additional scopes."
+            ),
+            "required_scope": required,
+            "granted_scopes": identity.scopes,
+        }
+    )

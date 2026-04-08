@@ -109,6 +109,7 @@ class TestRequireScope:
         ("get_queue_status", SCOPE_MEETINGS_READ),
         ("mark_finished_speaking", SCOPE_TURNS_MANAGE),
         ("publish_to_channel", SCOPE_MEETINGS_CHAT),
+        ("speak", SCOPE_TURNS_MANAGE),
     ])
     def test_tool_scope_mapping(self, tool: str, required_scope: str) -> None:
         # Identity with ALL scopes — should pass for every tool
