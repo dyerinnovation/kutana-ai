@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import LandingNav from "@/components/landing/LandingNav";
 import HeroSection from "@/components/landing/HeroSection";
 import ContextSection from "@/components/landing/ContextSection";
@@ -13,6 +14,13 @@ import { SecuritySection } from "@/components/landing/SecuritySection";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 
 export function LandingPage() {
+  // Force dark body background so backdrop-blur nav doesn't pick up light-mode body
+  useEffect(() => {
+    const prev = document.body.style.backgroundColor;
+    document.body.style.backgroundColor = "#09090b";
+    return () => { document.body.style.backgroundColor = prev; };
+  }, []);
+
   return (
     <div className="min-h-screen text-white" style={{ background: "linear-gradient(135deg, #09090b 0%, #131318 100%)" }}>
       <LandingNav />
