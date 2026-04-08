@@ -82,9 +82,6 @@ export type GatewayMessage =
   | { type: "joined"; meeting_id: string; granted_capabilities: string[] }
   | { type: "left"; meeting_id: string }
   | { type: "event"; event_type: string; payload: Record<string, unknown> }
-  | { type: "turn.speaker.changed"; speaker_id: string | null; speaker_name: string | null }
-  | { type: "turn.queue.updated"; queue: TurnQueueEntry[] }
-  | { type: "turn.your_turn" }
   | { type: "chat"; sender_id: string; sender_name: string; text: string; timestamp: number; is_agent: boolean };
 
 export interface ChatMessage {
@@ -96,9 +93,37 @@ export interface ChatMessage {
   is_agent: boolean;
 }
 
+/** Matches the queue entry shape from turn_bridge.get_queue_payload */
 export interface TurnQueueEntry {
+  position: number;
   participant_id: string;
-  name: string;
+  hand_raise_id: string;
+  priority: string;
+  topic: string | null;
+  raised_at: string;
+  /** Resolved client-side from participant list */
+  name?: string;
+}
+
+/** Payload shape of turn.queue.updated event from the gateway */
+export interface TurnQueuePayload {
+  meeting_id: string;
+  active_speaker_id: string | null;
+  queue: TurnQueueEntry[];
+}
+
+/** Payload shape of turn.speaker.changed event */
+export interface TurnSpeakerChangedPayload {
+  meeting_id: string;
+  previous_speaker_id: string | null;
+  new_speaker_id: string | null;
+}
+
+/** Payload shape of turn.speaking.started event */
+export interface TurnSpeakingStartedPayload {
+  meeting_id: string;
+  participant_id: string;
+  started_at: string;
 }
 
 export interface TtsAudioPayload {
