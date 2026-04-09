@@ -53,6 +53,13 @@ spec:
           volumeMounts:
             - name: langfuse-clickhouse-data
               mountPath: /var/lib/clickhouse
+            - name: clickhouse-config
+              mountPath: /etc/clickhouse-server/config.d/keeper-config.xml
+              subPath: keeper-config.xml
+      volumes:
+        - name: clickhouse-config
+          configMap:
+            name: langfuse-clickhouse-config
   volumeClaimTemplates:
     - metadata:
         name: langfuse-clickhouse-data
