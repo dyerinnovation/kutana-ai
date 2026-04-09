@@ -7,7 +7,10 @@ WORKDIR /app
 
 # Install test runner (all other deps — anthropic, langfuse, boto3 — already
 # present in the api-server venv).
-RUN /app/.venv/bin/pip install --no-cache-dir pytest pytest-asyncio
+# The api-server base image sets PATH=/app/.venv/bin:$PATH but the uv-created
+# venv lacks pip. Install directly into the venv's site-packages.
+RUN /usr/local/bin/pip install --no-cache-dir --target=/app/.venv/lib/python3.13/site-packages \
+    pytest pytest-asyncio
 
 # Copy eval code + test data
 COPY evals/ ./evals/
