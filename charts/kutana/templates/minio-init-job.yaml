@@ -26,7 +26,7 @@ spec:
             - /bin/sh
             - -c
             - |
-              mc alias set kutana http://{{ include "kutana.fullname" . }}-minio:9000 \
+              mc alias set kutana http://minio.{{ .Release.Namespace }}.svc:9000 \
                 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY" && \
               mc mb --ignore-existing kutana/{{ .Values.minio.evalBucket.name }} && \
               echo "Bucket {{ .Values.minio.evalBucket.name }} ready"

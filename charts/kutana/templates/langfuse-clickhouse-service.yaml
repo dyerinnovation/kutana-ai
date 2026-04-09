@@ -1,0 +1,23 @@
+{{- if .Values.langfuse.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: langfuse-clickhouse
+  labels:
+    {{- include "kutana.labels" . | nindent 4 }}
+    app.kubernetes.io/name: langfuse-clickhouse
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8123
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 9000
+      targetPort: native
+      protocol: TCP
+      name: native
+  selector:
+    app.kubernetes.io/name: langfuse-clickhouse
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

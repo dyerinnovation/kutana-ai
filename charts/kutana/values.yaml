@@ -167,6 +167,23 @@ langfuse:
       database: langfuse
       username: langfuse
       password: langfuse
+  clickhouse:
+    image:
+      repository: clickhouse/clickhouse-server
+      tag: "24.3-alpine"
+    persistence:
+      size: 5Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: "1"
+        memory: 512Mi
+    credentials:
+      database: langfuse
+      username: default
+      password: langfuse
 
 # ---------------------------------------------------------------------------
 # Observability

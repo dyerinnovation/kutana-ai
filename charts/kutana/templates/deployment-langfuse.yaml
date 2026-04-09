@@ -43,6 +43,10 @@ spec:
               value: {{ .Values.langfuse.env.NEXTAUTH_URL | quote }}
             - name: TELEMETRY_ENABLED
               value: {{ .Values.langfuse.env.TELEMETRY_ENABLED | quote }}
+            - name: CLICKHOUSE_URL
+              value: "http://{{ .Values.langfuse.clickhouse.credentials.username }}:{{ .Values.langfuse.clickhouse.credentials.password }}@langfuse-clickhouse.{{ .Release.Namespace }}.svc:8123/{{ .Values.langfuse.clickhouse.credentials.database }}"
+            - name: CLICKHOUSE_MIGRATION_URL
+              value: "clickhouse://{{ .Values.langfuse.clickhouse.credentials.username }}:{{ .Values.langfuse.clickhouse.credentials.password }}@langfuse-clickhouse.{{ .Release.Namespace }}.svc:9000/{{ .Values.langfuse.clickhouse.credentials.database }}"
           readinessProbe:
             httpGet:
               path: /api/public/health
