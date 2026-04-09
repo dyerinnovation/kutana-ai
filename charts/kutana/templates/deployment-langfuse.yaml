@@ -47,6 +47,10 @@ spec:
               value: "http://{{ .Values.langfuse.clickhouse.credentials.username }}:{{ .Values.langfuse.clickhouse.credentials.password }}@langfuse-clickhouse.{{ .Release.Namespace }}.svc:8123/{{ .Values.langfuse.clickhouse.credentials.database }}"
             - name: CLICKHOUSE_MIGRATION_URL
               value: "clickhouse://{{ .Values.langfuse.clickhouse.credentials.username }}:{{ .Values.langfuse.clickhouse.credentials.password }}@langfuse-clickhouse.{{ .Release.Namespace }}.svc:9000/{{ .Values.langfuse.clickhouse.credentials.database }}"
+            - name: CLICKHOUSE_USER
+              value: {{ .Values.langfuse.clickhouse.credentials.username | quote }}
+            - name: CLICKHOUSE_PASSWORD
+              value: {{ .Values.langfuse.clickhouse.credentials.password | quote }}
           readinessProbe:
             httpGet:
               path: /api/public/health
