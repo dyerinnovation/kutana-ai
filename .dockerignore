@@ -16,6 +16,7 @@ data/
 claude_projects/
 claude_docs/
 internal-docs/
+!internal-docs/development/managed-agent-system-prompts.md
 .claude/
 charts/
 docker-compose.yml
