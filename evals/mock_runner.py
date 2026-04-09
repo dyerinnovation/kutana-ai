@@ -353,15 +353,16 @@ async def run_mock_eval(
                     }
                 )
 
-        # End generation span with output and usage
+        # End generation span with output and usage (v4: update then end)
         if generation is not None:
-            generation.end(
+            generation.update(
                 output="\n".join(text_parts) or f"[{len(tool_use_blocks)} tool calls]",
                 usage_details={
                     "input": response.usage.input_tokens,
                     "output": response.usage.output_tokens,
                 },
             )
+            generation.end()
 
         all_text_parts.extend(text_parts)
         all_tool_calls.extend(tool_use_blocks)
@@ -382,14 +383,15 @@ async def run_mock_eval(
         for tc in all_tool_calls:
             agent_response += f"- {tc['name']}({json.dumps(tc['input'], indent=2)})\n"
 
-    # End the root span with final output
+    # End the root span with final output (v4: update then end)
     if root_span is not None:
-        root_span.end(
+        root_span.update(
             output={
                 "tool_call_count": len(all_tool_calls),
                 "turns": min(turn + 1, max_turns),
                 "response_length": len(agent_response),
             },
         )
+        root_span.end()
 
     return agent_response, all_tool_calls, trace_id

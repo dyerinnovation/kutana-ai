@@ -167,13 +167,14 @@ async def judge_agent_response(
 
     # End generation span with judge output
     if generation is not None:
-        generation.end(
+        generation.update(
             output=raw_text[:1000],
             usage_details={
                 "input": response.usage.input_tokens,
                 "output": response.usage.output_tokens,
             },
         )
+        generation.end()
 
     # Attach scores to the trace
     if langfuse is not None and resolved_trace_id:
