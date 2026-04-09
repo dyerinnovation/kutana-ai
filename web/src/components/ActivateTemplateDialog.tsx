@@ -5,6 +5,8 @@ import { listMeetings } from "@/api/meetings";
 import { PROMPT_PRESETS } from "@/lib/promptPresets";
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogTitle, DialogFooter } from "@/components/ui/Dialog";
+import { useAuth } from "@/hooks/useAuth";
+import { meetsTier } from "@/lib/planLimits";
 
 interface ActivateTemplateDialogProps {
   /** The template being activated, or null to close the dialog. */
@@ -20,10 +22,14 @@ export function ActivateTemplateDialog({
   onClose,
   onActivated,
 }: ActivateTemplateDialogProps) {
+  const { user } = useAuth();
+  const isBusiness = meetsTier(user, "business");
+
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [selectedMeetingId, setSelectedMeetingId] = useState("");
   const [isActivating, setIsActivating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedSopId, setSelectedSopId] = useState("");
 
   // Prompt customization
   const [showPromptCustomize, setShowPromptCustomize] = useState(false);
@@ -36,6 +42,7 @@ export function ActivateTemplateDialog({
     setError(null);
     setShowPromptCustomize(false);
     setPromptOverride("");
+    setSelectedSopId("");
     listMeetings()
       .then((res) =>
         setMeetings(
@@ -57,8 +64,8 @@ export function ActivateTemplateDialog({
       const session = await activateTemplate(
         template.id,
         selectedMeetingId,
-        undefined,
         promptOverride || undefined,
+        selectedSopId || undefined,
       );
       onActivated?.(session);
       onClose();
@@ -101,6 +108,28 @@ export function ActivateTemplateDialog({
               </select>
             )}
           </div>
+
+          {/* SOP selector — Business+ only */}
+          {isBusiness && (
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-gray-300">
+                Standard Operating Procedure
+                <span className="ml-1.5 inline-flex items-center rounded-full bg-purple-600/20 text-purple-400 border border-purple-500/30 px-1.5 py-0 text-[10px] font-medium">
+                  Business
+                </span>
+              </label>
+              <select
+                className="flex h-10 w-full rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-50 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                value={selectedSopId}
+                onChange={(e) => setSelectedSopId(e.target.value)}
+              >
+                <option value="">None (use default prompt)</option>
+              </select>
+              <p className="text-xs text-gray-500">
+                Attach an organization SOP to guide the agent&apos;s behavior.
+              </p>
+            </div>
+          )}
 
           {/* Prompt customization */}
           <div>

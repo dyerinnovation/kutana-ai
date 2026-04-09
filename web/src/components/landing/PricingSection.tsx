@@ -78,6 +78,7 @@ const teamTiers: PricingTier[] = [
       "Premium Text-to-Speech (ElevenLabs)",
       "Unlimited feed integrations",
       "Kutana Agents with included credits",
+      "User Interviewer & Initial Interviewer agents",
       "Meeting recording & playback",
       "Team analytics",
     ],

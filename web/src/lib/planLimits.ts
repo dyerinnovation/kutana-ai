@@ -84,3 +84,19 @@ export function upgradeTargetFor(
   if (feature === "more-feeds" || feature === "more-agents" || feature === "premium-agents") return "pro";
   return "basic";
 }
+
+/** Check whether a user's plan meets the tier required by a template. */
+export function canActivateTemplate(
+  user: User | null,
+  templateTier: string,
+): boolean {
+  if (!user) return false;
+  return tierRank(user.plan_tier) >= tierRank(templateTier);
+}
+
+/** Badge color classes for each template tier. */
+export const TIER_BADGE_STYLES: Record<string, string> = {
+  basic: "bg-gray-600/20 text-gray-300 border border-gray-500/30",
+  pro: "bg-blue-600/20 text-blue-400 border border-blue-500/30",
+  business: "bg-purple-600/20 text-purple-400 border border-purple-500/30",
+};

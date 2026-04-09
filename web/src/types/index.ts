@@ -155,6 +155,17 @@ export interface AgentTemplate {
   capabilities: string[];
   category: string;
   is_premium: boolean;
+  tier: "basic" | "pro" | "business";
+}
+
+export interface OrganizationSop {
+  id: string;
+  organization_id: string;
+  name: string;
+  category: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface HostedSession {

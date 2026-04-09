@@ -32,7 +32,15 @@ const SAMPLE_RATE = 16000;
 const RMS_SILENCE_THRESHOLD = 0.01;
 
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
-type RightTab = "transcript" | "chat";
+type RightTab = "transcript" | "chat" | "agents";
+
+interface AgentActivityEvent {
+  id: string;
+  agent_name: string;
+  event_type: "message" | "tool_use" | "error" | "status";
+  content: string;
+  timestamp: number;
+}
 
 function getGridClasses(count: number): string {
   if (count === 1) return "grid-cols-1 max-w-lg mx-auto";
@@ -75,6 +83,7 @@ export function MeetingRoomPage() {
   const [activeSpeaker, setActiveSpeaker] = useState<{ id: string; name: string } | null>(null);
   const [turnQueue, setTurnQueue] = useState<TurnQueueEntry[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [agentEvents, setAgentEvents] = useState<AgentActivityEvent[]>([]);
   const [rightTab, setRightTab] = useState<RightTab>("transcript");
   const [yourTurnAlert, setYourTurnAlert] = useState(false);
   const [chatInput, setChatInput] = useState("");
@@ -86,6 +95,7 @@ export function MeetingRoomPage() {
   const workletRef = useRef<AudioWorkletNode | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const agentEndRef = useRef<HTMLDivElement>(null);
   const participantsRef = useRef<Participant[]>([]);
 
   // Keep participantsRef in sync for use in event handlers
@@ -102,6 +112,11 @@ export function MeetingRoomPage() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
+
+  // Auto-scroll agent activity panel
+  useEffect(() => {
+    agentEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [agentEvents]);
 
   // Clear "your turn" alert after 5 seconds
   useEffect(() => {
@@ -313,6 +328,53 @@ export function MeetingRoomPage() {
             }
             return prev;
           });
+        } else if (msg.event_type === "agent.message") {
+          const agentEvt: AgentActivityEvent = {
+            id: `agent-msg-${Date.now()}-${Math.random()}`,
+            agent_name: (evPayload.agent_name as string) ?? "Agent",
+            event_type: "message",
+            content: (evPayload.content ?? evPayload.text) as string,
+            timestamp: (evPayload.timestamp as number) ?? Date.now() / 1000,
+          };
+          setAgentEvents((prev) => [...prev, agentEvt]);
+          // Also add to chat sidebar attributed to agent name
+          setChatMessages((prev) => [...prev, {
+            id: agentEvt.id,
+            sender_id: "agent",
+            sender_name: agentEvt.agent_name,
+            text: agentEvt.content,
+            timestamp: agentEvt.timestamp,
+            is_agent: true,
+          }]);
+        } else if (msg.event_type === "agent.mcp_tool_use") {
+          const toolEvt: AgentActivityEvent = {
+            id: `agent-tool-${Date.now()}-${Math.random()}`,
+            agent_name: (evPayload.agent_name as string) ?? "Agent",
+            event_type: "tool_use",
+            content: (evPayload.tool_name as string) ?? "processing",
+            timestamp: (evPayload.timestamp as number) ?? Date.now() / 1000,
+          };
+          setAgentEvents((prev) => [...prev, toolEvt]);
+          setRightTab("agents");
+        } else if (msg.event_type === "session.error") {
+          const errEvt: AgentActivityEvent = {
+            id: `agent-err-${Date.now()}-${Math.random()}`,
+            agent_name: (evPayload.agent_name as string) ?? "Agent",
+            event_type: "error",
+            content: (evPayload.message ?? evPayload.error) as string,
+            timestamp: (evPayload.timestamp as number) ?? Date.now() / 1000,
+          };
+          setAgentEvents((prev) => [...prev, errEvt]);
+          setRightTab("agents");
+        } else if (msg.event_type === "session.status_idle") {
+          const idleEvt: AgentActivityEvent = {
+            id: `agent-idle-${Date.now()}-${Math.random()}`,
+            agent_name: (evPayload.agent_name as string) ?? "Agent",
+            event_type: "status",
+            content: "Waiting for input...",
+            timestamp: (evPayload.timestamp as number) ?? Date.now() / 1000,
+          };
+          setAgentEvents((prev) => [...prev, idleEvt]);
         }
         break;
       }
@@ -678,7 +740,7 @@ export function MeetingRoomPage() {
           </div>
         </div>
 
-        {/* Right sidebar — tabbed: Transcript | Chat */}
+        {/* Right sidebar — tabbed: Transcript | Chat | Agents */}
         <div className="w-full md:w-80 md:flex-shrink-0 flex flex-col rounded-lg border border-gray-800 bg-gray-900/50 overflow-hidden">
           {/* Tab bar */}
           <div className="flex border-b border-gray-800">
@@ -706,6 +768,21 @@ export function MeetingRoomPage() {
               {/* Unread indicator */}
               {rightTab !== "chat" && chatMessages.length > 0 && (
                 <span className="absolute top-1.5 right-3 h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              )}
+            </button>
+            <button
+              onClick={() => setRightTab("agents")}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors relative ${
+                rightTab === "agents"
+                  ? "text-violet-400 border-b-2 border-violet-500 -mb-px bg-gray-800/50"
+                  : "text-gray-500 hover:text-gray-300"
+              }`}
+            >
+              <AgentActivityIcon />
+              Agents
+              {/* Activity indicator */}
+              {rightTab !== "agents" && agentEvents.length > 0 && (
+                <span className="absolute top-1.5 right-2 h-1.5 w-1.5 rounded-full bg-violet-400" />
               )}
             </button>
           </div>
@@ -779,6 +856,52 @@ export function MeetingRoomPage() {
                 );
               })}
               <div ref={chatEndRef} />
+            </div>
+          )}
+
+          {/* Agent activity panel */}
+          {rightTab === "agents" && (
+            <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
+              {agentEvents.length === 0 && (
+                <p className="text-xs text-gray-500 text-center py-6">
+                  No agent activity yet. Activate an agent template to see activity here.
+                </p>
+              )}
+              {agentEvents.map((evt) => (
+                <div key={evt.id} className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-1">
+                    <span className="inline-flex items-center rounded-full bg-violet-900/60 border border-violet-600/40 px-1.5 py-0 text-[10px] font-medium text-violet-300">
+                      AI
+                    </span>
+                    <span className="text-[10px] font-medium text-violet-400">
+                      {evt.agent_name}
+                    </span>
+                    <span className="text-[10px] text-gray-600">
+                      {formatChatTime(evt.timestamp)}
+                    </span>
+                  </div>
+                  <div className={`max-w-[95%] rounded-lg px-2.5 py-1.5 text-xs ${
+                    evt.event_type === "error"
+                      ? "bg-red-900/40 text-red-200 border border-red-700/40"
+                      : evt.event_type === "tool_use"
+                        ? "bg-gray-800/80 text-gray-300 border border-gray-700 italic"
+                        : evt.event_type === "status"
+                          ? "bg-gray-800/50 text-gray-400 border border-gray-700/50"
+                          : "bg-violet-900/40 text-violet-100 border border-violet-700/40"
+                  }`}>
+                    {evt.event_type === "tool_use" && (
+                      <span className="text-violet-400 mr-1">
+                        <ToolIcon />
+                      </span>
+                    )}
+                    {evt.event_type === "error" && "Error: "}
+                    {evt.event_type === "tool_use"
+                      ? `${evt.agent_name} is using ${evt.content}...`
+                      : evt.content}
+                  </div>
+                </div>
+              ))}
+              <div ref={agentEndRef} />
             </div>
           )}
           <form
@@ -1024,6 +1147,44 @@ function BotIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"
+      />
+    </svg>
+  );
+}
+
+/** Agent activity sparkle icon for sidebar tab */
+function AgentActivityIcon() {
+  return (
+    <svg
+      className="h-3.5 w-3.5"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z"
+      />
+    </svg>
+  );
+}
+
+/** Wrench/tool icon for MCP tool use activity */
+function ToolIcon() {
+  return (
+    <svg
+      className="inline h-3 w-3"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z"
       />
     </svg>
   );
