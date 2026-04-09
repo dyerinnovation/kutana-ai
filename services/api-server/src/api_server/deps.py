@@ -82,6 +82,9 @@ class Settings(BaseSettings):
     slack_redirect_uri: str = ""
     frontend_url: str = "http://localhost:5173"
 
+    # Anthropic managed agents
+    anthropic_api_key: str = ""
+
     # Observability
     sentry_dsn: str = ""
     slack_webhook_url: str = ""

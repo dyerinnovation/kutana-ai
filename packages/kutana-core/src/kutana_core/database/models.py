@@ -277,10 +277,10 @@ class UserORM(Base):
     password_reset_expires: Mapped[datetime | None] = mapped_column(
         sa.DateTime(timezone=True), nullable=True
     )
-    failed_login_attempts: Mapped[int] = mapped_column(sa.Integer, nullable=False, server_default="0")
-    locked_until: Mapped[datetime | None] = mapped_column(
-        sa.DateTime(timezone=True), nullable=True
+    failed_login_attempts: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, server_default="0"
     )
+    locked_until: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), nullable=True)
 
     # Billing & subscription
     plan_tier: Mapped[str] = mapped_column(
@@ -551,6 +551,7 @@ class AgentTemplateORM(Base):
     capabilities: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True, default=list)
     category: Mapped[str] = mapped_column(sa.String(50), nullable=False, default="general")
     is_premium: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False)
+    tier: Mapped[str] = mapped_column(sa.String(20), nullable=False, server_default="basic")
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
     )
@@ -584,6 +585,8 @@ class HostedAgentSessionORM(Base):
     status: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="active")
     anthropic_api_key_encrypted: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     system_prompt_override: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    anthropic_session_id: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
+    anthropic_agent_id: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
     started_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
     )
@@ -852,4 +855,45 @@ class UsageRecordORM(Base):
     __table_args__ = (
         Index("ix_usage_records_user_period", "user_id", "billing_period"),
         Index("ix_usage_records_resource", "resource_type", "resource_id"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Organization SOP models
+# ---------------------------------------------------------------------------
+
+
+class OrganizationSOPORM(Base):
+    """ORM model for organization standard operating procedures.
+
+    Attributes:
+        id: Primary key UUID.
+        organization_id: Organization this SOP belongs to.
+        name: SOP name.
+        category: SOP category (e.g. "engineering", "sales").
+        content: Full SOP content (prepended to agent system prompt).
+        created_at: Record creation timestamp.
+        updated_at: Record update timestamp.
+    """
+
+    __tablename__ = "organization_sops"
+
+    id: Mapped[UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID] = mapped_column(sa.Uuid, nullable=False)
+    name: Mapped[str] = mapped_column(sa.String(255), nullable=False)
+    category: Mapped[str] = mapped_column(sa.String(50), nullable=False, default="general")
+    content: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.func.now(),
+        onupdate=sa.func.now(),
+    )
+
+    __table_args__ = (
+        Index("ix_organization_sops_org_id", "organization_id"),
+        Index("ix_organization_sops_category", "organization_id", "category"),
     )

@@ -23,6 +23,7 @@ dependencies = [
     "prometheus-fastapi-instrumentator>=7.0",
     "aiohttp>=3.9",
     "aiosmtplib>=3.0",
+    "anthropic>=0.84.0",
 ]
 
 [tool.uv.sources]
