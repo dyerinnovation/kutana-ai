@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 
 import anthropic
 
@@ -15,7 +16,7 @@ from evals.models import EvalResult, JudgeScore, Rubric, Scenario
 
 logger = logging.getLogger(__name__)
 
-JUDGE_MODEL = "claude-sonnet-4-6"
+JUDGE_MODEL = os.environ.get("EVAL_MODEL", "claude-sonnet-4-6")
 JUDGE_MAX_TOKENS = 2048
 
 JUDGE_SYSTEM_PROMPT = """\
@@ -114,7 +115,12 @@ async def judge_agent_response(
     )
 
     raw_text = response.content[0].text
-    parsed = json.loads(raw_text)
+    # Strip markdown fences if the model wrapped its JSON
+    cleaned = raw_text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("\n", 1)[1]  # drop ```json line
+        cleaned = cleaned.rsplit("```", 1)[0]  # drop trailing ```
+    parsed = json.loads(cleaned)
 
     scores = [
         JudgeScore(

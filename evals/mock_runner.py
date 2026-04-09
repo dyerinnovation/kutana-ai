@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from typing import TYPE_CHECKING, Any
 
 import anthropic
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "claude-sonnet-4-6"
+DEFAULT_MODEL = os.environ.get("EVAL_MODEL", "claude-sonnet-4-6")
 DEFAULT_MAX_TOKENS = 4096
 
 # Kutana MCP tool definitions (subset used in mock evals).
