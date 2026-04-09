@@ -29,7 +29,8 @@ spec:
               mc alias set kutana http://minio.{{ .Release.Namespace }}.svc:9000 \
                 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY" && \
               mc mb --ignore-existing kutana/{{ .Values.minio.evalBucket.name }} && \
-              echo "Bucket {{ .Values.minio.evalBucket.name }} ready"
+              mc mb --ignore-existing kutana/langfuse-events && \
+              echo "Buckets {{ .Values.minio.evalBucket.name }} and langfuse-events ready"
           env:
             - name: MINIO_ACCESS_KEY
               valueFrom:
