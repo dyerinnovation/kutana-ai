@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
@@ -42,8 +44,8 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Manage application startup and shutdown lifecycle.
 
-    Logs startup/shutdown events and can be extended to initialise
-    database connection pools, Redis clients, or background tasks.
+    Starts the TranscriptBatcher background task for managed agent
+    lifecycle wiring, and shuts it down gracefully on exit.
 
     Args:
         app: The FastAPI application instance.
@@ -52,7 +54,37 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         Control back to the ASGI server while the app is running.
     """
     logger.info("api-server starting up")
+
+    # Start the transcript batcher if Anthropic API key is configured
+    batcher_task: asyncio.Task[None] | None = None
+    batcher = None
+    settings = get_settings()
+
+    if settings.anthropic_api_key:
+        from api_server.agent_lifecycle import TranscriptBatcher
+        from api_server.deps import _build_session_factory
+
+        db_factory = _build_session_factory(settings)
+        batcher = TranscriptBatcher(
+            redis_url=settings.redis_url,
+            api_key=settings.anthropic_api_key,
+            db_factory=db_factory,
+        )
+        batcher_task = asyncio.create_task(batcher.start())
+        logger.info("TranscriptBatcher started")
+    else:
+        logger.info("ANTHROPIC_API_KEY not set — TranscriptBatcher disabled")
+
     yield
+
+    # Shutdown
+    if batcher is not None:
+        await batcher.stop()
+    if batcher_task is not None:
+        batcher_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await batcher_task
+
     logger.info("api-server shutting down")
 
 

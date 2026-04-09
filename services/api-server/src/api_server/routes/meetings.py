@@ -13,8 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api_server.auth_deps import CurrentUser, CurrentUserOrAgent
 from api_server.billing_deps import check_meeting_limit
-from api_server.deps import get_db_session
+from api_server.deps import get_db_session, get_event_publisher
+from api_server.event_publisher import EventPublisher
 from kutana_core.database.models import MeetingInviteORM, MeetingORM, UserORM
+from kutana_core.events.definitions import MeetingEnded, MeetingStarted
 from kutana_core.models.meeting import MeetingStatus
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
@@ -276,13 +278,18 @@ async def start_meeting(
     meeting_id: UUID,
     _current_user: CurrentUserOrAgent,
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    publisher: Annotated[EventPublisher, Depends(get_event_publisher)],
 ) -> MeetingResponse:
     """Start a meeting (transition from scheduled to active).
+
+    Publishes a MeetingStarted event to Redis Streams so the
+    TranscriptBatcher can notify managed agent sessions.
 
     Args:
         meeting_id: The UUID of the meeting to start.
         _current_user: Authenticated user.
         db: Database session.
+        publisher: Event publisher for Redis Streams.
 
     Returns:
         Updated MeetingResponse with active status.
@@ -308,6 +315,9 @@ async def start_meeting(
     meeting.started_at = datetime.now(tz=UTC)
     await db.flush()
     await db.refresh(meeting)
+
+    await publisher.publish(MeetingStarted(meeting_id=meeting_id))
+
     return _to_response(meeting)
 
 
@@ -316,13 +326,18 @@ async def end_meeting(
     meeting_id: UUID,
     _current_user: CurrentUserOrAgent,
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    publisher: Annotated[EventPublisher, Depends(get_event_publisher)],
 ) -> MeetingResponse:
     """End a meeting (transition from active to completed).
+
+    Publishes a MeetingEnded event to Redis Streams so the
+    TranscriptBatcher can close managed agent sessions and record billing.
 
     Args:
         meeting_id: The UUID of the meeting to end.
         _current_user: Authenticated user.
         db: Database session.
+        publisher: Event publisher for Redis Streams.
 
     Returns:
         Updated MeetingResponse with completed status.
@@ -348,6 +363,9 @@ async def end_meeting(
     meeting.ended_at = datetime.now(tz=UTC)
     await db.flush()
     await db.refresh(meeting)
+
+    await publisher.publish(MeetingEnded(meeting_id=meeting_id))
+
     return _to_response(meeting)
 
 
