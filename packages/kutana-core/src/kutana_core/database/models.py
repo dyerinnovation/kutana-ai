@@ -587,6 +587,7 @@ class HostedAgentSessionORM(Base):
     system_prompt_override: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     anthropic_session_id: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
     anthropic_agent_id: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
+    summary_text: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     started_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
     )

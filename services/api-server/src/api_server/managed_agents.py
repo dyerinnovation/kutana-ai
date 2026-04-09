@@ -1,14 +1,12 @@
 """Anthropic Managed Agents integration.
 
-Forward-looking module: wraps the Anthropic beta managed-agents API to
-create, manage, and interact with hosted agent sessions backed by
+Wraps the Anthropic beta managed-agents API (``managed-agents-2026-04-01``)
+to create, manage, and interact with hosted agent sessions backed by
 Anthropic's infrastructure.
 
-**SDK availability:** As of anthropic SDK v0.84.0, the managed agents API
-(``client.beta.agents``, ``client.beta.sessions``, ``client.beta.environments``,
-``client.beta.vaults``) does not exist. All public functions in this module
-are guarded with a runtime check and will log a warning + return a
-sentinel value until a future SDK version ships the API.
+**SDK availability:** Requires anthropic SDK >= 0.92.0. The ``client.beta``
+namespace exposes ``agents``, ``sessions``, ``environments``, and ``vaults``
+resources. All public functions are guarded with a runtime availability check.
 """
 
 from __future__ import annotations
@@ -98,6 +96,47 @@ def _get_client(api_key: str) -> anthropic.AsyncAnthropic:
 # ---------------------------------------------------------------------------
 
 
+async def create_agent(
+    api_key: str,
+    name: str,
+    system_prompt: str,
+) -> str:
+    """Create an Anthropic managed agent for a template.
+
+    Creates a new agent definition with the Kutana MCP server attached
+    and the full built-in toolset enabled.
+
+    Args:
+        api_key: Anthropic API key.
+        name: Agent display name.
+        system_prompt: System prompt defining agent behavior.
+
+    Returns:
+        Anthropic agent ID string, or empty string if API unavailable.
+    """
+    if not _require_api("create_agent"):
+        return ""
+
+    client = _get_client(api_key)
+    agent = await client.beta.agents.create(
+        name=name,
+        model=DEFAULT_MODEL,
+        system=system_prompt,
+        mcp_servers=[
+            {
+                "type": "url",
+                "name": "kutana",
+                "url": MCP_SERVER_URL,
+            }
+        ],
+        tools=[
+            {"type": "agent_toolset_20260401"},
+        ],
+    )
+    logger.info("Created Anthropic agent %s (%s)", agent.id, name)
+    return agent.id
+
+
 async def register_agents(
     api_key: str,
     templates: list[dict[str, Any]],
@@ -117,30 +156,10 @@ async def register_agents(
     if not _require_api("register_agents"):
         return {}
 
-    client = _get_client(api_key)
     result: dict[str, str] = {}
-
     for tmpl in templates:
-        agent = await client.beta.agents.create(
-            name=tmpl["name"],
-            model=DEFAULT_MODEL,
-            system=tmpl["system_prompt"],
-            mcp_servers=[
-                {
-                    "type": "url",
-                    "name": "kutana",
-                    "url": MCP_SERVER_URL,
-                }
-            ],
-            tools=[
-                {
-                    "type": "mcp_toolset",
-                    "mcp_server_name": "kutana",
-                }
-            ],
-        )
-        result[tmpl["id"]] = agent.id
-        logger.info("Registered Anthropic agent %s for template %s", agent.id, tmpl["name"])
+        agent_id = await create_agent(api_key, tmpl["name"], tmpl["system_prompt"])
+        result[tmpl["id"]] = agent_id
 
     return result
 

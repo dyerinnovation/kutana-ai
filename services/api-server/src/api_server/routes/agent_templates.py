@@ -16,6 +16,7 @@ from api_server.auth_deps import CurrentUser  # noqa: TC001 — runtime dep for 
 from api_server.billing_deps import MANAGED_AGENT_MIN_TIER, require_tier
 from api_server.deps import Settings, get_db_session, get_settings
 from api_server.managed_agents import (
+    create_agent,
     create_vault,
     end_session,
     get_or_create_environment,
@@ -236,10 +237,14 @@ async def activate_template(
     db.add(session)
     await db.flush()
 
-    # Create Anthropic managed agent session
+    # Create Anthropic managed agent + session
     api_key = settings.anthropic_api_key
     if api_key:
         try:
+            # Create the Anthropic agent from the effective system prompt
+            anthropic_agent_id = await create_agent(api_key, template.name, effective_prompt)
+            session.anthropic_agent_id = anthropic_agent_id
+
             # Generate an MCP JWT for the managed agent
             now = int(time.time())
             mcp_payload = {
@@ -258,12 +263,12 @@ async def activate_template(
             }
             mcp_jwt = pyjwt.encode(mcp_payload, settings.jwt_secret, algorithm="HS256")
 
-            # Set up Anthropic session
+            # Set up Anthropic session with the real agent ID
             vault_id = await create_vault(api_key, mcp_jwt)
             env_id = await get_or_create_environment(api_key)
             anthropic_session_id = await start_session(
                 api_key,
-                template.name,  # agent_id resolved by Anthropic
+                anthropic_agent_id,
                 env_id,
                 vault_id,
             )

@@ -411,6 +411,7 @@ async def _close_session(
         redis_conn: Redis connection for forwarding agent events during close.
     """
     now = datetime.now(tz=UTC)
+    summary_text = ""
 
     if session.anthropic_session_id:
         # Send final summary request
@@ -428,9 +429,9 @@ async def _close_session(
             )
 
         # Wait for the agent to finish processing (with timeout),
-        # forwarding agent.message events to Redis so the summary is captured
+        # forwarding agent.message events to Redis and capturing summary text
         try:
-            await _wait_for_idle(
+            summary_text = await _wait_for_idle(
                 api_key,
                 session.anthropic_session_id,
                 timeout=30.0,
@@ -453,9 +454,11 @@ async def _close_session(
                 session.anthropic_session_id,
             )
 
-    # Update DB
+    # Update DB — persist summary and close
     session.status = "stopped"
     session.ended_at = now
+    if summary_text:
+        session.summary_text = summary_text
 
     # Record billing usage
     await _record_usage(session, db, now)
@@ -468,12 +471,12 @@ async def _wait_for_idle(
     meeting_id: UUID | None = None,
     agent_name: str | None = None,
     redis_conn: aioredis.Redis[str] | None = None,
-) -> None:
+) -> str:
     """Wait for an Anthropic session to reach idle status.
 
     Streams events until session.status_idle is received or timeout expires.
     If redis_conn is provided, forwards agent.message events so the summary
-    response is not lost.
+    response reaches the frontend. Returns accumulated agent message text.
 
     Args:
         api_key: Anthropic API key.
@@ -483,27 +486,35 @@ async def _wait_for_idle(
         agent_name: Agent display name for forwarded events.
         redis_conn: Redis connection for forwarding agent events.
 
+    Returns:
+        Accumulated text from agent.message events during the wait.
+
     Raises:
         TimeoutError: If idle not reached within timeout.
     """
+    accumulated_text: list[str] = []
 
     async def _watch() -> None:
         async for event in stream_events(api_key, session_id):
             event_type = getattr(event, "type", None)
-            # Forward agent.message events to Redis so the summary is captured
-            if event_type == "agent.message" and redis_conn is not None and meeting_id is not None:
+            # Forward agent.message events to Redis and capture text
+            if event_type == "agent.message":
                 content_blocks = getattr(event, "content", [])
                 text_parts: list[str] = []
                 for block in content_blocks:
                     if getattr(block, "type", None) == "text":
                         text_parts.append(getattr(block, "text", ""))
-                await _publish_agent_event(
-                    redis_conn,
-                    "agent.message",
-                    meeting_id,
-                    agent_name or "agent",
-                    {"content": " ".join(text_parts) or "(no text)"},
-                )
+                message_text = " ".join(text_parts)
+                if message_text:
+                    accumulated_text.append(message_text)
+                if redis_conn is not None and meeting_id is not None:
+                    await _publish_agent_event(
+                        redis_conn,
+                        "agent.message",
+                        meeting_id,
+                        agent_name or "agent",
+                        {"content": message_text or "(no text)"},
+                    )
             if event_type == "session.status_idle":
                 return
 
@@ -511,6 +522,8 @@ async def _wait_for_idle(
         await asyncio.wait_for(_watch(), timeout=timeout)
     except TimeoutError as exc:
         raise TimeoutError(f"Session {session_id} did not idle within {timeout}s") from exc
+
+    return "\n\n".join(accumulated_text)
 
 
 async def _record_usage(
