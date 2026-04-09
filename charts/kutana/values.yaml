@@ -192,7 +192,7 @@ observability:
   sentryDsn: ""
   slackWebhookUrl: ""
   logFormat: "json"
-  langfusePublicKey: ""
+  langfusePublicKey: "pk-lf-77c5dc94-c77b-49a8-8db4-2b5cacf27ca2"
 
 # ---------------------------------------------------------------------------
 # Secrets (base64-encoded values — override at install time)
