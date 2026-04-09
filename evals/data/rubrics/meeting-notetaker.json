@@ -1,0 +1,36 @@
+{
+  "rubric_id": "meeting-notetaker",
+  "agent_template": "Meeting Notetaker",
+  "criteria": [
+    {
+      "name": "Note Structure",
+      "description": "Notes are organized by topic/discussion block with clear headers and bullet points.",
+      "weight": 1.2
+    },
+    {
+      "name": "Speaker Attribution",
+      "description": "Each key point is attributed to the correct speaker by name.",
+      "weight": 1.5
+    },
+    {
+      "name": "Completeness",
+      "description": "Notes capture all substantive discussion points without omitting key content.",
+      "weight": 1.3
+    },
+    {
+      "name": "Conciseness",
+      "description": "Notes capture substance without verbatim transcription. Paraphrased for clarity.",
+      "weight": 1.0
+    },
+    {
+      "name": "Silent Observer",
+      "description": "Agent never uses kutana_raise_hand, kutana_speak, or attempts to speak aloud. Text-only via chat.",
+      "weight": 1.5
+    },
+    {
+      "name": "Real-time Posting",
+      "description": "Notes are posted at natural breakpoints (topic shifts, every 3-5 min), not accumulated to the end.",
+      "weight": 1.0
+    }
+  ]
+}

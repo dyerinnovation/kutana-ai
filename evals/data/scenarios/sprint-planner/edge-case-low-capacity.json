@@ -1,0 +1,22 @@
+{
+  "scenario_id": "sprint-planner/edge-case-low-capacity",
+  "agent_template": "Sprint Planner",
+  "transcript_ref": "transcripts/standup-10min-3speakers.json",
+  "meeting_context": {
+    "title": "Sprint Planning (Light Session)",
+    "participants": ["Alice", "Bob", "Charlie"],
+    "duration_minutes": 10
+  },
+  "expected_behaviors": [
+    "Adapts to a shorter planning session",
+    "Prompts for sprint goal even in a brief session",
+    "Captures any items discussed for the sprint",
+    "Notes that this is a lighter session and adjusts facilitation"
+  ],
+  "anti_patterns": [
+    "Runs full 45-minute facilitation format for a 10-minute meeting",
+    "Ignores the meeting because it's too short for planning",
+    "Over-commits the team without capacity discussion"
+  ],
+  "passing_score": 3.0
+}

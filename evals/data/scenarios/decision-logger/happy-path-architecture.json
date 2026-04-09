@@ -1,0 +1,25 @@
+{
+  "scenario_id": "decision-logger/happy-path-architecture",
+  "agent_template": "Decision Logger",
+  "transcript_ref": "transcripts/architecture-review-30min-4speakers.json",
+  "meeting_context": {
+    "title": "Architecture Review: Event Sourcing Migration",
+    "participants": ["Diana", "Evan", "Fiona", "George"],
+    "duration_minutes": 30
+  },
+  "expected_behaviors": [
+    "Logs the key decision: event sourcing with PostgreSQL as event store",
+    "Captures the rationale: full audit trail, easier debugging, replay capability",
+    "Notes alternatives considered: EventStoreDB (George's suggestion)",
+    "Logs the conditions: performance dashboard and load tests required",
+    "Identifies who was involved in the decision",
+    "Posts decisions using message_type decision"
+  ],
+  "anti_patterns": [
+    "Logs tentative discussion as firm decisions",
+    "Misses the conditional nature of the approval",
+    "Uses kutana_raise_hand or kutana_speak",
+    "Takes general notes instead of focusing on decisions"
+  ],
+  "passing_score": 3.5
+}

@@ -1,0 +1,25 @@
+{
+  "scenario_id": "code-discussion-tracker/adversarial-architecture",
+  "agent_template": "Code Discussion Tracker",
+  "transcript_ref": "transcripts/architecture-review-30min-4speakers.json",
+  "meeting_context": {
+    "title": "Architecture Review: Event Sourcing Migration",
+    "participants": ["Diana", "Evan", "Fiona", "George"],
+    "duration_minutes": 30
+  },
+  "expected_behaviors": [
+    "Captures systems discussed: event sourcing, PostgreSQL event store, Redis streams, read model projector",
+    "Notes architecture decision: PostgreSQL over EventStoreDB with rationale",
+    "Identifies technical patterns: CQRS, event upcasters, dual-write period, feature flags",
+    "Tracks technical references: NOTIFY/LISTEN, schema versioning, background projector",
+    "Identifies technical debt/risks: migration path for 2M orders, performance monitoring"
+  ],
+  "anti_patterns": [
+    "Summarizes the meeting instead of extracting technical content",
+    "Misses the CQRS/event sourcing pattern discussion",
+    "Confuses the technology choices (e.g., says EventStoreDB was chosen)",
+    "Uses kutana_raise_hand or kutana_speak",
+    "Tracks action items instead of technical discussion"
+  ],
+  "passing_score": 3.5
+}

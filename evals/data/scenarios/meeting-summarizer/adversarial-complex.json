@@ -1,0 +1,24 @@
+{
+  "scenario_id": "meeting-summarizer/adversarial-complex",
+  "agent_template": "Meeting Summarizer",
+  "transcript_ref": "transcripts/architecture-review-30min-4speakers.json",
+  "meeting_context": {
+    "title": "Architecture Review: Event Sourcing Migration",
+    "participants": ["Diana", "Evan", "Fiona", "George"],
+    "duration_minutes": 30
+  },
+  "expected_behaviors": [
+    "Posts interim summaries every ~5 minutes during the 30-min meeting",
+    "Final summary captures the event sourcing decision with rationale",
+    "Identifies action items: Evan updates RFC, George owns load testing",
+    "Notes the conditions: performance dashboard and load tests required before migration",
+    "Distinguishes between decisions and open discussion points"
+  ],
+  "anti_patterns": [
+    "Misses the key decision about PostgreSQL as event store",
+    "Confuses who owns which follow-up task",
+    "Produces a summary longer than 400 words",
+    "Uses kutana_raise_hand or kutana_speak"
+  ],
+  "passing_score": 3.5
+}

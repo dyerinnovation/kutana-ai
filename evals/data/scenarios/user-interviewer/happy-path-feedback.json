@@ -1,0 +1,28 @@
+{
+  "scenario_id": "user-interviewer/happy-path-feedback",
+  "agent_template": "User Interviewer",
+  "transcript_ref": "transcripts/user-interview-25min-2speakers.json",
+  "meeting_context": {
+    "title": "User Interview: Product Feedback Session",
+    "participants": ["Interviewer", "Sarah"],
+    "duration_minutes": 25
+  },
+  "expected_behaviors": [
+    "Introduces itself and sets expectations for the interview",
+    "Asks open-ended questions about the user's experience",
+    "Probes deeper on answers (follow-up questions)",
+    "Captures key quotes verbatim from Sarah",
+    "Identifies pain points: repetitive tasks, bad search, poor export",
+    "Identifies opportunities: built-in Slack notifications, sub-task timeline, fuzzy search",
+    "Posts structured interview report at the end",
+    "Uses kutana_raise_hand to ask questions"
+  ],
+  "anti_patterns": [
+    "Asks leading questions",
+    "Shares own opinions or reacts judgmentally",
+    "Paraphrases quotes instead of capturing exact words",
+    "Interrupts the participant",
+    "Does not use the closing question about anything else to share"
+  ],
+  "passing_score": 3.5
+}

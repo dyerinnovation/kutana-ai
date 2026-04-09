@@ -166,12 +166,24 @@ async def start_session(
     Returns:
         Session ID string.
     """
+    from api_server.langfuse_client import create_trace
+
+    trace = create_trace(
+        name="managed-agent-start-session",
+        metadata={"agent_id": agent_id, "env_id": env_id},
+        tags=["managed-agent", "session-start"],
+    )
+
     client = _get_client(api_key)
     session = await client.beta.sessions.create(
         agent=agent_id,
         environment_id=env_id,
         vault_ids=[vault_id],
     )
+
+    if trace is not None:
+        trace.update(output={"session_id": session.id})
+
     logger.info("Started Anthropic session %s for agent %s", session.id, agent_id)
     return session.id
 
@@ -184,6 +196,17 @@ async def send_message(api_key: str, session_id: str, text: str) -> None:
         session_id: Active session ID.
         text: Message text to send.
     """
+    from api_server.langfuse_client import get_langfuse
+
+    langfuse = get_langfuse()
+    generation = None
+    if langfuse is not None:
+        generation = langfuse.generation(
+            name="managed-agent-send-message",
+            metadata={"session_id": session_id},
+            input=text[:500],  # Truncate for Langfuse display
+        )
+
     client = _get_client(api_key)
     await client.beta.sessions.events.send(
         session_id,
@@ -194,6 +217,9 @@ async def send_message(api_key: str, session_id: str, text: str) -> None:
             }
         ],
     )
+
+    if generation is not None:
+        generation.end(output="message_sent")
 
 
 async def stream_events(api_key: str, session_id: str) -> AsyncIterator[Any]:
@@ -208,10 +234,25 @@ async def stream_events(api_key: str, session_id: str) -> AsyncIterator[Any]:
     Yields:
         SSE event objects from the Anthropic API.
     """
+    from api_server.langfuse_client import get_langfuse
+
+    langfuse = get_langfuse()
+    span = None
+    if langfuse is not None:
+        span = langfuse.span(
+            name="managed-agent-stream-events",
+            metadata={"session_id": session_id},
+        )
+
+    event_count = 0
     client = _get_client(api_key)
     async with client.beta.sessions.events.stream(session_id) as stream:
         async for event in stream:
+            event_count += 1
             yield event
+
+    if span is not None:
+        span.end(output={"events_streamed": event_count})
 
 
 async def end_session(api_key: str, session_id: str) -> None:
@@ -221,12 +262,24 @@ async def end_session(api_key: str, session_id: str) -> None:
         api_key: Anthropic API key.
         session_id: Session ID to end.
     """
+    from api_server.langfuse_client import create_trace
+
+    trace = create_trace(
+        name="managed-agent-end-session",
+        metadata={"session_id": session_id},
+        tags=["managed-agent", "session-end"],
+    )
+
     client = _get_client(api_key)
     try:
         await client.beta.sessions.events.send(
             session_id,
             events=[{"type": "user.interrupt"}],
         )
+        if trace is not None:
+            trace.update(output={"status": "ended"})
         logger.info("Ended Anthropic session %s", session_id)
     except anthropic.APIError:
+        if trace is not None:
+            trace.update(output={"status": "already_closed"})
         logger.warning("Failed to end Anthropic session %s (may already be closed)", session_id)

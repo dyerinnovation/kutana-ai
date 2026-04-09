@@ -1,0 +1,23 @@
+{
+  "scenario_id": "decision-logger/edge-case-no-decisions",
+  "agent_template": "Decision Logger",
+  "transcript_ref": "transcripts/standup-10min-3speakers.json",
+  "meeting_context": {
+    "title": "Daily Standup",
+    "participants": ["Alice", "Bob", "Charlie"],
+    "duration_minutes": 10
+  },
+  "expected_behaviors": [
+    "Recognizes that a standup has few formal decisions",
+    "May log the decision to take the chart library comparison offline",
+    "Does not over-extract decisions from status updates",
+    "Stays silent or posts minimal output when no decisions are made"
+  ],
+  "anti_patterns": [
+    "Fabricates decisions from routine status updates",
+    "Logs action items as decisions",
+    "Uses kutana_raise_hand or kutana_speak",
+    "Generates verbose output for a meeting with few decisions"
+  ],
+  "passing_score": 3.0
+}

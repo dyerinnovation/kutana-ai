@@ -1,0 +1,36 @@
+{
+  "metadata": {
+    "title": "User Interview: Product Feedback Session",
+    "duration_minutes": 25,
+    "speakers": ["Interviewer", "Sarah"],
+    "type": "user-interview"
+  },
+  "segments": [
+    {"speaker": "Interviewer", "text": "Thanks for joining, Sarah. I'm going to ask you some questions about your experience with our platform. There are no right or wrong answers — I'm here to learn from you.", "timestamp_seconds": 0.0},
+    {"speaker": "Sarah", "text": "Sure, happy to help. I've been using the platform for about 6 months now.", "timestamp_seconds": 18.0},
+    {"speaker": "Interviewer", "text": "Great. Can you tell me about how you typically use the platform in your day-to-day work?", "timestamp_seconds": 30.0},
+    {"speaker": "Sarah", "text": "I mainly use it for managing our team's projects. I create tasks, assign them to team members, and track progress through the dashboard.", "timestamp_seconds": 45.0},
+    {"speaker": "Sarah", "text": "We're a team of 12, so coordination is important. I probably spend about 30 minutes a day on the platform.", "timestamp_seconds": 60.0},
+    {"speaker": "Interviewer", "text": "30 minutes a day. Is that more or less than you'd like?", "timestamp_seconds": 75.0},
+    {"speaker": "Sarah", "text": "Honestly, it's more than I'd like. A lot of that time is spent on repetitive tasks like updating status fields and sending reminders. I wish there was more automation.", "timestamp_seconds": 88.0},
+    {"speaker": "Interviewer", "text": "Can you walk me through a specific example of a repetitive task?", "timestamp_seconds": 108.0},
+    {"speaker": "Sarah", "text": "Every Monday I have to go through each project board, check which tasks are overdue, and manually ping the owners on Slack. It takes about 15 minutes and it's the same thing every week.", "timestamp_seconds": 120.0},
+    {"speaker": "Interviewer", "text": "That does sound tedious. Have you tried any workarounds?", "timestamp_seconds": 145.0},
+    {"speaker": "Sarah", "text": "I set up a Zapier integration to auto-post overdue tasks to a Slack channel, but it doesn't work well because the API doesn't expose due dates in a clean way. The messages are often wrong or duplicated.", "timestamp_seconds": 158.0},
+    {"speaker": "Interviewer", "text": "Interesting. What would the ideal solution look like for you?", "timestamp_seconds": 185.0},
+    {"speaker": "Sarah", "text": "Built-in Slack notifications that I can customize. Like, every Monday at 9am, send a summary of overdue tasks to the project channel with a link to each task. No third-party tools needed.", "timestamp_seconds": 198.0},
+    {"speaker": "Interviewer", "text": "Got it. Let me switch topics. What's the feature you find most valuable?", "timestamp_seconds": 225.0},
+    {"speaker": "Sarah", "text": "The timeline view. Being able to see all tasks on a Gantt-style chart is a game changer for sprint planning. Before this, we were using spreadsheets and it was chaos.", "timestamp_seconds": 238.0},
+    {"speaker": "Interviewer", "text": "What makes it a game changer specifically?", "timestamp_seconds": 260.0},
+    {"speaker": "Sarah", "text": "Two things. First, I can see dependencies between tasks visually. If task A blocks task B, I can see the chain. Second, drag-and-drop rescheduling. When priorities shift I can just move things around.", "timestamp_seconds": 272.0},
+    {"speaker": "Interviewer", "text": "Is there anything about the timeline view that frustrates you?", "timestamp_seconds": 298.0},
+    {"speaker": "Sarah", "text": "Yes actually. It doesn't support sub-tasks. If I have a parent task with 5 sub-tasks, I can only see the parent on the timeline. I want to see the breakdown.", "timestamp_seconds": 310.0},
+    {"speaker": "Sarah", "text": "Also, the export to PDF looks terrible. When I share the timeline with stakeholders I have to screenshot it instead of exporting.", "timestamp_seconds": 335.0},
+    {"speaker": "Interviewer", "text": "Those are concrete examples, thank you. One last question — if you could change one thing about the platform, what would it be?", "timestamp_seconds": 355.0},
+    {"speaker": "Sarah", "text": "Search. The search is really bad. If I search for a task by title, it takes forever and often returns irrelevant results. I know the task exists but I can't find it.", "timestamp_seconds": 370.0},
+    {"speaker": "Sarah", "text": "I'd love fuzzy search, filters by project or status, and maybe recently viewed items in the search dropdown.", "timestamp_seconds": 395.0},
+    {"speaker": "Interviewer", "text": "That's really helpful feedback. Is there anything else you'd like to share that I haven't asked about?", "timestamp_seconds": 415.0},
+    {"speaker": "Sarah", "text": "Just that overall I like the platform and I want it to succeed. The core workflow is solid — it just needs polish in the areas I mentioned. Better search, better notifications, and better export.", "timestamp_seconds": 428.0},
+    {"speaker": "Interviewer", "text": "Thank you so much Sarah. This has been incredibly valuable. We'll follow up with you when we start working on these improvements.", "timestamp_seconds": 455.0}
+  ]
+}

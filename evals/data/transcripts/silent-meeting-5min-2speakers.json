@@ -1,0 +1,15 @@
+{
+  "metadata": {
+    "title": "Quick Sync",
+    "duration_minutes": 5,
+    "speakers": ["Alice", "Bob"],
+    "type": "silent-meeting"
+  },
+  "segments": [
+    {"speaker": "Alice", "text": "Hey Bob, just a quick sync. Are we still good for the deploy tomorrow?", "timestamp_seconds": 0.0},
+    {"speaker": "Bob", "text": "Yes, all tests are passing. I'll kick off the deploy at 10am.", "timestamp_seconds": 12.0},
+    {"speaker": "Alice", "text": "Sounds good. Anything else?", "timestamp_seconds": 22.0},
+    {"speaker": "Bob", "text": "Nope, that's it. Short and sweet.", "timestamp_seconds": 30.0},
+    {"speaker": "Alice", "text": "Great, talk to you tomorrow.", "timestamp_seconds": 38.0}
+  ]
+}

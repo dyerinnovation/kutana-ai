@@ -1,0 +1,28 @@
+{
+  "metadata": {
+    "title": "Code Review: Authentication Middleware Refactor",
+    "duration_minutes": 15,
+    "speakers": ["Reviewer", "Author", "Observer"],
+    "type": "code-review"
+  },
+  "segments": [
+    {"speaker": "Reviewer", "text": "Let's go through the auth middleware refactor PR. Author, want to walk us through the changes?", "timestamp_seconds": 0.0},
+    {"speaker": "Author", "text": "Sure. The main change is extracting the JWT validation logic from the middleware into a standalone verify_token function in auth/tokens.py.", "timestamp_seconds": 15.0},
+    {"speaker": "Author", "text": "Previously, the middleware was doing too much — validation, user lookup, and permission checks all in one place. Now each concern is a separate function.", "timestamp_seconds": 35.0},
+    {"speaker": "Reviewer", "text": "I see the new structure. verify_token in tokens.py, get_current_user in users.py, and check_permissions in permissions.py. Makes sense.", "timestamp_seconds": 55.0},
+    {"speaker": "Reviewer", "text": "One concern — in verify_token, you're catching all exceptions and returning None. That swallows errors. Can we at least log the exception type?", "timestamp_seconds": 75.0},
+    {"speaker": "Author", "text": "Good catch. I'll add structured logging for the exception type and the token claim that failed validation.", "timestamp_seconds": 95.0},
+    {"speaker": "Observer", "text": "Question — what happens when the JWT secret rotates? Does verify_token try both the old and new secret?", "timestamp_seconds": 112.0},
+    {"speaker": "Author", "text": "Right now it only uses the current secret. We should add a fallback to the previous secret during the rotation window. I'll add that as a follow-up ticket.", "timestamp_seconds": 128.0},
+    {"speaker": "Reviewer", "text": "Looking at the test file, tests/test_auth_middleware.py. The happy path test is good. But I don't see a test for expired tokens.", "timestamp_seconds": 150.0},
+    {"speaker": "Author", "text": "You're right. I'll add test cases for expired tokens, malformed tokens, and tokens with missing required claims.", "timestamp_seconds": 170.0},
+    {"speaker": "Reviewer", "text": "Also, line 47 in tokens.py — you're using PyJWT's decode with verify=True, but you're not specifying the required claims. Should we add required=[\"sub\", \"exp\", \"iat\"]?", "timestamp_seconds": 190.0},
+    {"speaker": "Author", "text": "Yes, that's a security improvement. I'll add the required claims list and a test that verifies tokens without sub are rejected.", "timestamp_seconds": 215.0},
+    {"speaker": "Observer", "text": "One more thing — the middleware is importing directly from auth.tokens now. Should we use dependency injection instead so it's easier to mock in tests?", "timestamp_seconds": 238.0},
+    {"speaker": "Author", "text": "We're using FastAPI's Depends already for the route-level injection. The middleware sits outside that system, but we could use a factory pattern. Let me think about whether that's overkill.", "timestamp_seconds": 260.0},
+    {"speaker": "Reviewer", "text": "I think the current approach is fine for now. The functions are pure enough to test directly. Let's not over-abstract.", "timestamp_seconds": 285.0},
+    {"speaker": "Reviewer", "text": "Overall the refactor looks good. Action items: add exception logging in verify_token, add missing test cases, add required JWT claims validation, and create a follow-up ticket for key rotation support.", "timestamp_seconds": 305.0},
+    {"speaker": "Author", "text": "Got it. I'll push the updates today and re-request review.", "timestamp_seconds": 330.0},
+    {"speaker": "Reviewer", "text": "Sounds good. Once those are addressed, I'm happy to approve.", "timestamp_seconds": 342.0}
+  ]
+}

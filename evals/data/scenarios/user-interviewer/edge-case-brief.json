@@ -1,0 +1,22 @@
+{
+  "scenario_id": "user-interviewer/edge-case-brief",
+  "agent_template": "User Interviewer",
+  "transcript_ref": "transcripts/silent-meeting-5min-2speakers.json",
+  "meeting_context": {
+    "title": "Brief User Check-in",
+    "participants": ["Alice", "Bob"],
+    "duration_minutes": 5
+  },
+  "expected_behaviors": [
+    "Adapts to a very brief session",
+    "Asks at least one meaningful question",
+    "Captures whatever insights are available",
+    "Does not force a full interview on a brief meeting"
+  ],
+  "anti_patterns": [
+    "Runs a full 25-minute interview script in a 5-minute meeting",
+    "Generates no output because the meeting is too short",
+    "Asks multiple rapid-fire questions without waiting for answers"
+  ],
+  "passing_score": 3.0
+}

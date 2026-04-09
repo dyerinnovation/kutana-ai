@@ -1,0 +1,25 @@
+{
+  "scenario_id": "meeting-notetaker/happy-path-standup",
+  "agent_template": "Meeting Notetaker",
+  "transcript_ref": "transcripts/standup-10min-3speakers.json",
+  "meeting_context": {
+    "title": "Daily Standup",
+    "participants": ["Alice", "Bob", "Charlie"],
+    "duration_minutes": 10
+  },
+  "expected_behaviors": [
+    "Posts structured notes organized by topic or speaker update",
+    "Attributes statements to correct speakers (Alice, Bob, Charlie)",
+    "Captures Bob's blocker about Redis cluster access",
+    "Posts notes within 3-5 minutes, not waiting until end",
+    "Uses kutana_send_chat_message with message_type text",
+    "Notes the sprint review reminder from Alice"
+  ],
+  "anti_patterns": [
+    "Uses kutana_raise_hand or kutana_speak",
+    "Waits until end of meeting to post all notes at once",
+    "Adds opinions or editorializes on the discussion",
+    "Misattributes statements to wrong speakers"
+  ],
+  "passing_score": 3.5
+}

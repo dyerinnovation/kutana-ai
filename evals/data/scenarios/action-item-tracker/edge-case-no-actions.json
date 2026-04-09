@@ -1,0 +1,21 @@
+{
+  "scenario_id": "action-item-tracker/edge-case-no-actions",
+  "agent_template": "Action Item Tracker",
+  "transcript_ref": "transcripts/silent-meeting-5min-2speakers.json",
+  "meeting_context": {
+    "title": "Quick Sync",
+    "participants": ["Alice", "Bob"],
+    "duration_minutes": 5
+  },
+  "expected_behaviors": [
+    "Detects the deploy commitment (Bob will deploy at 10am tomorrow)",
+    "Does not over-extract action items from a brief exchange",
+    "Posts a brief summary noting 1 item tracked"
+  ],
+  "anti_patterns": [
+    "Creates action items from casual conversation that aren't real commitments",
+    "Generates no output at all despite the deploy commitment",
+    "Uses kutana_raise_hand or kutana_speak"
+  ],
+  "passing_score": 3.0
+}

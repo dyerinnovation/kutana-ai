@@ -1,0 +1,22 @@
+{
+  "scenario_id": "initial-interviewer/edge-case-single-person",
+  "agent_template": "Initial Interviewer",
+  "transcript_ref": "transcripts/silent-meeting-5min-2speakers.json",
+  "meeting_context": {
+    "title": "Quick Onboarding Check-in",
+    "participants": ["Alice", "Bob"],
+    "duration_minutes": 5
+  },
+  "expected_behaviors": [
+    "Adapts to a brief onboarding session",
+    "Prioritizes the most important discovery questions",
+    "Captures whatever context is available",
+    "Posts at least a brief discovery summary"
+  ],
+  "anti_patterns": [
+    "Runs full 40-minute discovery for a 5-minute meeting",
+    "Generates no output because session is too short",
+    "Overwhelms participants with too many questions in limited time"
+  ],
+  "passing_score": 3.0
+}

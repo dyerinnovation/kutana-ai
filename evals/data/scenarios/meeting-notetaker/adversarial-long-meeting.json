@@ -1,0 +1,25 @@
+{
+  "scenario_id": "meeting-notetaker/adversarial-long-meeting",
+  "agent_template": "Meeting Notetaker",
+  "transcript_ref": "transcripts/architecture-review-30min-4speakers.json",
+  "meeting_context": {
+    "title": "Architecture Review: Event Sourcing Migration",
+    "participants": ["Diana", "Evan", "Fiona", "George"],
+    "duration_minutes": 30
+  },
+  "expected_behaviors": [
+    "Posts multiple note blocks throughout the 30-minute meeting",
+    "Captures the technical discussion about event sourcing vs CRUD",
+    "Notes the decision to use PostgreSQL as event store",
+    "Attributes concerns to correct speakers (George's EventStoreDB suggestion, Fiona's schema evolution question)",
+    "Captures the assigned follow-ups (Evan: RFC update, George: load testing)"
+  ],
+  "anti_patterns": [
+    "Summarizes instead of taking detailed notes",
+    "Misses topic transitions or new discussion threads",
+    "Uses kutana_raise_hand or kutana_speak",
+    "Waits until end to dump all notes",
+    "Editorializes on the architecture decision"
+  ],
+  "passing_score": 3.5
+}

@@ -1,0 +1,52 @@
+# Gitleaks configuration for Kutana AI
+# Docs: https://github.com/gitleaks/gitleaks
+
+title = "Kutana AI gitleaks config"
+
+# Use the default built-in rules (API keys, tokens, private keys, etc.)
+# Override only what needs allowlisting.
+
+# ---------------------------------------------------------------------------
+# Allowlist — suppress known false positives
+# ---------------------------------------------------------------------------
+[allowlist]
+  description = "Known test/mock values and safe patterns"
+
+  # Test/dev credentials in Helm values.yaml and CI configs.
+  # These are NOT real secrets — they are dev-only defaults.
+  regexes = [
+    # base64 test jwtSecret ("change-me-in-production")
+    '''Y2hhbmdlLW1lLWluLXByb2R1Y3Rpb24=''',
+    # base64 test deepgramApiKey (dev placeholder)
+    '''MmU5YmVlYzRhY2EzY2ZlMmVmMDA0Nzc2OTQzY2UzMTExZjg4NjE4Mg==''',
+    # MinIO dev password in values.yaml
+    '''kutana-minio-secret''',
+    # CI service container passwords (always "kutana")
+    '''POSTGRES_PASSWORD:\s*kutana''',
+    # Generic test DSN patterns used in CI
+    '''postgresql\+asyncpg://kutana:kutana@''',
+  ]
+
+  # Paths to skip: test/example configs, build artifacts, virtual envs
+  paths = [
+    # Files with known placeholder/example secrets
+    '''charts/kutana/values\.yaml''',
+    '''infra/woodpecker/secrets\.example\.yaml''',
+    '''infra/cloudflare-tunnel/secrets\.example\.yaml''',
+    '''\.github/workflows/ci\.yml''',
+    '''\.woodpecker\.yml''',
+    # Directories that never contain committed secrets
+    '''\.venv/''',
+    '''venv/''',
+    '''node_modules/''',
+    '''\.pytest_cache/''',
+    '''\.mypy_cache/''',
+    '''\.ruff_cache/''',
+    '''__pycache__/''',
+    '''dist/''',
+    '''build/''',
+    '''htmlcov/''',
+    '''\.git/''',
+    # Compiled files
+    '''.*\.pyc$''',
+  ]

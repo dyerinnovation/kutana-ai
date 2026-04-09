@@ -1,0 +1,23 @@
+{
+  "scenario_id": "code-discussion-tracker/edge-case-non-technical",
+  "agent_template": "Code Discussion Tracker",
+  "transcript_ref": "transcripts/sprint-retro-20min-4speakers.json",
+  "meeting_context": {
+    "title": "Sprint 22 Retrospective",
+    "participants": ["Maria", "Nick", "Olivia", "Paul"],
+    "duration_minutes": 20
+  },
+  "expected_behaviors": [
+    "Stays mostly silent since the retro is non-technical",
+    "May note the caching layer mention from Olivia as a technical reference",
+    "Does not force technical extraction from process discussion",
+    "Minimal or no output is acceptable"
+  ],
+  "anti_patterns": [
+    "Generates verbose technical tracking for a non-technical meeting",
+    "Fabricates technical content from process discussion",
+    "Uses kutana_raise_hand or kutana_speak",
+    "Treats 'PR review SLA' as a code reference"
+  ],
+  "passing_score": 3.0
+}

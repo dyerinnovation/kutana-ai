@@ -1,0 +1,40 @@
+{
+  "metadata": {
+    "title": "Architecture Review: Event Sourcing Migration",
+    "duration_minutes": 30,
+    "speakers": ["Diana", "Evan", "Fiona", "George"],
+    "type": "architecture-review"
+  },
+  "segments": [
+    {"speaker": "Diana", "text": "Thanks everyone for joining. Today we're reviewing the proposal to migrate our order service to event sourcing.", "timestamp_seconds": 0.0},
+    {"speaker": "Diana", "text": "Evan, you wrote the RFC. Want to walk us through the key points?", "timestamp_seconds": 15.0},
+    {"speaker": "Evan", "text": "Sure. The core idea is to replace our current CRUD-based order model with an event-sourced architecture. Every state change becomes an immutable event.", "timestamp_seconds": 30.0},
+    {"speaker": "Evan", "text": "The main benefits are full audit trail, easier debugging, and the ability to replay events for new projections.", "timestamp_seconds": 55.0},
+    {"speaker": "Evan", "text": "We'd use PostgreSQL as the event store, with a separate read model for queries. The event store table would be append-only.", "timestamp_seconds": 75.0},
+    {"speaker": "Fiona", "text": "What about the read model? How do we keep it in sync?", "timestamp_seconds": 95.0},
+    {"speaker": "Evan", "text": "We'd use a background projector that consumes events from a Redis stream and updates the read model. Eventually consistent, but for our use case that's fine.", "timestamp_seconds": 110.0},
+    {"speaker": "George", "text": "I have concerns about the migration path. We have 2 million existing orders. How do we handle the cutover?", "timestamp_seconds": 135.0},
+    {"speaker": "Evan", "text": "Good question. The plan is a dual-write period. New orders go through event sourcing, existing orders stay in the current model. We'd backfill events for historical orders in a background job.", "timestamp_seconds": 155.0},
+    {"speaker": "Diana", "text": "How long would the dual-write period last?", "timestamp_seconds": 180.0},
+    {"speaker": "Evan", "text": "Estimated 4 to 6 weeks. We'd need feature flags to route traffic and a kill switch if something goes wrong.", "timestamp_seconds": 195.0},
+    {"speaker": "Fiona", "text": "What's the performance impact? Event sourcing can be slower for writes because of the append plus projection.", "timestamp_seconds": 220.0},
+    {"speaker": "Evan", "text": "Benchmarks show about 15% write latency increase, but read latency actually improves because the read model is denormalized.", "timestamp_seconds": 240.0},
+    {"speaker": "George", "text": "I think we should use a dedicated event store like EventStoreDB instead of PostgreSQL. It's purpose-built for this.", "timestamp_seconds": 270.0},
+    {"speaker": "Diana", "text": "That adds operational complexity though. We already run PostgreSQL and have expertise there.", "timestamp_seconds": 290.0},
+    {"speaker": "George", "text": "Fair point. But PostgreSQL's NOTIFY/LISTEN has scaling limits. At high throughput we might hit issues.", "timestamp_seconds": 310.0},
+    {"speaker": "Evan", "text": "We're not using NOTIFY/LISTEN. The projector reads from Redis streams, which scales well. PostgreSQL is just the durable event store.", "timestamp_seconds": 330.0},
+    {"speaker": "Fiona", "text": "What about schema evolution? If the event schema changes over time, how do we handle old events?", "timestamp_seconds": 360.0},
+    {"speaker": "Evan", "text": "We'd use versioned events with upcasters. Each event has a schema version, and the upcaster transforms old versions to the current schema when replaying.", "timestamp_seconds": 380.0},
+    {"speaker": "Diana", "text": "Let's make a decision. I'm hearing general agreement on the approach, with PostgreSQL as the event store. Concerns are around migration risk and performance monitoring.", "timestamp_seconds": 420.0},
+    {"speaker": "Diana", "text": "Proposal: we approve the RFC with the condition that we add a performance monitoring dashboard before the migration starts, and we define rollback criteria upfront.", "timestamp_seconds": 450.0},
+    {"speaker": "Fiona", "text": "Agreed. I'd also want load tests before we go live.", "timestamp_seconds": 475.0},
+    {"speaker": "George", "text": "I can live with that. Let's also document the dual-write period SLA expectations.", "timestamp_seconds": 490.0},
+    {"speaker": "Evan", "text": "Sounds good. I'll update the RFC with rollback criteria, load testing plan, and SLA docs.", "timestamp_seconds": 510.0},
+    {"speaker": "Diana", "text": "Great. Decision made — we're going with event sourcing using PostgreSQL, pending performance dashboard and load test results.", "timestamp_seconds": 535.0},
+    {"speaker": "Diana", "text": "Evan, can you have the updated RFC by end of next week?", "timestamp_seconds": 555.0},
+    {"speaker": "Evan", "text": "Yes, I'll have it done by Friday.", "timestamp_seconds": 568.0},
+    {"speaker": "Diana", "text": "Perfect. George, can you own the load testing?", "timestamp_seconds": 580.0},
+    {"speaker": "George", "text": "Sure. I'll coordinate with Evan on test scenarios.", "timestamp_seconds": 592.0},
+    {"speaker": "Diana", "text": "Excellent. Thanks everyone. Let's reconvene in two weeks to check progress.", "timestamp_seconds": 610.0}
+  ]
+}

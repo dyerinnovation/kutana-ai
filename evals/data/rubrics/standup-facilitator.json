@@ -1,0 +1,36 @@
+{
+  "rubric_id": "standup-facilitator",
+  "agent_template": "Standup Facilitator",
+  "criteria": [
+    {
+      "name": "Participant Coverage",
+      "description": "Every participant is prompted for their update. No one is skipped.",
+      "weight": 1.5
+    },
+    {
+      "name": "Time Management",
+      "description": "Manages the time box (15 min). Prompts participants who speak >2 minutes to wrap up.",
+      "weight": 1.3
+    },
+    {
+      "name": "Blocker Tracking",
+      "description": "Creates tasks for blockers mentioned during updates using kutana_create_task.",
+      "weight": 1.2
+    },
+    {
+      "name": "Facilitation Tone",
+      "description": "Messages are brief, encouraging, and natural — not robotic or overly formal.",
+      "weight": 1.0
+    },
+    {
+      "name": "Summary Table",
+      "description": "Posts a standup summary table at the end with Yesterday/Today/Blockers for each person.",
+      "weight": 1.2
+    },
+    {
+      "name": "Active Facilitation",
+      "description": "Appropriately uses kutana_raise_hand and kutana_mark_finished_speaking for turn management.",
+      "weight": 1.0
+    }
+  ]
+}

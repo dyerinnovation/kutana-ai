@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "title": "Sprint 22 Retrospective",
+    "duration_minutes": 20,
+    "speakers": ["Maria", "Nick", "Olivia", "Paul"],
+    "type": "sprint-retro"
+  },
+  "segments": [
+    {"speaker": "Maria", "text": "Welcome to our Sprint 22 retro. Let's use the Start Stop Continue format. I'll give you a couple minutes for each section.", "timestamp_seconds": 0.0},
+    {"speaker": "Maria", "text": "Let's start with START — what should we start doing?", "timestamp_seconds": 18.0},
+    {"speaker": "Nick", "text": "We should start doing code reviews within 24 hours. Some of my PRs sat for 3 days last sprint and it blocked me.", "timestamp_seconds": 35.0},
+    {"speaker": "Olivia", "text": "I agree. We should also start writing acceptance criteria before we start coding. I had to rework the search feature twice because the requirements changed.", "timestamp_seconds": 55.0},
+    {"speaker": "Paul", "text": "We should start doing brief design docs for anything over 3 story points. The payment refactor was way more complex than we expected because we skipped the design phase.", "timestamp_seconds": 78.0},
+    {"speaker": "Maria", "text": "Good suggestions. Let's move to STOP — what should we stop doing?", "timestamp_seconds": 100.0},
+    {"speaker": "Paul", "text": "We need to stop merging PRs on Fridays. The payment bug from two weeks ago was merged Friday afternoon and we spent all of Monday firefighting.", "timestamp_seconds": 118.0},
+    {"speaker": "Nick", "text": "Stop having meetings during focus time blocks. I had three interruptions during my deep work block on Wednesday.", "timestamp_seconds": 140.0},
+    {"speaker": "Olivia", "text": "We should stop scope-creeping sprint items mid-sprint. The dashboard ticket went from 3 points to effectively 8 because we kept adding features.", "timestamp_seconds": 162.0},
+    {"speaker": "Maria", "text": "Fair points all around. Now CONTINUE — what's working well?", "timestamp_seconds": 185.0},
+    {"speaker": "Olivia", "text": "Continue doing pair programming for complex features. The session Nick and I had on the caching layer was really productive.", "timestamp_seconds": 200.0},
+    {"speaker": "Paul", "text": "Continue the daily standups at 9:30. The new time slot works much better for everyone.", "timestamp_seconds": 218.0},
+    {"speaker": "Nick", "text": "Continue using the shared testing environment. It caught two integration issues before they hit staging.", "timestamp_seconds": 235.0},
+    {"speaker": "Maria", "text": "Great feedback. Let's pick 2-3 concrete improvements to commit to for next sprint.", "timestamp_seconds": 255.0},
+    {"speaker": "Maria", "text": "I'm hearing three strong ones: 24-hour PR review SLA, no Friday merges, and design docs for items over 3 points. Can we commit to all three?", "timestamp_seconds": 275.0},
+    {"speaker": "Nick", "text": "The PR review SLA is my top pick. That alone would improve our flow significantly.", "timestamp_seconds": 298.0},
+    {"speaker": "Paul", "text": "I'm in on all three. The no-Friday-merge rule is easy to enforce.", "timestamp_seconds": 312.0},
+    {"speaker": "Olivia", "text": "Agreed. For the design docs, can we create a lightweight template so it doesn't become a burden?", "timestamp_seconds": 328.0},
+    {"speaker": "Maria", "text": "Good idea. I'll create a template. So our three commitments: 24-hour PR review SLA, no merges on Fridays, and design docs for 3+ point items with a lightweight template.", "timestamp_seconds": 348.0},
+    {"speaker": "Maria", "text": "Thanks everyone. I'll add these as team agreements in our wiki. See you at sprint planning tomorrow!", "timestamp_seconds": 375.0}
+  ]
+}

@@ -20,7 +20,10 @@ members = [
 
 [tool.uv]
 dev-dependencies = [
+    "anthropic>=0.84.0",
+    "boto3>=1.35",
     "groq>=0.11",
+    "langfuse>=3.0",
     "mypy>=1.19.1",
     "pydantic>=2.12.5",
     "pytest>=8.0",
@@ -33,6 +36,10 @@ dev-dependencies = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 addopts = "--import-mode=importlib"
+markers = [
+    "mock: Mock eval — system prompt + transcript through Messages API (no live cluster)",
+    "e2e: End-to-end eval — runs against the live dev cluster",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = []

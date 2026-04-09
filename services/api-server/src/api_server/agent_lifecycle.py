@@ -49,12 +49,14 @@ _MAX_BACKOFF_SECONDS = 30
 TRANSCRIPT_WINDOW_SECONDS = 30.0
 
 # Event types we forward from Anthropic sessions to the frontend
-_FORWARDED_EVENT_TYPES = frozenset({
-    "agent.message",
-    "agent.mcp_tool_use",
-    "session.error",
-    "session.status_idle",
-})
+_FORWARDED_EVENT_TYPES = frozenset(
+    {
+        "agent.message",
+        "agent.mcp_tool_use",
+        "session.error",
+        "session.status_idle",
+    }
+)
 
 # Active streaming tasks per Anthropic session (prevents duplicates)
 _streaming_tasks: dict[str, asyncio.Task[None]] = {}
@@ -137,13 +139,13 @@ async def stream_and_publish_events(
                         text_parts.append(getattr(block, "text", ""))
                 payload["content"] = " ".join(text_parts) or "(no text)"
             elif event_type == "agent.mcp_tool_use":
-                payload["tool_name"] = getattr(event, "name", None) or getattr(event, "tool_name", "unknown")
+                payload["tool_name"] = getattr(event, "name", None) or getattr(
+                    event, "tool_name", "unknown"
+                )
             elif event_type == "session.error":
                 error_obj = getattr(event, "error", None)
                 payload["message"] = (
-                    getattr(error_obj, "message", str(error_obj))
-                    if error_obj
-                    else "Unknown error"
+                    getattr(error_obj, "message", str(error_obj)) if error_obj else "Unknown error"
                 )
             # session.status_idle needs no extra fields
 
@@ -188,7 +190,11 @@ def start_event_streaming(
 
     task = asyncio.create_task(
         stream_and_publish_events(
-            api_key, anthropic_session_id, meeting_id, agent_name, redis_conn,
+            api_key,
+            anthropic_session_id,
+            meeting_id,
+            agent_name,
+            redis_conn,
         ),
         name=f"agent-events-{anthropic_session_id[:8]}",
     )
@@ -218,6 +224,15 @@ async def on_meeting_started(
         api_key: Anthropic API key.
         redis_conn: Redis connection for publishing agent events to the frontend.
     """
+    from api_server.langfuse_client import create_trace
+
+    trace = create_trace(
+        name="meeting-started",
+        metadata={"meeting_id": str(meeting_id)},
+        tags=["lifecycle", "meeting-started"],
+        session_id=str(meeting_id),
+    )
+
     # Find active hosted sessions with their template names
     result = await db.execute(
         select(HostedAgentSessionORM, AgentTemplateORM.name)
@@ -238,6 +253,7 @@ async def on_meeting_started(
     context = await _build_meeting_context(meeting_id, db)
 
     # Send context to each agent session and start event streaming
+    notified_count = 0
     for session, template_name in rows:
         assert session.anthropic_session_id is not None
         try:
@@ -246,6 +262,7 @@ async def on_meeting_started(
                 session.anthropic_session_id,
                 context,
             )
+            notified_count += 1
             logger.info(
                 "Sent meeting context to session %s (meeting %s)",
                 session.id,
@@ -265,6 +282,9 @@ async def on_meeting_started(
                 "Failed to send meeting context to session %s",
                 session.id,
             )
+
+    if trace is not None:
+        trace.update(output={"agents_notified": notified_count, "total_sessions": len(rows)})
 
 
 async def _build_meeting_context(meeting_id: UUID, db: AsyncSession) -> str:
@@ -326,6 +346,15 @@ async def on_meeting_ended(
         db: Async database session.
         api_key: Anthropic API key.
     """
+    from api_server.langfuse_client import create_trace
+
+    trace = create_trace(
+        name="meeting-ended",
+        metadata={"meeting_id": str(meeting_id)},
+        tags=["lifecycle", "meeting-ended"],
+        session_id=str(meeting_id),
+    )
+
     result = await db.execute(
         select(HostedAgentSessionORM).where(
             HostedAgentSessionORM.meeting_id == meeting_id,
@@ -342,6 +371,10 @@ async def on_meeting_ended(
         await _close_session(session, db, api_key)
 
     await db.flush()
+
+    if trace is not None:
+        trace.update(output={"sessions_closed": len(sessions)})
+
     logger.info(
         "Closed %d hosted agent session(s) for meeting %s",
         len(sessions),
@@ -681,11 +714,23 @@ class TranscriptBatcher:
         Args:
             meeting_id: Meeting whose buffer to flush.
         """
+        from api_server.langfuse_client import create_trace
+
         segments = self._buffers.pop(meeting_id, [])
         self._last_flush.pop(meeting_id, None)
 
         if not segments:
             return
+
+        trace = create_trace(
+            name="transcript-flush",
+            metadata={
+                "meeting_id": str(meeting_id),
+                "segment_count": len(segments),
+            },
+            tags=["lifecycle", "transcript-flush"],
+            session_id=str(meeting_id),
+        )
 
         # Format transcript batch
         lines: list[str] = []
@@ -729,6 +774,14 @@ class TranscriptBatcher:
                     "Failed to send transcript batch to session %s",
                     anthropic_session_id,
                 )
+
+        if trace is not None:
+            trace.update(
+                output={
+                    "segments_flushed": len(segments),
+                    "agents_notified": len(rows),
+                }
+            )
 
         logger.info(
             "Flushed %d transcript segments to %d agent(s) for meeting %s",

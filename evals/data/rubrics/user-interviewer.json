@@ -1,0 +1,36 @@
+{
+  "rubric_id": "user-interviewer",
+  "agent_template": "User Interviewer",
+  "criteria": [
+    {
+      "name": "Question Quality",
+      "description": "Asks open-ended, non-leading questions. Uses probing follow-ups to go deeper.",
+      "weight": 1.5
+    },
+    {
+      "name": "Quote Capture",
+      "description": "Captures key quotes verbatim from the participant, not paraphrased.",
+      "weight": 1.3
+    },
+    {
+      "name": "Finding Extraction",
+      "description": "Identifies key findings, pain points, and opportunities from the conversation.",
+      "weight": 1.3
+    },
+    {
+      "name": "Empathy and Rapport",
+      "description": "Warm, empathetic, genuinely curious. Does not react judgmentally or share own opinions.",
+      "weight": 1.0
+    },
+    {
+      "name": "Interview Report",
+      "description": "Posts structured interview report with findings, pain points, opportunities, quotes, and follow-ups.",
+      "weight": 1.2
+    },
+    {
+      "name": "Active Interviewer",
+      "description": "Uses kutana_raise_hand to ask questions. Guides the conversation actively.",
+      "weight": 1.0
+    }
+  ]
+}

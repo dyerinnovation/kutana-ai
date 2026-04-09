@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "title": "Daily Standup",
+    "duration_minutes": 10,
+    "speakers": ["Alice", "Bob", "Charlie"],
+    "type": "standup"
+  },
+  "segments": [
+    {"speaker": "Alice", "text": "Good morning everyone. Let's get started with our standup. I'll go first.", "timestamp_seconds": 0.0},
+    {"speaker": "Alice", "text": "Yesterday I finished the authentication refactor for the user service. Got the PR merged after code review.", "timestamp_seconds": 15.0},
+    {"speaker": "Alice", "text": "Today I'm going to start on the rate limiting middleware. Should have a draft PR by end of day.", "timestamp_seconds": 30.0},
+    {"speaker": "Alice", "text": "No blockers on my end.", "timestamp_seconds": 42.0},
+    {"speaker": "Bob", "text": "Nice work on the auth refactor, Alice. My turn.", "timestamp_seconds": 55.0},
+    {"speaker": "Bob", "text": "Yesterday I was debugging the WebSocket disconnection issue. Found the root cause — it was a race condition in the heartbeat handler.", "timestamp_seconds": 65.0},
+    {"speaker": "Bob", "text": "Today I'll push the fix and write regression tests for it.", "timestamp_seconds": 80.0},
+    {"speaker": "Bob", "text": "One blocker — I need access to the staging Redis cluster to verify the fix. Can someone help me with that?", "timestamp_seconds": 95.0},
+    {"speaker": "Alice", "text": "I can get you access after standup. Just ping me on Slack.", "timestamp_seconds": 110.0},
+    {"speaker": "Bob", "text": "Perfect, thanks Alice.", "timestamp_seconds": 118.0},
+    {"speaker": "Charlie", "text": "Alright, my turn. Yesterday I worked on the new dashboard design. Got the wireframes approved by the design team.", "timestamp_seconds": 130.0},
+    {"speaker": "Charlie", "text": "Today I'm going to start implementing the React components for the dashboard. Starting with the metrics cards.", "timestamp_seconds": 150.0},
+    {"speaker": "Charlie", "text": "I have a question — should we use the existing chart library or switch to the new one that the design team recommended?", "timestamp_seconds": 168.0},
+    {"speaker": "Alice", "text": "Let's take that offline. Can you put together a quick comparison and we'll discuss in our tech sync tomorrow?", "timestamp_seconds": 185.0},
+    {"speaker": "Charlie", "text": "Sure, I'll do that. No other blockers from me.", "timestamp_seconds": 200.0},
+    {"speaker": "Alice", "text": "Great. Quick reminder — sprint review is on Friday at 2pm. Make sure your demos are ready.", "timestamp_seconds": 220.0},
+    {"speaker": "Bob", "text": "Got it. My WebSocket fix should be demo-ready by then.", "timestamp_seconds": 235.0},
+    {"speaker": "Charlie", "text": "I'll have at least the metrics cards done for the demo.", "timestamp_seconds": 248.0},
+    {"speaker": "Alice", "text": "Sounds good. Let's wrap up. Have a productive day everyone!", "timestamp_seconds": 265.0},
+    {"speaker": "Bob", "text": "Thanks, you too!", "timestamp_seconds": 275.0}
+  ]
+}

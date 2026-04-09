@@ -7,7 +7,20 @@ on:
     branches: [main]
 
 jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        with:
+          args: detect --source . --config .gitleaks.toml --baseline-path .gitleaks-baseline.json
+        env:
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
   lint:
+    needs: [secret-scan]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,6 +32,7 @@ jobs:
       - run: uv run ruff format --check .
 
   type-check:
+    needs: [secret-scan]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,6 +43,7 @@ jobs:
       - run: uv run mypy packages/kutana-core/
 
   test:
+    needs: [secret-scan]
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -63,3 +78,24 @@ jobs:
           version: "latest"
       - run: uv sync
       - run: uv run pytest -x -v
+
+  eval-mock:
+    needs: [secret-scan]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - run: uv sync
+      - name: Check for eval/prompt changes
+        id: changes
+        run: |
+          CHANGED=$(git diff --name-only origin/main...HEAD -- 'evals/' 'internal-docs/development/managed-agent-system-prompts.md' || true)
+          if [ -n "$CHANGED" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; else echo "run=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Run mock evals
+        if: steps.changes.outputs.run == 'true' && env.ANTHROPIC_API_KEY != ''
+        run: uv run pytest evals/ -m mock -v --timeout=300

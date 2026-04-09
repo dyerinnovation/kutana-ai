@@ -1,0 +1,28 @@
+{
+  "scenario_id": "sprint-planner/happy-path-planning",
+  "agent_template": "Sprint Planner",
+  "transcript_ref": "transcripts/sprint-planning-45min-5speakers.json",
+  "meeting_context": {
+    "title": "Sprint 23 Planning",
+    "participants": ["Maria", "Nick", "Olivia", "Paul", "Quinn"],
+    "duration_minutes": 45
+  },
+  "expected_behaviors": [
+    "Facilitates sprint goal discussion and logs the agreed goal",
+    "Guides backlog review in order",
+    "Facilitates estimation for each item",
+    "Tracks assignments with owners and estimates",
+    "Creates tasks via kutana_create_task for each sprint item",
+    "Posts sprint plan summary table at end",
+    "Notes the dependency between TICKET-401 and TICKET-402",
+    "Flags the SendGrid risk identified by Quinn",
+    "Uses kutana_raise_hand for phase transitions"
+  ],
+  "anti_patterns": [
+    "Estimates for the team instead of facilitating estimation",
+    "Misses the dependency chain",
+    "Does not flag the reduced capacity due to Nick's vacation",
+    "Skips items or confuses assignments"
+  ],
+  "passing_score": 3.5
+}

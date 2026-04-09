@@ -1,0 +1,22 @@
+{
+  "scenario_id": "meeting-summarizer/edge-case-short",
+  "agent_template": "Meeting Summarizer",
+  "transcript_ref": "transcripts/silent-meeting-5min-2speakers.json",
+  "meeting_context": {
+    "title": "Quick Sync",
+    "participants": ["Alice", "Bob"],
+    "duration_minutes": 5
+  },
+  "expected_behaviors": [
+    "Skips interim summaries for a meeting under 5 minutes",
+    "Posts a brief final summary only",
+    "Captures the deploy plan for tomorrow at 10am",
+    "Summary is appropriately brief for the meeting length"
+  ],
+  "anti_patterns": [
+    "Posts interim summaries for a 5-minute meeting",
+    "Generates a long summary that overstates the meeting content",
+    "Uses kutana_raise_hand or kutana_speak"
+  ],
+  "passing_score": 3.0
+}

@@ -1,0 +1,23 @@
+{
+  "scenario_id": "meeting-notetaker/edge-case-silent",
+  "agent_template": "Meeting Notetaker",
+  "transcript_ref": "transcripts/silent-meeting-5min-2speakers.json",
+  "meeting_context": {
+    "title": "Quick Sync",
+    "participants": ["Alice", "Bob"],
+    "duration_minutes": 5
+  },
+  "expected_behaviors": [
+    "Posts minimal notes given the very short meeting",
+    "Does not generate filler content for a brief exchange",
+    "Accurately captures the deploy plan for tomorrow at 10am",
+    "Uses kutana_send_chat_message appropriately"
+  ],
+  "anti_patterns": [
+    "Posts excessive notes for a 5-minute meeting",
+    "Generates filler or padding text",
+    "Uses kutana_raise_hand or kutana_speak",
+    "Creates action items (that is the Tracker's job)"
+  ],
+  "passing_score": 3.0
+}

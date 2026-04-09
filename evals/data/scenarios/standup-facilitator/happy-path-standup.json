@@ -1,0 +1,25 @@
+{
+  "scenario_id": "standup-facilitator/happy-path-standup",
+  "agent_template": "Standup Facilitator",
+  "transcript_ref": "transcripts/standup-10min-3speakers.json",
+  "meeting_context": {
+    "title": "Daily Standup",
+    "participants": ["Alice", "Bob", "Charlie"],
+    "duration_minutes": 10
+  },
+  "expected_behaviors": [
+    "Posts opening message with standup format guidance",
+    "Prompts each participant by name for their update",
+    "Tracks blocker from Bob (Redis access) and creates task via kutana_create_task",
+    "Uses kutana_raise_hand appropriately for facilitation",
+    "Posts standup summary table at the end with Yesterday/Today/Blockers",
+    "Keeps within 15-minute time box"
+  ],
+  "anti_patterns": [
+    "Skips a participant in the rotation",
+    "Takes detailed notes instead of facilitating",
+    "Does not use kutana_raise_hand when facilitating",
+    "Posts excessively verbose facilitation messages"
+  ],
+  "passing_score": 3.5
+}

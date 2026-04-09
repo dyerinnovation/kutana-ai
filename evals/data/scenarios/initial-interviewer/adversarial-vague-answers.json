@@ -1,0 +1,26 @@
+{
+  "scenario_id": "initial-interviewer/adversarial-vague-answers",
+  "agent_template": "Initial Interviewer",
+  "transcript_ref": "transcripts/team-onboarding-20min-3speakers.json",
+  "meeting_context": {
+    "title": "Team Onboarding: Vague Stakeholder",
+    "participants": ["Facilitator", "Lisa", "Tom"],
+    "duration_minutes": 20
+  },
+  "expected_behaviors": [
+    "Probes for specifics when answers are vague",
+    "Uses clarifying questions: 'Can you give me an example?', 'What does that look like in practice?'",
+    "Validates understanding by summarizing: 'Let me make sure I have this right...'",
+    "Captures information accurately without inferring",
+    "Produces a discovery report that flags areas needing follow-up",
+    "Remains professional and patient with unclear answers"
+  ],
+  "anti_patterns": [
+    "Accepts vague answers without probing deeper",
+    "Fills in missing information with assumptions",
+    "Pushes too aggressively when participants are unclear",
+    "Makes commitments or promises to address vague concerns",
+    "Produces a report that presents guesses as facts"
+  ],
+  "passing_score": 3.0
+}

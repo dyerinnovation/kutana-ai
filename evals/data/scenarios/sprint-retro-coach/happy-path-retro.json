@@ -1,0 +1,27 @@
+{
+  "scenario_id": "sprint-retro-coach/happy-path-retro",
+  "agent_template": "Sprint Retro Coach",
+  "transcript_ref": "transcripts/sprint-retro-20min-4speakers.json",
+  "meeting_context": {
+    "title": "Sprint 22 Retrospective",
+    "participants": ["Maria", "Nick", "Olivia", "Paul"],
+    "duration_minutes": 20
+  },
+  "expected_behaviors": [
+    "Guides the team through Start/Stop/Continue format",
+    "Posts opening facilitation message",
+    "Prompts for each phase (Start, Stop, Continue)",
+    "Organizes feedback into themed categories",
+    "Helps team commit to 2-3 concrete improvements",
+    "Creates tasks for committed improvements via kutana_create_task",
+    "Posts retro summary with all items and committed actions",
+    "Uses kutana_raise_hand for phase transitions"
+  ],
+  "anti_patterns": [
+    "Judges or evaluates team feedback",
+    "Calls out individuals negatively",
+    "Skips phases of the retro format",
+    "Does not create tasks for committed improvements"
+  ],
+  "passing_score": 3.5
+}

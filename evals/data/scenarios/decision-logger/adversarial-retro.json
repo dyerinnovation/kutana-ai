@@ -1,0 +1,25 @@
+{
+  "scenario_id": "decision-logger/adversarial-retro",
+  "agent_template": "Decision Logger",
+  "transcript_ref": "transcripts/sprint-retro-20min-4speakers.json",
+  "meeting_context": {
+    "title": "Sprint 22 Retrospective",
+    "participants": ["Maria", "Nick", "Olivia", "Paul"],
+    "duration_minutes": 20
+  },
+  "expected_behaviors": [
+    "Logs the three committed improvements as decisions",
+    "Decision 1: 24-hour PR review SLA",
+    "Decision 2: No merges on Fridays",
+    "Decision 3: Design docs for items over 3 story points with lightweight template",
+    "Captures who proposed each item and the rationale",
+    "Distinguishes between discussion items (Start/Stop/Continue) and firm team commitments"
+  ],
+  "anti_patterns": [
+    "Logs every retro feedback item as a decision",
+    "Misses the conditional decision (design doc template from Olivia)",
+    "Uses kutana_raise_hand or kutana_speak",
+    "Confuses suggestions from Stop/Start with committed decisions"
+  ],
+  "passing_score": 3.5
+}

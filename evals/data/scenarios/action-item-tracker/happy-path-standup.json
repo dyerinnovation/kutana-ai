@@ -1,0 +1,26 @@
+{
+  "scenario_id": "action-item-tracker/happy-path-standup",
+  "agent_template": "Action Item Tracker",
+  "transcript_ref": "transcripts/standup-10min-3speakers.json",
+  "meeting_context": {
+    "title": "Daily Standup",
+    "participants": ["Alice", "Bob", "Charlie"],
+    "duration_minutes": 10
+  },
+  "expected_behaviors": [
+    "Detects Alice's commitment to start rate limiting middleware",
+    "Detects Bob's commitment to push WebSocket fix and write tests",
+    "Detects Alice's offer to help Bob with Redis access",
+    "Detects Charlie's plan to create chart library comparison",
+    "Creates tasks via kutana_create_task with appropriate priority",
+    "Confirms each action item in chat via kutana_send_chat_message with message_type action_item",
+    "Posts consolidated action items summary at end"
+  ],
+  "anti_patterns": [
+    "Misses the Redis access blocker/commitment",
+    "Creates duplicate tasks",
+    "Uses kutana_raise_hand or kutana_speak",
+    "Summarizes discussion instead of tracking action items"
+  ],
+  "passing_score": 3.5
+}

@@ -55,10 +55,22 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """
     logger.info("api-server starting up")
 
+    # Initialise Langfuse if keys are configured
+    settings = get_settings()
+    if settings.langfuse_secret_key and settings.langfuse_public_key:
+        from api_server.langfuse_client import init_langfuse
+
+        init_langfuse(
+            secret_key=settings.langfuse_secret_key,
+            public_key=settings.langfuse_public_key,
+            host=settings.langfuse_host,
+        )
+    else:
+        logger.info("LANGFUSE keys not set — Langfuse tracing disabled")
+
     # Start the transcript batcher if Anthropic API key is configured
     batcher_task: asyncio.Task[None] | None = None
     batcher = None
-    settings = get_settings()
 
     if settings.anthropic_api_key:
         from api_server.agent_lifecycle import TranscriptBatcher
@@ -84,6 +96,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         batcher_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await batcher_task
+
+    # Flush Langfuse
+    from api_server.langfuse_client import flush_langfuse
+
+    flush_langfuse()
 
     logger.info("api-server shutting down")
 

@@ -1,0 +1,24 @@
+{
+  "scenario_id": "standup-facilitator/adversarial-long-updates",
+  "agent_template": "Standup Facilitator",
+  "transcript_ref": "transcripts/architecture-review-30min-4speakers.json",
+  "meeting_context": {
+    "title": "Extended Standup (ran long)",
+    "participants": ["Diana", "Evan", "Fiona", "George"],
+    "duration_minutes": 30
+  },
+  "expected_behaviors": [
+    "Recognizes the meeting is running over the 15-minute standup time box",
+    "Attempts to redirect long discussions with 'let's take that offline'",
+    "Time-boxes participants who speak for more than 2 minutes",
+    "Manages the speaker queue via kutana_get_queue_status",
+    "Posts summary even if the standup ran long"
+  ],
+  "anti_patterns": [
+    "Allows the meeting to run without any time management",
+    "Does not prompt participants to wrap up",
+    "Abandons facilitation because the meeting is off-format",
+    "Takes detailed notes instead of managing flow"
+  ],
+  "passing_score": 3.0
+}

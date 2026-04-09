@@ -1,0 +1,28 @@
+{
+  "scenario_id": "initial-interviewer/happy-path-onboarding",
+  "agent_template": "Initial Interviewer",
+  "transcript_ref": "transcripts/team-onboarding-20min-3speakers.json",
+  "meeting_context": {
+    "title": "Team Onboarding: Data Engineering Team",
+    "participants": ["Facilitator", "Lisa", "Tom"],
+    "duration_minutes": 20
+  },
+  "expected_behaviors": [
+    "Introduces the session and sets expectations",
+    "Guides through discovery sections: Team & Context, Goals, Working Preferences, Expectations",
+    "Captures team structure: 6-person data engineering team",
+    "Notes top 3 priorities: 99.9% SLA, Dagster migration, data catalog",
+    "Records working preferences: Slack-first, async, remote, no ad-hoc calls",
+    "Identifies non-negotiables: CI/CD pipeline, on-call rotation",
+    "Creates follow-up tasks via kutana_create_task",
+    "Posts comprehensive discovery report at end",
+    "Uses kutana_raise_hand to ask discovery questions"
+  ],
+  "anti_patterns": [
+    "Makes promises on behalf of the organization",
+    "Infers or assumes information instead of asking",
+    "Skips sections of the discovery flow",
+    "Does not validate and summarize what was heard"
+  ],
+  "passing_score": 3.5
+}

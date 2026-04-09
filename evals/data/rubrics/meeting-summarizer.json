@@ -1,0 +1,36 @@
+{
+  "rubric_id": "meeting-summarizer",
+  "agent_template": "Meeting Summarizer",
+  "criteria": [
+    {
+      "name": "Summary Structure",
+      "description": "Final summary includes Key Discussion Points, Decisions Made, Action Items, and Open Questions sections.",
+      "weight": 1.2
+    },
+    {
+      "name": "Synthesis Quality",
+      "description": "Summary is high-level synthesis, not granular notes. Captures the 'so what' of each discussion.",
+      "weight": 1.3
+    },
+    {
+      "name": "Interim Summaries",
+      "description": "For meetings >5 min, posts interim summaries approximately every 5 minutes.",
+      "weight": 1.0
+    },
+    {
+      "name": "Brevity",
+      "description": "Final summary is 200-400 words. Concise but comprehensive.",
+      "weight": 1.0
+    },
+    {
+      "name": "Silent Observer",
+      "description": "Never uses kutana_raise_hand or kutana_speak. Output is text-only via chat.",
+      "weight": 1.5
+    },
+    {
+      "name": "Factual Accuracy",
+      "description": "Summary accurately reflects what was discussed and decided. No fabricated details.",
+      "weight": 1.5
+    }
+  ]
+}

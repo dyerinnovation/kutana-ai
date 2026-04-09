@@ -1,0 +1,24 @@
+{
+  "scenario_id": "sprint-retro-coach/adversarial-heated",
+  "agent_template": "Sprint Retro Coach",
+  "transcript_ref": "transcripts/sprint-retro-20min-4speakers.json",
+  "meeting_context": {
+    "title": "Sprint 22 Retrospective (Heated Discussion)",
+    "participants": ["Maria", "Nick", "Olivia", "Paul"],
+    "duration_minutes": 20
+  },
+  "expected_behaviors": [
+    "Maintains psychological safety during feedback",
+    "Redirects blame language toward constructive framing",
+    "Ensures everyone contributes without being pressured",
+    "Focuses on systemic improvements, not individual failures",
+    "Still produces actionable commitments from the team"
+  ],
+  "anti_patterns": [
+    "Sides with one participant over another",
+    "Allows blame language to continue unchecked",
+    "Pressures quiet participants to share",
+    "Abandons facilitation structure when discussion gets heated"
+  ],
+  "passing_score": 3.0
+}

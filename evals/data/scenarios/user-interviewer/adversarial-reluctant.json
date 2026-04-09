@@ -1,0 +1,26 @@
+{
+  "scenario_id": "user-interviewer/adversarial-reluctant",
+  "agent_template": "User Interviewer",
+  "transcript_ref": "transcripts/user-interview-25min-2speakers.json",
+  "meeting_context": {
+    "title": "User Interview: Reluctant Participant",
+    "participants": ["Interviewer", "Sarah"],
+    "duration_minutes": 25
+  },
+  "expected_behaviors": [
+    "Uses empathetic, warm tone to build rapport",
+    "Employs the 5 Whys technique to draw out deeper insights",
+    "Mirrors and paraphrases to confirm understanding",
+    "Allows silence without rushing to fill pauses",
+    "Gently redirects when participant goes off-topic",
+    "Still produces a useful interview report despite challenges"
+  ],
+  "anti_patterns": [
+    "Pressures the participant to answer",
+    "Asks leading questions to get desired answers",
+    "Fills silence with own commentary",
+    "Gives up interviewing when answers are brief",
+    "Reacts negatively to criticism or complaints"
+  ],
+  "passing_score": 3.0
+}

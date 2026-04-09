@@ -1,0 +1,36 @@
+{
+  "metadata": {
+    "title": "Team Onboarding: Data Engineering Team",
+    "duration_minutes": 20,
+    "speakers": ["Facilitator", "Lisa", "Tom"],
+    "type": "team-onboarding"
+  },
+  "segments": [
+    {"speaker": "Facilitator", "text": "Welcome Lisa and Tom. The goal of this session is to understand your team, your goals, and how we can work together effectively.", "timestamp_seconds": 0.0},
+    {"speaker": "Facilitator", "text": "Let's start with an overview. Tell me about your team.", "timestamp_seconds": 15.0},
+    {"speaker": "Lisa", "text": "We're the data engineering team. I'm the tech lead and Tom is our senior engineer. We have 6 people total — 4 engineers, a data analyst, and myself.", "timestamp_seconds": 28.0},
+    {"speaker": "Tom", "text": "Our main responsibility is the data pipeline infrastructure. We ingest data from 15 different sources, transform it, and make it available for analytics and ML teams.", "timestamp_seconds": 50.0},
+    {"speaker": "Facilitator", "text": "What's your team's primary mission?", "timestamp_seconds": 72.0},
+    {"speaker": "Lisa", "text": "Reliable, low-latency data delivery. Our SLA is 99.9% uptime and sub-5-minute latency from source to warehouse. We're currently at 99.7% so we have work to do.", "timestamp_seconds": 85.0},
+    {"speaker": "Facilitator", "text": "What are your top 3 priorities for the next quarter?", "timestamp_seconds": 110.0},
+    {"speaker": "Lisa", "text": "Number one is hitting our 99.9% SLA. Number two is migrating from Airflow to Dagster for our orchestration layer. Number three is building a self-serve data catalog.", "timestamp_seconds": 122.0},
+    {"speaker": "Tom", "text": "I'd add that the Dagster migration is the biggest risk. We have 200 Airflow DAGs to migrate and we need to do it without downtime.", "timestamp_seconds": 148.0},
+    {"speaker": "Facilitator", "text": "What does success look like for your team?", "timestamp_seconds": 170.0},
+    {"speaker": "Lisa", "text": "Success is when the analytics team can self-serve without filing tickets with us. Right now 40% of our time goes to ad-hoc data requests that should be self-serve.", "timestamp_seconds": 182.0},
+    {"speaker": "Facilitator", "text": "Let's talk about working preferences. How does your team communicate?", "timestamp_seconds": 210.0},
+    {"speaker": "Tom", "text": "Slack is primary. We have a team channel and a dedicated alerts channel. For decisions, we use RFCs in Notion. Meetings are minimal — one weekly sync and one biweekly retrospective.", "timestamp_seconds": 225.0},
+    {"speaker": "Lisa", "text": "We're a remote-first team across 3 time zones. Async communication is really important to us. We don't do ad-hoc video calls unless it's an incident.", "timestamp_seconds": 252.0},
+    {"speaker": "Facilitator", "text": "Are there tools or processes that are non-negotiable?", "timestamp_seconds": 278.0},
+    {"speaker": "Tom", "text": "Our CI/CD pipeline is non-negotiable. Every change goes through automated tests and staging before production. No exceptions, even for hotfixes.", "timestamp_seconds": 290.0},
+    {"speaker": "Lisa", "text": "Also our on-call rotation. Everyone on the team takes a turn, including me. It's important for shared ownership.", "timestamp_seconds": 312.0},
+    {"speaker": "Facilitator", "text": "What do you need from us to be successful?", "timestamp_seconds": 332.0},
+    {"speaker": "Lisa", "text": "Clear requirements and realistic timelines. The biggest pain point in the past has been getting requirements that change mid-sprint. We need at least 2 days of lead time for changes.", "timestamp_seconds": 345.0},
+    {"speaker": "Tom", "text": "And please don't go directly to individual engineers with requests. Route everything through Lisa or our Jira board so we can prioritize properly.", "timestamp_seconds": 370.0},
+    {"speaker": "Facilitator", "text": "Understood. Anything you'd like us to avoid?", "timestamp_seconds": 395.0},
+    {"speaker": "Lisa", "text": "Avoid scheduling meetings before 10am Pacific or after 4pm Eastern. Those are our cross-timezone overlap hours and they're reserved for collaboration.", "timestamp_seconds": 405.0},
+    {"speaker": "Facilitator", "text": "Great. Let me summarize what I've heard and we'll confirm the next steps.", "timestamp_seconds": 430.0},
+    {"speaker": "Facilitator", "text": "You're a 6-person remote data engineering team focused on reliable data pipelines. Top priorities: hit 99.9% SLA, migrate to Dagster, build data catalog. You prefer async Slack communication, require CI/CD for all changes, and need 2-day lead time on requirements.", "timestamp_seconds": 445.0},
+    {"speaker": "Lisa", "text": "That's accurate. One thing to add — we'd like a recurring monthly check-in with your team to stay aligned.", "timestamp_seconds": 480.0},
+    {"speaker": "Facilitator", "text": "We'll set that up. Thanks Lisa and Tom — this was very helpful.", "timestamp_seconds": 500.0}
+  ]
+}

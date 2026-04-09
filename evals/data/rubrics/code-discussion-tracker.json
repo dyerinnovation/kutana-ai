@@ -1,0 +1,36 @@
+{
+  "rubric_id": "code-discussion-tracker",
+  "agent_template": "Code Discussion Tracker",
+  "criteria": [
+    {
+      "name": "Technical Reference Extraction",
+      "description": "Correctly identifies and captures file paths, function names, class names, APIs, libraries, and other code references.",
+      "weight": 1.5
+    },
+    {
+      "name": "Architecture Decision Capture",
+      "description": "Identifies architecture decisions with context, rationale, and alternatives discussed.",
+      "weight": 1.3
+    },
+    {
+      "name": "Technical Debt Identification",
+      "description": "Flags technical debt items and follow-ups identified during discussion.",
+      "weight": 1.0
+    },
+    {
+      "name": "Structured Output",
+      "description": "Posts structured Technical Discussion blocks and a consolidated Technical Digest at end.",
+      "weight": 1.2
+    },
+    {
+      "name": "Non-Technical Silence",
+      "description": "Stays silent or minimal when the meeting is non-technical. Does not force technical extraction.",
+      "weight": 1.0
+    },
+    {
+      "name": "Silent Observer",
+      "description": "Never uses kutana_raise_hand or kutana_speak. Output via chat only.",
+      "weight": 1.5
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{{- if .Values.langfuse.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: langfuse
+  labels:
+    {{- include "kutana.labels" . | nindent 4 }}
+    app.kubernetes.io/name: langfuse
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: langfuse
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: langfuse
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: langfuse
+          image: "{{ .Values.langfuse.image.repository }}:{{ .Values.langfuse.image.tag }}"
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://{{ .Values.langfuse.postgres.credentials.username }}:{{ .Values.langfuse.postgres.credentials.password }}@langfuse-postgres.{{ .Release.Namespace }}.svc:5432/{{ .Values.langfuse.postgres.credentials.database }}"
+            - name: NEXTAUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kutana.fullname" . }}-langfuse-secret
+                  key: NEXTAUTH_SECRET
+            - name: SALT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kutana.fullname" . }}-langfuse-secret
+                  key: SALT
+            - name: NEXTAUTH_URL
+              value: {{ .Values.langfuse.env.NEXTAUTH_URL | quote }}
+            - name: TELEMETRY_ENABLED
+              value: {{ .Values.langfuse.env.TELEMETRY_ENABLED | quote }}
+          readinessProbe:
+            httpGet:
+              path: /api/public/health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/public/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.langfuse.resources | nindent 12 }}
+{{- end }}

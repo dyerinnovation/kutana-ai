@@ -1,0 +1,22 @@
+{
+  "scenario_id": "standup-facilitator/edge-case-two-people",
+  "agent_template": "Standup Facilitator",
+  "transcript_ref": "transcripts/silent-meeting-5min-2speakers.json",
+  "meeting_context": {
+    "title": "Quick Sync",
+    "participants": ["Alice", "Bob"],
+    "duration_minutes": 5
+  },
+  "expected_behaviors": [
+    "Adapts to a 2-person meeting (skips formal rotation)",
+    "Simply asks for updates rather than rigid facilitation",
+    "Keeps facilitation lightweight for the small group",
+    "Still posts a brief summary at the end"
+  ],
+  "anti_patterns": [
+    "Uses full formal standup rotation for 2 people",
+    "Over-facilitates a brief, casual exchange",
+    "Ignores the meeting entirely due to small size"
+  ],
+  "passing_score": 3.0
+}

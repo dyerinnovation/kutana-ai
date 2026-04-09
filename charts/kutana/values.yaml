@@ -140,12 +140,42 @@ web:
       memory: 128Mi
 
 # ---------------------------------------------------------------------------
+# Langfuse (self-hosted observability for LLM traces)
+# ---------------------------------------------------------------------------
+langfuse:
+  enabled: true
+  image:
+    repository: langfuse/langfuse
+    tag: "3"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  env:
+    NEXTAUTH_URL: "http://langfuse.spark-b0f2.local"
+    TELEMETRY_ENABLED: "false"
+  postgres:
+    image:
+      repository: postgres
+      tag: 16-alpine
+    persistence:
+      size: 5Gi
+    credentials:
+      database: langfuse
+      username: langfuse
+      password: langfuse
+
+# ---------------------------------------------------------------------------
 # Observability
 # ---------------------------------------------------------------------------
 observability:
   sentryDsn: ""
   slackWebhookUrl: ""
   logFormat: "json"
+  langfusePublicKey: ""
 
 # ---------------------------------------------------------------------------
 # Secrets (base64-encoded values — override at install time)
@@ -159,6 +189,9 @@ secrets:
   stripeWebhookSecret: ""
   slackClientId: ""
   slackClientSecret: ""
+  langfuseNextauthSecret: ""
+  langfuseSalt: ""
+  langfuseSecretKey: ""
 
 # ---------------------------------------------------------------------------
 # Stripe Billing (non-secret config — populate from scripts/stripe_setup.py)
@@ -189,6 +222,9 @@ minio:
     rootUser: kutana
     rootPassword: kutana-minio-secret
   defaultBucket: "kutana-uploads"
+  evalBucket:
+    create: true
+    name: "kutana-eval-data"
 
 # S3-compatible storage config (consumed by api-server)
 storage:

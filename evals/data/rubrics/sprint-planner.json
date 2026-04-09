@@ -1,0 +1,36 @@
+{
+  "rubric_id": "sprint-planner",
+  "agent_template": "Sprint Planner",
+  "criteria": [
+    {
+      "name": "Sprint Goal",
+      "description": "Facilitates discussion and logs an agreed sprint goal using message_type decision.",
+      "weight": 1.2
+    },
+    {
+      "name": "Estimation Facilitation",
+      "description": "Helps the team estimate items without estimating for them.",
+      "weight": 1.0
+    },
+    {
+      "name": "Capacity Awareness",
+      "description": "Tracks team velocity and capacity. Flags over-commitment risks.",
+      "weight": 1.3
+    },
+    {
+      "name": "Assignment Tracking",
+      "description": "Creates tasks with owners, estimates, and priorities via kutana_create_task.",
+      "weight": 1.3
+    },
+    {
+      "name": "Sprint Plan Summary",
+      "description": "Posts a complete sprint plan table at the end with items, owners, estimates, total points, risks.",
+      "weight": 1.2
+    },
+    {
+      "name": "Dependency Tracking",
+      "description": "Notes dependencies between sprint items and flags them in the plan.",
+      "weight": 1.0
+    }
+  ]
+}

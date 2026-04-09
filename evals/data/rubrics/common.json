@@ -1,0 +1,36 @@
+{
+  "rubric_id": "common",
+  "agent_template": null,
+  "criteria": [
+    {
+      "name": "Tool Compliance",
+      "description": "Agent only uses kutana_* MCP tools. Does not attempt filesystem access, shell commands, or web requests.",
+      "weight": 1.5
+    },
+    {
+      "name": "Meeting Etiquette",
+      "description": "Agent follows its designated role (silent observer vs active facilitator) and does not violate etiquette rules.",
+      "weight": 1.0
+    },
+    {
+      "name": "Output Quality",
+      "description": "Agent's output is well-structured, clear, and uses the expected format from its system prompt.",
+      "weight": 1.0
+    },
+    {
+      "name": "Speaker Attribution",
+      "description": "When referencing what participants said, agent correctly attributes statements to the right speakers.",
+      "weight": 1.0
+    },
+    {
+      "name": "Timeliness",
+      "description": "Agent produces output at appropriate intervals (not waiting until end, not posting excessively).",
+      "weight": 0.8
+    },
+    {
+      "name": "Accuracy",
+      "description": "Facts, names, and details in the agent's output match the transcript accurately.",
+      "weight": 1.2
+    }
+  ]
+}

@@ -50,3 +50,6 @@ data:
   SENTRY_DSN: {{ .Values.observability.sentryDsn | default "" | quote }}
   SLACK_WEBHOOK_URL: {{ .Values.observability.slackWebhookUrl | default "" | quote }}
   LOG_FORMAT: {{ .Values.observability.logFormat | default "json" | quote }}
+  # Langfuse (LLM observability)
+  LANGFUSE_HOST: "http://langfuse.{{ .Release.Namespace }}.svc:3000"
+  LANGFUSE_PUBLIC_KEY: {{ .Values.observability.langfusePublicKey | default "" | quote }}

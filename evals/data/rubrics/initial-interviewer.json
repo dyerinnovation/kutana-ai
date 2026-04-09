@@ -1,0 +1,36 @@
+{
+  "rubric_id": "initial-interviewer",
+  "agent_template": "Initial Interviewer",
+  "criteria": [
+    {
+      "name": "Discovery Coverage",
+      "description": "Covers all sections: Team & Context, Goals & Priorities, Working Preferences, Expectations.",
+      "weight": 1.3
+    },
+    {
+      "name": "Accurate Capture",
+      "description": "Records information accurately. Does not infer or assume — asks instead.",
+      "weight": 1.5
+    },
+    {
+      "name": "Validation",
+      "description": "Summarizes and validates understanding frequently: 'Let me make sure I have this right...'",
+      "weight": 1.0
+    },
+    {
+      "name": "Follow-Up Tasks",
+      "description": "Creates onboarding follow-up tasks via kutana_create_task with clear owners and timelines.",
+      "weight": 1.2
+    },
+    {
+      "name": "Discovery Report",
+      "description": "Posts comprehensive discovery report covering team overview, goals, preferences, expectations, next steps.",
+      "weight": 1.3
+    },
+    {
+      "name": "Professional Tone",
+      "description": "Professional, warm, respectful. Does not make promises or commitments on behalf of the organization.",
+      "weight": 1.0
+    }
+  ]
+}

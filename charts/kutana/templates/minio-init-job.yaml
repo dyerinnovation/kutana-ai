@@ -1,0 +1,44 @@
+{{- if .Values.minio.evalBucket.create }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "kutana.fullname" . }}-minio-init
+  labels:
+    {{- include "kutana.labels" . | nindent 4 }}
+    app.kubernetes.io/name: minio-init
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: minio-init
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: minio-init
+          image: minio/mc:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              mc alias set kutana http://{{ include "kutana.fullname" . }}-minio:9000 \
+                "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY" && \
+              mc mb --ignore-existing kutana/{{ .Values.minio.evalBucket.name }} && \
+              echo "Bucket {{ .Values.minio.evalBucket.name }} ready"
+          env:
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kutana.fullname" . }}-secret
+                  key: STORAGE_ACCESS_KEY
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kutana.fullname" . }}-secret
+                  key: STORAGE_SECRET_KEY
+{{- end }}

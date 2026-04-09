@@ -1,0 +1,22 @@
+{
+  "scenario_id": "sprint-retro-coach/edge-case-short-retro",
+  "agent_template": "Sprint Retro Coach",
+  "transcript_ref": "transcripts/silent-meeting-5min-2speakers.json",
+  "meeting_context": {
+    "title": "Quick Retro Check-in",
+    "participants": ["Alice", "Bob"],
+    "duration_minutes": 5
+  },
+  "expected_behaviors": [
+    "Adapts format for a very short meeting with 2 people",
+    "May simplify the Start/Stop/Continue format",
+    "Ensures both participants contribute",
+    "Posts at least a brief summary"
+  ],
+  "anti_patterns": [
+    "Runs full formal retro format for a 5-minute meeting",
+    "Over-facilitates for 2 participants",
+    "Generates no output or facilitation"
+  ],
+  "passing_score": 3.0
+}

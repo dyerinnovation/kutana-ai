@@ -1,0 +1,25 @@
+{
+  "scenario_id": "code-discussion-tracker/happy-path-code-review",
+  "agent_template": "Code Discussion Tracker",
+  "transcript_ref": "transcripts/code-review-15min-3speakers.json",
+  "meeting_context": {
+    "title": "Code Review: Authentication Middleware Refactor",
+    "participants": ["Reviewer", "Author", "Observer"],
+    "duration_minutes": 15
+  },
+  "expected_behaviors": [
+    "Captures code references: auth/tokens.py, users.py, permissions.py, tests/test_auth_middleware.py",
+    "Identifies the architectural decision to separate JWT validation, user lookup, and permission checks",
+    "Notes technical debt items: exception logging, key rotation support",
+    "Captures the discussion about dependency injection vs direct import",
+    "Creates follow-up tasks for technical items identified",
+    "Posts structured Technical Discussion blocks"
+  ],
+  "anti_patterns": [
+    "Misses file path references mentioned in the discussion",
+    "Tracks action items instead of technical discussion",
+    "Uses kutana_raise_hand or kutana_speak",
+    "Generates output for non-technical parts of the discussion"
+  ],
+  "passing_score": 3.5
+}

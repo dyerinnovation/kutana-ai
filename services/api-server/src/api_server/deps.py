@@ -90,6 +90,11 @@ class Settings(BaseSettings):
     slack_webhook_url: str = ""
     log_format: str = "json"  # "json" or "text"
 
+    # Langfuse (LLM observability)
+    langfuse_secret_key: str = ""
+    langfuse_public_key: str = ""
+    langfuse_host: str = "http://localhost:3100"
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

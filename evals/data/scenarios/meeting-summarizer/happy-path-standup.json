@@ -1,0 +1,24 @@
+{
+  "scenario_id": "meeting-summarizer/happy-path-standup",
+  "agent_template": "Meeting Summarizer",
+  "transcript_ref": "transcripts/standup-10min-3speakers.json",
+  "meeting_context": {
+    "title": "Daily Standup",
+    "participants": ["Alice", "Bob", "Charlie"],
+    "duration_minutes": 10
+  },
+  "expected_behaviors": [
+    "Produces a final summary with Key Discussion Points, Decisions, Action Items, and Open Questions",
+    "Captures each person's yesterday/today/blockers",
+    "Identifies Bob's Redis access blocker as an action item",
+    "Notes the sprint review reminder for Friday 2pm",
+    "Summary is 200-400 words and concise"
+  ],
+  "anti_patterns": [
+    "Uses kutana_raise_hand or kutana_speak",
+    "Produces granular notes instead of summary (duplicates Notetaker)",
+    "Misses the blocker about Redis cluster access",
+    "Generates an excessively long summary for a 10-minute meeting"
+  ],
+  "passing_score": 3.5
+}
