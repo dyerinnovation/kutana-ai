@@ -111,16 +111,14 @@ async def judge_agent_response(
         model=JUDGE_MODEL,
         max_tokens=JUDGE_MAX_TOKENS,
         system=JUDGE_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_content}],
+        messages=[
+            {"role": "user", "content": user_content},
+            {"role": "assistant", "content": "{"},
+        ],
     )
 
-    raw_text = response.content[0].text
-    # Strip markdown fences if the model wrapped its JSON
-    cleaned = raw_text.strip()
-    if cleaned.startswith("```"):
-        cleaned = cleaned.split("\n", 1)[1]  # drop ```json line
-        cleaned = cleaned.rsplit("```", 1)[0]  # drop trailing ```
-    parsed = json.loads(cleaned)
+    raw_text = "{" + response.content[0].text
+    parsed = json.loads(raw_text)
 
     scores = [
         JudgeScore(
