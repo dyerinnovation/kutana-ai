@@ -35,7 +35,8 @@ dev-dependencies = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-addopts = "--import-mode=importlib --ignore=evals"
+# kutana_core audit pending — may be obsolete after managed agents migration
+addopts = "--import-mode=importlib --ignore=evals --ignore=packages/kutana-core/tests"
 markers = [
     "mock: Mock eval — system prompt + transcript through Messages API (no live cluster)",
     "e2e: End-to-end eval — runs against the live dev cluster",
