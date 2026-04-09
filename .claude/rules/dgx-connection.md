@@ -47,6 +47,13 @@ SSH is still used for git pull and image builds (which run on DGX):
 ssh dgx '<command>'
 ```
 
+## Langfuse (LLM Observability)
+
+- **UI:** `http://langfuse.spark-b0f2.local` — login: `admin@kutana.ai`
+- **Credentials:** `~/Documents/dev/z-api-keys-and-tokens/langfuse-credentials.md`
+- **Public Key:** `pk-lf-77c5dc94-c77b-49a8-8db4-2b5cacf27ca2`
+- **In-cluster host:** `http://langfuse.kutana.svc:3000`
+
 ## Key Facts
 
 - **kubectl/helm:** configured locally via `~/.kube/config` — run them directly, no SSH needed
