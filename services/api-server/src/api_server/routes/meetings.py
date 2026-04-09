@@ -287,7 +287,7 @@ async def start_meeting(
     """Start a meeting (transition from scheduled to active).
 
     Publishes a MeetingStarted event to Redis Streams so the
-    TranscriptBatcher can notify managed agent sessions.
+    MeetingEventRelay can notify managed agent sessions.
 
     Args:
         meeting_id: The UUID of the meeting to start.
@@ -335,7 +335,7 @@ async def end_meeting(
     """End a meeting (transition from active to completed).
 
     Publishes a MeetingEnded event to Redis Streams so the
-    TranscriptBatcher can close managed agent sessions and record billing.
+    MeetingEventRelay can close managed agent sessions and record billing.
 
     Args:
         meeting_id: The UUID of the meeting to end.

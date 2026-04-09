@@ -2,7 +2,7 @@
 
 Connects meeting events to Anthropic managed agent sessions:
 - on_meeting_started: notifies active agents with meeting context
-- TranscriptBatcher: batches transcript segments (30s windows) and pushes to agents
+- MeetingEventRelay: forwards real-time transcript segments to all active agents
 - on_meeting_ended: sends final summary request, closes sessions, records billing
 - Event bridge: streams Anthropic session events and publishes to Redis for
   the gateway EventRelay to forward to browser WebSocket clients.
@@ -45,9 +45,6 @@ GROUP_NAME = "agent-lifecycle"
 BLOCK_MS = 5_000
 BATCH_SIZE = 10
 _MAX_BACKOFF_SECONDS = 30
-
-# Transcript batching window (seconds)
-TRANSCRIPT_WINDOW_SECONDS = 30.0
 
 # Event types we forward from Anthropic sessions to the frontend
 _FORWARDED_EVENT_TYPES = frozenset(
@@ -561,17 +558,19 @@ async def _record_usage(
 
 
 # ---------------------------------------------------------------------------
-# Transcript batcher (Redis Stream consumer)
+# Real-time transcript relay (Redis Stream consumer)
 # ---------------------------------------------------------------------------
 
 
-class TranscriptBatcher:
-    """Batches transcript segments from Redis Streams and pushes to agents.
+class MeetingEventRelay:
+    """Forwards real-time transcript segments to all active managed agents.
 
-    Reads transcript.segment.final events from the kutana:events stream,
-    accumulates them per-meeting in 30-second windows, and sends batched
-    transcript text to all active Anthropic managed agent sessions for
-    that meeting.
+    Reads transcript.segment.final events from the kutana:events stream
+    and immediately relays each segment to every active Anthropic managed
+    agent session for that meeting. No buffering — agents receive segments
+    as they arrive from STT.
+
+    Also handles meeting.started and meeting.ended lifecycle events.
 
     Uses a Redis consumer group so multiple instances share the workload.
 
@@ -587,7 +586,7 @@ class TranscriptBatcher:
         api_key: str,
         db_factory: async_sessionmaker[AsyncSession],
     ) -> None:
-        """Initialise the transcript batcher.
+        """Initialise the meeting event relay.
 
         Args:
             redis_url: Redis connection URL.
@@ -601,12 +600,8 @@ class TranscriptBatcher:
         self._stop_event = asyncio.Event()
         self._redis: aioredis.Redis[str] | None = None
 
-        # Per-meeting segment buffer: {meeting_id: [(speaker, text, timestamp)]}
-        self._buffers: dict[UUID, list[tuple[str, str, float]]] = {}
-        self._last_flush: dict[UUID, float] = {}
-
     async def start(self) -> None:
-        """Connect to Redis and begin consuming transcript events.
+        """Connect to Redis and begin consuming meeting events.
 
         Runs until stop() is called. Intended to be wrapped in
         asyncio.create_task() by the service lifespan.
@@ -614,7 +609,7 @@ class TranscriptBatcher:
         self._stop_event.clear()
         self._redis = aioredis.from_url(self._redis_url, decode_responses=True)
         logger.info(
-            "TranscriptBatcher starting (stream=%s, group=%s)",
+            "MeetingEventRelay starting (stream=%s, group=%s)",
             STREAM_KEY,
             GROUP_NAME,
         )
@@ -623,14 +618,11 @@ class TranscriptBatcher:
             await self._ensure_group()
             await self._consume_loop()
         finally:
-            # Flush remaining buffers on shutdown
-            for meeting_id in list(self._buffers):
-                await self._flush_buffer(meeting_id)
             await self._close_redis()
 
     async def stop(self) -> None:
         """Signal the consume loop to exit."""
-        logger.info("TranscriptBatcher stop requested")
+        logger.info("MeetingEventRelay stop requested")
         self._stop_event.set()
 
     async def _ensure_group(self) -> None:
@@ -664,19 +656,14 @@ class TranscriptBatcher:
                 backoff = 1.0
 
                 if not response:
-                    # Check for time-based flushes even when no new events
-                    await self._check_window_flushes()
                     continue
 
                 for _stream_name, entries in response:
                     for entry_id, fields in entries:
                         await self._handle_entry(entry_id, fields)
 
-                # Check for time-based flushes after processing entries
-                await self._check_window_flushes()
-
             except asyncio.CancelledError:
-                logger.info("TranscriptBatcher cancelled")
+                logger.info("MeetingEventRelay cancelled")
                 raise
             except RedisConnectionError as exc:
                 if self._stop_event.is_set():
@@ -692,7 +679,7 @@ class TranscriptBatcher:
                 self._redis = aioredis.from_url(self._redis_url, decode_responses=True)
                 await self._ensure_group()
             except Exception:
-                logger.exception("Unexpected error in transcript batcher")
+                logger.exception("Unexpected error in meeting event relay")
                 await asyncio.sleep(backoff)
                 backoff = min(backoff * 2, _MAX_BACKOFF_SECONDS)
 
@@ -701,10 +688,7 @@ class TranscriptBatcher:
         entry_id: str,
         fields: dict[str, str],
     ) -> None:
-        """Process a single stream entry — buffer transcript segments.
-
-        Also handles meeting.started and meeting.ended events to trigger
-        lifecycle actions.
+        """Process a single stream entry — relay transcript or handle lifecycle.
 
         Args:
             entry_id: Redis stream entry ID.
@@ -715,7 +699,7 @@ class TranscriptBatcher:
         raw_payload = fields.get("payload", "")
 
         if event_type == "transcript.segment.final":
-            await self._buffer_segment(raw_payload)
+            await self._relay_segment(raw_payload)
         elif event_type == "meeting.started":
             await self._handle_meeting_started(raw_payload)
         elif event_type == "meeting.ended":
@@ -724,8 +708,10 @@ class TranscriptBatcher:
         # Acknowledge regardless of event type
         await self._redis.xack(STREAM_KEY, GROUP_NAME, entry_id)
 
-    async def _buffer_segment(self, raw_payload: str) -> None:
-        """Parse and buffer a transcript segment.
+    async def _relay_segment(self, raw_payload: str) -> None:
+        """Parse a transcript segment and forward it to all active agents.
+
+        Each segment is sent immediately — no buffering or batching.
 
         Args:
             raw_payload: JSON string of the TranscriptSegmentFinal event.
@@ -753,54 +739,11 @@ class TranscriptBatcher:
         if not text.strip():
             return
 
-        if meeting_id not in self._buffers:
-            self._buffers[meeting_id] = []
-            self._last_flush[meeting_id] = asyncio.get_event_loop().time()
+        minutes = int(timestamp // 60)
+        seconds = int(timestamp % 60)
+        segment_text = f"[{minutes:02d}:{seconds:02d}] {speaker}: {text}"
 
-        self._buffers[meeting_id].append((speaker, text, timestamp))
-
-    async def _check_window_flushes(self) -> None:
-        """Flush buffers that have accumulated for >= TRANSCRIPT_WINDOW_SECONDS."""
-        now = asyncio.get_event_loop().time()
-        for meeting_id in list(self._buffers):
-            last = self._last_flush.get(meeting_id, now)
-            if now - last >= TRANSCRIPT_WINDOW_SECONDS:
-                await self._flush_buffer(meeting_id)
-
-    async def _flush_buffer(self, meeting_id: UUID) -> None:
-        """Send buffered transcript segments to active agents for a meeting.
-
-        Args:
-            meeting_id: Meeting whose buffer to flush.
-        """
-        from api_server.langfuse_client import create_trace
-
-        segments = self._buffers.pop(meeting_id, [])
-        self._last_flush.pop(meeting_id, None)
-
-        if not segments:
-            return
-
-        trace = create_trace(
-            name="transcript-flush",
-            metadata={
-                "meeting_id": str(meeting_id),
-                "segment_count": len(segments),
-            },
-            tags=["lifecycle", "transcript-flush"],
-            session_id=str(meeting_id),
-        )
-
-        # Format transcript batch
-        lines: list[str] = []
-        for speaker, text, ts in segments:
-            minutes = int(ts // 60)
-            seconds = int(ts % 60)
-            lines.append(f"[{minutes:02d}:{seconds:02d}] {speaker}: {text}")
-
-        transcript_text = f"## Transcript Update (meeting {meeting_id})\n\n" + "\n".join(lines)
-
-        # Find active hosted sessions with template names
+        # Find active hosted sessions for this meeting
         async with self._db_factory() as db:
             result = await db.execute(
                 select(
@@ -818,8 +761,7 @@ class TranscriptBatcher:
 
         for anthropic_session_id, template_name in rows:
             try:
-                await send_message(self._api_key, anthropic_session_id, transcript_text)
-                # Start streaming agent response events → Redis → browser
+                await send_message(self._api_key, anthropic_session_id, segment_text)
                 if self._redis is not None:
                     start_event_streaming(
                         self._api_key,
@@ -830,24 +772,9 @@ class TranscriptBatcher:
                     )
             except Exception:
                 logger.exception(
-                    "Failed to send transcript batch to session %s",
+                    "Failed to relay segment to session %s",
                     anthropic_session_id,
                 )
-
-        if trace is not None:
-            trace.update(
-                output={
-                    "segments_flushed": len(segments),
-                    "agents_notified": len(rows),
-                }
-            )
-
-        logger.info(
-            "Flushed %d transcript segments to %d agent(s) for meeting %s",
-            len(segments),
-            len(rows),
-            meeting_id,
-        )
 
     async def _handle_meeting_started(self, raw_payload: str) -> None:
         """Handle meeting.started event — send context to agents.
@@ -879,9 +806,6 @@ class TranscriptBatcher:
             logger.warning("Malformed meeting.ended payload")
             return
 
-        # Flush any remaining transcript segments first
-        await self._flush_buffer(meeting_id)
-
         async with self._db_factory() as db:
             await on_meeting_ended(meeting_id, db, self._api_key, redis_conn=self._redis)
             await db.commit()
@@ -891,3 +815,7 @@ class TranscriptBatcher:
         if self._redis is not None:
             await self._redis.aclose()
             self._redis = None
+
+
+# Backwards-compatible alias
+TranscriptBatcher = MeetingEventRelay

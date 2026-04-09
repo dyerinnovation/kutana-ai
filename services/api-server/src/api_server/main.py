@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Manage application startup and shutdown lifecycle.
 
-    Starts the TranscriptBatcher background task for managed agent
+    Starts the MeetingEventRelay background task for managed agent
     lifecycle wiring, and shuts it down gracefully on exit.
 
     Args:
@@ -68,34 +68,34 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     else:
         logger.info("LANGFUSE keys not set — Langfuse tracing disabled")
 
-    # Start the transcript batcher if Anthropic API key is configured
-    batcher_task: asyncio.Task[None] | None = None
-    batcher = None
+    # Start the meeting event relay if Anthropic API key is configured
+    relay_task: asyncio.Task[None] | None = None
+    relay = None
 
     if settings.anthropic_api_key:
-        from api_server.agent_lifecycle import TranscriptBatcher
+        from api_server.agent_lifecycle import MeetingEventRelay
         from api_server.deps import _build_session_factory
 
         db_factory = _build_session_factory(settings)
-        batcher = TranscriptBatcher(
+        relay = MeetingEventRelay(
             redis_url=settings.redis_url,
             api_key=settings.anthropic_api_key,
             db_factory=db_factory,
         )
-        batcher_task = asyncio.create_task(batcher.start())
-        logger.info("TranscriptBatcher started")
+        relay_task = asyncio.create_task(relay.start())
+        logger.info("MeetingEventRelay started")
     else:
-        logger.info("ANTHROPIC_API_KEY not set — TranscriptBatcher disabled")
+        logger.info("ANTHROPIC_API_KEY not set — MeetingEventRelay disabled")
 
     yield
 
     # Shutdown
-    if batcher is not None:
-        await batcher.stop()
-    if batcher_task is not None:
-        batcher_task.cancel()
+    if relay is not None:
+        await relay.stop()
+    if relay_task is not None:
+        relay_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
-            await batcher_task
+            await relay_task
 
     # Flush Langfuse
     from api_server.langfuse_client import flush_langfuse

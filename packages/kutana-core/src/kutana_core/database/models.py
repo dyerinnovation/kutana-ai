@@ -552,6 +552,9 @@ class AgentTemplateORM(Base):
     category: Mapped[str] = mapped_column(sa.String(50), nullable=False, default="general")
     is_premium: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False)
     tier: Mapped[str] = mapped_column(sa.String(20), nullable=False, server_default="basic")
+    participation_mode: Mapped[str] = mapped_column(
+        sa.String(20), nullable=False, server_default="observer"
+    )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
     )
