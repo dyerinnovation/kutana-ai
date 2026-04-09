@@ -252,6 +252,12 @@
 
 ---
 
+## Tech Debt: kutana-core Cleanup
+
+- [ ] Audit and clean up `kutana_core` post-managed-agents migration — see `internal-docs/development/kutana-core-audit.md` for the full audit and per-module recommendations (deprecate AgentSession, AgentConfig, AgentParticipant; consolidate agent-related ORM schemas)
+
+---
+
 ## Phase 3: Meeting Intelligence & Agent Integration
 
 - [ ] 🔗 BLOCK: Portable Message Bus Abstraction
