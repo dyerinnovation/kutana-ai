@@ -3,6 +3,8 @@
 Simulates agent behavior by sending the agent's system prompt and a
 synthetic transcript through the Anthropic Messages API with Kutana
 tool definitions, then captures the resulting tool_use blocks.
+
+Optionally traces each eval run to Langfuse when a client is provided.
 """
 
 from __future__ import annotations
@@ -15,6 +17,8 @@ from typing import TYPE_CHECKING, Any
 import anthropic
 
 if TYPE_CHECKING:
+    from langfuse import Langfuse
+
     from evals.models import Scenario, TranscriptSegment
 
 logger = logging.getLogger(__name__)
@@ -253,7 +257,8 @@ async def run_mock_eval(
     api_key: str | None = None,
     model: str = DEFAULT_MODEL,
     max_turns: int = 5,
-) -> tuple[str, list[dict[str, Any]]]:
+    langfuse: Langfuse | None = None,
+) -> tuple[str, list[dict[str, Any]], str | None]:
     """Run a mock eval: send system prompt + transcript, capture tool_use blocks.
 
     Performs a multi-turn conversation with the model, providing synthetic
@@ -266,9 +271,11 @@ async def run_mock_eval(
         api_key: Anthropic API key. Uses env var if None.
         model: Model to use for the eval.
         max_turns: Maximum conversation turns.
+        langfuse: Optional Langfuse client for tracing.
 
     Returns:
-        Tuple of (formatted agent response text, list of tool_use blocks).
+        Tuple of (formatted agent response text, list of tool_use blocks,
+        Langfuse trace ID or None if tracing disabled).
     """
     client = anthropic.AsyncAnthropic(api_key=api_key) if api_key else anthropic.AsyncAnthropic()
 
@@ -281,6 +288,23 @@ async def run_mock_eval(
 
     transcript_text = format_transcript(transcript_segments, context_header)
 
+    # Create Langfuse trace for this eval run (one trace per scenario;
+    # the judge attaches to this same trace via trace_id).
+    trace = None
+    if langfuse is not None:
+        trace = langfuse.trace(
+            name=f"eval/{scenario.agent_template}/{scenario.scenario_id}",
+            metadata={
+                "scenario_id": scenario.scenario_id,
+                "agent_template": scenario.agent_template,
+                "model": model,
+                "meeting_title": ctx.title,
+                "participant_count": len(ctx.participants),
+            },
+            tags=["eval", "mock", scenario.agent_template.lower().replace(" ", "-")],
+            session_id=scenario.scenario_id,
+        )
+
     messages: list[dict[str, Any]] = [
         {"role": "user", "content": transcript_text},
     ]
@@ -288,7 +312,17 @@ async def run_mock_eval(
     all_tool_calls: list[dict[str, Any]] = []
     all_text_parts: list[str] = []
 
-    for _turn in range(max_turns):
+    for turn in range(max_turns):
+        # Create a generation span for each API call
+        generation = None
+        if trace is not None:
+            generation = trace.generation(
+                name=f"agent-turn-{turn}",
+                model=model,
+                input=messages[-1]["content"][:500] if messages else "",
+                metadata={"turn": turn},
+            )
+
         response = await client.messages.create(
             model=model,
             max_tokens=DEFAULT_MAX_TOKENS,
@@ -313,6 +347,16 @@ async def run_mock_eval(
                     }
                 )
 
+        # End generation span with output and usage
+        if generation is not None:
+            generation.end(
+                output="\n".join(text_parts) or f"[{len(tool_use_blocks)} tool calls]",
+                usage={
+                    "input": response.usage.input_tokens,
+                    "output": response.usage.output_tokens,
+                },
+            )
+
         all_text_parts.extend(text_parts)
         all_tool_calls.extend(tool_use_blocks)
 
@@ -332,4 +376,15 @@ async def run_mock_eval(
         for tc in all_tool_calls:
             agent_response += f"- {tc['name']}({json.dumps(tc['input'], indent=2)})\n"
 
-    return agent_response, all_tool_calls
+    # Update trace with final output
+    if trace is not None:
+        trace.update(
+            output={
+                "tool_call_count": len(all_tool_calls),
+                "turns": min(turn + 1, max_turns),
+                "response_length": len(agent_response),
+            },
+        )
+
+    trace_id = trace.id if trace is not None else None
+    return agent_response, all_tool_calls, trace_id

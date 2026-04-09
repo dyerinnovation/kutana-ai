@@ -56,6 +56,7 @@ async def test_pro_agent_mock(
     system_prompts: dict[str, str],
     all_rubrics: dict[str, Rubric],
     anthropic_api_key: str,
+    langfuse_client: object,
 ) -> None:
     """Run mock eval for a Pro tier agent scenario."""
     prompt = system_prompts.get(scenario.agent_template)
@@ -67,11 +68,12 @@ async def test_pro_agent_mock(
         pytest.skip(f"Transcript not found: {scenario.transcript_ref}")
     segments = load_transcript(transcript_path)
 
-    agent_response, _tool_calls = await run_mock_eval(
+    agent_response, _tool_calls, trace_id = await run_mock_eval(
         system_prompt=prompt,
         scenario=scenario,
         transcript_segments=segments,
         api_key=anthropic_api_key,
+        langfuse=langfuse_client,
     )
 
     rubric = get_rubric_for_agent(scenario.agent_template, all_rubrics)
@@ -88,6 +90,8 @@ async def test_pro_agent_mock(
         transcript_text=transcript_text,
         agent_response=agent_response,
         api_key=anthropic_api_key,
+        langfuse=langfuse_client,
+        trace_id=trace_id,
     )
 
     assert result.overall_score >= scenario.passing_score, (

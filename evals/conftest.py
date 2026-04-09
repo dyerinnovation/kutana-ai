@@ -6,6 +6,7 @@ Provides fixtures for MinIO, Langfuse, Anthropic, and dev cluster access.
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
 
@@ -14,6 +15,14 @@ import pytest
 from evals.e2e_runner import E2ERunner
 from evals.minio_client import EvalMinioClient
 from evals.models import Rubric, Scenario, TranscriptSegment
+
+logger = logging.getLogger(__name__)
+
+# Try to import Langfuse; it's optional for evals
+try:
+    from langfuse import Langfuse
+except ImportError:
+    Langfuse = None  # type: ignore[assignment, misc]
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -58,6 +67,36 @@ def langfuse_config() -> dict[str, str]:
         "secret_key": secret_key,
         "host": host,
     }
+
+
+@pytest.fixture(scope="session")
+def langfuse_client() -> Langfuse | None:  # type: ignore[type-arg]
+    """Optional Langfuse client for eval tracing.
+
+    Returns None (tracing disabled) when Langfuse is not installed or
+    LANGFUSE env vars are missing. Tests continue without tracing.
+    """
+    if Langfuse is None:
+        logger.debug("Langfuse not installed — eval tracing disabled")
+        return None
+
+    public_key = os.environ.get("LANGFUSE_PUBLIC_KEY", "")
+    secret_key = os.environ.get("LANGFUSE_SECRET_KEY", "")
+    host = os.environ.get("LANGFUSE_HOST", "http://localhost:3100")
+
+    if not public_key or not secret_key:
+        logger.debug("LANGFUSE env vars not set — eval tracing disabled")
+        return None
+
+    client = Langfuse(
+        public_key=public_key,
+        secret_key=secret_key,
+        host=host,
+    )
+    logger.info("Langfuse eval tracing enabled (host=%s)", host)
+    yield client  # type: ignore[misc]
+    client.flush()
+    client.shutdown()
 
 
 @pytest.fixture(scope="session")

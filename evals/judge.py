@@ -2,6 +2,9 @@
 
 Uses the Anthropic Messages API with a structured scoring prompt to
 evaluate agent behavior against rubric criteria.
+
+Optionally traces judge calls and attaches scores to Langfuse when
+a client is provided.
 """
 
 from __future__ import annotations
@@ -9,10 +12,14 @@ from __future__ import annotations
 import json
 import logging
 import os
+from typing import TYPE_CHECKING
 
 import anthropic
 
 from evals.models import EvalResult, JudgeScore, Rubric, Scenario
+
+if TYPE_CHECKING:
+    from langfuse import Langfuse
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +82,8 @@ async def judge_agent_response(
     transcript_text: str,
     agent_response: str,
     api_key: str | None = None,
+    langfuse: Langfuse | None = None,
+    trace_id: str | None = None,
 ) -> EvalResult:
     """Score an agent's response using LLM-as-Judge.
 
@@ -84,6 +93,8 @@ async def judge_agent_response(
         transcript_text: Formatted transcript the agent received.
         agent_response: Agent's output (text + tool_use blocks).
         api_key: Anthropic API key. Uses ``ANTHROPIC_API_KEY`` env var if None.
+        langfuse: Optional Langfuse client for tracing.
+        trace_id: Optional trace ID to attach the judge span and scores to.
 
     Returns:
         Complete :class:`EvalResult` with per-criterion and overall scores.
@@ -107,6 +118,35 @@ async def judge_agent_response(
         criteria_text=criteria_text,
     )
 
+    # Create a Langfuse generation span for the judge call
+    generation = None
+    trace = None
+    if langfuse is not None:
+        if trace_id:
+            # Attach to existing trace from mock_runner
+            trace = langfuse.trace(id=trace_id)
+        else:
+            # Create a standalone trace for the judge call
+            trace = langfuse.trace(
+                name=f"eval-judge-{scenario.agent_template}",
+                metadata={
+                    "scenario_id": scenario.scenario_id,
+                    "agent_template": scenario.agent_template,
+                },
+                tags=["eval", "judge", scenario.agent_template.lower().replace(" ", "-")],
+                session_id=scenario.scenario_id,
+            )
+        generation = trace.generation(
+            name="judge-scoring",
+            model=JUDGE_MODEL,
+            input=user_content[:1000],
+            metadata={
+                "scenario_id": scenario.scenario_id,
+                "rubric_id": rubric.rubric_id,
+                "criteria_count": len(rubric.criteria),
+            },
+        )
+
     response = await client.messages.create(
         model=JUDGE_MODEL,
         max_tokens=JUDGE_MAX_TOKENS,
@@ -129,6 +169,33 @@ async def judge_agent_response(
         for s in parsed["scores"]
     ]
     overall = float(parsed["overall"])
+
+    # End generation span with judge output
+    if generation is not None:
+        generation.end(
+            output=raw_text[:1000],
+            usage={
+                "input": response.usage.input_tokens,
+                "output": response.usage.output_tokens,
+            },
+        )
+
+    # Attach scores to the trace
+    if langfuse is not None and trace is not None:
+        resolved_trace_id = trace_id or trace.id
+        langfuse.score(
+            trace_id=resolved_trace_id,
+            name="overall",
+            value=overall,
+            comment=f"{scenario.agent_template} / {scenario.scenario_id}",
+        )
+        for s in scores:
+            langfuse.score(
+                trace_id=resolved_trace_id,
+                name=s.criterion,
+                value=s.score,
+                comment=s.reason,
+            )
 
     return EvalResult(
         scenario_id=scenario.scenario_id,

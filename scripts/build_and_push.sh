@@ -55,6 +55,8 @@ for svc in "${SERVICES[@]}"; do
     # Vite env vars for production build. Override in env if needed.
     BUILD_ARGS+=(--build-arg "VITE_API_BASE_URL=${VITE_API_BASE_URL:-https://api-dev.kutana.ai/v1}")
     BUILD_ARGS+=(--build-arg "VITE_WS_BASE_URL=${VITE_WS_BASE_URL:-https://ws-dev.kutana.ai}")
+  elif [[ "$svc" == "eval" ]]; then
+    DOCKERFILE="evals/Dockerfile"
   else
     DOCKERFILE="services/${svc}/Dockerfile"
   fi

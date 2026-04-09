@@ -1,7 +1,14 @@
 """Anthropic Managed Agents integration.
 
-Wraps the Anthropic beta managed-agents API to create, manage, and
-interact with hosted agent sessions backed by Anthropic's infrastructure.
+Forward-looking module: wraps the Anthropic beta managed-agents API to
+create, manage, and interact with hosted agent sessions backed by
+Anthropic's infrastructure.
+
+**SDK availability:** As of anthropic SDK v0.84.0, the managed agents API
+(``client.beta.agents``, ``client.beta.sessions``, ``client.beta.environments``,
+``client.beta.vaults``) does not exist. All public functions in this module
+are guarded with a runtime check and will log a warning + return a
+sentinel value until a future SDK version ships the API.
 """
 
 from __future__ import annotations
@@ -15,6 +22,46 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Runtime availability check
+# ---------------------------------------------------------------------------
+
+_MANAGED_AGENTS_AVAILABLE: bool = False
+
+try:
+    _probe_client = anthropic.AsyncAnthropic(api_key="probe")
+    # Check if the beta namespace exposes the agents resource
+    if hasattr(_probe_client.beta, "agents") and hasattr(_probe_client.beta, "sessions"):
+        _MANAGED_AGENTS_AVAILABLE = True
+    del _probe_client
+except Exception:
+    pass
+
+if not _MANAGED_AGENTS_AVAILABLE:
+    logger.warning(
+        "Anthropic managed agents API is not available in the current SDK version. "
+        "All managed agent operations will be no-ops until a compatible SDK is installed."
+    )
+
+
+def _require_api(func_name: str) -> bool:
+    """Check if the managed agents API is available.
+
+    Args:
+        func_name: Name of the calling function (for log messages).
+
+    Returns:
+        True if available, False otherwise.
+    """
+    if not _MANAGED_AGENTS_AVAILABLE:
+        logger.warning(
+            "%s called but managed agents API is not available — returning sentinel.",
+            func_name,
+        )
+        return False
+    return True
+
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -67,6 +114,9 @@ async def register_agents(
     Returns:
         Mapping of template_id -> anthropic_agent_id.
     """
+    if not _require_api("register_agents"):
+        return {}
+
     client = _get_client(api_key)
     result: dict[str, str] = {}
 
@@ -109,6 +159,9 @@ async def get_or_create_environment(api_key: str) -> str:
     Returns:
         Environment ID string.
     """
+    if not _require_api("get_or_create_environment"):
+        return ""
+
     client = _get_client(api_key)
     env = await client.beta.environments.create(
         name="kutana-cloud",
@@ -131,6 +184,9 @@ async def create_vault(api_key: str, jwt: str) -> str:
     Returns:
         Vault ID string.
     """
+    if not _require_api("create_vault"):
+        return ""
+
     client = _get_client(api_key)
     vault = await client.beta.vaults.create(
         name="kutana-mcp-auth",
@@ -166,6 +222,9 @@ async def start_session(
     Returns:
         Session ID string.
     """
+    if not _require_api("start_session"):
+        return ""
+
     from api_server.langfuse_client import create_trace
 
     trace = create_trace(
@@ -196,6 +255,9 @@ async def send_message(api_key: str, session_id: str, text: str) -> None:
         session_id: Active session ID.
         text: Message text to send.
     """
+    if not _require_api("send_message"):
+        return
+
     from api_server.langfuse_client import get_langfuse
 
     langfuse = get_langfuse()
@@ -234,6 +296,9 @@ async def stream_events(api_key: str, session_id: str) -> AsyncIterator[Any]:
     Yields:
         SSE event objects from the Anthropic API.
     """
+    if not _require_api("stream_events"):
+        return
+
     from api_server.langfuse_client import get_langfuse
 
     langfuse = get_langfuse()
@@ -262,6 +327,9 @@ async def end_session(api_key: str, session_id: str) -> None:
         api_key: Anthropic API key.
         session_id: Session ID to end.
     """
+    if not _require_api("end_session"):
+        return
+
     from api_server.langfuse_client import create_trace
 
     trace = create_trace(

@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 import socket
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
@@ -331,12 +332,13 @@ async def on_meeting_ended(
     meeting_id: UUID,
     db: AsyncSession,
     api_key: str,
+    redis_conn: aioredis.Redis[str] | None = None,
 ) -> None:
     """Handle meeting end: request summaries, close sessions, record billing.
 
     For each active HostedAgentSession:
     1. Send a final summary request
-    2. Wait for session.status_idle (with timeout)
+    2. Wait for session.status_idle (with timeout), forwarding agent events
     3. End the Anthropic session
     4. Update DB: set ended_at, status=stopped
     5. Record usage in UsageRecordORM
@@ -345,6 +347,7 @@ async def on_meeting_ended(
         meeting_id: ID of the meeting that ended.
         db: Async database session.
         api_key: Anthropic API key.
+        redis_conn: Redis connection for publishing agent events during close phase.
     """
     from api_server.langfuse_client import create_trace
 
@@ -356,28 +359,30 @@ async def on_meeting_ended(
     )
 
     result = await db.execute(
-        select(HostedAgentSessionORM).where(
+        select(HostedAgentSessionORM, AgentTemplateORM.name)
+        .join(AgentTemplateORM, HostedAgentSessionORM.template_id == AgentTemplateORM.id)
+        .where(
             HostedAgentSessionORM.meeting_id == meeting_id,
             HostedAgentSessionORM.status == "active",
         )
     )
-    sessions = result.scalars().all()
+    rows = result.all()
 
-    if not sessions:
+    if not rows:
         logger.debug("No active hosted sessions to close for meeting %s", meeting_id)
         return
 
-    for session in sessions:
-        await _close_session(session, db, api_key)
+    for session, template_name in rows:
+        await _close_session(session, db, api_key, meeting_id, template_name, redis_conn)
 
     await db.flush()
 
     if trace is not None:
-        trace.update(output={"sessions_closed": len(sessions)})
+        trace.update(output={"sessions_closed": len(rows)})
 
     logger.info(
         "Closed %d hosted agent session(s) for meeting %s",
-        len(sessions),
+        len(rows),
         meeting_id,
     )
 
@@ -386,13 +391,23 @@ async def _close_session(
     session: HostedAgentSessionORM,
     db: AsyncSession,
     api_key: str,
+    meeting_id: UUID,
+    agent_name: str,
+    redis_conn: aioredis.Redis[str] | None = None,
 ) -> None:
     """Close a single hosted agent session with summary request and billing.
+
+    Sends a summary request, waits for the agent to respond (forwarding
+    agent.message events to Redis so the summary reaches the frontend),
+    then ends the Anthropic session and records billing.
 
     Args:
         session: The hosted agent session to close.
         db: Async database session.
         api_key: Anthropic API key.
+        meeting_id: Meeting ID for routing events.
+        agent_name: Agent template display name.
+        redis_conn: Redis connection for forwarding agent events during close.
     """
     now = datetime.now(tz=UTC)
 
@@ -411,9 +426,17 @@ async def _close_session(
                 session.id,
             )
 
-        # Wait for the agent to finish processing (with timeout)
+        # Wait for the agent to finish processing (with timeout),
+        # forwarding agent.message events to Redis so the summary is captured
         try:
-            await _wait_for_idle(api_key, session.anthropic_session_id, timeout=30.0)
+            await _wait_for_idle(
+                api_key,
+                session.anthropic_session_id,
+                timeout=30.0,
+                meeting_id=meeting_id,
+                agent_name=agent_name,
+                redis_conn=redis_conn,
+            )
         except TimeoutError:
             logger.warning(
                 "Timeout waiting for session %s to become idle",
@@ -441,15 +464,23 @@ async def _wait_for_idle(
     api_key: str,
     session_id: str,
     timeout: float = 30.0,
+    meeting_id: UUID | None = None,
+    agent_name: str | None = None,
+    redis_conn: aioredis.Redis[str] | None = None,
 ) -> None:
     """Wait for an Anthropic session to reach idle status.
 
     Streams events until session.status_idle is received or timeout expires.
+    If redis_conn is provided, forwards agent.message events so the summary
+    response is not lost.
 
     Args:
         api_key: Anthropic API key.
         session_id: Anthropic session ID.
         timeout: Maximum seconds to wait.
+        meeting_id: Meeting ID for routing forwarded events.
+        agent_name: Agent display name for forwarded events.
+        redis_conn: Redis connection for forwarding agent events.
 
     Raises:
         TimeoutError: If idle not reached within timeout.
@@ -458,6 +489,20 @@ async def _wait_for_idle(
     async def _watch() -> None:
         async for event in stream_events(api_key, session_id):
             event_type = getattr(event, "type", None)
+            # Forward agent.message events to Redis so the summary is captured
+            if event_type == "agent.message" and redis_conn is not None and meeting_id is not None:
+                content_blocks = getattr(event, "content", [])
+                text_parts: list[str] = []
+                for block in content_blocks:
+                    if getattr(block, "type", None) == "text":
+                        text_parts.append(getattr(block, "text", ""))
+                await _publish_agent_event(
+                    redis_conn,
+                    "agent.message",
+                    meeting_id,
+                    agent_name or "agent",
+                    {"content": " ".join(text_parts) or "(no text)"},
+                )
             if event_type == "session.status_idle":
                 return
 
@@ -480,7 +525,7 @@ async def _record_usage(
         ended_at: When the session ended.
     """
     duration = ended_at - session.started_at
-    duration_seconds = max(int(duration.total_seconds()), 1)
+    duration_seconds = max(math.ceil(duration.total_seconds()), 1)
     billing_period = ended_at.strftime("%Y-%m")
 
     usage = UsageRecordORM(
@@ -824,7 +869,7 @@ class TranscriptBatcher:
         await self._flush_buffer(meeting_id)
 
         async with self._db_factory() as db:
-            await on_meeting_ended(meeting_id, db, self._api_key)
+            await on_meeting_ended(meeting_id, db, self._api_key, redis_conn=self._redis)
             await db.commit()
 
     async def _close_redis(self) -> None:

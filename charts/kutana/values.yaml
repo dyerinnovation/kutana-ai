@@ -226,6 +226,15 @@ billing:
   priceBusinessYearly: ""
 
 # ---------------------------------------------------------------------------
+# Evals (agent evaluation pipeline — triggered manually via kubectl)
+# ---------------------------------------------------------------------------
+evals:
+  enabled: true
+  model: "claude-haiku-4-5-20251001"
+  image:
+    tag: latest
+
+# ---------------------------------------------------------------------------
 # MinIO Object Storage (dev only — production uses cloud S3/R2/GCS)
 # ---------------------------------------------------------------------------
 minio:

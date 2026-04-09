@@ -1,0 +1,55 @@
+{{- if .Values.evals.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "kutana.fullname" . }}-eval
+  labels:
+    {{- include "kutana.labels" . | nindent 4 }}
+    app.kubernetes.io/name: eval
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: eval
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: eval
+          image: {{ include "kutana.image" (dict "root" . "svc" "eval" "tag" .Values.evals.image.tag) }}
+          command: ["python", "-m", "pytest", "evals/", "-m", "mock", "-v", "--tb=short", "-o", "addopts=--import-mode=importlib"]
+          workingDir: /app
+          env:
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kutana.fullname" . }}-secret
+                  key: ANTHROPIC_API_KEY
+            - name: LANGFUSE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kutana.fullname" . }}-secret
+                  key: LANGFUSE_SECRET_KEY
+            - name: LANGFUSE_PUBLIC_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "kutana.fullname" . }}-config
+                  key: LANGFUSE_PUBLIC_KEY
+            - name: STORAGE_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kutana.fullname" . }}-secret
+                  key: STORAGE_ACCESS_KEY
+            - name: STORAGE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kutana.fullname" . }}-secret
+                  key: STORAGE_SECRET_KEY
+            - name: LANGFUSE_HOST
+              value: "http://langfuse.{{ .Release.Namespace }}.svc:3000"
+            - name: EVAL_MODEL
+              value: {{ .Values.evals.model | default "claude-haiku-4-5-20251001" | quote }}
+            - name: MINIO_ENDPOINT
+              value: "http://minio.{{ .Release.Namespace }}.svc:9000"
+{{- end }}
