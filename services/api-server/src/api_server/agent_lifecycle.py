@@ -4,19 +4,18 @@ Connects meeting events to Anthropic managed agent sessions:
 - on_meeting_started: notifies active agents with meeting context
 - TranscriptBatcher: batches transcript segments (30s windows) and pushes to agents
 - on_meeting_ended: sends final summary request, closes sessions, records billing
-- SessionEventProxy: streams Anthropic session events to Redis for frontend delivery
+- Event bridge: streams Anthropic session events and publishes to Redis for
+  the gateway EventRelay to forward to browser WebSocket clients.
 """
 
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import json
 import logging
 import socket
-import time
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 import redis.asyncio as aioredis
@@ -41,7 +40,6 @@ logger = logging.getLogger(__name__)
 
 # Redis stream constants (shared with EventPublisher / task-engine)
 STREAM_KEY = "kutana:events"
-MAX_STREAM_LEN = 10_000
 GROUP_NAME = "agent-lifecycle"
 BLOCK_MS = 5_000
 BATCH_SIZE = 10
@@ -50,16 +48,151 @@ _MAX_BACKOFF_SECONDS = 30
 # Transcript batching window (seconds)
 TRANSCRIPT_WINDOW_SECONDS = 30.0
 
-# Anthropic event types we forward to the frontend
-_PROXY_EVENT_TYPES = frozenset(
-    {
-        "agent.message",
-        "agent.mcp_tool_use",
-        "session.error",
-        "session.status_idle",
-        "span.model_request_end",
+# Event types we forward from Anthropic sessions to the frontend
+_FORWARDED_EVENT_TYPES = frozenset({
+    "agent.message",
+    "agent.mcp_tool_use",
+    "session.error",
+    "session.status_idle",
+})
+
+# Active streaming tasks per Anthropic session (prevents duplicates)
+_streaming_tasks: dict[str, asyncio.Task[None]] = {}
+
+
+# ---------------------------------------------------------------------------
+# Event bridge: Anthropic session events → Redis stream → frontend
+# ---------------------------------------------------------------------------
+
+
+async def _publish_agent_event(
+    redis_conn: aioredis.Redis[str],
+    event_type: str,
+    meeting_id: UUID,
+    agent_name: str,
+    payload: dict[str, object],
+) -> None:
+    """Publish an agent event to the kutana:events Redis stream.
+
+    The gateway EventRelay consumes these and forwards them to human
+    WebSocket sessions. The browser MeetingRoomPage handles them in
+    the agent activity panel.
+
+    Args:
+        redis_conn: Active Redis connection.
+        event_type: Event type (e.g. "agent.message").
+        meeting_id: Meeting this event belongs to.
+        agent_name: Display name of the agent template.
+        payload: Event-specific payload fields.
+    """
+    full_payload = {
+        "meeting_id": str(meeting_id),
+        "agent_name": agent_name,
+        "timestamp": datetime.now(tz=UTC).timestamp(),
+        **payload,
     }
-)
+    try:
+        await redis_conn.xadd(
+            STREAM_KEY,
+            {"event_type": event_type, "payload": json.dumps(full_payload, default=str)},
+            maxlen=10_000,
+            approximate=True,
+        )
+    except Exception:
+        logger.warning("Failed to publish %s for agent %s", event_type, agent_name)
+
+
+async def stream_and_publish_events(
+    api_key: str,
+    anthropic_session_id: str,
+    meeting_id: UUID,
+    agent_name: str,
+    redis_conn: aioredis.Redis[str],
+) -> None:
+    """Stream events from an Anthropic session and publish them to Redis.
+
+    Runs until the session goes idle or an error occurs. Safe to run as
+    a background asyncio task.
+
+    Args:
+        api_key: Anthropic API key.
+        anthropic_session_id: The active Anthropic session to stream from.
+        meeting_id: Meeting ID for routing events to the right WebSocket clients.
+        agent_name: Agent template display name for the UI.
+        redis_conn: Redis connection for publishing events.
+    """
+    try:
+        async for event in stream_events(api_key, anthropic_session_id):
+            event_type = getattr(event, "type", None)
+            if event_type not in _FORWARDED_EVENT_TYPES:
+                continue
+
+            payload: dict[str, object] = {}
+            if event_type == "agent.message":
+                # Extract text content from the message
+                content_blocks = getattr(event, "content", [])
+                text_parts: list[str] = []
+                for block in content_blocks:
+                    if getattr(block, "type", None) == "text":
+                        text_parts.append(getattr(block, "text", ""))
+                payload["content"] = " ".join(text_parts) or "(no text)"
+            elif event_type == "agent.mcp_tool_use":
+                payload["tool_name"] = getattr(event, "name", None) or getattr(event, "tool_name", "unknown")
+            elif event_type == "session.error":
+                error_obj = getattr(event, "error", None)
+                payload["message"] = (
+                    getattr(error_obj, "message", str(error_obj))
+                    if error_obj
+                    else "Unknown error"
+                )
+            # session.status_idle needs no extra fields
+
+            await _publish_agent_event(redis_conn, event_type, meeting_id, agent_name, payload)
+
+            if event_type in ("session.status_idle", "session.error"):
+                break
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        logger.exception(
+            "Error streaming events for session %s (agent %s)",
+            anthropic_session_id,
+            agent_name,
+        )
+    finally:
+        _streaming_tasks.pop(anthropic_session_id, None)
+
+
+def start_event_streaming(
+    api_key: str,
+    anthropic_session_id: str,
+    meeting_id: UUID,
+    agent_name: str,
+    redis_conn: aioredis.Redis[str],
+) -> None:
+    """Start streaming Anthropic session events as a background task.
+
+    Idempotent: if a streaming task is already running for this session,
+    this is a no-op.
+
+    Args:
+        api_key: Anthropic API key.
+        anthropic_session_id: Anthropic session ID to stream from.
+        meeting_id: Meeting ID for event routing.
+        agent_name: Agent display name.
+        redis_conn: Redis connection.
+    """
+    existing = _streaming_tasks.get(anthropic_session_id)
+    if existing is not None and not existing.done():
+        return
+
+    task = asyncio.create_task(
+        stream_and_publish_events(
+            api_key, anthropic_session_id, meeting_id, agent_name, redis_conn,
+        ),
+        name=f"agent-events-{anthropic_session_id[:8]}",
+    )
+    _streaming_tasks[anthropic_session_id] = task
 
 
 # ---------------------------------------------------------------------------
@@ -71,36 +204,41 @@ async def on_meeting_started(
     meeting_id: UUID,
     db: AsyncSession,
     api_key: str,
+    redis_conn: aioredis.Redis[str] | None = None,
 ) -> None:
     """Notify all active hosted agent sessions that a meeting has started.
 
     For each active HostedAgentSession linked to this meeting, sends a
     user.message with meeting context (title, participants, agenda).
+    Starts background event streaming to publish agent responses to Redis.
 
     Args:
         meeting_id: ID of the meeting that started.
         db: Async database session.
         api_key: Anthropic API key.
+        redis_conn: Redis connection for publishing agent events to the frontend.
     """
-    # Find active hosted sessions for this meeting
+    # Find active hosted sessions with their template names
     result = await db.execute(
-        select(HostedAgentSessionORM).where(
+        select(HostedAgentSessionORM, AgentTemplateORM.name)
+        .join(AgentTemplateORM, HostedAgentSessionORM.template_id == AgentTemplateORM.id)
+        .where(
             HostedAgentSessionORM.meeting_id == meeting_id,
             HostedAgentSessionORM.status == "active",
             HostedAgentSessionORM.anthropic_session_id.is_not(None),
         )
     )
-    sessions = result.scalars().all()
+    rows = result.all()
 
-    if not sessions:
+    if not rows:
         logger.debug("No active hosted sessions for meeting %s", meeting_id)
         return
 
     # Fetch meeting context
     context = await _build_meeting_context(meeting_id, db)
 
-    # Send context to each agent session
-    for session in sessions:
+    # Send context to each agent session and start event streaming
+    for session, template_name in rows:
         assert session.anthropic_session_id is not None
         try:
             await send_message(
@@ -113,6 +251,15 @@ async def on_meeting_started(
                 session.id,
                 meeting_id,
             )
+            # Start streaming Anthropic events → Redis → gateway → browser
+            if redis_conn is not None:
+                start_event_streaming(
+                    api_key,
+                    session.anthropic_session_id,
+                    meeting_id,
+                    template_name,
+                    redis_conn,
+                )
         except Exception:
             logger.exception(
                 "Failed to send meeting context to session %s",
@@ -322,180 +469,6 @@ async def _record_usage(
 
 
 # ---------------------------------------------------------------------------
-# Session event proxy (Anthropic → Redis → frontend)
-# ---------------------------------------------------------------------------
-
-
-class SessionEventProxy:
-    """Streams events from an Anthropic session and publishes them to Redis.
-
-    The agent-gateway EventRelay picks these up from the kutana:events
-    stream and forwards them to all WebSocket clients in the meeting room.
-
-    Each proxy runs as a background asyncio task for one Anthropic session.
-
-    Attributes:
-        _api_key: Anthropic API key.
-        _session_id: Anthropic session ID.
-        _meeting_id: Meeting this session belongs to.
-        _agent_name: Agent display name for event payloads.
-        _redis: Async Redis client for publishing.
-    """
-
-    def __init__(
-        self,
-        api_key: str,
-        anthropic_session_id: str,
-        meeting_id: UUID,
-        agent_name: str,
-        redis_client: aioredis.Redis[str],
-    ) -> None:
-        """Initialise the event proxy.
-
-        Args:
-            api_key: Anthropic API key.
-            anthropic_session_id: Anthropic session ID to stream from.
-            meeting_id: Meeting UUID for event routing.
-            agent_name: Agent display name.
-            redis_client: Live Redis client for publishing events.
-        """
-        self._api_key = api_key
-        self._session_id = anthropic_session_id
-        self._meeting_id = meeting_id
-        self._agent_name = agent_name
-        self._redis = redis_client
-        self._token_usage: dict[str, int] = {"input_tokens": 0, "output_tokens": 0}
-
-    async def run(self) -> None:
-        """Stream Anthropic session events and publish to Redis.
-
-        Runs until the stream ends, the session closes, or the task
-        is cancelled. Reconnects on transient errors.
-        """
-        backoff = 1.0
-        while True:
-            try:
-                async for event in stream_events(self._api_key, self._session_id):
-                    await self._handle_event(event)
-                # Stream ended normally (session closed)
-                logger.info(
-                    "Event proxy for session %s ended (stream closed)",
-                    self._session_id,
-                )
-                return
-            except asyncio.CancelledError:
-                logger.info("Event proxy for session %s cancelled", self._session_id)
-                raise
-            except Exception:
-                logger.exception(
-                    "Event proxy error for session %s — retrying in %.0fs",
-                    self._session_id,
-                    backoff,
-                )
-                await asyncio.sleep(backoff)
-                backoff = min(backoff * 2, _MAX_BACKOFF_SECONDS)
-
-    async def _handle_event(self, event: Any) -> None:
-        """Process a single Anthropic SSE event.
-
-        Filters for relevant event types and publishes them to the
-        kutana:events Redis stream with meeting_id for routing.
-
-        Args:
-            event: Anthropic SSE event object.
-        """
-        event_type = getattr(event, "type", None)
-        if not event_type:
-            return
-
-        # Track token usage from model requests
-        if event_type == "span.model_request_end":
-            usage = getattr(event, "usage", None)
-            if usage:
-                self._token_usage["input_tokens"] += getattr(usage, "input_tokens", 0)
-                self._token_usage["output_tokens"] += getattr(usage, "output_tokens", 0)
-            # Don't forward billing spans to frontend
-            return
-
-        if event_type not in _PROXY_EVENT_TYPES:
-            return
-
-        # Build payload for the frontend
-        payload = self._build_payload(event_type, event)
-        if payload is None:
-            return
-
-        # Publish to Redis stream for EventRelay pickup
-        try:
-            payload_json = json.dumps(payload, default=str)
-            await self._redis.xadd(
-                STREAM_KEY,
-                {"event_type": event_type, "payload": payload_json},
-                maxlen=MAX_STREAM_LEN,
-                approximate=True,
-            )
-        except Exception:
-            logger.warning(
-                "Failed to publish %s event for session %s",
-                event_type,
-                self._session_id,
-            )
-
-    def _build_payload(self, event_type: str, event: Any) -> dict[str, Any] | None:
-        """Build a Redis-publishable payload from an Anthropic event.
-
-        Args:
-            event_type: The event type string.
-            event: Anthropic SSE event object.
-
-        Returns:
-            Dict payload for Redis, or None to skip this event.
-        """
-        base: dict[str, Any] = {
-            "meeting_id": str(self._meeting_id),
-            "agent_name": self._agent_name,
-            "anthropic_session_id": self._session_id,
-            "timestamp": time.time(),
-        }
-
-        if event_type == "agent.message":
-            # Extract text content from the message
-            content = ""
-            raw_content = getattr(event, "content", None)
-            if isinstance(raw_content, list):
-                for block in raw_content:
-                    if getattr(block, "type", None) == "text":
-                        content += getattr(block, "text", "")
-            elif isinstance(raw_content, str):
-                content = raw_content
-            if not content:
-                return None
-            base["content"] = content
-            base["text"] = content
-
-        elif event_type == "agent.mcp_tool_use":
-            base["tool_name"] = getattr(event, "name", None) or getattr(
-                event, "tool_name", "unknown"
-            )
-            base["server_name"] = getattr(event, "server_name", "kutana")
-
-        elif event_type == "session.error":
-            error = getattr(event, "error", None)
-            base["error"] = str(error) if error else "Unknown error"
-            base["message"] = base["error"]
-
-        elif event_type == "session.status_idle":
-            pass  # base fields are sufficient
-
-        return base
-
-    @property
-    def token_usage(self) -> dict[str, int]:
-        """Accumulated token usage from this session."""
-        return dict(self._token_usage)
-
-
-# ---------------------------------------------------------------------------
 # Transcript batcher (Redis Stream consumer)
 # ---------------------------------------------------------------------------
 
@@ -540,9 +513,6 @@ class TranscriptBatcher:
         self._buffers: dict[UUID, list[tuple[str, str, float]]] = {}
         self._last_flush: dict[UUID, float] = {}
 
-        # Event proxy tasks: {anthropic_session_id: (task, proxy)}
-        self._proxy_tasks: dict[str, tuple[asyncio.Task[None], SessionEventProxy]] = {}
-
     async def start(self) -> None:
         """Connect to Redis and begin consuming transcript events.
 
@@ -564,23 +534,12 @@ class TranscriptBatcher:
             # Flush remaining buffers on shutdown
             for meeting_id in list(self._buffers):
                 await self._flush_buffer(meeting_id)
-            # Cancel all event proxy tasks
-            await self._stop_all_proxies()
             await self._close_redis()
 
     async def stop(self) -> None:
         """Signal the consume loop to exit."""
         logger.info("TranscriptBatcher stop requested")
         self._stop_event.set()
-
-    async def _stop_all_proxies(self) -> None:
-        """Cancel all running event proxy tasks."""
-        for session_id, (task, _proxy) in list(self._proxy_tasks.items()):
-            task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await task
-            logger.debug("Stopped event proxy for session %s", session_id)
-        self._proxy_tasks.clear()
 
     async def _ensure_group(self) -> None:
         """Create the consumer group if it does not exist."""
@@ -737,35 +696,49 @@ class TranscriptBatcher:
 
         transcript_text = f"## Transcript Update (meeting {meeting_id})\n\n" + "\n".join(lines)
 
-        # Find active hosted sessions with Anthropic integration
+        # Find active hosted sessions with template names
         async with self._db_factory() as db:
             result = await db.execute(
-                select(HostedAgentSessionORM.anthropic_session_id).where(
+                select(
+                    HostedAgentSessionORM.anthropic_session_id,
+                    AgentTemplateORM.name,
+                )
+                .join(AgentTemplateORM, HostedAgentSessionORM.template_id == AgentTemplateORM.id)
+                .where(
                     HostedAgentSessionORM.meeting_id == meeting_id,
                     HostedAgentSessionORM.status == "active",
                     HostedAgentSessionORM.anthropic_session_id.is_not(None),
                 )
             )
-            session_ids = [row[0] for row in result.all()]
+            rows = result.all()
 
-        for session_id in session_ids:
+        for anthropic_session_id, template_name in rows:
             try:
-                await send_message(self._api_key, session_id, transcript_text)
+                await send_message(self._api_key, anthropic_session_id, transcript_text)
+                # Start streaming agent response events → Redis → browser
+                if self._redis is not None:
+                    start_event_streaming(
+                        self._api_key,
+                        anthropic_session_id,
+                        meeting_id,
+                        template_name,
+                        self._redis,
+                    )
             except Exception:
                 logger.exception(
                     "Failed to send transcript batch to session %s",
-                    session_id,
+                    anthropic_session_id,
                 )
 
         logger.info(
             "Flushed %d transcript segments to %d agent(s) for meeting %s",
             len(segments),
-            len(session_ids),
+            len(rows),
             meeting_id,
         )
 
     async def _handle_meeting_started(self, raw_payload: str) -> None:
-        """Handle meeting.started event — send context to agents and start proxies.
+        """Handle meeting.started event — send context to agents.
 
         Args:
             raw_payload: JSON string of the MeetingStarted event.
@@ -778,14 +751,11 @@ class TranscriptBatcher:
             return
 
         async with self._db_factory() as db:
-            await on_meeting_started(meeting_id, db, self._api_key)
+            await on_meeting_started(meeting_id, db, self._api_key, redis_conn=self._redis)
             await db.commit()
 
-        # Start event proxies for active sessions
-        await self._start_proxies_for_meeting(meeting_id)
-
     async def _handle_meeting_ended(self, raw_payload: str) -> None:
-        """Handle meeting.ended event — stop proxies, close sessions, record billing.
+        """Handle meeting.ended event — close sessions and record billing.
 
         Args:
             raw_payload: JSON string of the MeetingEnded event.
@@ -800,83 +770,9 @@ class TranscriptBatcher:
         # Flush any remaining transcript segments first
         await self._flush_buffer(meeting_id)
 
-        # Stop event proxies for this meeting
-        await self._stop_proxies_for_meeting(meeting_id)
-
         async with self._db_factory() as db:
             await on_meeting_ended(meeting_id, db, self._api_key)
             await db.commit()
-
-    async def _start_proxies_for_meeting(self, meeting_id: UUID) -> None:
-        """Start event proxies for all active hosted sessions in a meeting.
-
-        Args:
-            meeting_id: Meeting whose sessions should be proxied.
-        """
-        if self._redis is None:
-            return
-
-        async with self._db_factory() as db:
-            result = await db.execute(
-                select(
-                    HostedAgentSessionORM.anthropic_session_id,
-                    AgentTemplateORM.name,
-                )
-                .join(
-                    AgentTemplateORM,
-                    HostedAgentSessionORM.template_id == AgentTemplateORM.id,
-                )
-                .where(
-                    HostedAgentSessionORM.meeting_id == meeting_id,
-                    HostedAgentSessionORM.status == "active",
-                    HostedAgentSessionORM.anthropic_session_id.is_not(None),
-                )
-            )
-            rows = result.all()
-
-        for anthropic_session_id, agent_name in rows:
-            if anthropic_session_id in self._proxy_tasks:
-                continue  # Already proxying
-
-            proxy = SessionEventProxy(
-                api_key=self._api_key,
-                anthropic_session_id=anthropic_session_id,
-                meeting_id=meeting_id,
-                agent_name=agent_name,
-                redis_client=self._redis,
-            )
-            task = asyncio.create_task(proxy.run())
-            self._proxy_tasks[anthropic_session_id] = (task, proxy)
-            logger.info(
-                "Started event proxy for %s (session %s, meeting %s)",
-                agent_name,
-                anthropic_session_id,
-                meeting_id,
-            )
-
-    async def _stop_proxies_for_meeting(self, meeting_id: UUID) -> None:
-        """Stop event proxies for all sessions in a meeting.
-
-        Args:
-            meeting_id: Meeting whose proxies should be stopped.
-        """
-        meeting_str = str(meeting_id)
-        to_remove: list[str] = []
-
-        for session_id, (task, proxy) in self._proxy_tasks.items():
-            if str(proxy._meeting_id) == meeting_str:
-                task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await task
-                to_remove.append(session_id)
-                logger.info(
-                    "Stopped event proxy for %s (session %s)",
-                    proxy._agent_name,
-                    session_id,
-                )
-
-        for session_id in to_remove:
-            del self._proxy_tasks[session_id]
 
     async def _close_redis(self) -> None:
         """Close the Redis connection."""
