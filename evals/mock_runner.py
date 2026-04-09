@@ -290,10 +290,17 @@ async def run_mock_eval(
 
     # Create Langfuse trace for this eval run (one trace per scenario;
     # the judge attaches to this same trace via trace_id).
-    trace = None
+    trace_id: str | None = None
+    root_span = None
     if langfuse is not None:
-        trace = langfuse.trace(
+        trace_id = langfuse.create_trace_id(
+            seed=f"eval/{scenario.agent_template}/{scenario.scenario_id}",
+        )
+        root_span = langfuse.start_observation(
             name=f"eval/{scenario.agent_template}/{scenario.scenario_id}",
+            trace_context={"trace_id": trace_id, "parent_span_id": ""},
+            as_type="span",
+            input=transcript_text[:500],
             metadata={
                 "scenario_id": scenario.scenario_id,
                 "agent_template": scenario.agent_template,
@@ -301,8 +308,6 @@ async def run_mock_eval(
                 "meeting_title": ctx.title,
                 "participant_count": len(ctx.participants),
             },
-            tags=["eval", "mock", scenario.agent_template.lower().replace(" ", "-")],
-            session_id=scenario.scenario_id,
         )
 
     messages: list[dict[str, Any]] = [
@@ -315,9 +320,10 @@ async def run_mock_eval(
     for turn in range(max_turns):
         # Create a generation span for each API call
         generation = None
-        if trace is not None:
-            generation = trace.generation(
+        if root_span is not None:
+            generation = root_span.start_observation(
                 name=f"agent-turn-{turn}",
+                as_type="generation",
                 model=model,
                 input=messages[-1]["content"][:500] if messages else "",
                 metadata={"turn": turn},
@@ -351,7 +357,7 @@ async def run_mock_eval(
         if generation is not None:
             generation.end(
                 output="\n".join(text_parts) or f"[{len(tool_use_blocks)} tool calls]",
-                usage={
+                usage_details={
                     "input": response.usage.input_tokens,
                     "output": response.usage.output_tokens,
                 },
@@ -376,9 +382,9 @@ async def run_mock_eval(
         for tc in all_tool_calls:
             agent_response += f"- {tc['name']}({json.dumps(tc['input'], indent=2)})\n"
 
-    # Update trace with final output
-    if trace is not None:
-        trace.update(
+    # End the root span with final output
+    if root_span is not None:
+        root_span.end(
             output={
                 "tool_call_count": len(all_tool_calls),
                 "turns": min(turn + 1, max_turns),
@@ -386,5 +392,4 @@ async def run_mock_eval(
             },
         )
 
-    trace_id = trace.id if trace is not None else None
     return agent_response, all_tool_calls, trace_id

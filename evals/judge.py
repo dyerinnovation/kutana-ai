@@ -118,32 +118,27 @@ async def judge_agent_response(
         criteria_text=criteria_text,
     )
 
-    # Create a Langfuse generation span for the judge call
+    # Create a Langfuse generation span for the judge call (v4 API)
     generation = None
-    trace = None
+    resolved_trace_id = trace_id
     if langfuse is not None:
-        if trace_id:
-            # Attach to existing trace from mock_runner
-            trace = langfuse.trace(id=trace_id)
-        else:
-            # Create a standalone trace for the judge call
-            trace = langfuse.trace(
-                name=f"eval-judge-{scenario.agent_template}",
-                metadata={
-                    "scenario_id": scenario.scenario_id,
-                    "agent_template": scenario.agent_template,
-                },
-                tags=["eval", "judge", scenario.agent_template.lower().replace(" ", "-")],
-                session_id=scenario.scenario_id,
+        if not resolved_trace_id:
+            # No trace from mock_runner — create a standalone trace ID
+            resolved_trace_id = langfuse.create_trace_id(
+                seed=f"eval-judge-{scenario.agent_template}/{scenario.scenario_id}",
             )
-        generation = trace.generation(
+        trace_ctx = {"trace_id": resolved_trace_id, "parent_span_id": ""}
+        generation = langfuse.start_observation(
             name="judge-scoring",
+            trace_context=trace_ctx,
+            as_type="generation",
             model=JUDGE_MODEL,
             input=user_content[:1000],
             metadata={
                 "scenario_id": scenario.scenario_id,
                 "rubric_id": rubric.rubric_id,
                 "criteria_count": len(rubric.criteria),
+                "agent_template": scenario.agent_template,
             },
         )
 
@@ -174,23 +169,22 @@ async def judge_agent_response(
     if generation is not None:
         generation.end(
             output=raw_text[:1000],
-            usage={
+            usage_details={
                 "input": response.usage.input_tokens,
                 "output": response.usage.output_tokens,
             },
         )
 
     # Attach scores to the trace
-    if langfuse is not None and trace is not None:
-        resolved_trace_id = trace_id or trace.id
-        langfuse.score(
+    if langfuse is not None and resolved_trace_id:
+        langfuse.create_score(
             trace_id=resolved_trace_id,
             name="overall",
             value=overall,
             comment=f"{scenario.agent_template} / {scenario.scenario_id}",
         )
         for s in scores:
-            langfuse.score(
+            langfuse.create_score(
                 trace_id=resolved_trace_id,
                 name=s.criterion,
                 value=s.score,
