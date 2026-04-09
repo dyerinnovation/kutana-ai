@@ -51,7 +51,7 @@ _HALLUCINATION_PHRASES: frozenset[str] = frozenset(
 # Compiled pattern: detects repetition of a short phrase within a single
 # segment (e.g. "I'm sorry. I'm sorry." or "- I'm sorry. - I'm sorry.").
 # Matches when the same run of ≥ 4 non-whitespace chars appears 2+ times.
-_REPETITION_RE = re.compile(r"(\S{4,}.{0,10}?)\s*[-–—.!?]?\s*\1", re.IGNORECASE)
+_REPETITION_RE = re.compile(r"(\S{4,}.{0,10}?)\s*[-\u2013\u2014.!?]?\s*\1", re.IGNORECASE)
 
 
 class WhisperRemoteSTT(STTProvider):
@@ -69,8 +69,8 @@ class WhisperRemoteSTT(STTProvider):
     1. **Segment duration gate** — Drops segments shorter than
        ``min_segment_duration_s`` (default 0.15 s).  When Whisper enters
        its fallback temperature-sampling mode on ambient noise it floods
-       the output with dozens of tiny segments (observed: 53 × "I'm sorry."
-       from 4.6 s of audio ≈ 0.087 s each).  This single gate eliminates
+       the output with dozens of tiny segments (observed: 53 x "I'm sorry."
+       from 4.6 s of audio ~0.087 s each).  This single gate eliminates
        the entire flood without touching real-speech segments.
 
     2. **``no_speech_prob`` gate** — Whisper's ``verbose_json`` response
@@ -113,7 +113,7 @@ class WhisperRemoteSTT(STTProvider):
             no_speech_threshold: Drop segments where Whisper's own
                 ``no_speech_prob`` is at or above this value.  Range
                 [0.0, 1.0]; default 0.35 (lowered from 0.5 — the
-                "I'm sorry" hallucinations were observed at 0.35–0.50).
+                "I'm sorry" hallucinations were observed at 0.35-0.50).
             min_confidence: Drop segments with confidence (derived from
                 ``avg_logprob``) below this value.  Default 0.0 disables
                 the filter; raise to ~0.3 for stricter filtering.
@@ -314,7 +314,7 @@ class WhisperRemoteSTT(STTProvider):
                 # Gate 1: Segment duration
                 # When Whisper's fallback temperature-sampling activates on ambient
                 # noise, it floods the output with many tiny segments (observed:
-                # 53 × "I'm sorry." in 4.6 s = ~0.087 s each).  Real speech
+                # 53 x "I'm sorry." in 4.6 s = ~0.087 s each).  Real speech
                 # segments are always ≥ ~0.15 s for the shortest syllable.
                 # ------------------------------------------------------------------
                 duration = end_time - start_time

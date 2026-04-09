@@ -6,6 +6,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 import pytest
+from pydantic import ValidationError
 
 from kutana_core.events.definitions import (
     FinishedSpeaking,
@@ -38,11 +39,11 @@ class TestHandRaisePriority:
 
     def test_normal_value(self) -> None:
         """NORMAL priority has the string value 'normal'."""
-        assert HandRaisePriority.NORMAL == "normal"
+        assert HandRaisePriority.NORMAL.value == "normal"
 
     def test_urgent_value(self) -> None:
         """URGENT priority has the string value 'urgent'."""
-        assert HandRaisePriority.URGENT == "urgent"
+        assert HandRaisePriority.URGENT.value == "urgent"
 
     def test_from_string(self) -> None:
         """Can construct from plain string."""
@@ -84,7 +85,7 @@ class TestQueueEntry:
 
     def test_position_required(self) -> None:
         """QueueEntry requires a position."""
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             QueueEntry(participant_id=PARTICIPANT_A)  # type: ignore[call-arg]
 
 

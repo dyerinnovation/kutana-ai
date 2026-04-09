@@ -25,7 +25,7 @@ from kutana_core.extraction.types import (
     TaskEntity,
     TranscriptBatch,
 )
-from kutana_providers.testing import MockMessageBus
+from kutana_providers.testing import MockMessageBus  # type: ignore[import-not-found]
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -41,7 +41,7 @@ def _make_task(**kwargs: object) -> TaskEntity:
         meeting_id=MEETING_ID,
         batch_id=BATCH_ID,
         title=str(kwargs.pop("title", "Fix the login bug")),
-        **kwargs,  # type: ignore[arg-type]
+        **kwargs,
     )
 
 
@@ -50,7 +50,7 @@ def _make_decision(**kwargs: object) -> DecisionEntity:
         meeting_id=MEETING_ID,
         batch_id=BATCH_ID,
         summary=str(kwargs.pop("summary", "Use PostgreSQL for storage")),
-        **kwargs,  # type: ignore[arg-type]
+        **kwargs,
     )
 
 
@@ -109,7 +109,7 @@ class TestTaskEntity:
                 meeting_id=MEETING_ID,
                 batch_id=BATCH_ID,
                 title="Some task",
-                priority="urgent",  # type: ignore[arg-type]
+                priority="urgent",
             )
 
     def test_confidence_out_of_range_raises(self) -> None:
@@ -200,7 +200,7 @@ class TestEntityMentionEntity:
                 meeting_id=MEETING_ID,
                 batch_id=BATCH_ID,
                 name="Foo",
-                kind="software",  # type: ignore[arg-type]
+                kind="software",
             )
 
     def test_content_key(self) -> None:
@@ -333,15 +333,9 @@ class TestDiscriminatedUnion:
             EntityMentionEntity(
                 meeting_id=MEETING_ID, batch_id=BATCH_ID, name="Redis", kind="system"
             ),
-            KeyPointEntity(
-                meeting_id=MEETING_ID, batch_id=BATCH_ID, summary="Key insight."
-            ),
-            BlockerEntity(
-                meeting_id=MEETING_ID, batch_id=BATCH_ID, description="Blocked."
-            ),
-            FollowUpEntity(
-                meeting_id=MEETING_ID, batch_id=BATCH_ID, description="Follow up."
-            ),
+            KeyPointEntity(meeting_id=MEETING_ID, batch_id=BATCH_ID, summary="Key insight."),
+            BlockerEntity(meeting_id=MEETING_ID, batch_id=BATCH_ID, description="Blocked."),
+            FollowUpEntity(meeting_id=MEETING_ID, batch_id=BATCH_ID, description="Follow up."),
         ]
         for entity in entities:
             data = entity.model_dump(mode="json")
@@ -719,16 +713,8 @@ class TestBatchCollector:
         await collector._process_batch()
 
         # Published messages: one to .insights and one to .insights.task
-        insight_msgs = [
-            m
-            for m in bus.published
-            if m.topic == f"meeting.{MEETING_ID}.insights"
-        ]
-        task_msgs = [
-            m
-            for m in bus.published
-            if m.topic == f"meeting.{MEETING_ID}.insights.task"
-        ]
+        insight_msgs = [m for m in bus.published if m.topic == f"meeting.{MEETING_ID}.insights"]
+        task_msgs = [m for m in bus.published if m.topic == f"meeting.{MEETING_ID}.insights.task"]
         assert len(insight_msgs) == 1
         assert len(task_msgs) == 1
 
@@ -915,9 +901,7 @@ class TestFullPipeline:
         assert unique2 == []
 
         # 4. Messages were published to bus
-        insight_msgs = [
-            m for m in bus.published if f"meeting.{MEETING_ID}.insights" in m.topic
-        ]
+        insight_msgs = [m for m in bus.published if f"meeting.{MEETING_ID}.insights" in m.topic]
         assert len(insight_msgs) >= 2  # base + per-type
 
         await collector.stop()

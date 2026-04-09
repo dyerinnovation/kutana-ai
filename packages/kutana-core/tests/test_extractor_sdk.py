@@ -97,7 +97,7 @@ class TestValidateExtractor:
             pass
 
         with pytest.raises(ExtractorValidationError, match="unimplemented abstract"):
-            validate_extractor(PartialExtractor)  # type: ignore[type-abstract]
+            validate_extractor(PartialExtractor)
 
     def test_extractor_with_empty_name_raises(self) -> None:
         """validate_extractor raises if name property returns empty string."""
@@ -194,7 +194,7 @@ class TestExtractorDecorator:
     def test_decorator_returns_extractor_instance(self) -> None:
         """@extractor wraps the function in a _FunctionExtractor instance."""
 
-        @extractor(name="deco-test", entity_types=["key_point"])
+        @extractor(name="deco-test", entity_types=["key_point"])  # type: ignore[untyped-decorator]
         async def my_fn(batch: TranscriptBatch) -> ExtractionResult:
             return ExtractionResult(batch_id=batch.batch_id, entities=[], processing_time_ms=0.0)
 
@@ -204,7 +204,7 @@ class TestExtractorDecorator:
     def test_decorator_sets_name(self) -> None:
         """@extractor sets the name property on the returned instance."""
 
-        @extractor(name="my-decorator-extractor", entity_types=["task"])
+        @extractor(name="my-decorator-extractor", entity_types=["task"])  # type: ignore[untyped-decorator]
         async def fn(batch: TranscriptBatch) -> ExtractionResult:
             return ExtractionResult(batch_id=batch.batch_id, entities=[], processing_time_ms=0.0)
 
@@ -213,7 +213,7 @@ class TestExtractorDecorator:
     def test_decorator_sets_entity_types(self) -> None:
         """@extractor sets the entity_types property on the returned instance."""
 
-        @extractor(name="e", entity_types=["decision", "blocker"])
+        @extractor(name="e", entity_types=["decision", "blocker"])  # type: ignore[untyped-decorator]
         async def fn(batch: TranscriptBatch) -> ExtractionResult:
             return ExtractionResult(batch_id=batch.batch_id, entities=[], processing_time_ms=0.0)
 
@@ -223,7 +223,7 @@ class TestExtractorDecorator:
         """@extractor delegates extract() calls to the wrapped function."""
         calls: list[TranscriptBatch] = []
 
-        @extractor(name="call-logger", entity_types=["task"])
+        @extractor(name="call-logger", entity_types=["task"])  # type: ignore[untyped-decorator]
         async def fn(batch: TranscriptBatch) -> ExtractionResult:
             calls.append(batch)
             return ExtractionResult(batch_id=batch.batch_id, entities=[], processing_time_ms=0.0)
@@ -237,17 +237,17 @@ class TestExtractorDecorator:
         """@extractor raises ValueError for an empty name."""
         with pytest.raises(ValueError, match="non-empty name"):
 
-            @extractor(name="", entity_types=["task"])
-            async def fn(batch: TranscriptBatch) -> ExtractionResult:  # type: ignore[return]
-                ...
+            @extractor(name="", entity_types=["task"])  # type: ignore[untyped-decorator]
+            async def fn(batch: TranscriptBatch) -> ExtractionResult:
+                raise NotImplementedError
 
     def test_decorator_empty_entity_types_raises(self) -> None:
         """@extractor raises ValueError for an empty entity_types list."""
         with pytest.raises(ValueError, match="non-empty entity_types"):
 
-            @extractor(name="valid-name", entity_types=[])
-            async def fn(batch: TranscriptBatch) -> ExtractionResult:  # type: ignore[return]
-                ...
+            @extractor(name="valid-name", entity_types=[])  # type: ignore[untyped-decorator]
+            async def fn(batch: TranscriptBatch) -> ExtractionResult:
+                raise NotImplementedError
 
 
 # ---------------------------------------------------------------------------
@@ -484,9 +484,7 @@ class TestExtractorLoaderFileLoading:
                 async def extract(self, batch: TranscriptBatch) -> ExtractionResult:
                     return ExtractionResult(batch_id=batch.batch_id, entities=[], processing_time_ms=0.0)
         """)
-        with tempfile.NamedTemporaryFile(
-            suffix=".py", mode="w", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False) as f:
             f.write(code)
             tmp_path = f.name
 
@@ -507,9 +505,7 @@ class TestExtractorLoaderFileLoading:
     def test_load_from_file_with_no_extractors_returns_empty(self) -> None:
         """load_from_file() returns [] when no Extractor subclasses are found."""
         code = "x = 1  # no extractor here\n"
-        with tempfile.NamedTemporaryFile(
-            suffix=".py", mode="w", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False) as f:
             f.write(code)
             tmp_path = f.name
 
@@ -540,9 +536,7 @@ class TestExtractorLoaderFileLoading:
                 entity_types: ClassVar[list[str]] = ["task", "decision"]
                 version = "v2"
         """)
-        with tempfile.NamedTemporaryFile(
-            suffix=".py", mode="w", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False) as f:
             f.write(code_v1)
             tmp_path = f.name
 
@@ -558,7 +552,7 @@ class TestExtractorLoaderFileLoading:
             v2_cls = loader.extractors["hot-reload"]
 
             assert v2_cls is not v1_cls
-            assert v2_cls.entity_types == ["task", "decision"]  # type: ignore[attr-defined]
+            assert v2_cls.entity_types == ["task", "decision"]  # type: ignore[comparison-overlap]
         finally:
             Path(tmp_path).unlink(missing_ok=True)
 
@@ -601,9 +595,7 @@ class TestExtractorLoaderEntryPoints:
         assert "mock-ep" in loaded
         assert loader.is_registered("mock-ep")
 
-    def test_load_from_entry_points_skips_invalid(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_load_from_entry_points_skips_invalid(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """load_from_entry_points() skips entry points that fail to load."""
 
         class BadEP:
@@ -643,7 +635,7 @@ class TestExtractorLoaderIntrospection:
         loader = ExtractorLoader()
         loader.register(EE)
         snapshot = loader.extractors
-        snapshot["extra"] = EE  # type: ignore[assignment]
+        snapshot["extra"] = EE
         assert "extra" not in loader.extractors
 
     def test_is_registered_returns_false_for_unknown(self) -> None:
@@ -673,9 +665,14 @@ class TestComplianceExtractor:
     async def test_compliance_extractor_finds_gdpr(self) -> None:
         """ComplianceExtractor extracts entities from GDPR-mentioning segments."""
         # Import from examples
-        sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent / "examples" / "custom-extractors"))
+        sys.path.insert(
+            0,
+            str(
+                Path(__file__).parent.parent.parent.parent.parent / "examples" / "custom-extractors"
+            ),
+        )
         try:
-            from compliance_extractor import ComplianceExtractor  # type: ignore[import]
+            from compliance_extractor import ComplianceExtractor  # type: ignore[import-not-found]
         except ImportError:
             pytest.skip("compliance_extractor not found in examples/")
         finally:
@@ -695,9 +692,14 @@ class TestComplianceExtractor:
 
     async def test_compliance_extractor_empty_batch(self) -> None:
         """ComplianceExtractor returns empty result for batch with no compliance text."""
-        sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent / "examples" / "custom-extractors"))
+        sys.path.insert(
+            0,
+            str(
+                Path(__file__).parent.parent.parent.parent.parent / "examples" / "custom-extractors"
+            ),
+        )
         try:
-            from compliance_extractor import ComplianceExtractor  # type: ignore[import]
+            from compliance_extractor import ComplianceExtractor
         except ImportError:
             pytest.skip("compliance_extractor not found in examples/")
         finally:
@@ -710,9 +712,14 @@ class TestComplianceExtractor:
 
     async def test_compliance_extractor_is_valid_extractor(self) -> None:
         """ComplianceExtractor passes validate_extractor."""
-        sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent / "examples" / "custom-extractors"))
+        sys.path.insert(
+            0,
+            str(
+                Path(__file__).parent.parent.parent.parent.parent / "examples" / "custom-extractors"
+            ),
+        )
         try:
-            from compliance_extractor import ComplianceExtractor  # type: ignore[import]
+            from compliance_extractor import ComplianceExtractor
         except ImportError:
             pytest.skip("compliance_extractor not found in examples/")
         finally:

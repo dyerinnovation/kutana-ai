@@ -87,6 +87,7 @@ class TestApiServerEventPublisher:
 
         mock_redis.xadd.assert_called_once()
         from api_server.event_publisher import STREAM_KEY
+
         assert mock_redis.xadd.call_args[0][0] == STREAM_KEY
 
     async def test_publish_sets_event_type_field(self) -> None:

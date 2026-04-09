@@ -192,9 +192,7 @@ class PubSubMessageBus(MessageBus):
         self._topic_paths[topic] = path
         return path
 
-    async def _get_or_create_subscription(
-        self, topic: str, group: str
-    ) -> str:
+    async def _get_or_create_subscription(self, topic: str, group: str) -> str:
         """Return the Pub/Sub subscription path, creating it if needed.
 
         Args:
@@ -253,14 +251,16 @@ class PubSubMessageBus(MessageBus):
             metadata=metadata or {},
             source=source,
         )
-        body = json.dumps({
-            "message_id": message.id,
-            "topic": message.topic,
-            "payload": message.payload,
-            "metadata": message.metadata,
-            "timestamp": message.timestamp.isoformat(),
-            "source": message.source,
-        })
+        body = json.dumps(
+            {
+                "message_id": message.id,
+                "topic": message.topic,
+                "payload": message.payload,
+                "metadata": message.metadata,
+                "timestamp": message.timestamp.isoformat(),
+                "source": message.source,
+            }
+        )
         topic_path = await self._get_or_create_topic(topic)
         publisher = self._get_publisher()
         data = body.encode("utf-8")
@@ -340,9 +340,7 @@ class PubSubMessageBus(MessageBus):
             return
         subscriber = self._get_subscriber()
         try:
-            await subscriber.acknowledge(
-                subscription=sub_path, ack_ids=[message_id]
-            )
+            await subscriber.acknowledge(subscription=sub_path, ack_ids=[message_id])
         except Exception:
             logger.exception("PubSub ack failed for message %s", message_id)
 
@@ -383,16 +381,12 @@ class PubSubMessageBus(MessageBus):
                 cache_key = f"{sub.topic}::{effective_group}"
                 sub_path = self._sub_paths.get(cache_key)
                 if sub_path is None:
-                    sub_path = await self._get_or_create_subscription(
-                        sub.topic, effective_group
-                    )
+                    sub_path = await self._get_or_create_subscription(sub.topic, effective_group)
                 await self._pull_and_dispatch(sub, sub_path)
             except asyncio.CancelledError:
                 raise
             except Exception:
-                logger.exception(
-                    "Error in PubSub consume loop for %s", sub.topic
-                )
+                logger.exception("Error in PubSub consume loop for %s", sub.topic)
                 await asyncio.sleep(1.0)
 
     async def _consume_pattern(self, sub: Subscription) -> None:
@@ -401,9 +395,7 @@ class PubSubMessageBus(MessageBus):
 
         subscriber = self._get_subscriber()
         try:
-            response = await subscriber.list_subscriptions(
-                project=f"projects/{self._project_id}"
-            )
+            response = await subscriber.list_subscriptions(project=f"projects/{self._project_id}")
         except Exception:
             await asyncio.sleep(1.0)
             return
@@ -417,16 +409,12 @@ class PubSubMessageBus(MessageBus):
                 effective_group = sub.group or sub.subscription_id[:16]
                 cache_key = f"{kutana_topic}::{effective_group}"
                 if cache_key not in self._sub_paths:
-                    await self._get_or_create_subscription(
-                        kutana_topic, effective_group
-                    )
+                    await self._get_or_create_subscription(kutana_topic, effective_group)
                 sub_path = self._sub_paths.get(cache_key)
                 if sub_path:
                     await self._pull_and_dispatch(sub, sub_path)
 
-    async def _pull_and_dispatch(
-        self, sub: Subscription, sub_path: str
-    ) -> None:
+    async def _pull_and_dispatch(self, sub: Subscription, sub_path: str) -> None:
         """Synchronously pull messages from Pub/Sub and dispatch them.
 
         Args:
@@ -459,8 +447,6 @@ class PubSubMessageBus(MessageBus):
         if ack_ids:
             # Auto-acknowledge processed messages (caller can also use ack())
             try:
-                await subscriber.acknowledge(
-                    subscription=sub_path, ack_ids=ack_ids
-                )
+                await subscriber.acknowledge(subscription=sub_path, ack_ids=ack_ids)
             except Exception:
                 logger.exception("PubSub auto-ack failed for %s", sub_path)

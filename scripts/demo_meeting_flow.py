@@ -202,11 +202,13 @@ async def demo_meeting_flow(audio_path: Path | None = None) -> bool:
 
                 # Send join_meeting
                 logger.info("Step 8: Joining meeting")
-                await ws.send_json({
-                    "type": "join_meeting",
-                    "meeting_id": meeting_id,
-                    "capabilities": ["listen", "speak", "transcribe"],
-                })
+                await ws.send_json(
+                    {
+                        "type": "join_meeting",
+                        "meeting_id": meeting_id,
+                        "capabilities": ["listen", "speak", "transcribe"],
+                    }
+                )
 
                 # Wait for joined confirmation
                 joined = False
@@ -241,7 +243,11 @@ async def demo_meeting_flow(audio_path: Path | None = None) -> bool:
                 audio_data: bytes | None = None
                 if audio_path and audio_path.exists():
                     audio_data = load_audio_file(audio_path)
-                    logger.info("  Loaded audio: %s (%d bytes)", audio_path.name, len(audio_data) if audio_data else 0)
+                    logger.info(
+                        "  Loaded audio: %s (%d bytes)",
+                        audio_path.name,
+                        len(audio_data) if audio_data else 0,
+                    )
 
                 if audio_data is None:
                     logger.info("  Using 2s silence (no audio file provided)")
@@ -252,11 +258,13 @@ async def demo_meeting_flow(audio_path: Path | None = None) -> bool:
                 offset = 0
                 while offset < len(audio_data):
                     chunk = audio_data[offset : offset + CHUNK_SIZE]
-                    await ws.send_json({
-                        "type": "audio_data",
-                        "data": base64.b64encode(chunk).decode(),
-                        "sequence": sequence,
-                    })
+                    await ws.send_json(
+                        {
+                            "type": "audio_data",
+                            "data": base64.b64encode(chunk).decode(),
+                            "sequence": sequence,
+                        }
+                    )
                     offset += CHUNK_SIZE
                     sequence += 1
                     await asyncio.sleep(0.1)  # pace the sending
@@ -301,10 +309,12 @@ async def demo_meeting_flow(audio_path: Path | None = None) -> bool:
                 # Step 11: Leave meeting
                 # =============================================================
                 logger.info("Step 11: Leaving meeting")
-                await ws.send_json({
-                    "type": "leave_meeting",
-                    "reason": "demo_complete",
-                })
+                await ws.send_json(
+                    {
+                        "type": "leave_meeting",
+                        "reason": "demo_complete",
+                    }
+                )
                 await asyncio.sleep(0.5)
 
         except aiohttp.ClientError as e:

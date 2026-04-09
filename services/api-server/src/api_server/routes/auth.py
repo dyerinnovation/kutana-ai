@@ -418,9 +418,7 @@ async def reset_password(
             detail="Invalid or expired reset token",
         )
 
-    if user.password_reset_expires is None or user.password_reset_expires < datetime.now(
-        UTC
-    ):
+    if user.password_reset_expires is None or user.password_reset_expires < datetime.now(UTC):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired reset token",

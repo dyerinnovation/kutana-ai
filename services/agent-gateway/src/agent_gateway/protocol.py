@@ -161,8 +161,8 @@ class Joined(BaseModel):
     participants: list[dict[str, Any]] = Field(default_factory=list)
     granted_capabilities: list[str] = Field(default_factory=list)
     # Audio sidecar — only present when voice capability is granted.
-    audio_ws_url: str | None = None   # Full WebSocket URL including token + meeting_id
-    audio_token: str | None = None    # Short-lived JWT for /audio/connect
+    audio_ws_url: str | None = None  # Full WebSocket URL including token + meeting_id
+    audio_token: str | None = None  # Short-lived JWT for /audio/connect
 
 
 class TranscriptMessage(BaseModel):
@@ -205,7 +205,9 @@ class ParticipantUpdate(BaseModel):
     role: str
     connection_type: str | None = None
     source: str | None = None  # "agent", "claude-code", "human", "openclaw", etc.
-    capabilities: list[str] | None = None  # Granted capabilities (e.g. ["listen", "speak", "voice"])
+    capabilities: list[str] | None = (
+        None  # Granted capabilities (e.g. ["listen", "speak", "voice"])
+    )
 
 
 class ErrorMessage(BaseModel):

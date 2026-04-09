@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 import pytest
 
@@ -155,7 +156,13 @@ class TestMessageBusABC:
         """A subclass missing any abstract method cannot be instantiated."""
 
         class Incomplete(MessageBus):
-            async def publish(self, topic: str, payload: dict, metadata: dict | None = None, source: str = "") -> str:  # type: ignore[override]
+            async def publish(
+                self,
+                topic: str,
+                payload: dict[str, Any],
+                metadata: dict[str, Any] | None = None,
+                source: str = "",
+            ) -> str:
                 return ""
 
             # Intentionally omitting subscribe, unsubscribe, ack, close
@@ -174,7 +181,7 @@ class TestMockMessageBus:
 
     async def test_publish_records_message(self) -> None:
         """publish() appends to the published list."""
-        from kutana_providers.testing import MockMessageBus
+        from kutana_providers.testing import MockMessageBus  # type: ignore[import-not-found]
 
         bus = MockMessageBus()
         msg_id = await bus.publish("test.topic", {"x": 1})

@@ -184,7 +184,9 @@ async def run_e2e_test(
                 )
             else:
                 logger.error("Unexpected response: %s", joined)
-                result["summary"]["errors"].append(f"Unexpected join response: {joined.get('type')}")
+                result["summary"]["errors"].append(
+                    f"Unexpected join response: {joined.get('type')}"
+                )
                 return result
 
             # --- Send audio in chunks ---

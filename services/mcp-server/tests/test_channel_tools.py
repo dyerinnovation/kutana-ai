@@ -89,11 +89,13 @@ class TestGatewayClientEventBuffering:
         from mcp_server.gateway_client import GatewayClient
 
         client = GatewayClient("ws://localhost:8003", "test-token")
-        client._events_buffer.extend([  # type: ignore[attr-defined]
-            {"type": "turn_queue_updated", "queue": []},
-            {"type": "participant_update", "action": "joined", "name": "Alice"},
-            {"type": "turn_speaker_changed", "new_speaker_id": str(uuid4())},
-        ])
+        client._events_buffer.extend(
+            [  # type: ignore[attr-defined]
+                {"type": "turn_queue_updated", "queue": []},
+                {"type": "participant_update", "action": "joined", "name": "Alice"},
+                {"type": "turn_speaker_changed", "new_speaker_id": str(uuid4())},
+            ]
+        )
 
         turn_events = client.get_events(event_type="turn_queue_updated")  # type: ignore[attr-defined]
         assert len(turn_events) == 1
@@ -130,13 +132,15 @@ class TestGatewayClientEventBuffering:
         # Simulate what _listen() does for participant_update
         client._events_buffer.append(msg)  # type: ignore[attr-defined]
         if msg["action"] == "joined":
-            client._participants.append({  # type: ignore[attr-defined]
-                "participant_id": msg["participant_id"],
-                "name": msg["name"],
-                "role": msg["role"],
-                "connection_type": msg["connection_type"],
-                "source": msg["source"],
-            })
+            client._participants.append(
+                {  # type: ignore[attr-defined]
+                    "participant_id": msg["participant_id"],
+                    "name": msg["name"],
+                    "role": msg["role"],
+                    "connection_type": msg["connection_type"],
+                    "source": msg["source"],
+                }
+            )
 
         participants = client.get_participants()  # type: ignore[attr-defined]
         assert len(participants) == 1
@@ -148,16 +152,20 @@ class TestGatewayClientEventBuffering:
 
         meeting_id = str(uuid4())
         messages = [
-            json.dumps({
-                "type": "turn_queue_updated",
-                "meeting_id": meeting_id,
-                "queue": [{"participant_id": str(uuid4()), "position": 1}],
-            }),
-            json.dumps({
-                "type": "turn_speaker_changed",
-                "meeting_id": meeting_id,
-                "new_speaker_id": str(uuid4()),
-            }),
+            json.dumps(
+                {
+                    "type": "turn_queue_updated",
+                    "meeting_id": meeting_id,
+                    "queue": [{"participant_id": str(uuid4()), "position": 1}],
+                }
+            ),
+            json.dumps(
+                {
+                    "type": "turn_speaker_changed",
+                    "meeting_id": meeting_id,
+                    "new_speaker_id": str(uuid4()),
+                }
+            ),
         ]
 
         # Use a real async generator — no mocking of __aiter__ needed
@@ -190,20 +198,24 @@ class TestGatewayClientSourceInJoin:
             sent_messages.append(msg)
 
         async def mock_recv() -> str:
-            return json.dumps({
-                "type": "joined",
-                "meeting_id": str(uuid4()),
-                "granted_capabilities": ["listen", "transcribe"],
-            })
+            return json.dumps(
+                {
+                    "type": "joined",
+                    "meeting_id": str(uuid4()),
+                    "granted_capabilities": ["listen", "transcribe"],
+                }
+            )
 
         mock_ws = MagicMock()
         mock_ws.send = mock_send
         mock_ws.recv = AsyncMock(side_effect=mock_recv)
 
-        with patch("websockets.connect", new=AsyncMock(return_value=mock_ws)):
-            with patch.object(asyncio, "create_task"):
-                client = GatewayClient("ws://localhost:8003", "test-token")
-                await client.connect_and_join(str(uuid4()))
+        with (
+            patch("websockets.connect", new=AsyncMock(return_value=mock_ws)),
+            patch.object(asyncio, "create_task"),
+        ):
+            client = GatewayClient("ws://localhost:8003", "test-token")
+            await client.connect_and_join(str(uuid4()))
 
         assert len(sent_messages) == 1
         join_msg = json.loads(sent_messages[0])

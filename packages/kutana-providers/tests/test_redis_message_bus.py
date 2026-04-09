@@ -179,7 +179,9 @@ class TestSubscribe:
         self, bus: RedisStreamsMessageBus, mock_redis: AsyncMock
     ) -> None:
         """subscribe() does not raise if XGROUP CREATE fails (group exists)."""
-        mock_redis.xgroup_create.side_effect = Exception("BUSYGROUP Consumer Group name already exists")
+        mock_redis.xgroup_create.side_effect = Exception(
+            "BUSYGROUP Consumer Group name already exists"
+        )
 
         async def handler(msg: Message) -> None:
             pass
@@ -297,27 +299,21 @@ class TestAck:
 class TestClose:
     """Tests for RedisStreamsMessageBus.close."""
 
-    async def test_close_calls_redis_aclose(
-        self, mock_redis: AsyncMock
-    ) -> None:
+    async def test_close_calls_redis_aclose(self, mock_redis: AsyncMock) -> None:
         """close() calls aclose() on the Redis client."""
         b = RedisStreamsMessageBus(url="redis://localhost:6379/0")
         b._redis = mock_redis
         await b.close()
         mock_redis.aclose.assert_called_once()
 
-    async def test_close_sets_redis_to_none(
-        self, mock_redis: AsyncMock
-    ) -> None:
+    async def test_close_sets_redis_to_none(self, mock_redis: AsyncMock) -> None:
         """close() sets _redis to None for idempotency."""
         b = RedisStreamsMessageBus(url="redis://localhost:6379/0")
         b._redis = mock_redis
         await b.close()
         assert b._redis is None
 
-    async def test_close_clears_subscriptions(
-        self, mock_redis: AsyncMock
-    ) -> None:
+    async def test_close_clears_subscriptions(self, mock_redis: AsyncMock) -> None:
         """close() clears the active subscription registry."""
         b = RedisStreamsMessageBus(url="redis://localhost:6379/0", poll_block_ms=50)
         b._redis = mock_redis
@@ -330,9 +326,7 @@ class TestClose:
         await b.close()
         assert len(b._subscriptions) == 0
 
-    async def test_close_is_idempotent(
-        self, mock_redis: AsyncMock
-    ) -> None:
+    async def test_close_is_idempotent(self, mock_redis: AsyncMock) -> None:
         """Calling close() twice does not raise."""
         b = RedisStreamsMessageBus(url="redis://localhost:6379/0")
         b._redis = mock_redis
@@ -366,9 +360,7 @@ class TestParseEntry:
         assert msg.metadata == {"region": "eu-west-1"}
         assert msg.source == "api-server"
 
-    def test_parse_entry_missing_fields_use_defaults(
-        self, bus: RedisStreamsMessageBus
-    ) -> None:
+    def test_parse_entry_missing_fields_use_defaults(self, bus: RedisStreamsMessageBus) -> None:
         """_parse_entry handles missing fields gracefully."""
         msg = bus._parse_entry({})
         assert msg.topic == ""
@@ -385,9 +377,7 @@ class TestParseEntry:
 class TestMakeEntry:
     """Tests for internal _make_entry serialization."""
 
-    def test_make_entry_contains_all_fields(
-        self, bus: RedisStreamsMessageBus
-    ) -> None:
+    def test_make_entry_contains_all_fields(self, bus: RedisStreamsMessageBus) -> None:
         """_make_entry produces a dict with all required stream fields."""
         msg = Message(
             topic="task.created",
@@ -480,9 +470,7 @@ class TestCreateFromEnv:
         bus = create_message_bus_from_env()
         assert bus._url == "redis://prod-redis:6379/2"
 
-    def test_unsupported_backend_raises(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_unsupported_backend_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Raises ValueError for unsupported KUTANA_MESSAGE_BUS values."""
         monkeypatch.setenv("KUTANA_MESSAGE_BUS", "kafka")
         with pytest.raises(ValueError, match="Unsupported"):

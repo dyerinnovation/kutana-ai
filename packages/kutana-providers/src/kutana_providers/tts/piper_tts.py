@@ -74,6 +74,7 @@ class PiperTTS(TTSProvider):
         """Return True if the piper package is importable."""
         try:
             import piper  # noqa: F401
+
             return True
         except ImportError:
             logger.warning(
@@ -93,10 +94,7 @@ class PiperTTS(TTSProvider):
             RuntimeError: If piper is not installed.
         """
         if not self._piper_available:
-            msg = (
-                "Piper TTS is not installed. "
-                "Install it with: pip install piper-tts"
-            )
+            msg = "Piper TTS is not installed. Install it with: pip install piper-tts"
             raise RuntimeError(msg)
 
         from piper.voice import PiperVoice
@@ -104,9 +102,7 @@ class PiperTTS(TTSProvider):
         self._voice = PiperVoice.load(self._voice_name)
         logger.info("Loaded Piper voice: %s", self._voice_name)
 
-    async def synthesize_stream(
-        self, text: str, voice: str | None = None
-    ) -> AsyncIterator[bytes]:
+    async def synthesize_stream(self, text: str, voice: str | None = None) -> AsyncIterator[bytes]:
         """Synthesize text into audio bytes using Piper.
 
         Lazily loads the voice model on first call, then runs

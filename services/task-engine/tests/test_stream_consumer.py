@@ -154,7 +154,9 @@ class TestEnsureGroup:
         """BUSYGROUP ResponseError is silently swallowed."""
         consumer = _make_consumer()
         mock_redis = AsyncMock()
-        mock_redis.xgroup_create.side_effect = ResponseError("BUSYGROUP Consumer Group already exists")
+        mock_redis.xgroup_create.side_effect = ResponseError(
+            "BUSYGROUP Consumer Group already exists"
+        )
         consumer._redis = mock_redis
 
         # Should not raise
@@ -204,9 +206,7 @@ class TestHandleEntry:
         entry_id, fields = _segment_event_entry(_make_segment())
         await consumer._handle_entry(entry_id, fields)
 
-        mock_redis.xack.assert_called_once_with(
-            DEFAULT_STREAM_KEY, DEFAULT_GROUP_NAME, entry_id
-        )
+        mock_redis.xack.assert_called_once_with(DEFAULT_STREAM_KEY, DEFAULT_GROUP_NAME, entry_id)
 
     async def test_skips_non_segment_events(self) -> None:
         """Non-segment events are acknowledged and the callback is not called."""
@@ -219,9 +219,7 @@ class TestHandleEntry:
         await consumer._handle_entry(entry_id, fields)
 
         on_segment.assert_not_called()
-        mock_redis.xack.assert_called_once_with(
-            DEFAULT_STREAM_KEY, DEFAULT_GROUP_NAME, entry_id
-        )
+        mock_redis.xack.assert_called_once_with(DEFAULT_STREAM_KEY, DEFAULT_GROUP_NAME, entry_id)
 
     async def test_acknowledges_on_parse_error(self) -> None:
         """Malformed JSON payload is acknowledged to avoid PEL build-up."""
@@ -245,9 +243,7 @@ class TestHandleEntry:
         # Should not propagate the callback exception
         await consumer._handle_entry(entry_id, fields)
 
-        mock_redis.xack.assert_called_once_with(
-            DEFAULT_STREAM_KEY, DEFAULT_GROUP_NAME, entry_id
-        )
+        mock_redis.xack.assert_called_once_with(DEFAULT_STREAM_KEY, DEFAULT_GROUP_NAME, entry_id)
 
     async def test_missing_event_type_field_treated_as_skip(self) -> None:
         """Entry with no event_type field is treated as unknown and ACKed."""

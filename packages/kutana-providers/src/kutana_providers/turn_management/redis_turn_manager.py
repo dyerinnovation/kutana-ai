@@ -260,7 +260,7 @@ class RedisTurnManager(TurnManager):
         Returns:
             RaiseHandResult with position and hand_raise_id.
         """
-        r = await self._get_redis()
+        await self._get_redis()
         hand_raise_id = uuid4()
         score = self._priority_score(priority)
         member = f"{participant_id}:{hand_raise_id}"
@@ -349,7 +349,7 @@ class RedisTurnManager(TurnManager):
 
         queue: list[QueueEntry] = []
         for position, (member, _score) in enumerate(members_with_scores, start=1):
-            pid_str, hrid_str = member[:_UUID_LEN], member[_UUID_LEN + 1:]
+            pid_str, hrid_str = member[:_UUID_LEN], member[_UUID_LEN + 1 :]
             meta = await r.hgetall(self._meta_key(meeting_id, UUID(hrid_str)))
             raised_at_str = meta.get("raised_at", datetime.now(tz=UTC).isoformat())
             raised_at = datetime.fromisoformat(raised_at_str)
@@ -464,7 +464,9 @@ class RedisTurnManager(TurnManager):
         await r.delete(self._speaking_started_key(meeting_id, participant_id))
 
         if status == "done":
-            logger.info("Queue empty after speaker %s finished in meeting %s", participant_id, meeting_id)
+            logger.info(
+                "Queue empty after speaker %s finished in meeting %s", participant_id, meeting_id
+            )
             return None
 
         # status == "advanced"

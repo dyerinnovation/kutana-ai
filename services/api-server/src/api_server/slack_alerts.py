@@ -43,7 +43,10 @@ async def send_slack_alert(
     }
 
     try:
-        async with aiohttp.ClientSession() as session, session.post(webhook_url, json=payload) as resp:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(webhook_url, json=payload) as resp,
+        ):
             if resp.status != 200:
                 body = await resp.text()
                 logger.warning("Slack webhook returned %d: %s", resp.status, body[:200])

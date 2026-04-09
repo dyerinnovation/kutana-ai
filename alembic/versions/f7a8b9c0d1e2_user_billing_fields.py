@@ -67,9 +67,7 @@ def upgrade() -> None:
     )
     op.add_column(
         "users",
-        sa.Column(
-            "subscription_period_end", sa.DateTime(timezone=True), nullable=True
-        ),
+        sa.Column("subscription_period_end", sa.DateTime(timezone=True), nullable=True),
     )
     op.add_column(
         "users",

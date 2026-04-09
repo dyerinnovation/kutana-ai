@@ -7,11 +7,14 @@ Create Date: 2026-03-02
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 
 from alembic import op
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 revision: str = "b3c4d5e6f7a8"
 down_revision: str = "a1b2c3d4e5f6"
@@ -79,12 +82,8 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["agent_config_id"], ["agent_configs.id"]),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
     )
-    op.create_index(
-        "ix_agent_api_keys_key_hash", "agent_api_keys", ["key_hash"], unique=True
-    )
-    op.create_index(
-        "ix_agent_api_keys_agent_config_id", "agent_api_keys", ["agent_config_id"]
-    )
+    op.create_index("ix_agent_api_keys_key_hash", "agent_api_keys", ["key_hash"], unique=True)
+    op.create_index("ix_agent_api_keys_agent_config_id", "agent_api_keys", ["agent_config_id"])
     op.create_index("ix_agent_api_keys_user_id", "agent_api_keys", ["user_id"])
 
 

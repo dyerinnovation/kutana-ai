@@ -9,6 +9,7 @@ also delivered in real time to gateway-connected participants.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from typing import TYPE_CHECKING, Any
@@ -81,10 +82,8 @@ class ChatBridge:
         """Stop the pub/sub subscriber and close the ChatStore."""
         if self._pubsub_task and not self._pubsub_task.done():
             self._pubsub_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._pubsub_task
-            except asyncio.CancelledError:
-                pass
         if hasattr(self.chat_store, "close"):
             await self.chat_store.close()  # type: ignore[attr-defined]
         logger.info("ChatBridge stopped")

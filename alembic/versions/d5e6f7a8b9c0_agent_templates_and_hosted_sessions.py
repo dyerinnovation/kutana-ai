@@ -7,12 +7,15 @@ Create Date: 2026-03-26
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
 
 from alembic import op
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 revision: str = "d5e6f7a8b9c0"
 down_revision: str | None = "c4d5e6f7a8b9"
@@ -66,17 +69,13 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["template_id"], ["agent_templates.id"]),
         sa.ForeignKeyConstraint(["meeting_id"], ["meetings.id"]),
     )
-    op.create_index(
-        "ix_hosted_agent_sessions_user_id", "hosted_agent_sessions", ["user_id"]
-    )
+    op.create_index("ix_hosted_agent_sessions_user_id", "hosted_agent_sessions", ["user_id"])
     op.create_index(
         "ix_hosted_agent_sessions_meeting_id",
         "hosted_agent_sessions",
         ["meeting_id"],
     )
-    op.create_index(
-        "ix_hosted_agent_sessions_status", "hosted_agent_sessions", ["status"]
-    )
+    op.create_index("ix_hosted_agent_sessions_status", "hosted_agent_sessions", ["status"])
 
     # Seed default templates
     op.execute(

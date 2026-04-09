@@ -90,9 +90,7 @@ class TestNATSImportGuard:
 
     def test_raises_import_error_when_nats_missing(self) -> None:
         """NATSMessageBus raises ImportError if nats-py is not installed."""
-        with patch(
-            "kutana_providers.messaging.nats_jetstream._NATS_AVAILABLE", False
-        ):
+        with patch("kutana_providers.messaging.nats_jetstream._NATS_AVAILABLE", False):
             from kutana_providers.messaging.nats_jetstream import _require_nats
 
             with pytest.raises(ImportError, match="nats-py"):
@@ -136,26 +134,20 @@ class TestNATSSubjectNaming:
 class TestNATSPublish:
     """Tests for NATSMessageBus.publish."""
 
-    async def test_publish_calls_js_publish(
-        self, bus: Any, mock_js: AsyncMock
-    ) -> None:
+    async def test_publish_calls_js_publish(self, bus: Any, mock_js: AsyncMock) -> None:
         """publish() calls JetStream publish on the subject."""
         await bus.publish("meeting.events", {"type": "started"})
         mock_js.publish.assert_called_once()
         call_args = mock_js.publish.call_args
         assert call_args[0][0] == "meeting.events"
 
-    async def test_publish_returns_uuid(
-        self, bus: Any
-    ) -> None:
+    async def test_publish_returns_uuid(self, bus: Any) -> None:
         """publish() returns a 36-char UUID string."""
         msg_id = await bus.publish("t", {})
         assert isinstance(msg_id, str)
         assert len(msg_id) == 36
 
-    async def test_publish_sends_json_body(
-        self, bus: Any, mock_js: AsyncMock
-    ) -> None:
+    async def test_publish_sends_json_body(self, bus: Any, mock_js: AsyncMock) -> None:
         """publish() encodes the full message as UTF-8 JSON."""
         await bus.publish("t", {"answer": 42}, source="svc")
         call_args = mock_js.publish.call_args
@@ -176,9 +168,7 @@ class TestNATSPublish:
 class TestNATSSubscribe:
     """Tests for NATSMessageBus.subscribe."""
 
-    async def test_subscribe_returns_subscription(
-        self, bus: Any
-    ) -> None:
+    async def test_subscribe_returns_subscription(self, bus: Any) -> None:
         """subscribe() returns a Subscription with correct topic."""
 
         async def handler(msg: Message) -> None:
@@ -189,9 +179,7 @@ class TestNATSSubscribe:
         assert sub.topic == "meeting.events"
         bus._subscriptions.clear()
 
-    async def test_subscribe_calls_js_subscribe(
-        self, bus: Any, mock_js: AsyncMock
-    ) -> None:
+    async def test_subscribe_calls_js_subscribe(self, bus: Any, mock_js: AsyncMock) -> None:
         """subscribe() calls jetstream.subscribe for the subject."""
 
         async def handler(msg: Message) -> None:
@@ -201,9 +189,7 @@ class TestNATSSubscribe:
         mock_js.subscribe.assert_called_once()
         bus._subscriptions.clear()
 
-    async def test_subscribe_with_group_uses_queue(
-        self, bus: Any, mock_js: AsyncMock
-    ) -> None:
+    async def test_subscribe_with_group_uses_queue(self, bus: Any, mock_js: AsyncMock) -> None:
         """subscribe(group=...) passes queue= and durable= to JetStream."""
 
         async def handler(msg: Message) -> None:
@@ -215,9 +201,7 @@ class TestNATSSubscribe:
         assert "durable" in call_kwargs
         bus._subscriptions.clear()
 
-    async def test_subscribe_without_group_no_queue(
-        self, bus: Any, mock_js: AsyncMock
-    ) -> None:
+    async def test_subscribe_without_group_no_queue(self, bus: Any, mock_js: AsyncMock) -> None:
         """Fan-out subscribe (group=None) does not set queue=."""
 
         async def handler(msg: Message) -> None:
@@ -228,9 +212,7 @@ class TestNATSSubscribe:
         assert "queue" not in call_kwargs
         bus._subscriptions.clear()
 
-    async def test_subscribe_registers_in_subscriptions_dict(
-        self, bus: Any
-    ) -> None:
+    async def test_subscribe_registers_in_subscriptions_dict(self, bus: Any) -> None:
         """subscribe() adds to the internal _subscriptions dict."""
 
         async def handler(msg: Message) -> None:
@@ -244,9 +226,7 @@ class TestNATSSubscribe:
 class TestNATSHandlerDispatch:
     """Tests for _make_handler callback dispatch."""
 
-    async def test_handler_dispatches_message_to_callback(
-        self, bus: Any
-    ) -> None:
+    async def test_handler_dispatches_message_to_callback(self, bus: Any) -> None:
         """_make_handler callback deserialises message and calls handler."""
         received: list[Message] = []
 
@@ -257,13 +237,15 @@ class TestNATSHandlerDispatch:
         bus._subscriptions[sub.subscription_id] = sub
 
         callback = bus._make_handler(sub)
-        nats_msg = _make_nats_msg({
-            "message_id": "test-uuid-1234",
-            "topic": "t",
-            "payload": {"x": 99},
-            "metadata": {},
-            "source": "svc",
-        })
+        nats_msg = _make_nats_msg(
+            {
+                "message_id": "test-uuid-1234",
+                "topic": "t",
+                "payload": {"x": 99},
+                "metadata": {},
+                "source": "svc",
+            }
+        )
         await callback(nats_msg)
 
         assert len(received) == 1
@@ -281,13 +263,15 @@ class TestNATSHandlerDispatch:
         bus._subscriptions[sub.subscription_id] = sub
 
         callback = bus._make_handler(sub)
-        nats_msg = _make_nats_msg({
-            "message_id": "x",
-            "topic": "t",
-            "payload": {},
-            "metadata": {},
-            "source": "",
-        })
+        nats_msg = _make_nats_msg(
+            {
+                "message_id": "x",
+                "topic": "t",
+                "payload": {},
+                "metadata": {},
+                "source": "",
+            }
+        )
         await callback(nats_msg)
         # ack should NOT be called; nak should be called
         nats_msg.ack.assert_not_called()
@@ -311,9 +295,7 @@ class TestNATSAck:
 class TestNATSUnsubscribe:
     """Tests for NATSMessageBus.unsubscribe."""
 
-    async def test_unsubscribe_removes_from_subscriptions(
-        self, bus: Any
-    ) -> None:
+    async def test_unsubscribe_removes_from_subscriptions(self, bus: Any) -> None:
         """unsubscribe() removes the subscription from the registry."""
 
         async def handler(msg: Message) -> None:
@@ -324,9 +306,7 @@ class TestNATSUnsubscribe:
         await bus.unsubscribe(sub)
         assert sub.subscription_id not in bus._subscriptions
 
-    async def test_unsubscribe_calls_nats_sub_unsubscribe(
-        self, bus: Any
-    ) -> None:
+    async def test_unsubscribe_calls_nats_sub_unsubscribe(self, bus: Any) -> None:
         """unsubscribe() drains the underlying NATS subscription."""
 
         async def handler(msg: Message) -> None:
@@ -353,16 +333,12 @@ class TestNATSClose:
         await bus.close()
         assert len(bus._subscriptions) == 0
 
-    async def test_close_drains_nats_connection(
-        self, bus: Any, mock_nc: MagicMock
-    ) -> None:
+    async def test_close_drains_nats_connection(self, bus: Any, mock_nc: MagicMock) -> None:
         """close() calls nc.drain() on the NATS client."""
         await bus.close()
         mock_nc.drain.assert_called_once()
 
-    async def test_close_sets_nc_to_none(
-        self, bus: Any
-    ) -> None:
+    async def test_close_sets_nc_to_none(self, bus: Any) -> None:
         """close() resets the NATS client reference."""
         await bus.close()
         assert bus._nc is None

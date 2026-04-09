@@ -76,9 +76,7 @@ def upgrade() -> None:
         ),
     )
     op.create_index("ix_agent_sessions_meeting_id", "agent_sessions", ["meeting_id"])
-    op.create_index(
-        "ix_agent_sessions_agent_config_id", "agent_sessions", ["agent_config_id"]
-    )
+    op.create_index("ix_agent_sessions_agent_config_id", "agent_sessions", ["agent_config_id"])
     op.create_index("ix_agent_sessions_status", "agent_sessions", ["status"])
 
     # --- Alter meetings table ---

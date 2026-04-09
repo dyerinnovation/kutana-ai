@@ -3,6 +3,7 @@
 Tests each of the turn management tools by mocking the RedisTurnManager
 and MCPIdentity globals in mcp_server.main.
 """
+
 from __future__ import annotations
 
 import json
@@ -505,6 +506,7 @@ async def test_join_meeting_text_only_default_capabilities() -> None:
         patch("mcp_server.main.GatewayClient", return_value=mock_gw),
     ):
         from mcp_server.main import kutana_join_meeting
+
         await kutana_join_meeting(str(TEST_MEETING_ID), capabilities=["text_only"])
 
     assert set(mapped_caps) == {"listen", "transcribe"}
@@ -513,6 +515,7 @@ async def test_join_meeting_text_only_default_capabilities() -> None:
 @pytest.mark.asyncio
 async def test_join_meeting_voice_returns_audio_fields() -> None:
     """kutana_join_meeting returns audio_ws_url and audio_token for voice."""
+
     async def fake_connect_and_join(
         meeting_id: str,
         capabilities: list[str] | None = None,
@@ -538,9 +541,8 @@ async def test_join_meeting_voice_returns_audio_fields() -> None:
         patch("mcp_server.main.GatewayClient", return_value=mock_gw),
     ):
         from mcp_server.main import kutana_join_meeting
-        result = json.loads(
-            await kutana_join_meeting(str(TEST_MEETING_ID), capabilities=["voice"])
-        )
+
+        result = json.loads(await kutana_join_meeting(str(TEST_MEETING_ID), capabilities=["voice"]))
 
     assert "audio_ws_url" in result
     assert "audio_token" in result
@@ -550,6 +552,7 @@ async def test_join_meeting_voice_returns_audio_fields() -> None:
 @pytest.mark.asyncio
 async def test_join_meeting_text_only_no_audio_fields() -> None:
     """kutana_join_meeting does not include audio fields for text_only."""
+
     async def fake_connect_and_join(
         meeting_id: str,
         capabilities: list[str] | None = None,
@@ -575,6 +578,7 @@ async def test_join_meeting_text_only_no_audio_fields() -> None:
         patch("mcp_server.main.GatewayClient", return_value=mock_gw),
     ):
         from mcp_server.main import kutana_join_meeting
+
         result = json.loads(
             await kutana_join_meeting(str(TEST_MEETING_ID), capabilities=["text_only"])
         )
@@ -611,6 +615,7 @@ async def test_join_meeting_voice_includes_speak_cap() -> None:
         patch("mcp_server.main.GatewayClient", return_value=mock_gw),
     ):
         from mcp_server.main import kutana_join_meeting
+
         await kutana_join_meeting(str(TEST_MEETING_ID), capabilities=["voice"])
 
     assert "speak" in mapped_caps

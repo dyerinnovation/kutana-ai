@@ -351,9 +351,7 @@ class TestDefaultRegistry:
         """Default registry can create a WhisperSTT provider."""
         from kutana_providers.stt.whisper_stt import WhisperSTT
 
-        provider = default_registry.create(
-            ProviderType.STT, "whisper", model_size="tiny"
-        )
+        provider = default_registry.create(ProviderType.STT, "whisper", model_size="tiny")
         assert isinstance(provider, WhisperSTT)
         assert isinstance(provider, STTProvider)
 
@@ -381,9 +379,7 @@ class TestDefaultRegistry:
         """Default registry can create a GroqLLM provider."""
         from kutana_providers.llm.groq_llm import GroqLLM
 
-        provider = default_registry.create(
-            ProviderType.LLM, "groq", api_key="test-key"
-        )
+        provider = default_registry.create(ProviderType.LLM, "groq", api_key="test-key")
         assert isinstance(provider, GroqLLM)
         assert isinstance(provider, LLMProvider)
 

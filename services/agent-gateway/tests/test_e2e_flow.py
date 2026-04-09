@@ -53,12 +53,15 @@ class TestE2EAudioToTranscript:
         mock_publisher.close = AsyncMock()
         mock_publisher.publish = AsyncMock()
 
-        with patch(
-            "agent_gateway.audio_bridge.EventPublisher",
-            return_value=mock_publisher,
-        ), patch(
-            "agent_gateway.audio_bridge._create_stt_provider",
-            return_value=mock_stt,
+        with (
+            patch(
+                "agent_gateway.audio_bridge.EventPublisher",
+                return_value=mock_publisher,
+            ),
+            patch(
+                "agent_gateway.audio_bridge._create_stt_provider",
+                return_value=mock_stt,
+            ),
         ):
             bridge = AudioBridge(
                 redis_url="redis://localhost:6379/0",
@@ -170,12 +173,15 @@ class TestE2EAudioToTranscript:
 
         mock_publisher.publish = capture_publish
 
-        with patch(
-            "agent_gateway.audio_bridge.EventPublisher",
-            return_value=mock_publisher,
-        ), patch(
-            "agent_gateway.audio_bridge._create_stt_provider",
-            return_value=mock_stt,
+        with (
+            patch(
+                "agent_gateway.audio_bridge.EventPublisher",
+                return_value=mock_publisher,
+            ),
+            patch(
+                "agent_gateway.audio_bridge._create_stt_provider",
+                return_value=mock_stt,
+            ),
         ):
             bridge = AudioBridge(
                 redis_url="redis://localhost:6379/0",

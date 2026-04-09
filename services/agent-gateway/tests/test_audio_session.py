@@ -43,6 +43,7 @@ def _make_websocket(messages: list[str] | None = None):
 
     # Build a side_effect that returns messages then raises WebSocketDisconnect
     from fastapi import WebSocketDisconnect
+
     responses = list(messages or [])
     responses.append(None)  # sentinel — raise after messages
 
@@ -210,7 +211,8 @@ class TestAudioSessionStartStopSpeaking:
 
         # On disconnect while speaking, _cleanup should broadcast "stopped"
         stopped_calls = [
-            c for c in router.broadcast_speaker_changed.call_args_list
+            c
+            for c in router.broadcast_speaker_changed.call_args_list
             if c.kwargs.get("action") == "stopped"
         ]
         assert len(stopped_calls) >= 1
@@ -278,9 +280,7 @@ class TestAudioSessionAudioData:
 
         # Should have sent an error message through the outbound queue / send_json
         error_calls = [
-            call
-            for call in ws.send_json.call_args_list
-            if call[0][0].get("type") == "error"
+            call for call in ws.send_json.call_args_list if call[0][0].get("type") == "error"
         ]
         assert len(error_calls) >= 1
 
@@ -302,9 +302,7 @@ class TestAudioSessionPing:
         )
         await session.handle()
 
-        pong_calls = [
-            c for c in ws.send_json.call_args_list if c[0][0].get("type") == "pong"
-        ]
+        pong_calls = [c for c in ws.send_json.call_args_list if c[0][0].get("type") == "pong"]
         assert len(pong_calls) >= 1
 
 
@@ -324,7 +322,7 @@ class TestAudioSessionReceiveAudio:
             audio_router=router,
         )
 
-        audio_bytes = b"\xAA\xBB" * 80
+        audio_bytes = b"\xaa\xbb" * 80
         speakers = ["participant-abc"]
         await session.receive_audio(audio_bytes=audio_bytes, speakers=speakers)
 

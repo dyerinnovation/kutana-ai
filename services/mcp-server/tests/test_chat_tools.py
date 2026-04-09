@@ -3,6 +3,7 @@
 Tests each of the 3 chat/status tools by mocking RedisChatStore, RedisTurnManager,
 ApiClient, GatewayClient, and MCPIdentity globals in mcp_server.main.
 """
+
 from __future__ import annotations
 
 import json
@@ -140,7 +141,9 @@ async def test_send_chat_message_question_type() -> None:
         patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
     ):
         result = json.loads(
-            await send_chat_message(str(TEST_MEETING_ID), "What is the timeline?", message_type="question")
+            await send_chat_message(
+                str(TEST_MEETING_ID), "What is the timeline?", message_type="question"
+            )
         )
 
     assert result["message_type"] == "question"
@@ -157,7 +160,9 @@ async def test_send_chat_message_question_type() -> None:
 async def test_send_chat_message_action_item_type() -> None:
     """send_chat_message accepts 'action_item' as message_type."""
     cs = _make_chat_store()
-    msg = _make_chat_message(content="Review PR by Friday", message_type=ChatMessageType.ACTION_ITEM)
+    msg = _make_chat_message(
+        content="Review PR by Friday", message_type=ChatMessageType.ACTION_ITEM
+    )
     cs.send_message.return_value = msg
 
     with (
@@ -165,7 +170,9 @@ async def test_send_chat_message_action_item_type() -> None:
         patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
     ):
         result = json.loads(
-            await send_chat_message(str(TEST_MEETING_ID), "Review PR by Friday", message_type="action_item")
+            await send_chat_message(
+                str(TEST_MEETING_ID), "Review PR by Friday", message_type="action_item"
+            )
         )
 
     assert result["message_type"] == "action_item"
@@ -201,7 +208,9 @@ async def test_send_chat_message_decision_type() -> None:
         patch.object(main_module, "_mcp_identity", TEST_IDENTITY),
     ):
         result = json.loads(
-            await send_chat_message(str(TEST_MEETING_ID), "We ship v2 next week", message_type="decision")
+            await send_chat_message(
+                str(TEST_MEETING_ID), "We ship v2 next week", message_type="decision"
+            )
         )
 
     assert result["message_type"] == "decision"

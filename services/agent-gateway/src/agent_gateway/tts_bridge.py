@@ -14,12 +14,12 @@ from __future__ import annotations
 import base64
 import logging
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
-
-from kutana_core.interfaces.tts import TTSProvider, Voice
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from agent_gateway.connection_manager import ConnectionManager
+    from kutana_core.interfaces.tts import TTSProvider, Voice
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ _DEFAULT_VOICE_POOL: list[str] = [
 ]
 
 _CHAR_BUDGET_DEFAULT: int = 100_000  # characters per agent per session
-_CACHE_MAX_SIZE: int = 256           # max number of cached audio entries
+_CACHE_MAX_SIZE: int = 256  # max number of cached audio entries
 
 
 # ---------------------------------------------------------------------------
@@ -283,9 +283,7 @@ class TTSBridge:
     # Voice management
     # ------------------------------------------------------------------
 
-    def assign_voice(
-        self, session_id: UUID, requested_voice: str | None = None
-    ) -> str:
+    def assign_voice(self, session_id: UUID, requested_voice: str | None = None) -> str:
         """Assign a voice to a session.
 
         Args:
@@ -342,18 +340,12 @@ class TTSBridge:
         if not text:
             return None
 
-        effective_voice = (
-            voice
-            or self._voice_pool.get(session_id)
-            or _DEFAULT_VOICE_POOL[0]
-        )
+        effective_voice = voice or self._voice_pool.get(session_id) or _DEFAULT_VOICE_POOL[0]
 
         # Cache hit — no budget consumption for repeated phrases
         cached = self._cache.get(effective_voice, text)
         if cached is not None:
-            logger.debug(
-                "TTS cache hit for session %s (%d chars)", session_id, len(text)
-            )
+            logger.debug("TTS cache hit for session %s (%d chars)", session_id, len(text))
             return cached
 
         # Budget check
@@ -438,9 +430,7 @@ class TTSBridge:
                 await session.send_event("tts.audio", payload)
                 delivered += 1
             except Exception:
-                logger.warning(
-                    "Failed to deliver TTS audio to session %s", session.session_id
-                )
+                logger.warning("Failed to deliver TTS audio to session %s", session.session_id)
 
         logger.info(
             "TTS broadcast: meeting=%s speaker=%s chars=%d delivered=%d",

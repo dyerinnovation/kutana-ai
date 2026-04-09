@@ -98,9 +98,7 @@ def validate_mcp_token(
     try:
         agent_config_id = UUID(agent_config_id_str)
     except ValueError as e:
-        raise MCPAuthError(
-            "invalid_claim", "'agent_config_id' must be a valid UUID"
-        ) from e
+        raise MCPAuthError("invalid_claim", "'agent_config_id' must be a valid UUID") from e
 
     # Extract scopes
     scopes = payload.get("scopes", [])

@@ -8,11 +8,13 @@ when the configurable timeout expires.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from agent_gateway.connection_manager import ConnectionManager
     from kutana_core.interfaces.turn_manager import TurnManager
 
@@ -65,18 +67,14 @@ class TurnBridge:
                 self._monitor_loop(),
                 name="turn-bridge-monitor",
             )
-            logger.info(
-                "TurnBridge monitor started (timeout=%ds)", self.speaker_timeout_seconds
-            )
+            logger.info("TurnBridge monitor started (timeout=%ds)", self.speaker_timeout_seconds)
 
     async def stop(self) -> None:
         """Stop the background monitor and close the TurnManager."""
         if self._monitor_task and not self._monitor_task.done():
             self._monitor_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._monitor_task
-            except asyncio.CancelledError:
-                pass
         if hasattr(self.turn_manager, "close"):
             await self.turn_manager.close()  # type: ignore[attr-defined]
         logger.info("TurnBridge stopped")
@@ -158,9 +156,7 @@ class TurnBridge:
             participant_id: The participant finishing their turn.
         """
         previous_speaker_id = participant_id
-        new_speaker_id = await self.turn_manager.mark_finished_speaking(
-            meeting_id, participant_id
-        )
+        new_speaker_id = await self.turn_manager.mark_finished_speaking(meeting_id, participant_id)
 
         # Broadcast finished event
         await self._broadcast_event(
@@ -245,7 +241,9 @@ class TurnBridge:
         status = await self.turn_manager.get_queue_status(meeting_id)
         return {
             "meeting_id": str(meeting_id),
-            "active_speaker_id": str(status.active_speaker_id) if status.active_speaker_id else None,
+            "active_speaker_id": str(status.active_speaker_id)
+            if status.active_speaker_id
+            else None,
             "queue": [
                 {
                     "position": entry.position,

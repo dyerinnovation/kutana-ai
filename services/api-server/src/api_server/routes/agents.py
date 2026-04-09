@@ -2,19 +2,23 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Annotated
-from uuid import UUID
+from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from api_server.auth_deps import CurrentUser
 from api_server.billing_deps import check_agent_config_limit
 from api_server.deps import get_db_session
 from kutana_core.database.models import AgentConfigORM
+
+if TYPE_CHECKING:
+    from datetime import datetime
+    from uuid import UUID
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from api_server.auth_deps import CurrentUser
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -121,9 +125,9 @@ async def list_agents(
     agents = result.scalars().all()
 
     count_result = await db.execute(
-        select(func.count()).select_from(AgentConfigORM).where(
-            AgentConfigORM.owner_id == current_user.id
-        )
+        select(func.count())
+        .select_from(AgentConfigORM)
+        .where(AgentConfigORM.owner_id == current_user.id)
     )
     total = count_result.scalar_one()
 

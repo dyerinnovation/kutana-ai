@@ -151,9 +151,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Validate STT config at startup — fail fast if misconfigured
     test_provider = _create_stt_provider(_settings, uuid4())
     await test_provider.close()
-    logger.info(
-        "audio-service starting up (stt_provider=%s)", _settings.stt_provider
-    )
+    logger.info("audio-service starting up (stt_provider=%s)", _settings.stt_provider)
 
     yield
 

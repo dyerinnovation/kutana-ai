@@ -5,15 +5,13 @@ from __future__ import annotations
 import json
 import logging
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from api_server.auth_deps import CurrentUser
 from api_server.deps import get_db_session
 from kutana_core.database.models import (
     MeetingORM,
@@ -21,6 +19,11 @@ from kutana_core.database.models import (
     TaskORM,
     TranscriptSegmentORM,
 )
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from api_server.auth_deps import CurrentUser
 
 logger = logging.getLogger(__name__)
 
@@ -110,9 +113,7 @@ async def _generate_summary_via_haiku(
         messages=[
             {
                 "role": "user",
-                "content": (
-                    f"Summarize this meeting transcript:\n\n{transcript_text}"
-                ),
+                "content": (f"Summarize this meeting transcript:\n\n{transcript_text}"),
             }
         ],
     )
@@ -168,9 +169,7 @@ async def get_meeting_summary(
         HTTPException: 404 if meeting not found.
     """
     # Verify meeting exists
-    result = await db.execute(
-        select(MeetingORM).where(MeetingORM.id == meeting_id)
-    )
+    result = await db.execute(select(MeetingORM).where(MeetingORM.id == meeting_id))
     meeting = result.scalar_one_or_none()
     if meeting is None:
         raise HTTPException(
@@ -181,24 +180,21 @@ async def get_meeting_summary(
     # Check for cached summary
     if not regenerate:
         cached_result = await db.execute(
-            select(MeetingSummaryORM).where(
-                MeetingSummaryORM.meeting_id == meeting_id
-            )
+            select(MeetingSummaryORM).where(MeetingSummaryORM.meeting_id == meeting_id)
         )
         cached = cached_result.scalar_one_or_none()
         if cached is not None:
             # Get task count fresh
             task_count_result = await db.execute(
-                select(func.count())
-                .select_from(TaskORM)
-                .where(TaskORM.meeting_id == meeting_id)
+                select(func.count()).select_from(TaskORM).where(TaskORM.meeting_id == meeting_id)
             )
             task_count = task_count_result.scalar() or 0
 
             # Get participant count from transcript
             participant_result = await db.execute(
-                select(func.count(func.distinct(TranscriptSegmentORM.speaker_id)))
-                .where(TranscriptSegmentORM.meeting_id == meeting_id)
+                select(func.count(func.distinct(TranscriptSegmentORM.speaker_id))).where(
+                    TranscriptSegmentORM.meeting_id == meeting_id
+                )
             )
             participant_count = participant_result.scalar() or 0
 
@@ -246,16 +242,15 @@ async def get_meeting_summary(
 
     # Get task count
     task_count_result = await db.execute(
-        select(func.count())
-        .select_from(TaskORM)
-        .where(TaskORM.meeting_id == meeting_id)
+        select(func.count()).select_from(TaskORM).where(TaskORM.meeting_id == meeting_id)
     )
     task_count = task_count_result.scalar() or 0
 
     # Get participant count
     participant_result = await db.execute(
-        select(func.count(func.distinct(TranscriptSegmentORM.speaker_id)))
-        .where(TranscriptSegmentORM.meeting_id == meeting_id)
+        select(func.count(func.distinct(TranscriptSegmentORM.speaker_id))).where(
+            TranscriptSegmentORM.meeting_id == meeting_id
+        )
     )
     participant_count = participant_result.scalar() or 0
 
@@ -269,9 +264,7 @@ async def get_meeting_summary(
 
     # Cache the summary — upsert
     existing_result = await db.execute(
-        select(MeetingSummaryORM).where(
-            MeetingSummaryORM.meeting_id == meeting_id
-        )
+        select(MeetingSummaryORM).where(MeetingSummaryORM.meeting_id == meeting_id)
     )
     existing = existing_result.scalar_one_or_none()
     if existing is not None:

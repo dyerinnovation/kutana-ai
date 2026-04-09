@@ -45,9 +45,7 @@ class EventRelay:
             redis_url: Redis connection URL.
             connection_manager: The gateway connection manager.
         """
-        self._redis: redis.Redis[str] = redis.from_url(
-            redis_url, decode_responses=True
-        )
+        self._redis: redis.Redis[str] = redis.from_url(redis_url, decode_responses=True)
         self._manager = connection_manager
         self._running = False
         self._task: asyncio.Task[None] | None = None
@@ -56,9 +54,7 @@ class EventRelay:
         """Start consuming events from Redis Streams."""
         # Ensure consumer group exists
         try:
-            await self._redis.xgroup_create(
-                STREAM_KEY, GROUP_NAME, id="0", mkstream=True
-            )
+            await self._redis.xgroup_create(STREAM_KEY, GROUP_NAME, id="0", mkstream=True)
         except redis.ResponseError as e:
             if "BUSYGROUP" not in str(e):
                 raise
@@ -141,7 +137,9 @@ class EventRelay:
                 # Treat empty set as None (no filter) for backward compat:
                 # agents with no active subscriptions receive all channel events.
                 subscribed = raw_subscribed if raw_subscribed else None
-                if self._should_relay(event_type, session.capabilities, subscribed_channels=subscribed):
+                if self._should_relay(
+                    event_type, session.capabilities, subscribed_channels=subscribed
+                ):
                     try:
                         if event_type == "transcript.segment.final":
                             segment = payload.get("segment", {})

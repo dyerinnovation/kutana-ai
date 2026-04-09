@@ -209,9 +209,7 @@ class SQSMessageBus(MessageBus):
     # SQS helpers
     # ------------------------------------------------------------------
 
-    async def _get_or_create_sqs_queue(
-        self, queue_name: str
-    ) -> tuple[str, str]:
+    async def _get_or_create_sqs_queue(self, queue_name: str) -> tuple[str, str]:
         """Return (queue_url, queue_arn) for *queue_name*, creating it if needed.
 
         Args:
@@ -243,9 +241,7 @@ class SQSMessageBus(MessageBus):
         logger.debug("SQS queue %s -> %s", queue_name, queue_url)
         return queue_url, queue_arn
 
-    async def _subscribe_sqs_to_sns(
-        self, sns_arn: str, sqs_arn: str, sqs_url: str
-    ) -> None:
+    async def _subscribe_sqs_to_sns(self, sns_arn: str, sqs_arn: str, sqs_url: str) -> None:
         """Subscribe an SQS queue to an SNS topic.
 
         Sets the SQS queue policy to allow SNS to deliver messages, then
@@ -257,16 +253,20 @@ class SQSMessageBus(MessageBus):
             sqs_url: SQS queue URL (for policy update).
         """
         # Grant SNS permission to publish to SQS
-        policy = json.dumps({
-            "Version": "2012-10-17",
-            "Statement": [{
-                "Effect": "Allow",
-                "Principal": {"Service": "sns.amazonaws.com"},
-                "Action": "sqs:SendMessage",
-                "Resource": sqs_arn,
-                "Condition": {"ArnEquals": {"aws:SourceArn": sns_arn}},
-            }],
-        })
+        policy = json.dumps(
+            {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {"Service": "sns.amazonaws.com"},
+                        "Action": "sqs:SendMessage",
+                        "Resource": sqs_arn,
+                        "Condition": {"ArnEquals": {"aws:SourceArn": sns_arn}},
+                    }
+                ],
+            }
+        )
         session = self._make_session()
         async with session.client("sqs") as sqs:
             await sqs.set_queue_attributes(
@@ -313,14 +313,16 @@ class SQSMessageBus(MessageBus):
             metadata=metadata or {},
             source=source,
         )
-        body = json.dumps({
-            "message_id": message.id,
-            "topic": message.topic,
-            "payload": message.payload,
-            "metadata": message.metadata,
-            "timestamp": message.timestamp.isoformat(),
-            "source": message.source,
-        })
+        body = json.dumps(
+            {
+                "message_id": message.id,
+                "topic": message.topic,
+                "payload": message.payload,
+                "metadata": message.metadata,
+                "timestamp": message.timestamp.isoformat(),
+                "source": message.source,
+            }
+        )
         sns_arn = await self._get_or_create_sns_topic(topic)
         session = self._make_session()
         async with session.client("sns") as sns:
@@ -414,9 +416,7 @@ class SQSMessageBus(MessageBus):
         if subscription.group is None:
             return
         group = subscription.group
-        queue_name = _queue_name_for_group(
-            subscription.topic, group, self._topic_prefix
-        )
+        queue_name = _queue_name_for_group(subscription.topic, group, self._topic_prefix)
         cached = self._sqs_queues.get(queue_name)
         if cached is None:
             return
@@ -424,9 +424,7 @@ class SQSMessageBus(MessageBus):
         session = self._make_session()
         try:
             async with session.client("sqs") as sqs:
-                await sqs.delete_message(
-                    QueueUrl=queue_url, ReceiptHandle=message_id
-                )
+                await sqs.delete_message(QueueUrl=queue_url, ReceiptHandle=message_id)
         except Exception:
             logger.exception("SQS ack failed for message %s", message_id)
 
@@ -522,6 +520,4 @@ class SQSMessageBus(MessageBus):
                             ReceiptHandle=receipt_handle,
                         )
             except Exception:
-                logger.exception(
-                    "Error dispatching SQS message from %s", queue_url
-                )
+                logger.exception("Error dispatching SQS message from %s", queue_url)

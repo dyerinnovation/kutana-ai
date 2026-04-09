@@ -155,8 +155,7 @@ async def _on_window(window: SegmentWindow) -> None:
         window: A time-bounded batch of transcript segments ready for extraction.
     """
     logger.info(
-        "Window ready for extraction: meeting=%s window=%.1f–%.1fs "
-        "segments=%d is_final=%s",
+        "Window ready for extraction: meeting=%s window=%.1f-%.1fs segments=%d is_final=%s",
         window.meeting_id,
         window.window_start,
         window.window_end,
@@ -246,9 +245,7 @@ async def _on_window(window: SegmentWindow) -> None:
         try:
             await _event_publisher.publish_insights(str(window.meeting_id), deduped_result)
         except Exception:
-            logger.exception(
-                "Failed to publish insights for meeting %s", window.meeting_id
-            )
+            logger.exception("Failed to publish insights for meeting %s", window.meeting_id)
 
     # Persist tasks to PostgreSQL (graceful fallback)
     await _persist_task_entities(unique, window.meeting_id)

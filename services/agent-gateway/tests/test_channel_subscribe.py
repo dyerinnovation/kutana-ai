@@ -37,10 +37,12 @@ class TestSubscribeChannelMessage:
 
     def test_parse_subscribe_channel(self) -> None:
         """parse_client_message correctly parses subscribe_channel."""
-        msg = parse_client_message({
-            "type": "subscribe_channel",
-            "channels": ["tasks", "summaries"],
-        })
+        msg = parse_client_message(
+            {
+                "type": "subscribe_channel",
+                "channels": ["tasks", "summaries"],
+            }
+        )
         assert isinstance(msg, SubscribeChannel)
         assert "tasks" in msg.channels
 
@@ -323,7 +325,9 @@ class TestEventRelayChannelRouting:
         connection_manager.get_meeting_sessions.return_value = [session]
 
         payload = json.dumps({"meeting_id": str(meeting_id), "channel": "anything", "msg": "hi"})
-        await relay._handle_event("msg-1", {"event_type": "data.channel.anything", "payload": payload})
+        await relay._handle_event(
+            "msg-1", {"event_type": "data.channel.anything", "payload": payload}
+        )
 
         session.send_event.assert_awaited_once()
 
@@ -343,32 +347,44 @@ class TestEventRelayChannelRouting:
 
     def test_should_relay_channel_with_subscription(self, relay: EventRelay) -> None:
         """_should_relay returns True for subscribed channel."""
-        assert relay._should_relay(
-            "data.channel.tasks",
-            ["listen"],
-            subscribed_channels={"tasks"},
-        ) is True
+        assert (
+            relay._should_relay(
+                "data.channel.tasks",
+                ["listen"],
+                subscribed_channels={"tasks"},
+            )
+            is True
+        )
 
     def test_should_relay_channel_not_subscribed(self, relay: EventRelay) -> None:
         """_should_relay returns False for unsubscribed channel."""
-        assert relay._should_relay(
-            "data.channel.tasks",
-            ["listen"],
-            subscribed_channels={"decisions"},
-        ) is False
+        assert (
+            relay._should_relay(
+                "data.channel.tasks",
+                ["listen"],
+                subscribed_channels={"decisions"},
+            )
+            is False
+        )
 
     def test_should_relay_channel_wildcard(self, relay: EventRelay) -> None:
         """_should_relay returns True for wildcard subscription."""
-        assert relay._should_relay(
-            "data.channel.anything",
-            ["listen"],
-            subscribed_channels={"*"},
-        ) is True
+        assert (
+            relay._should_relay(
+                "data.channel.anything",
+                ["listen"],
+                subscribed_channels={"*"},
+            )
+            is True
+        )
 
     def test_should_relay_channel_no_filter(self, relay: EventRelay) -> None:
         """_should_relay returns True when subscribed_channels is None (no filter)."""
-        assert relay._should_relay(
-            "data.channel.tasks",
-            ["listen"],
-            subscribed_channels=None,
-        ) is True
+        assert (
+            relay._should_relay(
+                "data.channel.tasks",
+                ["listen"],
+                subscribed_channels=None,
+            )
+            is True
+        )

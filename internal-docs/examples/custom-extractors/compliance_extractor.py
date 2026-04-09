@@ -118,9 +118,7 @@ _ACTION_KEYWORDS: list[str] = [
 ]
 
 # Precompile all patterns for efficiency
-_REGULATION_RE = re.compile(
-    "|".join(_REGULATION_PATTERNS), re.IGNORECASE
-)
+_REGULATION_RE = re.compile("|".join(_REGULATION_PATTERNS), re.IGNORECASE)
 _ACTION_RE = re.compile(
     r"\b(?:" + "|".join(re.escape(kw) for kw in _ACTION_KEYWORDS) + r")\b",
     re.IGNORECASE,

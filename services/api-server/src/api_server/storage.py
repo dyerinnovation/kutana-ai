@@ -44,6 +44,7 @@ class ObjectStorage:
 
     async def ensure_bucket(self) -> None:
         """Create the bucket if it doesn't exist."""
+
         def _ensure() -> None:
             try:
                 self._client.head_bucket(Bucket=self._bucket)

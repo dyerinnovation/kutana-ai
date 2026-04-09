@@ -33,9 +33,7 @@ class EventPublisher:
         Args:
             redis_url: Redis connection URL (e.g. ``redis://localhost:6379/0``).
         """
-        self._redis: redis.Redis[str] = redis.from_url(
-            redis_url, decode_responses=True
-        )
+        self._redis: redis.Redis[str] = redis.from_url(redis_url, decode_responses=True)
 
     async def publish(self, event: BaseEvent) -> str:
         """Publish a domain event to the Redis Stream.

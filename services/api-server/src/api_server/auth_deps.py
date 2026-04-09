@@ -3,17 +3,19 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from api_server.auth import decode_user_token, hash_api_key
 from api_server.deps import Settings, get_db_session, get_settings
 from kutana_core.database.models import AgentApiKeyORM, ApiKeyAuditLogORM, UserORM
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 _bearer_scheme = HTTPBearer()
 
@@ -120,7 +122,7 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
-        )
+        ) from None
 
     user_id_str = payload.get("sub")
     if not user_id_str:
@@ -135,7 +137,7 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload",
-        )
+        ) from None
 
     return await _lookup_user(db, user_id)
 
@@ -172,7 +174,7 @@ async def get_current_user_or_agent(
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or expired token",
-            )
+            ) from None
 
         user_id_str = payload.get("sub")
         if not user_id_str:
@@ -186,7 +188,7 @@ async def get_current_user_or_agent(
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token payload",
-            )
+            ) from None
         return await _lookup_user(db, user_id)
 
     # --- Try X-API-Key ---

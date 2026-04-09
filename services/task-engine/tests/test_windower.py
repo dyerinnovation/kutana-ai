@@ -208,7 +208,7 @@ class TestAddSegment:
         """Segments before the new overlap start are removed after emit."""
         windower, _ = _make_windower(window_size_seconds=60.0, overlap_seconds=10.0)
         mid = uuid4()
-        # Two segments: 0–30s and 30–60s.  After emit, new window starts at 50s.
+        # Two segments: 0-30s and 30-60s.  After emit, new window starts at 50s.
         # Only segments with end_time > 50 should remain.
         s1 = _make_segment(meeting_id=mid, start_time=0.0, end_time=30.0)
         s2 = _make_segment(meeting_id=mid, start_time=30.0, end_time=60.0)
@@ -224,8 +224,8 @@ class TestAddSegment:
         """Segments within the overlap zone appear in the next window."""
         windower, cb = _make_windower(window_size_seconds=60.0, overlap_seconds=10.0)
         mid = uuid4()
-        # First window: 0–60s.  After emit, new window_start = 50s.
-        # Add a segment at 55–65s — it should appear in the second window.
+        # First window: 0-60s.  After emit, new window_start = 50s.
+        # Add a segment at 55-65s — it should appear in the second window.
         s1 = _make_segment(meeting_id=mid, start_time=0.0, end_time=60.0)
         s2 = _make_segment(meeting_id=mid, start_time=55.0, end_time=65.0, text="Overlap")
         s3 = _make_segment(meeting_id=mid, start_time=65.0, end_time=115.0, text="Filler")

@@ -211,9 +211,7 @@ class DemoAgent:
                 if entities:
                     for entity in entities:
                         self.entity_buffer.append(entity)
-                    lines.append(
-                        f"[Extraction:{event_type}] {len(entities)} new entities"
-                    )
+                    lines.append(f"[Extraction:{event_type}] {len(entities)} new entities")
         return "\n".join(lines) if lines else "(no new events)"
 
     async def _execute_tool(

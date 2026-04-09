@@ -79,9 +79,7 @@ def check_postgres() -> tuple[str, str]:
 
 def check_redis() -> tuple[str, str]:
     """Check Redis connectivity and basic stats."""
-    rc, out, _ = run_cmd(
-        ["docker", "compose", "exec", "-T", "redis", "redis-cli", "ping"]
-    )
+    rc, out, _ = run_cmd(["docker", "compose", "exec", "-T", "redis", "redis-cli", "ping"])
     if rc != 0 or out != "PONG":
         return "❌", "Not responding to PING"
 
@@ -137,8 +135,18 @@ def check_redis_streams() -> tuple[str, str]:
         return "⚠️", f"Stream length {stream_len} — possible consumer lag"
 
     # Check consumer groups
-    rc, groups_out, _ = run_cmd(
-        ["docker", "compose", "exec", "-T", "redis", "redis-cli", "XINFO", "GROUPS", "meeting_events"]
+    rc, _groups_out, _ = run_cmd(
+        [
+            "docker",
+            "compose",
+            "exec",
+            "-T",
+            "redis",
+            "redis-cli",
+            "XINFO",
+            "GROUPS",
+            "meeting_events",
+        ]
     )
 
     return "✅", f"Stream length: {stream_len}"
@@ -169,15 +177,17 @@ def generate_report(
     for svc, status in docker_status.items():
         lines.append(f"| Docker: {svc} | {status} | |")
 
-    lines.extend([
-        "",
-        "## Application Health",
-        "",
-        "| Check | Status | Notes |",
-        "|-------|--------|-------|",
-        f"| Redis Streams | {streams_status[0]} | {streams_status[1]} |",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Application Health",
+            "",
+            "| Check | Status | Notes |",
+            "|-------|--------|-------|",
+            f"| Redis Streams | {streams_status[0]} | {streams_status[1]} |",
+            "",
+        ]
+    )
 
     # Collect alerts
     alerts = []

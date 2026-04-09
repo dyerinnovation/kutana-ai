@@ -54,13 +54,15 @@ def _identity(scopes: list[str]) -> MCPIdentity:
 
 
 def _full_identity() -> MCPIdentity:
-    return _identity([
-        SCOPE_MEETINGS_READ,
-        SCOPE_MEETINGS_JOIN,
-        SCOPE_MEETINGS_CHAT,
-        SCOPE_TURNS_MANAGE,
-        SCOPE_TASKS_WRITE,
-    ])
+    return _identity(
+        [
+            SCOPE_MEETINGS_READ,
+            SCOPE_MEETINGS_JOIN,
+            SCOPE_MEETINGS_CHAT,
+            SCOPE_TURNS_MANAGE,
+            SCOPE_TASKS_WRITE,
+        ]
+    )
 
 
 # ===========================================================================
@@ -98,18 +100,21 @@ class TestRequireScope:
         result = require_scope(identity, "nonexistent_tool_xyz")
         assert result is None
 
-    @pytest.mark.parametrize("tool,required_scope", [
-        ("list_meetings", SCOPE_MEETINGS_READ),
-        ("join_meeting", SCOPE_MEETINGS_JOIN),
-        ("send_chat_message", SCOPE_MEETINGS_CHAT),
-        ("raise_hand", SCOPE_TURNS_MANAGE),
-        ("create_task", SCOPE_TASKS_WRITE),
-        ("get_transcript", SCOPE_MEETINGS_READ),
-        ("get_queue_status", SCOPE_MEETINGS_READ),
-        ("mark_finished_speaking", SCOPE_TURNS_MANAGE),
-        ("publish_to_channel", SCOPE_MEETINGS_CHAT),
-        ("speak", SCOPE_TURNS_MANAGE),
-    ])
+    @pytest.mark.parametrize(
+        "tool,required_scope",
+        [
+            ("list_meetings", SCOPE_MEETINGS_READ),
+            ("join_meeting", SCOPE_MEETINGS_JOIN),
+            ("send_chat_message", SCOPE_MEETINGS_CHAT),
+            ("raise_hand", SCOPE_TURNS_MANAGE),
+            ("create_task", SCOPE_TASKS_WRITE),
+            ("get_transcript", SCOPE_MEETINGS_READ),
+            ("get_queue_status", SCOPE_MEETINGS_READ),
+            ("mark_finished_speaking", SCOPE_TURNS_MANAGE),
+            ("publish_to_channel", SCOPE_MEETINGS_CHAT),
+            ("speak", SCOPE_TURNS_MANAGE),
+        ],
+    )
     def test_tool_scope_mapping(self, tool: str, required_scope: str) -> None:
         # Identity with ALL scopes — should pass for every tool
         full_identity = _full_identity()
@@ -392,7 +397,7 @@ class TestRedisRateLimiterUnit:
         mock_redis.pipeline.side_effect = ConnectionError("Redis down")
         limiter._redis = mock_redis
 
-        allowed, retry = await limiter.check(uuid4(), "send_chat_message")
+        allowed, _retry = await limiter.check(uuid4(), "send_chat_message")
         assert allowed is True
 
     @pytest.mark.asyncio
@@ -435,8 +440,6 @@ class TestRedisRateLimiterUnit:
         limiter = RedisRateLimiter("redis://localhost")
         agent_a = uuid4()
         agent_b = uuid4()
-
-        call_counts: dict[str, int] = {}
 
         mock_redis = AsyncMock()
         mock_pipe = AsyncMock()

@@ -56,10 +56,13 @@ class ApiClient:
         Raises:
             RuntimeError: If the token exchange fails.
         """
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/v1/token/gateway",
-            headers={"X-API-Key": self.api_key},
-        ) as resp:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/v1/token/gateway",
+                headers={"X-API-Key": self.api_key},
+            ) as resp,
+        ):
             if resp.status != 200:
                 text = await resp.text()
                 raise RuntimeError(f"Token exchange failed ({resp.status}): {text}")
@@ -76,15 +79,16 @@ class ApiClient:
         Raises:
             RuntimeError: If the token exchange fails.
         """
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/v1/token/mcp",
-            headers={"X-API-Key": self.api_key},
-        ) as resp:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/v1/token/mcp",
+                headers={"X-API-Key": self.api_key},
+            ) as resp,
+        ):
             if resp.status != 200:
                 text = await resp.text()
-                raise RuntimeError(
-                    f"MCP token exchange failed ({resp.status}): {text}"
-                )
+                raise RuntimeError(f"MCP token exchange failed ({resp.status}): {text}")
             data = await resp.json()
             token = data["token"]
             self._bearer_token = token
@@ -101,10 +105,13 @@ class ApiClient:
         Returns:
             List of meeting dicts.
         """
-        async with aiohttp.ClientSession() as session, session.get(
-            f"{self.base_url}/v1/meetings",
-            headers=self._auth_headers,
-        ) as resp:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.get(
+                f"{self.base_url}/v1/meetings",
+                headers=self._auth_headers,
+            ) as resp,
+        ):
             data = await resp.json()
             return data.get("items", [])
 
@@ -117,11 +124,14 @@ class ApiClient:
         Returns:
             List of task dicts.
         """
-        async with aiohttp.ClientSession() as session, session.get(
-            f"{self.base_url}/v1/tasks",
-            params={"meeting_id": meeting_id},
-            headers=self._auth_headers,
-        ) as resp:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.get(
+                f"{self.base_url}/v1/tasks",
+                params={"meeting_id": meeting_id},
+                headers=self._auth_headers,
+            ) as resp,
+        ):
             data = await resp.json()
             return data.get("items", [])
 
@@ -141,15 +151,18 @@ class ApiClient:
         Returns:
             The created task dict.
         """
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/v1/tasks",
-            json={
-                "meeting_id": meeting_id,
-                "description": description,
-                "priority": priority,
-            },
-            headers=self._auth_headers,
-        ) as resp:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/v1/tasks",
+                json={
+                    "meeting_id": meeting_id,
+                    "description": description,
+                    "priority": priority,
+                },
+                headers=self._auth_headers,
+            ) as resp,
+        ):
             return await resp.json()
 
     async def create_meeting(
@@ -177,16 +190,17 @@ class ApiClient:
         if title is not None:
             body["title"] = title
 
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/v1/meetings",
-            json=body,
-            headers=self._auth_headers,
-        ) as resp:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/v1/meetings",
+                json=body,
+                headers=self._auth_headers,
+            ) as resp,
+        ):
             if resp.status not in (200, 201):
                 text = await resp.text()
-                raise RuntimeError(
-                    f"Create meeting failed ({resp.status}): {text}"
-                )
+                raise RuntimeError(f"Create meeting failed ({resp.status}): {text}")
             return await resp.json()
 
     async def start_meeting(self, meeting_id: str) -> dict[str, Any]:
@@ -198,15 +212,16 @@ class ApiClient:
         Returns:
             The updated meeting dict.
         """
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/v1/meetings/{meeting_id}/start",
-            headers=self._auth_headers,
-        ) as resp:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/v1/meetings/{meeting_id}/start",
+                headers=self._auth_headers,
+            ) as resp,
+        ):
             if resp.status != 200:
                 text = await resp.text()
-                raise RuntimeError(
-                    f"Start meeting failed ({resp.status}): {text}"
-                )
+                raise RuntimeError(f"Start meeting failed ({resp.status}): {text}")
             return await resp.json()
 
     async def get_summary(self, meeting_id: str) -> dict[str, Any]:
@@ -221,15 +236,16 @@ class ApiClient:
         Returns:
             Summary dict with key_points, decisions, task_count, etc.
         """
-        async with aiohttp.ClientSession() as session, session.get(
-            f"{self.base_url}/v1/meetings/{meeting_id}/summary",
-            headers=self._auth_headers,
-        ) as resp:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.get(
+                f"{self.base_url}/v1/meetings/{meeting_id}/summary",
+                headers=self._auth_headers,
+            ) as resp,
+        ):
             if resp.status != 200:
                 text = await resp.text()
-                raise RuntimeError(
-                    f"Get summary failed ({resp.status}): {text}"
-                )
+                raise RuntimeError(f"Get summary failed ({resp.status}): {text}")
             return await resp.json()
 
     async def end_meeting(self, meeting_id: str) -> dict[str, Any]:
@@ -241,13 +257,14 @@ class ApiClient:
         Returns:
             The updated meeting dict.
         """
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/v1/meetings/{meeting_id}/end",
-            headers=self._auth_headers,
-        ) as resp:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/v1/meetings/{meeting_id}/end",
+                headers=self._auth_headers,
+            ) as resp,
+        ):
             if resp.status != 200:
                 text = await resp.text()
-                raise RuntimeError(
-                    f"End meeting failed ({resp.status}): {text}"
-                )
+                raise RuntimeError(f"End meeting failed ({resp.status}): {text}")
             return await resp.json()

@@ -253,9 +253,7 @@ class TestGetMessages:
         assert result[0].content == "older"
         assert result[1].content == "newer"
 
-    async def test_limit_respected(
-        self, store: RedisChatStore, mock_redis: AsyncMock
-    ) -> None:
+    async def test_limit_respected(self, store: RedisChatStore, mock_redis: AsyncMock) -> None:
         """Limit parameter is passed to xrevrange."""
         mock_redis.xrevrange.return_value = []
 
@@ -264,9 +262,7 @@ class TestGetMessages:
         call_kwargs = mock_redis.xrevrange.call_args
         assert call_kwargs.kwargs.get("count") == 10 or call_kwargs.args[3:] == (10,)
 
-    async def test_message_type_filter(
-        self, store: RedisChatStore, mock_redis: AsyncMock
-    ) -> None:
+    async def test_message_type_filter(self, store: RedisChatStore, mock_redis: AsyncMock) -> None:
         """message_type filter excludes non-matching messages."""
         entries = [
             _make_stream_entry(1710000000000, message_type="text"),
@@ -275,16 +271,12 @@ class TestGetMessages:
         ]
         mock_redis.xrevrange.return_value = list(reversed(entries))
 
-        result = await store.get_messages(
-            MEETING_ID, message_type=ChatMessageType.DECISION
-        )
+        result = await store.get_messages(MEETING_ID, message_type=ChatMessageType.DECISION)
 
         assert len(result) == 1
         assert result[0].message_type == ChatMessageType.DECISION
 
-    async def test_since_uses_xrange(
-        self, store: RedisChatStore, mock_redis: AsyncMock
-    ) -> None:
+    async def test_since_uses_xrange(self, store: RedisChatStore, mock_redis: AsyncMock) -> None:
         """When since is provided, xrange is used (not xrevrange)."""
         since = datetime(2026, 3, 10, 12, 0, 0, tzinfo=UTC)
         mock_redis.xrange.return_value = []
@@ -331,15 +323,11 @@ class TestGetMessages:
 class TestClearMeeting:
     """Tests for clear_meeting operations."""
 
-    async def test_deletes_stream_key(
-        self, store: RedisChatStore, mock_redis: AsyncMock
-    ) -> None:
+    async def test_deletes_stream_key(self, store: RedisChatStore, mock_redis: AsyncMock) -> None:
         """clear_meeting calls delete on the stream key."""
         await store.clear_meeting(MEETING_ID)
 
-        mock_redis.delete.assert_called_once_with(
-            RedisChatStore._stream_key(MEETING_ID)
-        )
+        mock_redis.delete.assert_called_once_with(RedisChatStore._stream_key(MEETING_ID))
 
     async def test_correct_meeting_key_deleted(
         self, store: RedisChatStore, mock_redis: AsyncMock

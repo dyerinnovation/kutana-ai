@@ -204,14 +204,16 @@ class NATSMessageBus(MessageBus):
             metadata=metadata or {},
             source=source,
         )
-        body = json.dumps({
-            "message_id": message.id,
-            "topic": message.topic,
-            "payload": message.payload,
-            "metadata": message.metadata,
-            "timestamp": message.timestamp.isoformat(),
-            "source": message.source,
-        })
+        body = json.dumps(
+            {
+                "message_id": message.id,
+                "topic": message.topic,
+                "payload": message.payload,
+                "metadata": message.metadata,
+                "timestamp": message.timestamp.isoformat(),
+                "source": message.source,
+            }
+        )
         subject = _topic_to_subject(topic)
         js = await self._get_jetstream()
         await js.publish(subject, body.encode("utf-8"))
@@ -273,9 +275,7 @@ class NATSMessageBus(MessageBus):
         )
         return sub
 
-    def _make_handler(
-        self, sub: Subscription
-    ) -> Any:
+    def _make_handler(self, sub: Subscription) -> Any:
         """Create a NATS message callback that dispatches to the subscription handler.
 
         Args:
@@ -301,9 +301,7 @@ class NATSMessageBus(MessageBus):
                 # Auto-ack for JetStream push consumers
                 await nats_msg.ack()
             except Exception:
-                logger.exception(
-                    "Error dispatching NATS message for topic %s", sub.topic
-                )
+                logger.exception("Error dispatching NATS message for topic %s", sub.topic)
                 with contextlib.suppress(Exception):
                     await nats_msg.nak()
 

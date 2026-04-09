@@ -96,9 +96,7 @@ class HumanSessionHandler:
         self._manager.join_meeting(self.session_id, self.meeting_id)
 
         if self._audio_bridge is not None:
-            await self._audio_bridge.ensure_pipeline(
-                self.meeting_id, speaker_name=self.agent_name
-            )
+            await self._audio_bridge.ensure_pipeline(self.meeting_id, speaker_name=self.agent_name)
 
         # Send joined confirmation so the frontend can transition to "connected"
         response = Joined(
@@ -119,10 +117,9 @@ class HumanSessionHandler:
                 continue
             role = "human" if getattr(session, "source", "") == "human" else "agent"
             participant_id = (
-                (getattr(session, "_identity", None)
-                and getattr(session._identity, "agent_config_id", session.session_id))
-                or session.session_id
-            )
+                getattr(session, "_identity", None)
+                and getattr(session._identity, "agent_config_id", session.session_id)
+            ) or session.session_id
             try:
                 await self.send_participant_update(
                     action="joined",
@@ -148,6 +145,7 @@ class HumanSessionHandler:
                 await self._dispatch(data)
         except Exception as e:
             from fastapi import WebSocketDisconnect
+
             if isinstance(e, WebSocketDisconnect):
                 logger.warning(
                     "Human session %s disconnected (code=%s)",

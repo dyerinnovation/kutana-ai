@@ -7,11 +7,14 @@ Create Date: 2026-03-07
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 
 from alembic import op
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 revision: str = "c4d5e6f7a8b9"
 down_revision: str = "b3c4d5e6f7a8"
@@ -44,12 +47,8 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["key_id"], ["agent_api_keys.id"]),
     )
-    op.create_index(
-        "ix_api_key_audit_log_key_id", "api_key_audit_log", ["key_id"]
-    )
-    op.create_index(
-        "ix_api_key_audit_log_action", "api_key_audit_log", ["action"]
-    )
+    op.create_index("ix_api_key_audit_log_key_id", "api_key_audit_log", ["key_id"])
+    op.create_index("ix_api_key_audit_log_action", "api_key_audit_log", ["action"])
 
 
 def downgrade() -> None:

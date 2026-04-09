@@ -427,9 +427,7 @@ class LLMExtractor(Extractor):
 
         for raw in tool_input.get("tasks", []):
             try:
-                entity: AnyExtractedEntity = TaskEntity.model_validate(
-                    {**_base(), **raw}
-                )
+                entity: AnyExtractedEntity = TaskEntity.model_validate({**_base(), **raw})
                 entities.append(entity)
             except Exception:
                 logger.warning("LLMExtractor: skipping invalid task: %s", raw)
@@ -454,9 +452,7 @@ class LLMExtractor(Extractor):
                 entity = EntityMentionEntity.model_validate({**_base(0.9), **raw})
                 entities.append(entity)
             except Exception:
-                logger.warning(
-                    "LLMExtractor: skipping invalid entity_mention: %s", raw
-                )
+                logger.warning("LLMExtractor: skipping invalid entity_mention: %s", raw)
 
         for raw in tool_input.get("key_points", []):
             try:

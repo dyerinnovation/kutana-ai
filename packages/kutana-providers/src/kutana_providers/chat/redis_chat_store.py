@@ -126,16 +126,18 @@ class RedisChatStore(ChatStore):
         )
 
         # Publish notification for real-time delivery to gateway subscribers
-        notification = json.dumps({
-            "meeting_id": str(meeting_id),
-            "message_id": str(message_id),
-            "sender_id": str(sender_id),
-            "sender_name": sender_name,
-            "content": content,
-            "message_type": message_type.value,
-            "sent_at": sent_at.isoformat(),
-            "sequence": sequence,
-        })
+        notification = json.dumps(
+            {
+                "meeting_id": str(meeting_id),
+                "message_id": str(message_id),
+                "sender_id": str(sender_id),
+                "sender_name": sender_name,
+                "content": content,
+                "message_type": message_type.value,
+                "sent_at": sent_at.isoformat(),
+                "sequence": sequence,
+            }
+        )
         await r.publish(CHAT_PUBSUB_CHANNEL, notification)
 
         logger.info(
@@ -179,9 +181,7 @@ class RedisChatStore(ChatStore):
             # Most recent `limit` messages in reverse, then re-reversed for chronological order.
             # Fetch more than `limit` when filtering by type to ensure we have enough after filtering.
             fetch_count = limit if message_type is None else limit * 4
-            raw_entries = await r.xrevrange(
-                stream_key, max="+", min="-", count=fetch_count
-            )
+            raw_entries = await r.xrevrange(stream_key, max="+", min="-", count=fetch_count)
             raw_entries = list(reversed(raw_entries))
 
         messages: list[ChatMessage] = []
@@ -211,9 +211,7 @@ class RedisChatStore(ChatStore):
                     break
 
             except (KeyError, ValueError) as exc:
-                logger.warning(
-                    "Skipping malformed chat stream entry %s: %s", entry_id, exc
-                )
+                logger.warning("Skipping malformed chat stream entry %s: %s", entry_id, exc)
 
         return messages
 

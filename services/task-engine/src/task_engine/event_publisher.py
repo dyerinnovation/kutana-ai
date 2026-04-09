@@ -34,9 +34,7 @@ class EventPublisher:
         Args:
             redis_url: Redis connection URL (e.g. ``redis://localhost:6379/0``).
         """
-        self._redis: redis.Redis[str] = redis.from_url(
-            redis_url, decode_responses=True
-        )
+        self._redis: redis.Redis[str] = redis.from_url(redis_url, decode_responses=True)
 
     async def publish(self, event: BaseEvent) -> str:
         """Publish a domain event to the Redis Stream.
@@ -81,9 +79,7 @@ class EventPublisher:
 
         by_type: dict[str, list[Any]] = {}
         for entity in result.entities:
-            by_type.setdefault(entity.entity_type, []).append(
-                entity.model_dump(mode="json")
-            )
+            by_type.setdefault(entity.entity_type, []).append(entity.model_dump(mode="json"))
 
         for entity_type, entities in by_type.items():
             await self._redis.publish(

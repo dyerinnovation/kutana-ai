@@ -12,8 +12,8 @@ Rules enforced:
     topic           — max 200 chars, control characters removed
     description     — max 200 chars, control characters removed
     channel         — max 64 chars, alphanumeric + hyphens/underscores
-    last_n          — integer, clamped 1–500
-    limit           — integer, clamped 1–200
+    last_n          — integer, clamped 1-500
+    limit           — integer, clamped 1-200
 """
 
 from __future__ import annotations
@@ -75,9 +75,9 @@ def validate_meeting_id(meeting_id: str) -> UUID:
         return UUID(meeting_id)
     except (ValueError, AttributeError):
         raise ValueError(
-            f"Invalid meeting_id: expected a UUID (e.g. 'xxxxxxxx-xxxx-…'), "
+            f"Invalid meeting_id: expected a UUID (e.g. 'xxxxxxxx-xxxx-...'), "
             f"got {meeting_id!r:.50}"
-        )
+        ) from None
 
 
 def sanitize_content(content: str) -> str:
@@ -103,8 +103,7 @@ def sanitize_content(content: str) -> str:
 
     if len(cleaned) > MAX_CONTENT_LENGTH:
         raise ValueError(
-            f"Content too long: max {MAX_CONTENT_LENGTH} characters, "
-            f"got {len(cleaned)}"
+            f"Content too long: max {MAX_CONTENT_LENGTH} characters, got {len(cleaned)}"
         )
     return cleaned
 
@@ -130,8 +129,7 @@ def sanitize_context(context: str) -> str:
 
     if len(cleaned) > MAX_CONTEXT_LENGTH:
         raise ValueError(
-            f"Context too long: max {MAX_CONTEXT_LENGTH} characters, "
-            f"got {len(cleaned)}"
+            f"Context too long: max {MAX_CONTEXT_LENGTH} characters, got {len(cleaned)}"
         )
     return cleaned
 
@@ -150,10 +148,7 @@ def validate_priority(priority: str) -> str:
     """
     allowed = {"normal", "urgent"}
     if priority not in allowed:
-        raise ValueError(
-            f"Invalid priority: must be one of {sorted(allowed)}, "
-            f"got {priority!r}"
-        )
+        raise ValueError(f"Invalid priority: must be one of {sorted(allowed)}, got {priority!r}")
     return priority
 
 
@@ -178,10 +173,7 @@ def sanitize_topic(topic: str | None) -> str | None:
     cleaned = _CONTROL_CHAR_RE.sub("", topic)
     cleaned = _INJECTION_PATTERN_RE.sub("[filtered]", cleaned)
     if len(cleaned) > MAX_TOPIC_LENGTH:
-        raise ValueError(
-            f"Topic too long: max {MAX_TOPIC_LENGTH} characters, "
-            f"got {len(cleaned)}"
-        )
+        raise ValueError(f"Topic too long: max {MAX_TOPIC_LENGTH} characters, got {len(cleaned)}")
     return cleaned
 
 
@@ -205,8 +197,7 @@ def sanitize_description(description: str) -> str:
     cleaned = _INJECTION_PATTERN_RE.sub("[filtered]", cleaned)
     if len(cleaned) > MAX_DESCRIPTION_LENGTH:
         raise ValueError(
-            f"Description too long: max {MAX_DESCRIPTION_LENGTH} characters, "
-            f"got {len(cleaned)}"
+            f"Description too long: max {MAX_DESCRIPTION_LENGTH} characters, got {len(cleaned)}"
         )
     return cleaned
 
@@ -225,8 +216,7 @@ def validate_channel(channel: str) -> str:
     """
     if not channel or len(channel) > MAX_CHANNEL_NAME_LENGTH:
         raise ValueError(
-            f"Channel name must be 1–{MAX_CHANNEL_NAME_LENGTH} characters, "
-            f"got {len(channel)!r}"
+            f"Channel name must be 1-{MAX_CHANNEL_NAME_LENGTH} characters, got {len(channel)!r}"
         )
     if not _CHANNEL_NAME_RE.match(channel):
         raise ValueError(
@@ -251,10 +241,7 @@ def sanitize_title(title: str) -> str:
     cleaned = _CONTROL_CHAR_RE.sub("", title)
     cleaned = _HTML_TAG_RE.sub("", cleaned)
     if len(cleaned) > MAX_TITLE_LENGTH:
-        raise ValueError(
-            f"Title too long: max {MAX_TITLE_LENGTH} characters, "
-            f"got {len(cleaned)}"
-        )
+        raise ValueError(f"Title too long: max {MAX_TITLE_LENGTH} characters, got {len(cleaned)}")
     return cleaned
 
 

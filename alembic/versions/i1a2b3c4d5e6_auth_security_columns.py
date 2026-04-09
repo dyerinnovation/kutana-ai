@@ -17,11 +17,18 @@ depends_on = None
 
 def upgrade() -> None:
     """Add password reset, email verification, and lockout columns to users."""
-    op.add_column("users", sa.Column("email_verified", sa.Boolean(), nullable=False, server_default="false"))
+    op.add_column(
+        "users", sa.Column("email_verified", sa.Boolean(), nullable=False, server_default="false")
+    )
     op.add_column("users", sa.Column("email_verification_token", sa.String(255), nullable=True))
     op.add_column("users", sa.Column("password_reset_token", sa.String(255), nullable=True))
-    op.add_column("users", sa.Column("password_reset_expires", sa.DateTime(timezone=True), nullable=True))
-    op.add_column("users", sa.Column("failed_login_attempts", sa.Integer(), nullable=False, server_default="0"))
+    op.add_column(
+        "users", sa.Column("password_reset_expires", sa.DateTime(timezone=True), nullable=True)
+    )
+    op.add_column(
+        "users",
+        sa.Column("failed_login_attempts", sa.Integer(), nullable=False, server_default="0"),
+    )
     op.add_column("users", sa.Column("locked_until", sa.DateTime(timezone=True), nullable=True))
 
 

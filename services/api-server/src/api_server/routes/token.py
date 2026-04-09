@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import jwt
 from agent_gateway.auth import create_agent_token
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from api_server.auth_deps import CurrentUser, validate_api_key
 from api_server.deps import Settings, get_db_session, get_settings
@@ -19,6 +18,9 @@ from kutana_core.database.models import (
     AgentConfigORM,
     MeetingORM,
 )
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -224,9 +226,7 @@ async def get_meeting_token(
     Raises:
         HTTPException: 404 if the meeting does not exist.
     """
-    result = await db.execute(
-        select(MeetingORM).where(MeetingORM.id == body.meeting_id)
-    )
+    result = await db.execute(select(MeetingORM).where(MeetingORM.id == body.meeting_id))
     meeting = result.scalar_one_or_none()
     if meeting is None:
         raise HTTPException(

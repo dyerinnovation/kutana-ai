@@ -213,9 +213,7 @@ class TestCancelHandRaise:
 
         assert result is True
 
-    async def test_not_in_queue(
-        self, manager: RedisTurnManager, mock_redis: AsyncMock
-    ) -> None:
+    async def test_not_in_queue(self, manager: RedisTurnManager, mock_redis: AsyncMock) -> None:
         """Returns False when participant has no active hand raise."""
         mock_redis.get.return_value = None
 
@@ -249,9 +247,7 @@ class TestCancelHandRaise:
 class TestGetActiveSpeaker:
     """Tests for get_active_speaker operations."""
 
-    async def test_no_speaker(
-        self, manager: RedisTurnManager, mock_redis: AsyncMock
-    ) -> None:
+    async def test_no_speaker(self, manager: RedisTurnManager, mock_redis: AsyncMock) -> None:
         """Returns None when no one is speaking."""
         mock_redis.get.return_value = None
 
@@ -259,9 +255,7 @@ class TestGetActiveSpeaker:
 
         assert result is None
 
-    async def test_active_speaker(
-        self, manager: RedisTurnManager, mock_redis: AsyncMock
-    ) -> None:
+    async def test_active_speaker(self, manager: RedisTurnManager, mock_redis: AsyncMock) -> None:
         """Returns the UUID of the active speaker."""
         mock_redis.get.return_value = str(PARTICIPANT_A)
 
@@ -290,9 +284,7 @@ class TestGetSpeakingStatus:
         assert status.is_speaking is True
         assert status.in_queue is False
 
-    async def test_in_queue(
-        self, manager: RedisTurnManager, mock_redis: AsyncMock
-    ) -> None:
+    async def test_in_queue(self, manager: RedisTurnManager, mock_redis: AsyncMock) -> None:
         """Returns in_queue=True with correct position for queued participant."""
         mock_redis.get = AsyncMock(side_effect=[None, str(HAND_RAISE_ID)])
         mock_redis.zrank = AsyncMock(return_value=1)  # 0-based rank = position 2
@@ -304,9 +296,7 @@ class TestGetSpeakingStatus:
         assert status.queue_position == 2
         assert status.hand_raise_id == HAND_RAISE_ID
 
-    async def test_idle(
-        self, manager: RedisTurnManager, mock_redis: AsyncMock
-    ) -> None:
+    async def test_idle(self, manager: RedisTurnManager, mock_redis: AsyncMock) -> None:
         """Returns is_speaking=False, in_queue=False for idle participant."""
         mock_redis.get = AsyncMock(return_value=None)
 
@@ -325,9 +315,7 @@ class TestGetSpeakingStatus:
 class TestSetActiveSpeaker:
     """Tests for set_active_speaker (host override) operation."""
 
-    async def test_sets_speaker(
-        self, manager: RedisTurnManager, mock_redis: AsyncMock
-    ) -> None:
+    async def test_sets_speaker(self, manager: RedisTurnManager, mock_redis: AsyncMock) -> None:
         """Calls Redis pipeline with the correct speaker key."""
         mock_pipe = AsyncMock()
         mock_pipe.set = AsyncMock()
@@ -368,9 +356,7 @@ class TestClearMeeting:
         mock_redis.keys.assert_called_once_with(f"turn:{MEETING_ID}:*")
         mock_redis.delete.assert_called_once_with(*keys)
 
-    async def test_no_keys_to_clear(
-        self, manager: RedisTurnManager, mock_redis: AsyncMock
-    ) -> None:
+    async def test_no_keys_to_clear(self, manager: RedisTurnManager, mock_redis: AsyncMock) -> None:
         """Does not call delete when there are no keys."""
         mock_redis.keys.return_value = []
         mock_redis.delete = AsyncMock()

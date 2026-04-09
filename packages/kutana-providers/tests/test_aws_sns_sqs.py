@@ -50,13 +50,9 @@ def _make_sqs_client(
     """Build a mock SQS async context-manager client."""
     sqs = AsyncMock()
     sqs.create_queue = AsyncMock(return_value={"QueueUrl": queue_url})
-    sqs.get_queue_attributes = AsyncMock(
-        return_value={"Attributes": {"QueueArn": queue_arn}}
-    )
+    sqs.get_queue_attributes = AsyncMock(return_value={"Attributes": {"QueueArn": queue_arn}})
     sqs.set_queue_attributes = AsyncMock()
-    sqs.receive_message = AsyncMock(
-        return_value={"Messages": messages or []}
-    )
+    sqs.receive_message = AsyncMock(return_value={"Messages": messages or []})
     sqs.delete_message = AsyncMock()
     return sqs
 
@@ -130,9 +126,7 @@ class TestSQSMessageBusImportGuard:
                 del sys.modules["kutana_providers.messaging.aws_sns_sqs"]
 
             # Re-import with missing dependency simulated
-            with patch(
-                "kutana_providers.messaging.aws_sns_sqs._AIOBOTO3_AVAILABLE", False
-            ):
+            with patch("kutana_providers.messaging.aws_sns_sqs._AIOBOTO3_AVAILABLE", False):
                 from kutana_providers.messaging.aws_sns_sqs import _require_aioboto3
 
                 with pytest.raises(ImportError, match="aioboto3"):
@@ -145,9 +139,7 @@ class TestTopicNaming:
     def test_topic_to_sns_name_replaces_dots(self) -> None:
         from kutana_providers.messaging.aws_sns_sqs import _topic_to_sns_name
 
-        assert _topic_to_sns_name("meeting.abc.events", "kutana-") == (
-            "kutana-meeting_abc_events"
-        )
+        assert _topic_to_sns_name("meeting.abc.events", "kutana-") == ("kutana-meeting_abc_events")
 
     def test_topic_to_sns_name_replaces_wildcards(self) -> None:
         from kutana_providers.messaging.aws_sns_sqs import _topic_to_sns_name
@@ -165,9 +157,7 @@ class TestTopicNaming:
     def test_queue_name_truncated_to_80_chars(self) -> None:
         from kutana_providers.messaging.aws_sns_sqs import _queue_name_for_group
 
-        result = _queue_name_for_group(
-            "a" * 100, "b" * 100, "c" * 10
-        )
+        result = _queue_name_for_group("a" * 100, "b" * 100, "c" * 10)
         assert len(result) <= 80
 
 
@@ -430,9 +420,7 @@ class TestCreateFromEnvAWS:
         assert isinstance(bus, NATSMessageBus)
         assert bus._url == "nats://myhost:4222"
 
-    def test_unsupported_backend_raises(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_unsupported_backend_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """create_message_bus_from_env() raises ValueError for unknown backend."""
         monkeypatch.setenv("KUTANA_MESSAGE_BUS", "rabbit-mq")
 

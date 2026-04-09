@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import time
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from agent_gateway.audio_session import AudioSessionHandler
 
 logger = logging.getLogger(__name__)
@@ -202,10 +204,8 @@ class AudioRouter:
         """Stop the VAD monitor and release resources."""
         if self._vad_task is not None and not self._vad_task.done():
             self._vad_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._vad_task
-            except asyncio.CancelledError:
-                pass
             self._vad_task = None
         logger.debug("AudioRouter[%s]: stopped", self.meeting_id)
 

@@ -126,29 +126,35 @@ class TestParseClientMessage:
     def test_parse_join_meeting(self) -> None:
         """Parses join_meeting message correctly."""
         mid = uuid4()
-        msg = parse_client_message({
-            "type": "join_meeting",
-            "meeting_id": str(mid),
-        })
+        msg = parse_client_message(
+            {
+                "type": "join_meeting",
+                "meeting_id": str(mid),
+            }
+        )
         assert isinstance(msg, JoinMeeting)
         assert msg.meeting_id == mid
 
     def test_parse_audio_data(self) -> None:
         """Parses audio_data message correctly."""
-        msg = parse_client_message({
-            "type": "audio_data",
-            "data": "dGVzdA==",
-            "sequence": 1,
-        })
+        msg = parse_client_message(
+            {
+                "type": "audio_data",
+                "data": "dGVzdA==",
+                "sequence": 1,
+            }
+        )
         assert isinstance(msg, AudioData)
 
     def test_parse_data_message(self) -> None:
         """Parses data message correctly."""
-        msg = parse_client_message({
-            "type": "data",
-            "channel": "tasks",
-            "payload": {"key": "value"},
-        })
+        msg = parse_client_message(
+            {
+                "type": "data",
+                "channel": "tasks",
+                "payload": {"key": "value"},
+            }
+        )
         assert isinstance(msg, DataMessage)
 
     def test_parse_leave_meeting(self) -> None:

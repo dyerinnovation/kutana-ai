@@ -39,7 +39,10 @@ TIMEOUT_SECONDS = 90  # Wait up to 90s for LLM to respond (window is 30s by defa
 MEETING_ID = str(uuid.uuid4())
 SEGMENTS = [
     ("Alice", "Good morning everyone. Let's kick off the Q2 planning meeting."),
-    ("Bob", "Thanks Alice. I'll own the backend API refactor and have it done by end of next week."),
+    (
+        "Bob",
+        "Thanks Alice. I'll own the backend API refactor and have it done by end of next week.",
+    ),
     ("Alice", "Perfect. We also decided to sunset the legacy v1 endpoints on April 30th."),
     ("Carol", "I'll take the frontend migration tasks. Should be done by April 15th."),
     ("Bob", "We need to make sure the database migration runs before we flip the feature flag."),
@@ -47,7 +50,10 @@ SEGMENTS = [
     ("Bob", "Yes, I'll add that to my list. Target is April 10th."),
     ("Carol", "I'll set up the staging environment for testing by April 5th."),
     ("Alice", "Great. Key decision: we're going with PostgreSQL 16 for the new schema."),
-    ("Bob", "One more thing — we need to update the security audit docs before the April 30th launch."),
+    (
+        "Bob",
+        "One more thing — we need to update the security audit docs before the April 30th launch.",
+    ),
     ("Alice", "I'll handle that. Let's wrap up. Thanks everyone."),
 ]
 
@@ -167,9 +173,7 @@ async def main() -> int:
         return 1
 
     # Subscribe before publishing so we don't miss the message
-    pubsub_task = asyncio.create_task(
-        wait_for_insights(r, MEETING_ID, TIMEOUT_SECONDS)
-    )
+    pubsub_task = asyncio.create_task(wait_for_insights(r, MEETING_ID, TIMEOUT_SECONDS))
     # Small delay to let subscribe complete before publishing
     await asyncio.sleep(0.3)
 

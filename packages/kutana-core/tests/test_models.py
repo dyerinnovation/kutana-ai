@@ -82,10 +82,10 @@ class TestMeeting:
 
     def test_meeting_status_enum_values(self) -> None:
         """MeetingStatus enum has all expected values."""
-        assert MeetingStatus.SCHEDULED == "scheduled"
-        assert MeetingStatus.ACTIVE == "active"
-        assert MeetingStatus.COMPLETED == "completed"
-        assert MeetingStatus.FAILED == "failed"
+        assert MeetingStatus.SCHEDULED.value == "scheduled"
+        assert MeetingStatus.ACTIVE.value == "active"
+        assert MeetingStatus.COMPLETED.value == "completed"
+        assert MeetingStatus.FAILED.value == "failed"
 
     def test_meeting_started_after_ended_raises(self) -> None:
         """Validation error if started_at > ended_at."""
@@ -150,9 +150,9 @@ class TestParticipant:
 
     def test_participant_role_enum(self) -> None:
         """ParticipantRole has all expected values."""
-        assert ParticipantRole.HOST == "host"
-        assert ParticipantRole.PARTICIPANT == "participant"
-        assert ParticipantRole.AGENT == "agent"
+        assert ParticipantRole.HOST.value == "host"
+        assert ParticipantRole.PARTICIPANT.value == "participant"
+        assert ParticipantRole.AGENT.value == "agent"
 
     def test_participant_serialization_roundtrip(self) -> None:
         """Participant can be serialized and deserialized."""
@@ -199,17 +199,17 @@ class TestTask:
 
     def test_task_priority_enum(self) -> None:
         """TaskPriority has all expected values."""
-        assert TaskPriority.LOW == "low"
-        assert TaskPriority.MEDIUM == "medium"
-        assert TaskPriority.HIGH == "high"
-        assert TaskPriority.CRITICAL == "critical"
+        assert TaskPriority.LOW.value == "low"
+        assert TaskPriority.MEDIUM.value == "medium"
+        assert TaskPriority.HIGH.value == "high"
+        assert TaskPriority.CRITICAL.value == "critical"
 
     def test_task_status_enum(self) -> None:
         """TaskStatus has all expected values."""
-        assert TaskStatus.PENDING == "pending"
-        assert TaskStatus.IN_PROGRESS == "in_progress"
-        assert TaskStatus.DONE == "done"
-        assert TaskStatus.BLOCKED == "blocked"
+        assert TaskStatus.PENDING.value == "pending"
+        assert TaskStatus.IN_PROGRESS.value == "in_progress"
+        assert TaskStatus.DONE.value == "done"
+        assert TaskStatus.BLOCKED.value == "blocked"
 
     def test_valid_transitions(self) -> None:
         """Valid task status transitions are allowed."""
@@ -493,9 +493,9 @@ class TestRoom:
 
     def test_room_status_enum_values(self) -> None:
         """RoomStatus enum has all expected values."""
-        assert RoomStatus.PENDING == "pending"
-        assert RoomStatus.ACTIVE == "active"
-        assert RoomStatus.CLOSED == "closed"
+        assert RoomStatus.PENDING.value == "pending"
+        assert RoomStatus.ACTIVE.value == "active"
+        assert RoomStatus.CLOSED.value == "closed"
 
     def test_room_serialization_roundtrip(self) -> None:
         """Room can be serialized and deserialized."""
@@ -548,15 +548,15 @@ class TestAgentSession:
 
     def test_connection_type_enum_values(self) -> None:
         """ConnectionType enum has all expected values."""
-        assert ConnectionType.WEBRTC == "webrtc"
-        assert ConnectionType.AGENT_GATEWAY == "agent_gateway"
-        assert ConnectionType.PHONE == "phone"
+        assert ConnectionType.WEBRTC.value == "webrtc"
+        assert ConnectionType.AGENT_GATEWAY.value == "agent_gateway"
+        assert ConnectionType.PHONE.value == "phone"
 
     def test_session_status_enum_values(self) -> None:
         """AgentSessionStatus enum has all expected values."""
-        assert AgentSessionStatus.CONNECTING == "connecting"
-        assert AgentSessionStatus.ACTIVE == "active"
-        assert AgentSessionStatus.DISCONNECTED == "disconnected"
+        assert AgentSessionStatus.CONNECTING.value == "connecting"
+        assert AgentSessionStatus.ACTIVE.value == "active"
+        assert AgentSessionStatus.DISCONNECTED.value == "disconnected"
 
     def test_session_serialization_roundtrip(self) -> None:
         """AgentSession can be serialized and deserialized."""
@@ -614,7 +614,7 @@ class TestParticipantNewFields:
         """Participant can have OBSERVER role."""
         p = Participant(name="Observer Bot", role=ParticipantRole.OBSERVER)
         assert p.role == ParticipantRole.OBSERVER
-        assert p.role == "observer"
+        assert p.role.value == "observer"
 
     def test_participant_connection_type(self) -> None:
         """Participant can have a connection_type."""

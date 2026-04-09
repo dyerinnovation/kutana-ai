@@ -43,9 +43,7 @@ def _make_session(capabilities=None):
 class TestTranscriptEventHandling:
     """Tests for transcript.segment.final routing."""
 
-    async def test_transcript_event_calls_send_transcript(
-        self, relay, connection_manager
-    ) -> None:
+    async def test_transcript_event_calls_send_transcript(self, relay, connection_manager) -> None:
         """transcript.segment.final calls session.send_transcript with correct fields."""
         meeting_id = uuid4()
         session = _make_session(capabilities=["listen", "transcribe"])
@@ -82,9 +80,7 @@ class TestTranscriptEventHandling:
         )
         session.send_event.assert_not_awaited()
 
-    async def test_transcript_event_defaults(
-        self, relay, connection_manager
-    ) -> None:
+    async def test_transcript_event_defaults(self, relay, connection_manager) -> None:
         """Missing segment fields use defaults."""
         meeting_id = uuid4()
         session = _make_session(capabilities=["listen"])
@@ -113,9 +109,7 @@ class TestTranscriptEventHandling:
             speaker_name=None,
         )
 
-    async def test_transcript_event_missing_segment_key(
-        self, relay, connection_manager
-    ) -> None:
+    async def test_transcript_event_missing_segment_key(self, relay, connection_manager) -> None:
         """Payload without 'segment' key uses empty dict defaults."""
         meeting_id = uuid4()
         session = _make_session(capabilities=["transcribe"])
@@ -145,9 +139,7 @@ class TestTranscriptEventHandling:
 class TestNonTranscriptEvents:
     """Tests that non-transcript events still use send_event."""
 
-    async def test_meeting_event_calls_send_event(
-        self, relay, connection_manager
-    ) -> None:
+    async def test_meeting_event_calls_send_event(self, relay, connection_manager) -> None:
         """meeting.started event calls session.send_event."""
         meeting_id = uuid4()
         session = _make_session(capabilities=["listen"])

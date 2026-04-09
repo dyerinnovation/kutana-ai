@@ -23,9 +23,7 @@ REDIS_URL = "redis://localhost:6379/0"
 async def _redis_available() -> bool:
     """Check if Redis is reachable."""
     try:
-        client: redis.Redis[str] = redis.from_url(
-            REDIS_URL, decode_responses=True
-        )
+        client: redis.Redis[str] = redis.from_url(REDIS_URL, decode_responses=True)
         await client.ping()
         await client.aclose()
         return True
@@ -42,9 +40,7 @@ async def redis_client() -> redis.Redis[str]:
     if not await _redis_available():
         pytest.skip("Redis not available")
 
-    client: redis.Redis[str] = redis.from_url(
-        REDIS_URL, decode_responses=True
-    )
+    client: redis.Redis[str] = redis.from_url(REDIS_URL, decode_responses=True)
     # Clean stream before test
     await client.delete(STREAM_KEY)
     yield client  # type: ignore[misc]
@@ -53,9 +49,7 @@ async def redis_client() -> redis.Redis[str]:
     await client.aclose()
 
 
-def _make_segments(
-    meeting_id: object, n: int = 2
-) -> list[TranscriptSegment]:
+def _make_segments(meeting_id: object, n: int = 2) -> list[TranscriptSegment]:
     """Create sample transcript segments."""
     return [
         TranscriptSegment(
@@ -73,9 +67,7 @@ def _make_segments(
 class TestRedisEventFlow:
     """Integration tests for MockSTT → AudioPipeline → Redis."""
 
-    async def test_meeting_lifecycle_events_in_redis(
-        self, redis_client: redis.Redis[str]
-    ) -> None:
+    async def test_meeting_lifecycle_events_in_redis(self, redis_client: redis.Redis[str]) -> None:
         """Full lifecycle: MeetingStarted, 2 segments, MeetingEnded."""
         meeting_id = uuid4()
         segments = _make_segments(meeting_id, n=2)
@@ -103,9 +95,7 @@ class TestRedisEventFlow:
             entries = await redis_client.xrange(STREAM_KEY)
             assert len(entries) == 4
 
-            event_types = [
-                entry[1]["event_type"] for entry in entries
-            ]
+            event_types = [entry[1]["event_type"] for entry in entries]
             assert event_types == [
                 "meeting.started",
                 "transcript.segment.final",

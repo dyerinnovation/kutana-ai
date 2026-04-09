@@ -169,15 +169,10 @@ async def main() -> None:
     try:
         from claude_agent_sdk import Agent, AgentConfig, MCPServerConfig
     except ImportError:
-        print(
-            "claude-agent-sdk not installed. Install with:\n"
-            "  uv add claude-agent-sdk"
-        )
+        print("claude-agent-sdk not installed. Install with:\n  uv add claude-agent-sdk")
         sys.exit(1)
 
-    mcp_url = os.environ.get(
-        "KUTANA_MCP_URL", "http://kutana.spark-b0f2.local/mcp"
-    )
+    mcp_url = os.environ.get("KUTANA_MCP_URL", "http://kutana.spark-b0f2.local/mcp")
     api_key = os.environ.get("KUTANA_API_KEY", "")
 
     if not api_key:

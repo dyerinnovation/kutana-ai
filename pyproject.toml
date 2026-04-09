@@ -35,7 +35,7 @@ dev-dependencies = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-addopts = "--import-mode=importlib"
+addopts = "--import-mode=importlib --ignore=evals"
 markers = [
     "mock: Mock eval — system prompt + transcript through Messages API (no live cluster)",
     "e2e: End-to-end eval — runs against the live dev cluster",

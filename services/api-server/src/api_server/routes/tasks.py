@@ -4,20 +4,23 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, date, datetime
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from api_server.auth_deps import CurrentUser
 from api_server.deps import get_db_session, get_event_publisher
-from api_server.event_publisher import EventPublisher
 from kutana_core.database.models import TaskORM
 from kutana_core.events.definitions import TaskCreated, TaskUpdated
 from kutana_core.models.task import Task, TaskPriority, TaskStatus
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from api_server.auth_deps import CurrentUser
+    from api_server.event_publisher import EventPublisher
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -126,9 +129,7 @@ def _orm_to_domain(task: TaskORM) -> Task:
     Returns:
         A :class:`~kutana_core.models.task.Task` domain model.
     """
-    dep_ids: list[UUID] = [
-        UUID(dep) for dep in (task.dependencies or [])
-    ]
+    dep_ids: list[UUID] = [UUID(dep) for dep in (task.dependencies or [])]
     return Task(
         id=task.id,
         meeting_id=task.meeting_id,

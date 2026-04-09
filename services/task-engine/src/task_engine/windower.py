@@ -11,14 +11,14 @@ from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
-from kutana_core.models.transcript import TranscriptSegment
-
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
+    from uuid import UUID
+
+    from kutana_core.models.transcript import TranscriptSegment
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +197,7 @@ class SegmentWindower:
         )
 
         logger.info(
-            "Flushing final window for meeting %s: %.1f–%.1fs (%d segments)",
+            "Flushing final window for meeting %s: %.1f-%.1fs (%d segments)",
             meeting_id,
             window_start,
             window_end,
@@ -269,7 +269,7 @@ class SegmentWindower:
             )
 
             logger.info(
-                "Emitting window for meeting %s: %.1f–%.1fs (%d segments)",
+                "Emitting window for meeting %s: %.1f-%.1fs (%d segments)",
                 meeting_id,
                 window_start,
                 window_end,
@@ -286,9 +286,7 @@ class SegmentWindower:
 
             # Prune the buffer: drop any segment whose end is entirely
             # before the new window start (it won't be needed again).
-            self._buffers[meeting_id] = [
-                s for s in segments if s.end_time > new_window_start
-            ]
+            self._buffers[meeting_id] = [s for s in segments if s.end_time > new_window_start]
 
     def _cleanup(self, meeting_id: UUID) -> None:
         """Remove per-meeting buffer and window-start state.

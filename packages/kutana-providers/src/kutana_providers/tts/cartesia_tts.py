@@ -70,9 +70,7 @@ class CartesiaTTS(TTSProvider):
             },
         }
 
-    async def synthesize_stream(
-        self, text: str, voice: str | None = None
-    ) -> AsyncIterator[bytes]:
+    async def synthesize_stream(self, text: str, voice: str | None = None) -> AsyncIterator[bytes]:
         """Synthesize text into streaming PCM16 audio bytes via Cartesia.
 
         Args:

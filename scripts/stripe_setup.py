@@ -46,8 +46,7 @@ TIERS: list[Tier] = [
         key="basic",
         name="Kutana Basic",
         description=(
-            "Individual plan with 10 meetings/month, 1 custom agent "
-            "connection, and 30-day memory."
+            "Individual plan with 10 meetings/month, 1 custom agent connection, and 30-day memory."
         ),
         monthly_cents=799,
         yearly_cents=7900,
@@ -76,8 +75,7 @@ TIERS: list[Tier] = [
         key="enterprise",
         name="Kutana Enterprise",
         description=(
-            "Custom deployment, SSO, dedicated infra, SLAs, and audit "
-            "logging. Billed manually."
+            "Custom deployment, SSO, dedicated infra, SLAs, and audit logging. Billed manually."
         ),
         monthly_cents=None,
         yearly_cents=None,
@@ -176,19 +174,13 @@ def main() -> int:
         product = upsert_product(tier)
         print(f"  Product: {product.id} — {tier.name}")
         if tier.monthly_cents is not None:
-            monthly = upsert_price(
-                product, tier.key, "month", tier.monthly_cents
-            )
+            monthly = upsert_price(product, tier.key, "month", tier.monthly_cents)
             print(f"    monthly: {monthly.id}  (${tier.monthly_cents / 100:.2f})")
-            env_lines.append(
-                f"STRIPE_PRICE_{tier.key.upper()}_MONTHLY={monthly.id}"
-            )
+            env_lines.append(f"STRIPE_PRICE_{tier.key.upper()}_MONTHLY={monthly.id}")
         if tier.yearly_cents is not None:
             yearly = upsert_price(product, tier.key, "year", tier.yearly_cents)
             print(f"    yearly:  {yearly.id}  (${tier.yearly_cents / 100:.2f})")
-            env_lines.append(
-                f"STRIPE_PRICE_{tier.key.upper()}_YEARLY={yearly.id}"
-            )
+            env_lines.append(f"STRIPE_PRICE_{tier.key.upper()}_YEARLY={yearly.id}")
 
     print("\nAdd these to your .env file or Helm secret:\n")
     print("\n".join(env_lines))

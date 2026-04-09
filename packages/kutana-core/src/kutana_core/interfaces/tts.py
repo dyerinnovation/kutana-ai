@@ -33,9 +33,7 @@ class TTSProvider(ABC):
     """
 
     @abstractmethod
-    def synthesize_stream(
-        self, text: str, voice: str | None = None
-    ) -> AsyncIterator[bytes]:
+    def synthesize_stream(self, text: str, voice: str | None = None) -> AsyncIterator[bytes]:
         """Synthesize text into streaming audio chunks.
 
         Args:

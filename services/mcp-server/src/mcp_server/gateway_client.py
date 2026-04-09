@@ -6,6 +6,7 @@ Reuses the battle-tested connection pattern from scripts/test_e2e_gateway.py.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from typing import Any
@@ -96,13 +97,15 @@ class GatewayClient:
         return response
 
     # Event types that are buffered in _events_buffer for polling via get_meeting_events()
-    _BUFFERED_EVENT_TYPES = frozenset({
-        "turn_queue_updated",
-        "turn_speaker_changed",
-        "turn_your_turn",
-        "participant_update",
-        "chat_message",
-    })
+    _BUFFERED_EVENT_TYPES = frozenset(
+        {
+            "turn_queue_updated",
+            "turn_speaker_changed",
+            "turn_your_turn",
+            "participant_update",
+            "chat_message",
+        }
+    )
 
     async def _listen(self) -> None:
         """Background listener that buffers incoming gateway messages."""
@@ -150,7 +153,8 @@ class GatewayClient:
                             self._participants.append(participant)
                         elif action == "left":
                             self._participants = [
-                                p for p in self._participants
+                                p
+                                for p in self._participants
                                 if p.get("participant_id") != msg.get("participant_id")
                             ]
                     logger.debug("Buffered gateway event: %s", msg_type)
@@ -201,11 +205,13 @@ class GatewayClient:
         if self._ws is not None:
             import asyncio
 
-            subscribe_msg = json.dumps({
-                "type": "subscribe_channel",
-                "channels": [channel],
-            })
-            asyncio.create_task(self._ws.send(subscribe_msg))
+            subscribe_msg = json.dumps(
+                {
+                    "type": "subscribe_channel",
+                    "channels": [channel],
+                }
+            )
+            asyncio.create_task(self._ws.send(subscribe_msg))  # noqa: RUF006
 
         logger.info("Subscribed to channel: %s", channel)
 
@@ -256,9 +262,7 @@ class GatewayClient:
         await self._ws.send(json.dumps({"type": "stop_speaking"}))
         logger.debug("Sent stop_speaking to gateway")
 
-    async def publish_to_channel(
-        self, channel: str, payload: dict[str, Any]
-    ) -> None:
+    async def publish_to_channel(self, channel: str, payload: dict[str, Any]) -> None:
         """Publish a message to a data channel via the gateway.
 
         Args:
@@ -276,9 +280,7 @@ class GatewayClient:
         await self._ws.send(json.dumps(data_msg))
         logger.debug("Published to channel %s", channel)
 
-    def get_events(
-        self, last_n: int = 50, event_type: str | None = None
-    ) -> list[dict[str, Any]]:
+    def get_events(self, last_n: int = 50, event_type: str | None = None) -> list[dict[str, Any]]:
         """Get recent meeting events buffered from the gateway WebSocket.
 
         Includes turn queue updates, speaker changes, participant joins/leaves,
@@ -298,9 +300,7 @@ class GatewayClient:
             return filtered[-last_n:]
         return self._events_buffer[-last_n:]
 
-    def get_channel_messages(
-        self, channel: str, last_n: int = 50
-    ) -> list[dict[str, Any]]:
+    def get_channel_messages(self, channel: str, last_n: int = 50) -> list[dict[str, Any]]:
         """Get buffered messages from a data channel.
 
         Args:
@@ -331,10 +331,8 @@ class GatewayClient:
 
         if self._listener_task is not None:
             self._listener_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._listener_task
-            except asyncio.CancelledError:
-                pass
             self._listener_task = None
 
         self._meeting_id = None

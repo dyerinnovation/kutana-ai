@@ -166,9 +166,9 @@ class StreamConsumer:
 
         while not self._stop_event.is_set():
             try:
-                response: list[
-                    tuple[str, list[tuple[str, dict[str, str]]]]
-                ] | None = await self._redis.xreadgroup(
+                response: (
+                    list[tuple[str, list[tuple[str, dict[str, str]]]]] | None
+                ) = await self._redis.xreadgroup(
                     groupname=self._group_name,
                     consumername=self._consumer_name,
                     streams={self._stream_key: ">"},
@@ -200,9 +200,7 @@ class StreamConsumer:
                 backoff = min(backoff * 2, _MAX_BACKOFF_SECONDS)
                 # Reconnect
                 await self._close_redis()
-                self._redis = redis.from_url(
-                    self._redis_url, decode_responses=True
-                )
+                self._redis = redis.from_url(self._redis_url, decode_responses=True)
                 await self._ensure_group()
             except Exception:
                 logger.exception("Unexpected error in consume loop")
@@ -243,8 +241,7 @@ class StreamConsumer:
             event = TranscriptSegmentFinal.model_validate(data)
         except (json.JSONDecodeError, ValueError):
             logger.exception(
-                "Failed to parse %s payload (entry=%s) — acknowledging to "
-                "prevent PEL build-up",
+                "Failed to parse %s payload (entry=%s) — acknowledging to prevent PEL build-up",
                 _SEGMENT_EVENT_TYPE,
                 entry_id,
             )

@@ -68,7 +68,7 @@ async def test_basic_agent_mock(
     segments = load_transcript(transcript_path)
 
     # Run mock eval
-    agent_response, tool_calls = await run_mock_eval(
+    agent_response, _tool_calls = await run_mock_eval(
         system_prompt=prompt,
         scenario=scenario,
         transcript_segments=segments,

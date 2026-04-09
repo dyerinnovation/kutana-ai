@@ -247,9 +247,7 @@ class TestLLMExtractorExtract:
 
         tool_input = {
             **_empty_tool_input(),
-            "key_points": [
-                {"summary": "We need to refactor auth", "importance": "high"}
-            ],
+            "key_points": [{"summary": "We need to refactor auth", "importance": "high"}],
         }
         mock_response = _make_tool_response(tool_input)
 
@@ -271,9 +269,7 @@ class TestLLMExtractorExtract:
 
         tool_input = {
             **_empty_tool_input(),
-            "blockers": [
-                {"description": "Missing API keys from vendor", "severity": "critical"}
-            ],
+            "blockers": [{"description": "Missing API keys from vendor", "severity": "critical"}],
         }
         mock_response = _make_tool_response(tool_input)
 
@@ -426,9 +422,7 @@ class TestLLMExtractorExtract:
             captured_messages.append(kwargs.get("messages", []))
             return _make_tool_response(_empty_tool_input())
 
-        with patch.object(
-            extractor._client.messages, "create", new=mock_create
-        ):
+        with patch.object(extractor._client.messages, "create", new=mock_create):
             await extractor.extract(batch)
 
         assert len(captured_messages) == 1
@@ -450,9 +444,7 @@ class TestRegistryIntegration:
         assert default_registry.is_registered(ProviderType.EXTRACTOR, "llm")
 
     def test_create_llm_extractor_from_registry(self) -> None:
-        extractor = default_registry.create(
-            ProviderType.EXTRACTOR, "llm", api_key="test-key"
-        )
+        extractor = default_registry.create(ProviderType.EXTRACTOR, "llm", api_key="test-key")
         assert isinstance(extractor, LLMExtractor)
         assert extractor.name == "llm-extractor"
 

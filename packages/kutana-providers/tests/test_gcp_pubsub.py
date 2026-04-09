@@ -40,7 +40,7 @@ def _make_subscriber(
 
     # pull() returns a response with ReceivedMessage objects
     received = []
-    for msg_data in (messages or []):
+    for msg_data in messages or []:
         rm = MagicMock()
         rm.ack_id = f"ack-{id(msg_data)}"
         rm.message = MagicMock()
@@ -98,9 +98,7 @@ class TestPubSubImportGuard:
 
     def test_raises_import_error_when_pubsub_missing(self) -> None:
         """PubSubMessageBus raises ImportError if google-cloud-pubsub is missing."""
-        with patch(
-            "kutana_providers.messaging.gcp_pubsub._PUBSUB_AVAILABLE", False
-        ):
+        with patch("kutana_providers.messaging.gcp_pubsub._PUBSUB_AVAILABLE", False):
             from kutana_providers.messaging.gcp_pubsub import _require_pubsub
 
             with pytest.raises(ImportError, match="google-cloud-pubsub"):
@@ -132,24 +130,18 @@ class TestPubSubNaming:
 class TestPubSubPublish:
     """Tests for PubSubMessageBus.publish."""
 
-    async def test_publish_creates_topic(
-        self, bus: Any, publisher: AsyncMock
-    ) -> None:
+    async def test_publish_creates_topic(self, bus: Any, publisher: AsyncMock) -> None:
         """publish() calls publisher.create_topic."""
         await bus.publish("test.topic", {"x": 1})
         publisher.create_topic.assert_called_once()
 
-    async def test_publish_returns_uuid_string(
-        self, bus: Any
-    ) -> None:
+    async def test_publish_returns_uuid_string(self, bus: Any) -> None:
         """publish() returns a 36-char UUID."""
         msg_id = await bus.publish("test.topic", {})
         assert isinstance(msg_id, str)
         assert len(msg_id) == 36
 
-    async def test_publish_sends_encoded_json(
-        self, bus: Any, publisher: AsyncMock
-    ) -> None:
+    async def test_publish_sends_encoded_json(self, bus: Any, publisher: AsyncMock) -> None:
         """publish() sends UTF-8 JSON to the Pub/Sub publisher."""
         await bus.publish("t", {"answer": 42}, source="test-svc")
         call_kwargs = publisher.publish.call_args[1]
@@ -157,9 +149,7 @@ class TestPubSubPublish:
         assert body["payload"] == {"answer": 42}
         assert body["source"] == "test-svc"
 
-    async def test_publish_caches_topic_path(
-        self, bus: Any, publisher: AsyncMock
-    ) -> None:
+    async def test_publish_caches_topic_path(self, bus: Any, publisher: AsyncMock) -> None:
         """publish() only creates the topic once per unique topic string."""
         await bus.publish("my.topic", {})
         await bus.publish("my.topic", {})
@@ -178,9 +168,7 @@ class TestPubSubPublish:
 class TestPubSubSubscribe:
     """Tests for PubSubMessageBus.subscribe."""
 
-    async def test_subscribe_returns_subscription(
-        self, bus: Any
-    ) -> None:
+    async def test_subscribe_returns_subscription(self, bus: Any) -> None:
         """subscribe() returns a Subscription with correct topic."""
 
         async def handler(msg: Message) -> None:
@@ -194,6 +182,7 @@ class TestPubSubSubscribe:
         for t in bus._tasks:
             t.cancel()
         import asyncio
+
         await asyncio.gather(*bus._tasks, return_exceptions=True)
 
     async def test_subscribe_creates_pubsub_subscription(
@@ -211,11 +200,10 @@ class TestPubSubSubscribe:
         for t in bus._tasks:
             t.cancel()
         import asyncio
+
         await asyncio.gather(*bus._tasks, return_exceptions=True)
 
-    async def test_subscribe_with_group_sets_group(
-        self, bus: Any
-    ) -> None:
+    async def test_subscribe_with_group_sets_group(self, bus: Any) -> None:
         """subscribe(group=...) sets the group on the Subscription."""
 
         async def handler(msg: Message) -> None:
@@ -228,15 +216,14 @@ class TestPubSubSubscribe:
         for t in bus._tasks:
             t.cancel()
         import asyncio
+
         await asyncio.gather(*bus._tasks, return_exceptions=True)
 
 
 class TestPubSubAck:
     """Tests for PubSubMessageBus.ack."""
 
-    async def test_ack_noop_for_fanout_subscription(
-        self, bus: Any, subscriber: AsyncMock
-    ) -> None:
+    async def test_ack_noop_for_fanout_subscription(self, bus: Any, subscriber: AsyncMock) -> None:
         """ack() is a no-op for fan-out (group=None) subscriptions."""
 
         async def handler(msg: Message) -> None:
@@ -287,9 +274,7 @@ class TestPubSubClose:
 class TestCreateFromEnvGCP:
     """Tests for create_message_bus_from_env with gcp-pubsub backend."""
 
-    def test_create_pubsub_bus_from_env(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_create_pubsub_bus_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """create_message_bus_from_env() returns PubSubMessageBus for gcp-pubsub."""
         monkeypatch.setenv("KUTANA_MESSAGE_BUS", "gcp-pubsub")
         monkeypatch.setenv("GCP_PROJECT_ID", "my-gcp-project")
@@ -301,9 +286,7 @@ class TestCreateFromEnvGCP:
         assert isinstance(bus, PubSubMessageBus)
         assert bus._project_id == "my-gcp-project"
 
-    def test_gcp_bus_raises_without_project_id(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_gcp_bus_raises_without_project_id(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """PubSubMessageBus raises ValueError when GCP_PROJECT_ID is unset."""
         monkeypatch.delenv("GCP_PROJECT_ID", raising=False)
 

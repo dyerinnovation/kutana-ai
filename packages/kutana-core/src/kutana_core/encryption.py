@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 import os
 
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import Fernet, InvalidToken  # type: ignore[import-not-found]
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ def encrypt_value(plaintext: str) -> str:
         Base64-encoded ciphertext string.
     """
     f = _get_fernet()
-    return f.encrypt(plaintext.encode()).decode()
+    return str(f.encrypt(plaintext.encode()).decode())
 
 
 def decrypt_value(ciphertext: str) -> str:
@@ -66,6 +66,6 @@ def decrypt_value(ciphertext: str) -> str:
     """
     f = _get_fernet()
     try:
-        return f.decrypt(ciphertext.encode()).decode()
+        return str(f.decrypt(ciphertext.encode()).decode())
     except InvalidToken as e:
         raise ValueError("Decryption failed: invalid key or corrupted data") from e

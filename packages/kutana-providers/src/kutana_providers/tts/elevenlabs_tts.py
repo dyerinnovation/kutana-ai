@@ -63,9 +63,7 @@ class ElevenLabsTTS(TTSProvider):
             },
         }
 
-    async def synthesize_stream(
-        self, text: str, voice: str | None = None
-    ) -> AsyncIterator[bytes]:
+    async def synthesize_stream(self, text: str, voice: str | None = None) -> AsyncIterator[bytes]:
         """Synthesize text into streaming MP3 audio bytes via ElevenLabs.
 
         Args:

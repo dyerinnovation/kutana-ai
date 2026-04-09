@@ -334,7 +334,9 @@ class TestOnWindowDeduplication:
         try:
             with (
                 patch.object(main_module, "_llm_extractor", extractor),
-                patch.object(main_module, "_event_publisher", MagicMock(publish_insights=publish_mock)),
+                patch.object(
+                    main_module, "_event_publisher", MagicMock(publish_insights=publish_mock)
+                ),
                 patch.object(main_module, "_session_factory", None),
             ):
                 await main_module._on_window(window)

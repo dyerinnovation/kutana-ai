@@ -187,9 +187,7 @@ class BatchCollector:
         # Group entities by type and publish to per-type topics
         by_type: dict[str, list[Any]] = {}
         for entity in result.entities:
-            by_type.setdefault(entity.entity_type, []).append(
-                entity.model_dump(mode="json")
-            )
+            by_type.setdefault(entity.entity_type, []).append(entity.model_dump(mode="json"))
 
         for entity_type, entity_dicts in by_type.items():
             await self._bus.publish(

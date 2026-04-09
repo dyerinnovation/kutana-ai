@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
-from uuid import UUID
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from agent_gateway.audio_router import AudioRouter
     from agent_gateway.chat_bridge import ChatBridge
     from agent_gateway.tts_bridge import TTSBridge
@@ -181,11 +182,7 @@ class ConnectionManager:
             List of session handlers in the meeting.
         """
         session_ids = self._meeting_sessions.get(meeting_id, set())
-        return [
-            self._sessions[sid]
-            for sid in session_ids
-            if sid in self._sessions
-        ]
+        return [self._sessions[sid] for sid in session_ids if sid in self._sessions]
 
     def get_all_sessions(self) -> list[Any]:
         """Return all active sessions."""

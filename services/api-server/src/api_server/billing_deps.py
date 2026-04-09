@@ -181,9 +181,7 @@ async def check_agent_config_limit(user: UserORM, db: AsyncSession) -> None:
     if limit is None:
         return
     result = await db.execute(
-        select(func.count())
-        .select_from(AgentConfigORM)
-        .where(AgentConfigORM.owner_id == user.id)
+        select(func.count()).select_from(AgentConfigORM).where(AgentConfigORM.owner_id == user.id)
     )
     count = result.scalar_one()
     if count >= limit:
@@ -207,9 +205,7 @@ async def check_feed_limit(user: UserORM, db: AsyncSession) -> None:
     if limit is None:
         return
     result = await db.execute(
-        select(func.count())
-        .select_from(FeedORM)
-        .where(FeedORM.user_id == user.id)
+        select(func.count()).select_from(FeedORM).where(FeedORM.user_id == user.id)
     )
     count = result.scalar_one()
     if count >= limit:

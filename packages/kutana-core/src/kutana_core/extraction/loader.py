@@ -78,15 +78,13 @@ def validate_extractor(cls: type) -> None:
         :class:`ExtractorValidationError`: If any check fails.
     """
     if not isinstance(cls, type):
-        raise ExtractorValidationError(cls, "must be a class")  # type: ignore[arg-type]
+        raise ExtractorValidationError(cls, "must be a class")
 
     if not issubclass(cls, Extractor):
-        raise ExtractorValidationError(
-            cls, f"must subclass Extractor (got {cls.__bases__})"
-        )
+        raise ExtractorValidationError(cls, f"must subclass Extractor (got {cls.__bases__})")
 
     # Check for un-implemented abstract methods
-    abstract_methods = getattr(cls, "__abstractmethods__", frozenset())
+    abstract_methods: frozenset[str] = getattr(cls, "__abstractmethods__", frozenset())
     if abstract_methods:
         raise ExtractorValidationError(
             cls,
@@ -124,9 +122,7 @@ def validate_extractor(cls: type) -> None:
                 cls, "entity_types property must return a non-empty list"
             )
         if not all(isinstance(t, str) for t in types_val):
-            raise ExtractorValidationError(
-                cls, "entity_types entries must all be strings"
-            )
+            raise ExtractorValidationError(cls, "entity_types entries must all be strings")
     except ExtractorValidationError:
         raise
     except Exception as exc:
@@ -205,9 +201,7 @@ class ExtractorLoader:
         self._registry[name] = cls
         logger.debug("Registered custom extractor %r -> %s", name, cls.__name__)
 
-    def register_or_replace(
-        self, cls: type[Extractor], *, name: str | None = None
-    ) -> None:
+    def register_or_replace(self, cls: type[Extractor], *, name: str | None = None) -> None:
         """Register a custom extractor, replacing any existing entry with the same name.
 
         Used for hot-reloading: replace an extractor class at runtime without
@@ -300,9 +294,7 @@ class ExtractorLoader:
                 cls = ep.load()
                 self.register_or_replace(cls, name=ep.name)
                 loaded.append(ep.name)
-                logger.info(
-                    "Loaded extractor %r from entry point %s", ep.name, ep.value
-                )
+                logger.info("Loaded extractor %r from entry point %s", ep.name, ep.value)
             except Exception as exc:
                 logger.warning(
                     "Failed to load extractor entry point %r (%s): %s",
@@ -343,7 +335,7 @@ class ExtractorLoader:
 
         module = importlib.util.module_from_spec(spec)
         sys.modules[module_name] = module
-        spec.loader.exec_module(module)  # type: ignore[union-attr]
+        spec.loader.exec_module(module)
 
         # Find all Extractor subclasses defined in this module
         candidates: list[type[Extractor]] = [
@@ -374,9 +366,7 @@ class ExtractorLoader:
                 )
         return loaded
 
-    def load_from_module(
-        self, module_path: str, class_name: str | None = None
-    ) -> list[str]:
+    def load_from_module(self, module_path: str, class_name: str | None = None) -> list[str]:
         """Load extractor(s) from a dotted Python module path.
 
         Args:
@@ -402,9 +392,7 @@ class ExtractorLoader:
             candidates = [
                 obj
                 for obj in vars(module).values()
-                if isinstance(obj, type)
-                and issubclass(obj, Extractor)
-                and obj is not Extractor
+                if isinstance(obj, type) and issubclass(obj, Extractor) and obj is not Extractor
             ]
 
         loaded: list[str] = []
@@ -413,9 +401,7 @@ class ExtractorLoader:
                 self.register_or_replace(cls)
                 loaded.append(cls.__name__.lower())
             except Exception as exc:
-                logger.warning(
-                    "Failed to register extractor %s: %s", cls.__name__, exc
-                )
+                logger.warning("Failed to register extractor %s: %s", cls.__name__, exc)
         return loaded
 
     # ------------------------------------------------------------------

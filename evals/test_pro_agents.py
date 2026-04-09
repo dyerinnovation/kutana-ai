@@ -67,7 +67,7 @@ async def test_pro_agent_mock(
         pytest.skip(f"Transcript not found: {scenario.transcript_ref}")
     segments = load_transcript(transcript_path)
 
-    agent_response, tool_calls = await run_mock_eval(
+    agent_response, _tool_calls = await run_mock_eval(
         system_prompt=prompt,
         scenario=scenario,
         transcript_segments=segments,

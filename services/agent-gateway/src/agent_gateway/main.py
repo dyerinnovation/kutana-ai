@@ -6,6 +6,7 @@ import json
 import logging
 import sys
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING, Any
 from uuid import UUID as _UUID
 
 # Enable application-level logging so session events are visible in docker logs
@@ -14,27 +15,26 @@ logging.basicConfig(
     format="%(levelname)s [%(name)s] %(message)s",
     stream=sys.stdout,
 )
-from typing import TYPE_CHECKING, Any
 
-import redis.asyncio as redis_async
-from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import (
+import redis.asyncio as redis_async  # noqa: E402
+from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect  # noqa: E402
+from pydantic import BaseModel  # noqa: E402
+from sqlalchemy.ext.asyncio import (  # noqa: E402
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
 
-from agent_gateway.agent_session import AgentSessionHandler
-from agent_gateway.audio_bridge import AudioBridge
-from agent_gateway.audio_session import AudioSessionHandler
-from agent_gateway.auth import AuthError, validate_token
-from agent_gateway.chat_bridge import ChatBridge
-from agent_gateway.connection_manager import ConnectionManager
-from agent_gateway.event_relay import EventRelay
-from agent_gateway.human_session import HumanSessionHandler
-from agent_gateway.settings import AgentGatewaySettings
-from agent_gateway.turn_bridge import TurnBridge
+from agent_gateway.agent_session import AgentSessionHandler  # noqa: E402
+from agent_gateway.audio_bridge import AudioBridge  # noqa: E402
+from agent_gateway.audio_session import AudioSessionHandler  # noqa: E402
+from agent_gateway.auth import AuthError, validate_token  # noqa: E402
+from agent_gateway.chat_bridge import ChatBridge  # noqa: E402
+from agent_gateway.connection_manager import ConnectionManager  # noqa: E402
+from agent_gateway.event_relay import EventRelay  # noqa: E402
+from agent_gateway.human_session import HumanSessionHandler  # noqa: E402
+from agent_gateway.settings import AgentGatewaySettings  # noqa: E402
+from agent_gateway.turn_bridge import TurnBridge  # noqa: E402
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

@@ -56,11 +56,12 @@ class TestEnsurePipeline:
         """Creates a pipeline and starts segment consumer task."""
         meeting_id = uuid4()
 
-        with patch(
-            "agent_gateway.audio_bridge._create_stt_provider"
-        ) as mock_factory, patch(
-            "agent_gateway.audio_bridge.AudioPipeline",
-            return_value=mock_pipeline,
+        with (
+            patch("agent_gateway.audio_bridge._create_stt_provider") as mock_factory,
+            patch(
+                "agent_gateway.audio_bridge.AudioPipeline",
+                return_value=mock_pipeline,
+            ),
         ):
             mock_factory.return_value = MagicMock()
             await bridge.ensure_pipeline(meeting_id)
@@ -76,12 +77,13 @@ class TestEnsurePipeline:
         """Calling ensure_pipeline twice for the same meeting is a no-op."""
         meeting_id = uuid4()
 
-        with patch(
-            "agent_gateway.audio_bridge._create_stt_provider"
-        ) as mock_factory, patch(
-            "agent_gateway.audio_bridge.AudioPipeline",
-            return_value=mock_pipeline,
-        ) as mock_pipeline_cls:
+        with (
+            patch("agent_gateway.audio_bridge._create_stt_provider") as mock_factory,
+            patch(
+                "agent_gateway.audio_bridge.AudioPipeline",
+                return_value=mock_pipeline,
+            ) as mock_pipeline_cls,
+        ):
             mock_factory.return_value = MagicMock()
             await bridge.ensure_pipeline(meeting_id)
             await bridge.ensure_pipeline(meeting_id)
@@ -90,9 +92,7 @@ class TestEnsurePipeline:
 
         await bridge.close()
 
-    async def test_multiple_meetings_get_separate_pipelines(
-        self, bridge, mock_pipeline
-    ) -> None:
+    async def test_multiple_meetings_get_separate_pipelines(self, bridge, mock_pipeline) -> None:
         """Each meeting gets its own pipeline instance."""
         m1 = uuid4()
         m2 = uuid4()
@@ -112,11 +112,12 @@ class TestEnsurePipeline:
             pipelines_created.append(p)
             return p
 
-        with patch(
-            "agent_gateway.audio_bridge._create_stt_provider"
-        ) as mock_factory, patch(
-            "agent_gateway.audio_bridge.AudioPipeline",
-            side_effect=make_pipeline,
+        with (
+            patch("agent_gateway.audio_bridge._create_stt_provider") as mock_factory,
+            patch(
+                "agent_gateway.audio_bridge.AudioPipeline",
+                side_effect=make_pipeline,
+            ),
         ):
             mock_factory.return_value = MagicMock()
             await bridge.ensure_pipeline(m1)
@@ -136,11 +137,12 @@ class TestProcessAudio:
         meeting_id = uuid4()
         audio = b"\x00\x01" * 800
 
-        with patch(
-            "agent_gateway.audio_bridge._create_stt_provider"
-        ), patch(
-            "agent_gateway.audio_bridge.AudioPipeline",
-            return_value=mock_pipeline,
+        with (
+            patch("agent_gateway.audio_bridge._create_stt_provider"),
+            patch(
+                "agent_gateway.audio_bridge.AudioPipeline",
+                return_value=mock_pipeline,
+            ),
         ):
             await bridge.ensure_pipeline(meeting_id)
 
@@ -160,17 +162,16 @@ class TestProcessAudio:
 class TestClosePipeline:
     """Tests for close_pipeline."""
 
-    async def test_closes_pipeline_and_cancels_task(
-        self, bridge, mock_pipeline
-    ) -> None:
+    async def test_closes_pipeline_and_cancels_task(self, bridge, mock_pipeline) -> None:
         """Closing a pipeline removes it and cancels the segment task."""
         meeting_id = uuid4()
 
-        with patch(
-            "agent_gateway.audio_bridge._create_stt_provider"
-        ), patch(
-            "agent_gateway.audio_bridge.AudioPipeline",
-            return_value=mock_pipeline,
+        with (
+            patch("agent_gateway.audio_bridge._create_stt_provider"),
+            patch(
+                "agent_gateway.audio_bridge.AudioPipeline",
+                return_value=mock_pipeline,
+            ),
         ):
             await bridge.ensure_pipeline(meeting_id)
 
@@ -212,11 +213,12 @@ class TestClose:
 
         m1, m2 = uuid4(), uuid4()
 
-        with patch(
-            "agent_gateway.audio_bridge._create_stt_provider"
-        ), patch(
-            "agent_gateway.audio_bridge.AudioPipeline",
-            side_effect=make_pipeline,
+        with (
+            patch("agent_gateway.audio_bridge._create_stt_provider"),
+            patch(
+                "agent_gateway.audio_bridge.AudioPipeline",
+                side_effect=make_pipeline,
+            ),
         ):
             await bridge.ensure_pipeline(m1)
             await bridge.ensure_pipeline(m2)

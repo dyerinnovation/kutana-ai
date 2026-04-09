@@ -72,11 +72,7 @@ class RedisStreamsMessageBus(MessageBus):
     def _parse_entry(self, fields: dict[str, str]) -> Message:
         """Deserialise a Redis stream entry dict to a Message."""
         timestamp_str = fields.get("timestamp", "")
-        timestamp = (
-            datetime.fromisoformat(timestamp_str)
-            if timestamp_str
-            else datetime.now(tz=UTC)
-        )
+        timestamp = datetime.fromisoformat(timestamp_str) if timestamp_str else datetime.now(tz=UTC)
         return Message(
             id=fields.get("message_id", ""),
             topic=fields.get("topic", ""),
@@ -156,17 +152,13 @@ class RedisStreamsMessageBus(MessageBus):
                 logger.debug("Created consumer group %s on stream %s", group, topic)
             except Exception:
                 # Group already exists — that's fine
-                logger.debug(
-                    "Consumer group %s already exists on stream %s", group, topic
-                )
+                logger.debug("Consumer group %s already exists on stream %s", group, topic)
 
         task: asyncio.Task[None] = asyncio.create_task(
             self._consume(sub), name=f"bus-sub-{sub.subscription_id[:8]}"
         )
         self._tasks.append(task)
-        logger.debug(
-            "Subscribed to %s (group=%s, id=%s)", topic, group, sub.subscription_id
-        )
+        logger.debug("Subscribed to %s (group=%s, id=%s)", topic, group, sub.subscription_id)
         return sub
 
     async def unsubscribe(self, subscription: Subscription) -> None:
@@ -241,27 +233,19 @@ class RedisStreamsMessageBus(MessageBus):
                 if sub.group is not None:
                     await self._read_group(redis, sub, target_streams)
                 else:
-                    await self._read_fanout(
-                        redis, sub, target_streams, stream_last_ids
-                    )
+                    await self._read_fanout(redis, sub, target_streams, stream_last_ids)
             except asyncio.CancelledError:
                 raise
             except Exception:
-                logger.exception(
-                    "Error in consume loop for topic %s", sub.topic
-                )
+                logger.exception("Error in consume loop for topic %s", sub.topic)
                 await asyncio.sleep(1)
 
-    async def _scan_matching_streams(
-        self, redis: Any, pattern: str
-    ) -> list[str]:
+    async def _scan_matching_streams(self, redis: Any, pattern: str) -> list[str]:
         """Return all Redis keys matching the given fnmatch pattern."""
         matched: list[str] = []
         cursor = 0
         while True:
-            cursor, keys = await redis.scan(
-                cursor=cursor, match=pattern, count=100
-            )
+            cursor, keys = await redis.scan(cursor=cursor, match=pattern, count=100)
             matched.extend(keys)
             if cursor == 0:
                 break
@@ -322,9 +306,7 @@ class RedisStreamsMessageBus(MessageBus):
                     message = self._parse_entry(fields)
                     await sub.handler(message)
                 except Exception:
-                    logger.exception(
-                        "Error dispatching message from %s", sub.topic
-                    )
+                    logger.exception("Error dispatching message from %s", sub.topic)
 
 
 def create_message_bus_from_env() -> MessageBus:
@@ -362,7 +344,6 @@ def create_message_bus_from_env() -> MessageBus:
     """
     import os
 
-
     backend = os.getenv("KUTANA_MESSAGE_BUS", "redis").lower()
 
     if backend == "redis":
@@ -396,8 +377,5 @@ def create_message_bus_from_env() -> MessageBus:
         )
 
     supported = ", ".join(["redis", "aws-sns-sqs", "gcp-pubsub", "nats"])
-    msg = (
-        f"Unsupported KUTANA_MESSAGE_BUS value: {backend!r}. "
-        f"Supported backends: {supported}"
-    )
+    msg = f"Unsupported KUTANA_MESSAGE_BUS value: {backend!r}. Supported backends: {supported}"
     raise ValueError(msg)

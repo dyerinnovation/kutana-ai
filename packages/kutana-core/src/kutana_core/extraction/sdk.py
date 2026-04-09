@@ -94,7 +94,7 @@ class SimpleExtractor(Extractor):
         """Validate that subclasses set non-empty name and entity_types."""
         super().__init_subclass__(**kwargs)
         # Only validate concrete (non-abstract) subclasses
-        abstract_methods = getattr(cls, "__abstractmethods__", frozenset())
+        abstract_methods: frozenset[str] = getattr(cls, "__abstractmethods__", frozenset())
         if not abstract_methods:
             if not cls.name:
                 import warnings
@@ -182,7 +182,8 @@ class _FunctionExtractor(Extractor):
 
     async def extract(self, batch: TranscriptBatch) -> ExtractionResult:
         """Delegate extraction to the wrapped async function."""
-        return await self._fn(batch)
+        result: ExtractionResult = await self._fn(batch)
+        return result
 
 
 def extractor(
@@ -270,8 +271,8 @@ def make_task(
         title=title,
         assignee=assignee,
         deadline=deadline,
-        priority=priority,  # type: ignore[arg-type]
-        status=status,  # type: ignore[arg-type]
+        priority=priority,
+        status=status,
         source_speaker=source_speaker,
         source_segment_id=source_segment_id,
         confidence=confidence,
@@ -340,7 +341,7 @@ def make_question(
         batch_id=batch.batch_id,
         text=text,
         asker=asker,
-        status=status,  # type: ignore[arg-type]
+        status=status,
         answer=answer,
         source_segment_id=source_segment_id,
         confidence=confidence,
@@ -377,7 +378,7 @@ def make_key_point(
         summary=summary,
         speaker=speaker,
         topic=topic,
-        importance=importance,  # type: ignore[arg-type]
+        importance=importance,
         source_segment_id=source_segment_id,
         confidence=confidence,
     )
@@ -412,7 +413,7 @@ def make_blocker(
         batch_id=batch.batch_id,
         description=description,
         owner=owner,
-        severity=severity,  # type: ignore[arg-type]
+        severity=severity,
         related_tasks=related_tasks or [],
         source_segment_id=source_segment_id,
         confidence=confidence,
@@ -479,7 +480,7 @@ def make_entity_mention(
         meeting_id=batch.meeting_id,
         batch_id=batch.batch_id,
         name=name,
-        kind=kind,  # type: ignore[arg-type]
+        kind=kind,
         context=context,
         first_mention_segment_id=first_mention_segment_id,
         confidence=confidence,
