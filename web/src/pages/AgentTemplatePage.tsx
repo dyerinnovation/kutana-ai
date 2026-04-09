@@ -11,7 +11,11 @@ import {
 } from "@/components/ui/Card";
 import { ActivateTemplateDialog } from "@/components/ActivateTemplateDialog";
 import { useAuth } from "@/hooks/useAuth";
-import { MANAGED_AGENT_MIN_TIER, meetsTier } from "@/lib/planLimits";
+import {
+  canActivateTemplate,
+  planLabel,
+  TIER_BADGE_STYLES,
+} from "@/lib/planLimits";
 import { UpgradeBadge } from "@/components/UpgradeBadge";
 
 const CATEGORIES = [
@@ -32,7 +36,6 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export function AgentTemplatePage() {
   const { user } = useAuth();
-  const canActivate = meetsTier(user, MANAGED_AGENT_MIN_TIER);
 
   const [templates, setTemplates] = useState<AgentTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,7 +70,12 @@ export function AgentTemplatePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-50">Agent Templates</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-gray-50">Agent Templates</h1>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-900/30 border border-violet-600/30 px-2.5 py-0.5 text-xs font-medium text-violet-300">
+            Powered by Claude
+          </span>
+        </div>
         <p className="text-sm text-gray-400 mt-1">
           Browse and activate prebuilt AI agents for your meetings
         </p>
@@ -115,64 +123,71 @@ export function AgentTemplatePage() {
 
       {templates.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2">
-          {templates.map((template) => (
-            <Card key={template.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <CardTitle>{template.name}</CardTitle>
-                  <span
-                    className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${
-                      CATEGORY_COLORS[template.category] ??
-                      CATEGORY_COLORS.general
-                    }`}
-                  >
-                    {template.category.charAt(0).toUpperCase() + template.category.slice(1)}
-                  </span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-400 mb-3">
-                  {template.description}
-                </p>
-                {template.capabilities.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-4">
-                    {template.capabilities.map((cap) => (
+          {templates.map((template) => {
+            const templateTier = template.tier ?? "basic";
+            const userCanActivate = canActivateTemplate(user, templateTier);
+            return (
+              <Card key={template.id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <CardTitle>{template.name}</CardTitle>
+                    <div className="flex items-center gap-1.5">
                       <span
-                        key={cap}
-                        className="inline-flex rounded-md bg-gray-800 px-2 py-0.5 text-xs text-gray-400"
+                        className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${
+                          TIER_BADGE_STYLES[templateTier] ?? TIER_BADGE_STYLES.basic
+                        }`}
                       >
-                        {formatCapability(cap)}
+                        {planLabel(templateTier)}
                       </span>
-                    ))}
-                  </div>
-                )}
-                <div className="flex items-center justify-between">
-                  {template.is_premium && (
-                    meetsTier(user, "pro")
-                      ? <span className="inline-flex items-center rounded-md bg-blue-600/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 text-xs font-medium">Pro</span>
-                      : <UpgradeBadge requiredTier="pro" />
-                  )}
-                  {!canActivate ? (
-                    <div className="ml-auto">
-                      <UpgradeBadge requiredTier={MANAGED_AGENT_MIN_TIER} />
+                      <span
+                        className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${
+                          CATEGORY_COLORS[template.category] ??
+                          CATEGORY_COLORS.general
+                        }`}
+                      >
+                        {template.category.charAt(0).toUpperCase() + template.category.slice(1)}
+                      </span>
                     </div>
-                  ) : template.is_premium && !meetsTier(user, "pro") ? (
-                    <Button size="sm" disabled className="ml-auto" title="Upgrade to Pro to activate">
-                      Activate
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => setActivateTarget(template)}
-                      className="ml-auto"
-                    >
-                      Activate
-                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-400 mb-3">
+                    {template.description}
+                  </p>
+                  {template.capabilities.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                      {template.capabilities.map((cap) => (
+                        <span
+                          key={cap}
+                          className="inline-flex rounded-md bg-gray-800 px-2 py-0.5 text-xs text-gray-400"
+                        >
+                          {formatCapability(cap)}
+                        </span>
+                      ))}
+                    </div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="flex items-center justify-between">
+                    {!userCanActivate && (
+                      <UpgradeBadge requiredTier={templateTier as "basic" | "pro" | "business" | "enterprise"} />
+                    )}
+                    {userCanActivate ? (
+                      <Button
+                        size="sm"
+                        onClick={() => setActivateTarget(template)}
+                        className="ml-auto"
+                      >
+                        Activate
+                      </Button>
+                    ) : (
+                      <Button size="sm" disabled className="ml-auto" title={`Requires ${planLabel(templateTier)} plan`}>
+                        Activate
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
