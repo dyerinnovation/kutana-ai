@@ -60,8 +60,8 @@ const managedFeatures: Feature[] = [
         <path d="M16 13H8m8 4H8m2-8H8" />
       </svg>
     ),
-    title: "Meeting Summarizer",
-    description: "Instant actionable summaries after every meeting",
+    title: "Notetaker & Summarizer",
+    description: "Detailed notes and instant summaries after every meeting",
   },
   {
     icon: (
@@ -70,8 +70,8 @@ const managedFeatures: Feature[] = [
         <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
       </svg>
     ),
-    title: "Action Tracker",
-    description: "Auto-extract tasks, assign owners, track deadlines",
+    title: "Action & Decision Tracking",
+    description: "Auto-extract tasks, log decisions, assign owners, track deadlines",
   },
   {
     icon: (
@@ -79,8 +79,8 @@ const managedFeatures: Feature[] = [
         <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
       </svg>
     ),
-    title: "Productivity Suite",
-    description: "Standup facilitators, note-takers, decision loggers",
+    title: "Standup & Retro Facilitators",
+    description: "Guided standups, sprint retrospectives, and planning sessions",
   },
   {
     icon: (
@@ -90,8 +90,8 @@ const managedFeatures: Feature[] = [
         <line x1="14" y1="4" x2="10" y2="20" />
       </svg>
     ),
-    title: "Engineering Suite",
-    description: "Sprint planners, code context agents, retrospective bots",
+    title: "Engineering & Research",
+    description: "Code discussion trackers, sprint planners, user interviewers",
   },
   {
     icon: (
@@ -102,8 +102,8 @@ const managedFeatures: Feature[] = [
         <rect x="3" y="14" width="7" height="7" />
       </svg>
     ),
-    title: "Growing Library",
-    description: "New Kutana Managed Agents added regularly across categories",
+    title: "10 Agents & Growing",
+    description: "From basic notes to business-tier coaching \u2014 pick what your team needs",
   },
 ];
 

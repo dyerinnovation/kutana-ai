@@ -4,37 +4,101 @@ Managed agents are pre-built AI agents available directly in the Kutana dashboar
 
 ## Available Agents
 
-### Meeting Summarizer
+### Basic Tier
+
+These agents are included with all plans.
+
+#### Meeting Notetaker
+
+Captures detailed, timestamped notes throughout the meeting, organized by topic with speaker attribution.
+
+**Category:** Productivity
+**Produces:** Chronological meeting notes with speaker attribution, topic headers, and inline action callouts
+**Best for:** Teams who need a complete record of what was discussed
+
+#### Meeting Summarizer
 
 Produces rolling meeting summaries every 5 minutes during a meeting and a final comprehensive summary when the meeting ends.
 
 **Category:** Summarization
-**Produces:** Key discussion points, decisions made, overall meeting summary
+**Produces:** Key discussion points, decisions made, action items, overall meeting summary
 **Best for:** Keeping remote team members in the loop, post-meeting recaps
 
-### Action Item Tracker
+---
 
-Listens for commitments, assignments, and deadlines during the meeting and extracts them as structured tasks.
+### Pro Tier
+
+These agents require a Pro plan or higher.
+
+#### Action Item Tracker
+
+Listens for commitments, assignments, and deadlines during the meeting and extracts them as structured tasks in real time.
 
 **Category:** Productivity
-**Produces:** Task list with assignees, deadlines, and context
+**Produces:** Task list with assignees, deadlines, priority levels, and context
 **Best for:** Ensuring nothing falls through the cracks after a meeting
 
-### Decision Logger
+#### Decision Logger
 
-Captures decisions as they are made during the meeting, including the context and rationale behind each decision.
+Captures decisions as they are made during the meeting, including the context, rationale, alternatives considered, and stakeholders involved.
 
 **Category:** Documentation
 **Produces:** Decision log with context, participants involved, and timestamps
 **Best for:** Audit trails, onboarding new team members, revisiting past decisions
 
-### Code Discussion Tracker
+#### Standup Facilitator
+
+Actively guides daily standup meetings — prompts each participant for their update, tracks blockers, and keeps the meeting within the time box.
+
+**Category:** Productivity
+**Produces:** Structured standup summary table (Yesterday / Today / Blockers per person), blocker follow-ups
+**Best for:** Teams who want consistent, time-boxed standups without a human facilitator
+
+#### Code Discussion Tracker
 
 Extracts code-related topics, technical decisions, and references to specific files, functions, or systems discussed during the meeting.
 
 **Category:** Engineering
-**Produces:** Technical discussion summary, code references, architecture decisions
+**Produces:** Technical discussion digest with code references, architecture decisions, and technical debt items
 **Best for:** Engineering standups, architecture reviews, sprint planning
+
+---
+
+### Business Tier
+
+These agents require a Business plan. Business-tier agents can be customized with organizational SOPs (Standard Operating Procedures) that are prepended to their instructions at activation time.
+
+#### Sprint Retro Coach
+
+Facilitates sprint retrospective meetings using structured frameworks (Start/Stop/Continue, 4Ls, Mad/Sad/Glad). Guides the team through each phase, collects feedback, and helps commit to improvement actions.
+
+**Category:** Engineering
+**Produces:** Categorized retro feedback (Start/Stop/Continue), themed patterns, committed improvement actions
+**Best for:** Scrum teams who want consistent, well-facilitated retrospectives
+
+#### Sprint Planner
+
+Assists with sprint planning by guiding backlog review, facilitating estimation, tracking capacity, and building a coherent sprint plan with committed items.
+
+**Category:** Engineering
+**Produces:** Sprint plan with goal, estimated items, owners, capacity summary, and risk flags
+**Best for:** Teams who want structured sprint planning with real-time tracking
+
+#### User Interviewer
+
+Conducts structured user research interviews — asks open-ended questions, probes for deeper insights, captures verbatim quotes, and produces a structured interview report.
+
+**Category:** Research
+**Produces:** Interview report with key findings, pain points, opportunities, and notable quotes
+**Best for:** Product teams conducting user research at scale
+
+#### Initial Interviewer
+
+Conducts structured initial candidate interviews with consistent evaluation criteria. Tracks responses, captures communication quality indicators, and produces a structured scorecard.
+
+**Category:** HR
+**Produces:** Candidate scorecard with question-by-question evaluation and overall assessment
+**Best for:** Standardizing initial candidate screens across interviewers
 
 ## How to Activate
 
@@ -47,13 +111,14 @@ Extracts code-related topics, technical decisions, and references to specific fi
    - **Manual** — you assign the agent to individual meetings
 5. The agent is now active and will join meetings automatically
 
-## API Key Requirements
+## Tier Requirements
 
-| Tier | API Key | Cost |
-|------|---------|------|
-| Free | You provide your own Anthropic API key in Settings | Free |
-| Pro / Business | Included with your plan | Included in subscription |
-| Enterprise | Dedicated key management | Custom pricing |
+| Tier | Agents Included | SOP Customization |
+|------|----------------|-------------------|
+| Basic | Meeting Notetaker, Meeting Summarizer | No |
+| Pro | All Basic agents + Action Item Tracker, Decision Logger, Standup Facilitator, Code Discussion Tracker | No |
+| Business | All Pro agents + Sprint Retro Coach, Sprint Planner, User Interviewer, Initial Interviewer | Yes |
+| Enterprise | All Business agents + custom agent development | Yes |
 
 ## Output
 

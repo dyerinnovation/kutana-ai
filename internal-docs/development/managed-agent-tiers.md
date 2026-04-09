@@ -1,111 +1,65 @@
-# Managed Agent Tier Bucketing
+# Managed Agent Tier Assignments
 
-Implementation plan for enforcing `is_premium` on managed agent templates so Basic users get core templates and Pro+ users unlock advanced ones.
+## Current State (10 templates)
 
-## Current State
+All 10 templates are seeded in migration `j2b3c4d5e6f7`. Tier enforcement uses the `tier` column on `agent_templates` and the `require_tier()` helper in the activation endpoint.
 
-- 4 seed templates in migration `d5e6f7a8b9c0`, all with `is_premium = false`
-- `billing_deps.py` has `MANAGED_AGENT_MIN_TIER = "basic"` — a single gate for all templates
-- `activate_template` calls `require_tier(user, MANAGED_AGENT_MIN_TIER)` but ignores `template.is_premium`
-- Frontend shows a yellow "Premium" label when `is_premium` is true but does not gate the Activate button
+## Template Roster
 
-## Template Tier Assignments
+| # | Template | Category | Tier | `is_premium` | ID |
+|---|----------|----------|------|-------------|-----|
+| 1 | Meeting Notetaker | productivity | **Basic** | false | `a0..001` |
+| 2 | Meeting Summarizer | general | **Basic** | false | `a0..004` |
+| 3 | Action Item Tracker | productivity | **Pro** | true | `a0..005` |
+| 4 | Decision Logger | productivity | **Pro** | true | `a0..006` |
+| 5 | Standup Facilitator | productivity | **Pro** | true | `a0..003` |
+| 6 | Code Discussion Tracker | engineering | **Pro** | true | `a0..002` |
+| 7 | Sprint Retro Coach | engineering | **Business** | true | `a0..007` |
+| 8 | Sprint Planner | engineering | **Business** | true | `a0..008` |
+| 9 | User Interviewer | research | **Business** | true | `a0..009` |
+| 10 | Initial Interviewer | hr | **Business** | true | `a0..00a` |
 
-| Template | Category | Capabilities | Recommended Tier | Rationale |
-|---|---|---|---|---|
-| Meeting Notetaker | productivity | transcription, task_extraction, action_items | **Basic** | Core value prop — every user should get a notetaker |
-| Meeting Summarizer | general | transcription, summarization | **Basic** | Simple post-meeting output, low differentiation cost |
-| Standup Facilitator | productivity | transcription, task_extraction, action_items | **Pro** | Active facilitation (guides participants, tracks blockers) is higher-value than passive note-taking |
-| Technical Scribe | engineering | transcription, task_extraction, summarization | **Pro** | Engineering-specific context capture is a power-user feature |
+## Tier Breakdown
 
-**Future templates to consider** (not yet seeded):
-| Template Idea | Category | Tier | Notes |
-|---|---|---|---|
-| Sprint Retro Coach | engineering | Pro | Guides retro formats, clusters feedback |
-| Sales Call Analyst | sales | Pro | Objection tracking, deal signals |
-| Compliance Monitor | compliance | Business | Regulated-industry feature |
-| Executive Briefing Writer | leadership | Business | Cross-meeting synthesis |
+### Basic (2 agents)
+Core value prop — every user gets meeting notes and summaries. These are passive, silent agents that produce text output via chat.
 
-## Implementation Steps
+- **Meeting Notetaker** — detailed, chronological, timestamped notes
+- **Meeting Summarizer** — rolling 5-minute summaries + final recap
 
-### 1. Backend: enforce `is_premium` in activate endpoint
+### Pro (4 agents)
+Power-user productivity features. Mix of passive trackers and one active facilitator.
 
-**File:** `services/api-server/src/api_server/routes/agent_templates.py`
+- **Action Item Tracker** — extracts commitments and creates tasks in real time
+- **Decision Logger** — captures decisions with rationale and alternatives
+- **Standup Facilitator** — *active facilitator* that guides standup format and prompts each participant
+- **Code Discussion Tracker** — extracts code references, architecture decisions, tech debt
 
-In `activate_template()`, after fetching the template and before creating the session, add:
+### Business (4 agents)
+Advanced facilitation and research agents. Support organizational SOP customization — SOPs are prepended to the system prompt at activation time.
 
-```python
-if template.is_premium:
-    require_tier(user, "pro")
-```
+- **Sprint Retro Coach** — *active facilitator* for retrospectives (Start/Stop/Continue, 4Ls, etc.)
+- **Sprint Planner** — *active facilitator* for sprint planning (backlog review, estimation, commitment)
+- **User Interviewer** — *active interviewer* for user research sessions
+- **Initial Interviewer** — *active interviewer* for candidate screening
 
-This reuses the existing `require_tier` helper. No new billing constant needed — `is_premium` maps directly to the `"pro"` tier.
+## Enforcement
 
-### 2. Backend: update seed data
+### Backend
+- `services/api-server/src/api_server/routes/agent_templates.py` — `activate_template()` calls `require_tier(user, template.tier)`
+- The `tier` column is the source of truth. `is_premium` is a legacy boolean kept for backward compatibility (true for Pro+ templates).
 
-**File:** New Alembic migration (data-only, no schema change)
+### Frontend
+- Template cards show tier badges (Basic, Pro, Business)
+- Activate button is disabled when user's plan is below the template's tier
+- Upgrade prompt links to `/pricing`
 
-```sql
-UPDATE agent_templates SET is_premium = true
-WHERE name IN ('Standup Facilitator', 'Technical Scribe');
-```
+## SOP Customization (Business Tier)
 
-This flips the two Pro-tier templates. The `is_premium` column and index already exist.
+Business-tier agents support organizational SOPs stored in the `organization_sops` table. When a Business agent is activated:
 
-### 3. Frontend: add tier badge to template cards
+1. The platform queries `organization_sops` for the user's org + matching category
+2. SOP content is prepended to the agent's system prompt at the `[ORGANIZATION SOP BLOCK]` marker
+3. The combined prompt is sent to the Anthropic API
 
-**File:** `web/src/pages/AgentsPage.tsx` (lines ~287-289)
-
-Replace the current plain "Premium" text span with the existing `UpgradeBadge` component:
-
-```tsx
-{template.is_premium && !meetsTier(user, "pro") && (
-  <UpgradeBadge requiredTier="pro" />
-)}
-{template.is_premium && meetsTier(user, "pro") && (
-  <span className="text-xs text-yellow-400 font-medium">Pro</span>
-)}
-```
-
-### 4. Frontend: gate activation in modal
-
-**File:** `web/src/pages/AgentsPage.tsx` (activate modal section, ~line 306)
-
-When `activateTarget.is_premium && !meetsTier(user, "pro")`:
-- Disable the "Activate Agent" button
-- Show an inline upgrade prompt: "Upgrade to Pro to activate this agent"
-- Link to `/pricing`
-
-### 5. Frontend: update `planLimits.ts`
-
-**File:** `web/src/lib/planLimits.ts`
-
-Add `"premium-agents"` to the `upgradeTargetFor` function so it returns `"pro"`.
-
-### 6. API response: include `min_tier` field (optional enhancement)
-
-Add a computed `min_tier` field to `AgentTemplateResponse` so the frontend does not need to duplicate the `is_premium -> "pro"` mapping:
-
-```python
-min_tier: str  # "basic" or "pro"
-# Set from: "pro" if t.is_premium else "basic"
-```
-
-This is optional but cleaner than the frontend interpreting a boolean.
-
-## Files Changed
-
-| File | Change |
-|---|---|
-| `services/api-server/src/api_server/routes/agent_templates.py` | Add `is_premium` check in `activate_template` |
-| `alembic/versions/<new>_set_premium_templates.py` | Data migration flipping 2 templates to premium |
-| `web/src/pages/AgentsPage.tsx` | Tier badge, gated Activate button, upgrade prompt in modal |
-| `web/src/lib/planLimits.ts` | Add `premium-agents` to `upgradeTargetFor` |
-
-## Testing
-
-- Unit test: activate a premium template as Basic user -> 403
-- Unit test: activate a premium template as Pro user -> 201
-- Unit test: activate a non-premium template as Basic user -> 201
-- E2E: verify badge renders on premium cards, Activate disabled for Basic users
-- Migration: verify idempotent (re-running UPDATE is safe)
+This allows organizations to customize agent behavior (e.g., specific retro formats, interview question banks, reporting templates) without modifying the base system prompt.
