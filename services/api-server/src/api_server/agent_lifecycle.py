@@ -54,6 +54,7 @@ _FORWARDED_EVENT_TYPES = frozenset(
     {
         "agent.message",
         "agent.mcp_tool_use",
+        "agent.custom_tool_use",
         "session.error",
         "session.status_idle",
     }
@@ -139,7 +140,7 @@ async def stream_and_publish_events(
                     if getattr(block, "type", None) == "text":
                         text_parts.append(getattr(block, "text", ""))
                 payload["content"] = " ".join(text_parts) or "(no text)"
-            elif event_type == "agent.mcp_tool_use":
+            elif event_type in ("agent.mcp_tool_use", "agent.custom_tool_use"):
                 payload["tool_name"] = getattr(event, "name", None) or getattr(
                     event, "tool_name", "unknown"
                 )

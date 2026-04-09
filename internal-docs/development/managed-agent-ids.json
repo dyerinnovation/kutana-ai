@@ -1,0 +1,281 @@
+{
+  "environment": {
+    "id": "env_01W7Eys4dncsU2QwnUkNfmYX",
+    "name": "kutana-agents"
+  },
+  "agents": [
+    {
+      "id": "agent_011CZtcwu1SmExYSKgwJz4b9",
+      "version": 1,
+      "name": "Meeting Notetaker",
+      "tier": "basic",
+      "index": 1,
+      "model": "claude-sonnet-4-6"
+    },
+    {
+      "id": "agent_011CZtcwv8fTmDZGDLiKsQJQ",
+      "version": 1,
+      "name": "Meeting Summarizer",
+      "tier": "basic",
+      "index": 2,
+      "model": "claude-sonnet-4-6"
+    },
+    {
+      "id": "agent_011CZtcwwYFMqbiF3SAJMcqK",
+      "version": 1,
+      "name": "Action Item Tracker",
+      "tier": "pro",
+      "index": 3,
+      "model": "claude-sonnet-4-6"
+    },
+    {
+      "id": "agent_011CZtcwxZWauqhhWrHAW83Y",
+      "version": 1,
+      "name": "Decision Logger",
+      "tier": "pro",
+      "index": 4,
+      "model": "claude-sonnet-4-6"
+    },
+    {
+      "id": "agent_011CZtcwyQ81he3LZtJgGPWf",
+      "version": 1,
+      "name": "Standup Facilitator",
+      "tier": "pro",
+      "index": 5,
+      "model": "claude-sonnet-4-6"
+    },
+    {
+      "id": "agent_011CZtcwzV7A5QnfjdnSDwPN",
+      "version": 1,
+      "name": "Code Discussion Tracker",
+      "tier": "pro",
+      "index": 6,
+      "model": "claude-sonnet-4-6"
+    },
+    {
+      "id": "agent_011CZtcx38bdLcBVPF1KTJ6g",
+      "version": 1,
+      "name": "Sprint Retro Coach",
+      "tier": "business",
+      "index": 7,
+      "model": "claude-sonnet-4-6"
+    },
+    {
+      "id": "agent_011CZtcx4ibfuvRE7AeZ4uuR",
+      "version": 1,
+      "name": "Sprint Planner",
+      "tier": "business",
+      "index": 8,
+      "model": "claude-sonnet-4-6"
+    },
+    {
+      "id": "agent_011CZtcx5vmuQzMwgAHZfame",
+      "version": 1,
+      "name": "User Interviewer",
+      "tier": "business",
+      "index": 9,
+      "model": "claude-sonnet-4-6"
+    },
+    {
+      "id": "agent_011CZtcx73zdHMNHuGQnhdEJ",
+      "version": 1,
+      "name": "Initial Interviewer",
+      "tier": "business",
+      "index": 10,
+      "model": "claude-sonnet-4-6"
+    }
+  ],
+  "environment_id": "env_01W7Eys4dncsU2QwnUkNfmYX",
+  "test_result": {
+    "session_id": "sesn_011CZtdW5NBUzZLryL983QTi",
+    "agent_tested": "Meeting Notetaker",
+    "agent_id": "agent_011CZtcwu1SmExYSKgwJz4b9",
+    "text_response": "Sure! Since these two calls are independent of each other, I'll fire them both at the same time in parallel!",
+    "tool_calls": [
+      "kutana_get_meeting_status",
+      "kutana_get_transcript"
+    ],
+    "total_events": 9,
+    "success": true,
+    "event_types_observed": [
+      "session.status_running",
+      "user.message",
+      "span.model_request_start",
+      "agent.thinking",
+      "agent.message",
+      "agent.custom_tool_use",
+      "agent.custom_tool_use",
+      "span.model_request_end",
+      "session.status_idle"
+    ],
+    "notes": "Event type for custom tools is 'agent.custom_tool_use' (not 'agent.tool_use'). API key from ANTHROPIC_API_KEY_TEST.txt required (not .env key)."
+  },
+  "tiered_agents": [
+    {
+      "id": "agent_011CZtdpTFK4Wd3CKfoQENtt",
+      "version": 1,
+      "name": "Meeting Notetaker (Haiku)",
+      "model": "claude-haiku-4-5-20251001",
+      "tier": "basic"
+    },
+    {
+      "id": "agent_011CZtdpUKJx4WicPxBRegPt",
+      "version": 1,
+      "name": "Meeting Summarizer (Haiku)",
+      "model": "claude-haiku-4-5-20251001",
+      "tier": "basic"
+    },
+    {
+      "id": "agent_011CZtdpVMp87MsxaDcqQDjc",
+      "version": 1,
+      "name": "Action Item Tracker (Haiku)",
+      "model": "claude-haiku-4-5-20251001",
+      "tier": "pro"
+    },
+    {
+      "id": "agent_011CZtdpWr7kTSDfSUQP7gmz",
+      "version": 1,
+      "name": "Sprint Planner (Opus)",
+      "model": "claude-opus-4-6",
+      "tier": "business"
+    },
+    {
+      "id": "agent_011CZtdpYN9SpSAZHHDPkbbe",
+      "version": 1,
+      "name": "User Interviewer (Opus)",
+      "model": "claude-opus-4-6",
+      "tier": "business"
+    },
+    {
+      "id": "agent_011CZtdpZbJoRGLdvpjDiKof",
+      "version": 1,
+      "name": "Initial Interviewer (Opus)",
+      "model": "claude-opus-4-6",
+      "tier": "business"
+    }
+  ],
+  "all_agents": [
+    {
+      "id": "agent_011CZtcwu1SmExYSKgwJz4b9",
+      "version": 1,
+      "name": "Meeting Notetaker",
+      "tier": "basic",
+      "index": 1,
+      "model": "claude-sonnet-4-6"
+    },
+    {
+      "id": "agent_011CZtcwv8fTmDZGDLiKsQJQ",
+      "version": 1,
+      "name": "Meeting Summarizer",
+      "tier": "basic",
+      "index": 2,
+      "model": "claude-sonnet-4-6"
+    },
+    {
+      "id": "agent_011CZtcwwYFMqbiF3SAJMcqK",
+      "version": 1,
+      "name": "Action Item Tracker",
+      "tier": "pro",
+      "index": 3,
+      "model": "claude-sonnet-4-6"
+    },
+    {
+      "id": "agent_011CZtcwxZWauqhhWrHAW83Y",
+      "version": 1,
+      "name": "Decision Logger",
+      "tier": "pro",
+      "index": 4,
+      "model": "claude-sonnet-4-6"
+    },
+    {
+      "id": "agent_011CZtcwyQ81he3LZtJgGPWf",
+      "version": 1,
+      "name": "Standup Facilitator",
+      "tier": "pro",
+      "index": 5,
+      "model": "claude-sonnet-4-6"
+    },
+    {
+      "id": "agent_011CZtcwzV7A5QnfjdnSDwPN",
+      "version": 1,
+      "name": "Code Discussion Tracker",
+      "tier": "pro",
+      "index": 6,
+      "model": "claude-sonnet-4-6"
+    },
+    {
+      "id": "agent_011CZtcx38bdLcBVPF1KTJ6g",
+      "version": 1,
+      "name": "Sprint Retro Coach",
+      "tier": "business",
+      "index": 7,
+      "model": "claude-sonnet-4-6"
+    },
+    {
+      "id": "agent_011CZtcx4ibfuvRE7AeZ4uuR",
+      "version": 1,
+      "name": "Sprint Planner",
+      "tier": "business",
+      "index": 8,
+      "model": "claude-sonnet-4-6"
+    },
+    {
+      "id": "agent_011CZtcx5vmuQzMwgAHZfame",
+      "version": 1,
+      "name": "User Interviewer",
+      "tier": "business",
+      "index": 9,
+      "model": "claude-sonnet-4-6"
+    },
+    {
+      "id": "agent_011CZtcx73zdHMNHuGQnhdEJ",
+      "version": 1,
+      "name": "Initial Interviewer",
+      "tier": "business",
+      "index": 10,
+      "model": "claude-sonnet-4-6"
+    },
+    {
+      "id": "agent_011CZtdpTFK4Wd3CKfoQENtt",
+      "version": 1,
+      "name": "Meeting Notetaker (Haiku)",
+      "model": "claude-haiku-4-5-20251001",
+      "tier": "basic"
+    },
+    {
+      "id": "agent_011CZtdpUKJx4WicPxBRegPt",
+      "version": 1,
+      "name": "Meeting Summarizer (Haiku)",
+      "model": "claude-haiku-4-5-20251001",
+      "tier": "basic"
+    },
+    {
+      "id": "agent_011CZtdpVMp87MsxaDcqQDjc",
+      "version": 1,
+      "name": "Action Item Tracker (Haiku)",
+      "model": "claude-haiku-4-5-20251001",
+      "tier": "pro"
+    },
+    {
+      "id": "agent_011CZtdpWr7kTSDfSUQP7gmz",
+      "version": 1,
+      "name": "Sprint Planner (Opus)",
+      "model": "claude-opus-4-6",
+      "tier": "business"
+    },
+    {
+      "id": "agent_011CZtdpYN9SpSAZHHDPkbbe",
+      "version": 1,
+      "name": "User Interviewer (Opus)",
+      "model": "claude-opus-4-6",
+      "tier": "business"
+    },
+    {
+      "id": "agent_011CZtdpZbJoRGLdvpjDiKof",
+      "version": 1,
+      "name": "Initial Interviewer (Opus)",
+      "model": "claude-opus-4-6",
+      "tier": "business"
+    }
+  ]
+}
