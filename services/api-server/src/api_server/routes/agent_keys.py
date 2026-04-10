@@ -3,23 +3,19 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
+from uuid import UUID  # noqa: TC003 — used in runtime route params
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002 — FastAPI DI
 
 from api_server.auth import generate_api_key
+from api_server.auth_deps import CurrentUser  # noqa: TC001 — FastAPI DI
 from api_server.billing_deps import API_KEY_MIN_TIER, require_tier
 from api_server.deps import get_db_session
 from kutana_core.database.models import AgentApiKeyORM, AgentConfigORM, ApiKeyAuditLogORM
-
-if TYPE_CHECKING:
-    from uuid import UUID
-
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    from api_server.auth_deps import CurrentUser
 
 router = APIRouter(prefix="/agents/{agent_id}/keys", tags=["agent-keys"])
 

@@ -3,25 +3,21 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
+from uuid import UUID  # noqa: TC003 — used in runtime route params
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import exists, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002 — FastAPI DI
 
+from api_server.auth_deps import CurrentUser, CurrentUserOrAgent  # noqa: TC001 — FastAPI DI
 from api_server.billing_deps import check_meeting_limit
 from api_server.deps import get_db_session, get_event_publisher
+from api_server.event_publisher import EventPublisher  # noqa: TC001 — FastAPI DI
 from kutana_core.database.models import MeetingInviteORM, MeetingORM, UserORM
 from kutana_core.events.definitions import MeetingEnded, MeetingStarted
 from kutana_core.models.meeting import MeetingStatus
-
-if TYPE_CHECKING:
-    from uuid import UUID
-
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    from api_server.auth_deps import CurrentUser, CurrentUserOrAgent
-    from api_server.event_publisher import EventPublisher
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
 

@@ -5,13 +5,15 @@ from __future__ import annotations
 import json
 import logging
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002 — FastAPI DI
 
+from api_server.auth_deps import CurrentUser  # noqa: TC001 — FastAPI DI
 from api_server.deps import get_db_session
 from kutana_core.database.models import (
     MeetingORM,
@@ -19,11 +21,6 @@ from kutana_core.database.models import (
     TaskORM,
     TranscriptSegmentORM,
 )
-
-if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    from api_server.auth_deps import CurrentUser
 
 logger = logging.getLogger(__name__)
 

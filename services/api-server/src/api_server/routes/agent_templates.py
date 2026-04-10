@@ -5,12 +5,13 @@ from __future__ import annotations
 import logging
 import time
 from datetime import UTC
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 
 import jwt as pyjwt
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002 — FastAPI DI
 
 from api_server.agent_registry import AgentNotFoundError, get_agent_id_by_name
 from api_server.auth_deps import CurrentUser  # noqa: TC001 — runtime dep for FastAPI DI
@@ -29,9 +30,6 @@ from kutana_core.database.models import (
     MeetingORM,
     OrganizationSOPORM,
 )
-
-if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 

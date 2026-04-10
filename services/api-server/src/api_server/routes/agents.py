@@ -2,23 +2,19 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated
+from datetime import datetime  # noqa: TC003 — used in response model fields
+from typing import Annotated
+from uuid import UUID  # noqa: TC003 — used in runtime route params
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002 — FastAPI DI
 
+from api_server.auth_deps import CurrentUser  # noqa: TC001 — FastAPI DI
 from api_server.billing_deps import check_agent_config_limit
 from api_server.deps import get_db_session
 from kutana_core.database.models import AgentConfigORM
-
-if TYPE_CHECKING:
-    from datetime import datetime
-    from uuid import UUID
-
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    from api_server.auth_deps import CurrentUser
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 

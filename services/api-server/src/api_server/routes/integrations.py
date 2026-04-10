@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 from urllib.parse import urlencode
 from uuid import uuid4
 
@@ -13,14 +13,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002 — FastAPI DI
 
-from api_server.auth_deps import CurrentUser  # noqa: TC001 — runtime dep for FastAPI DI
+from api_server.auth_deps import CurrentUser  # noqa: TC001 — FastAPI DI
 from api_server.deps import Settings, get_db_session, get_settings
 from api_server.encryption import decrypt_value, encrypt_value
 from kutana_core.database.models import IntegrationORM
-
-if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 
