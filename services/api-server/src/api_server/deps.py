@@ -84,6 +84,7 @@ class Settings(BaseSettings):
 
     # Anthropic managed agents
     anthropic_api_key: str = ""
+    kutana_agent_tier: str = "default"
 
     # Observability
     sentry_dsn: str = ""

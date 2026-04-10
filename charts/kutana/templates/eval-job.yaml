@@ -18,7 +18,6 @@ spec:
       containers:
         - name: eval
           image: {{ include "kutana.image" (dict "root" . "svc" "eval" "tag" .Values.evals.image.tag) }}
-          command: ["python", "-m", "pytest", "evals/", "-m", "mock", "-v", "--tb=short", "-o", "addopts=--import-mode=importlib"]
           workingDir: /app
           env:
             - name: ANTHROPIC_API_KEY
@@ -52,4 +51,17 @@ spec:
               value: {{ .Values.evals.model | default "claude-haiku-4-5-20251001" | quote }}
             - name: MINIO_ENDPOINT
               value: "http://minio.{{ .Release.Namespace }}.svc:9000"
+            # e2e mode configuration
+            - name: EVAL_MODE
+              value: {{ .Values.evals.mode | default "mock" | quote }}
+            - name: KUTANA_API_URL
+              value: {{ .Values.evals.apiUrl | default (printf "http://api-server.%s.svc:8000/api/v1" .Release.Namespace) | quote }}
+            - name: REDIS_URL
+              value: {{ .Values.evals.redisUrl | default (printf "redis://redis.%s.svc:6379/0" .Release.Namespace) | quote }}
+            - name: KUTANA_AGENT_TIER
+              value: {{ .Values.evals.agentTier | default "haiku" | quote }}
+            - name: EVAL_AGENTS
+              value: {{ .Values.evals.agents | default "meeting-notetaker" | quote }}
+            - name: KUTANA_AUTH_TOKEN
+              value: {{ .Values.evals.authToken | default "" | quote }}
 {{- end }}

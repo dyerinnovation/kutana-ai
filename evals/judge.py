@@ -145,7 +145,13 @@ async def judge_agent_response(
     response = await client.messages.create(
         model=JUDGE_MODEL,
         max_tokens=JUDGE_MAX_TOKENS,
-        system=JUDGE_SYSTEM_PROMPT,
+        system=[
+            {
+                "type": "text",
+                "text": JUDGE_SYSTEM_PROMPT,
+                "cache_control": {"type": "ephemeral"},
+            }
+        ],
         messages=[
             {"role": "user", "content": user_content},
             {"role": "assistant", "content": "{"},

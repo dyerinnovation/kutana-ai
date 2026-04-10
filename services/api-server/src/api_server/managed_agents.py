@@ -100,6 +100,8 @@ async def create_agent(
     api_key: str,
     name: str,
     system_prompt: str,
+    *,
+    model: str | None = None,
 ) -> str:
     """Create an Anthropic managed agent for a template.
 
@@ -110,6 +112,7 @@ async def create_agent(
         api_key: Anthropic API key.
         name: Agent display name.
         system_prompt: System prompt defining agent behavior.
+        model: Model ID override. Defaults to DEFAULT_MODEL.
 
     Returns:
         Anthropic agent ID string, or empty string if API unavailable.
@@ -120,7 +123,7 @@ async def create_agent(
     client = _get_client(api_key)
     agent = await client.beta.agents.create(
         name=name,
-        model=DEFAULT_MODEL,
+        model=model or DEFAULT_MODEL,
         system=system_prompt,
         mcp_servers=[
             {

@@ -78,7 +78,8 @@ def langfuse_client() -> Langfuse | None:  # type: ignore[type-arg]
     """
     if Langfuse is None:
         logger.debug("Langfuse not installed — eval tracing disabled")
-        return None
+        yield None
+        return
 
     public_key = os.environ.get("LANGFUSE_PUBLIC_KEY", "")
     secret_key = os.environ.get("LANGFUSE_SECRET_KEY", "")
@@ -86,7 +87,8 @@ def langfuse_client() -> Langfuse | None:  # type: ignore[type-arg]
 
     if not public_key or not secret_key:
         logger.debug("LANGFUSE env vars not set — eval tracing disabled")
-        return None
+        yield None
+        return
 
     client = Langfuse(
         public_key=public_key,

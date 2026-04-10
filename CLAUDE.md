@@ -45,6 +45,7 @@ See `internal-docs/development/TASKLIST.md` for the task queue.
 - **Roadmap & strategy:** `internal-docs/strategy/roadmap.md` · `internal-docs/strategy/cost-architecture.md`
 - **Agent platform docs:** `external-docs/agent-platform/`
 - **QA playbooks:** `internal-docs/testing/milestone-playbooks/`
+- **Test credentials:** `testing/test-human-creds.md` (UI test user for Playwright/browser testing)
 - **CoWork setup:** `internal-docs/development/cowork-setup.md`
 
 ## Common Commands

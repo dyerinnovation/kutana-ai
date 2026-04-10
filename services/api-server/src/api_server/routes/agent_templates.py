@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import select
 
+from api_server.agent_registry import AgentNotFoundError, get_agent_id_by_name
 from api_server.auth_deps import CurrentUser  # noqa: TC001 — runtime dep for FastAPI DI
 from api_server.billing_deps import MANAGED_AGENT_MIN_TIER, require_tier
 from api_server.deps import Settings, get_db_session, get_settings
@@ -241,8 +242,24 @@ async def activate_template(
     api_key = settings.anthropic_api_key
     if api_key:
         try:
-            # Create the Anthropic agent from the effective system prompt
-            anthropic_agent_id = await create_agent(api_key, template.name, effective_prompt)
+            if body.sop_id:
+                # Org-specific agent: create a new one with the SOP-enriched prompt
+                anthropic_agent_id = await create_agent(api_key, template.name, effective_prompt)
+            else:
+                # Standard template: use pre-created registry agent
+                try:
+                    anthropic_agent_id = get_agent_id_by_name(
+                        template.name, tier=settings.kutana_agent_tier
+                    )
+                except AgentNotFoundError:
+                    logger.warning(
+                        "No registry agent for '%s' (tier=%s), falling back to create_agent",
+                        template.name,
+                        settings.kutana_agent_tier,
+                    )
+                    anthropic_agent_id = await create_agent(
+                        api_key, template.name, effective_prompt
+                    )
             session.anthropic_agent_id = anthropic_agent_id
 
             # Generate an MCP JWT for the managed agent
