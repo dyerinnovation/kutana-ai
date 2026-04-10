@@ -474,6 +474,8 @@ class TestExtractorLoaderFileLoading:
     def test_load_from_valid_file(self) -> None:
         """load_from_file() discovers and registers extractors from a .py file."""
         code = textwrap.dedent("""\
+            from typing import ClassVar
+
             from kutana_core.extraction.sdk import SimpleExtractor
             from kutana_core.extraction.types import ExtractionResult, TranscriptBatch
 
@@ -519,6 +521,8 @@ class TestExtractorLoaderFileLoading:
     def test_load_from_file_hot_reload(self) -> None:
         """load_from_file() can re-load a modified extractor (hot-reload)."""
         code_v1 = textwrap.dedent("""\
+            from typing import ClassVar
+
             from kutana_core.extraction.sdk import SimpleExtractor
             from kutana_core.extraction.types import ExtractionResult, TranscriptBatch
 
@@ -528,6 +532,8 @@ class TestExtractorLoaderFileLoading:
                 version = "v1"
         """)
         code_v2 = textwrap.dedent("""\
+            from typing import ClassVar
+
             from kutana_core.extraction.sdk import SimpleExtractor
             from kutana_core.extraction.types import ExtractionResult, TranscriptBatch
 

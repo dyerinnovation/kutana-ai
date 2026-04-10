@@ -54,11 +54,12 @@ class ExtractorValidationError(Exception):
         reason: Human-readable description of the failure.
     """
 
-    def __init__(self, cls: type, reason: str) -> None:
-        """Initialize with the failing class and reason."""
+    def __init__(self, cls: Any, reason: str) -> None:
+        """Initialize with the failing class (or non-class object) and reason."""
         self.cls = cls
         self.reason = reason
-        super().__init__(f"{cls.__name__}: {reason}")
+        label = getattr(cls, "__name__", repr(cls))
+        super().__init__(f"{label}: {reason}")
 
 
 def validate_extractor(cls: type) -> None:
