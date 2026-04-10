@@ -79,6 +79,9 @@ z-api-keys-and-tokens/
 credentials.json
 service-account*.json
 
+# Per-run eval outputs (managed-agents harness investigations + nightly reports)
+eval_outputs/
+
 # Claude Code local files
 .claude/*
 !.claude/rules/
