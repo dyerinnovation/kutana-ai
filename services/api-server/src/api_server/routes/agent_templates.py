@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from datetime import UTC
@@ -13,7 +14,6 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002 — FastAPI DI
 
-from api_server.agent_lifecycle import _wait_for_idle
 from api_server.agent_registry import AgentNotFoundError, get_agent_id_by_name
 from api_server.auth_deps import CurrentUser  # noqa: TC001 — runtime dep for FastAPI DI
 from api_server.billing_deps import MANAGED_AGENT_MIN_TIER, require_tier
@@ -25,6 +25,7 @@ from api_server.managed_agents import (
     get_or_create_environment,
     send_message,
     start_session,
+    stream_events,
 )
 from kutana_core.database.models import (
     AgentTemplateORM,
@@ -297,7 +298,11 @@ async def activate_template(
             await db.flush()
 
             # Send initial prep message so the agent knows its role and waits
-            # for the Meeting Started notification instead of calling tools
+            # for the Meeting Started notification instead of calling tools.
+            #
+            # ORDERING: open the SSE stream BEFORE sending the prep message to
+            # avoid a race where the session reaches idle before we start listening
+            # and we hang forever waiting for an event that already fired.
             prep_text = (
                 f"You are the {template.name} for an upcoming Kutana meeting:\n"
                 f'"{meeting.title}"\n\n'
@@ -317,16 +322,43 @@ async def activate_template(
                 "  - Answer participant questions when addressed directly (via kutana_speak)\n\n"
                 "For now: acknowledge and wait."
             )
+
+            # 1. Start consuming the SSE stream in a background task first
+            event_gen = stream_events(api_key, anthropic_session_id)
+
+            async def _wait_for_prep_idle() -> None:
+                async for event in event_gen:
+                    etype = getattr(event, "type", None)
+                    if etype == "session.status_idle":
+                        return
+                    if etype == "session.error":
+                        error_obj = getattr(event, "error", None)
+                        msg = (
+                            getattr(error_obj, "message", str(error_obj))
+                            if error_obj
+                            else str(event)
+                        )
+                        raise HTTPException(
+                            status_code=status.HTTP_502_BAD_GATEWAY,
+                            detail=f"Agent session errored during prep: {msg}",
+                        )
+
+            idle_task: asyncio.Task[None] = asyncio.create_task(_wait_for_prep_idle())
+            # Let the event loop advance so the stream connection is established
+            await asyncio.sleep(0.1)
+
+            # 2. THEN send the prep message (stream is already open, no missed events)
             await send_message(api_key, anthropic_session_id, prep_text)
             logger.info(
                 "Sent prep message to session %s (agent %s)", anthropic_session_id, template.name
             )
 
-            # Wait for the agent to reach idle before returning — confirms prep landed cleanly
+            # 3. Wait for the session to reach idle
             try:
-                await _wait_for_idle(api_key, anthropic_session_id, timeout=60.0)
+                await asyncio.wait_for(idle_task, timeout=60.0)
                 logger.info("Session %s reached idle after prep message", anthropic_session_id)
             except TimeoutError:
+                idle_task.cancel()
                 raise HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
                     detail=f"Managed agent session {anthropic_session_id} did not reach idle within 60s",
