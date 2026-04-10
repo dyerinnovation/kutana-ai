@@ -123,7 +123,7 @@ async def judge_agent_response(
     resolved_trace_id = trace_id
     if langfuse is not None:
         if not resolved_trace_id:
-            # No trace from mock_runner — create a standalone trace ID
+            # No existing trace — create a standalone trace ID
             resolved_trace_id = langfuse.create_trace_id(
                 seed=f"eval-judge-{scenario.agent_template}/{scenario.scenario_id}",
             )

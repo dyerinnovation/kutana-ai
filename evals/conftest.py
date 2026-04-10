@@ -34,12 +34,6 @@ SCENARIOS_DIR = DATA_DIR / "scenarios"
 TRANSCRIPTS_DIR = DATA_DIR / "transcripts"
 RUBRICS_DIR = DATA_DIR / "rubrics"
 
-# Path to system prompts doc (parsed for agent prompt lookup)
-SYSTEM_PROMPTS_PATH = (
-    EVALS_DIR.parent / "internal-docs" / "development" / "managed-agent-system-prompts.md"
-)
-
-
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -153,32 +147,25 @@ async def e2e_runner(dev_cluster_config: dict[str, str]) -> E2ERunner:
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture(scope="session")
-def system_prompts() -> dict[str, str]:
-    """Load all 10 agent system prompts from the markdown doc.
+def format_transcript(
+    segments: list[TranscriptSegment],
+    meeting_context_header: str,
+) -> str:
+    """Format transcript segments into a text block for the judge.
+
+    Args:
+        segments: Parsed transcript segments.
+        meeting_context_header: Meeting context header (title, participants).
 
     Returns:
-        Mapping of agent template name -> system prompt text.
+        Formatted transcript string.
     """
-    if not SYSTEM_PROMPTS_PATH.exists():
-        pytest.skip(f"System prompts not found: {SYSTEM_PROMPTS_PATH}")
-
-    content = SYSTEM_PROMPTS_PATH.read_text()
-    prompts: dict[str, str] = {}
-
-    # Parse code blocks after ### N. <Name> headings
-    import re
-
-    pattern = re.compile(
-        r"###\s+\d+\.\s+(.+?)\n\s*```\n(.*?)```",
-        re.DOTALL,
-    )
-    for match in pattern.finditer(content):
-        name = match.group(1).strip()
-        prompt = match.group(2).strip()
-        prompts[name] = prompt
-
-    return prompts
+    lines: list[str] = [meeting_context_header, "", "## Transcript Update", ""]
+    for seg in segments:
+        minutes = int(seg.timestamp_seconds // 60)
+        seconds = int(seg.timestamp_seconds % 60)
+        lines.append(f"[{minutes:02d}:{seconds:02d}] {seg.speaker}: {seg.text}")
+    return "\n".join(lines)
 
 
 def load_scenario(path: Path) -> Scenario:

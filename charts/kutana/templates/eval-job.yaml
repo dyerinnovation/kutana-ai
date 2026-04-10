@@ -51,9 +51,6 @@ spec:
               value: {{ .Values.evals.model | default "claude-haiku-4-5-20251001" | quote }}
             - name: MINIO_ENDPOINT
               value: "http://minio.{{ .Release.Namespace }}.svc:9000"
-            # e2e mode configuration
-            - name: EVAL_MODE
-              value: {{ .Values.evals.mode | default "mock" | quote }}
             - name: KUTANA_API_URL
               value: {{ .Values.evals.apiUrl | default (printf "http://api-server.%s.svc:8000/v1" .Release.Namespace) | quote }}
             - name: REDIS_URL

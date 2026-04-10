@@ -26,11 +26,5 @@ COPY pyproject.toml ./pyproject.toml
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONPATH="/app"
 
-# Write a small entrypoint that selects mock vs e2e based on EVAL_MODE env var.
-# EVAL_MODE=e2e  → python evals/k8s_runner.py (in-cluster job)
-# EVAL_MODE=mock → pytest evals/ -m mock       (default, offline)
-RUN printf '#!/bin/sh\nif [ "${EVAL_MODE}" = "e2e" ]; then\n  exec python evals/k8s_runner.py "$@"\nelse\n  exec python -m pytest evals/ -m mock -v --tb=short -o "addopts=--import-mode=importlib"\nfi\n' \
-    > /app/eval-entrypoint.sh \
-    && chmod +x /app/eval-entrypoint.sh
-
-ENTRYPOINT ["/app/eval-entrypoint.sh"]
+# Entrypoint runs the managed-agent eval runner.
+ENTRYPOINT ["python", "evals/k8s_runner.py"]
