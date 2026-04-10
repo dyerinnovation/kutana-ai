@@ -23,7 +23,8 @@ COPY internal-docs/development/managed-agent-system-prompts.md \
 # The job command overrides addopts to remove --ignore=evals.
 COPY pyproject.toml ./pyproject.toml
 
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH="/app"
 
 # Write a small entrypoint that selects mock vs e2e based on EVAL_MODE env var.
 # EVAL_MODE=e2e  → python evals/k8s_runner.py (in-cluster job)
