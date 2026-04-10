@@ -35,6 +35,7 @@ See `internal-docs/development/TASKLIST.md` for the task queue.
 @.claude/rules/documentation.md
 @.claude/rules/dgx-connection.md
 @.claude/rules/database-migrations.md
+@.claude/rules/eval-reports.md
 
 ## Key References
 

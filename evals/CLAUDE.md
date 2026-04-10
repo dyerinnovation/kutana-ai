@@ -46,3 +46,23 @@ bash ~/.claude/skills/run-eval-job/run.sh --agents meeting-notetaker,action-item
 ```
 
 The script requires `kubectl` and `helm` on `PATH` and `charts/kutana/values-secrets.yaml` to exist (credentials come from there — never hardcode them). Set `KUTANA_REPO` if the repo is not at the default path.
+
+## Writing eval reports
+
+After every eval run or investigation, a markdown report goes to `eval_outputs/YYYY-MM-DD/<descriptive-name>.md` at the repo root. The directory is gitignored — reports are local-only per-session artifacts.
+
+**When to write one:**
+- After any full scenario run (pass or fail) — capture scores, event counts, bugs surfaced
+- After a debugging session — capture root causes, fixes shipped, open decisions
+- After an infra change that affects the eval path — capture what changed and the verification result
+
+**Naming:** `eval_outputs/YYYY-MM-DD/YYYY-MM-DD-<slug>.md` — e.g. `2026-04-10-managed-agents-investigation.md`, `2026-04-11-scenario-run-meeting-notetaker.md`. Multiple reports per day are fine.
+
+**Required sections** (see `.claude/rules/eval-reports.md` for the full template):
+1. **Context** — what you were testing / investigating
+2. **Bugs found** — root cause, fix, verification for each
+3. **Deliverables shipped** — commits, skills, config changes
+4. **Open decisions** — things needing a human call
+5. **Next action** — what happens next
+
+Past reports live in `eval_outputs/` (gitignored — look on the machine where the session ran).
