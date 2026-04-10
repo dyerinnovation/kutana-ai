@@ -26,6 +26,7 @@ from api_server.event_publisher import EventPublisher  # noqa: TC001 — FastAPI
 from api_server.managed_agent_activation import _warm_agent_in_background, _warming_tasks
 from kutana_core.database.models import (
     AgentTemplateORM,
+    HostedAgentSessionORM,
     MeetingInviteORM,
     MeetingORM,
     MeetingSelectedTemplateORM,
@@ -583,6 +584,220 @@ async def get_selected_agents(
             for row in rows
         ],
     )
+
+
+# ---------------------------------------------------------------------------
+# Per-meeting agent session state + retry
+# ---------------------------------------------------------------------------
+
+
+class AgentSessionInfo(BaseModel):
+    """Per-selected-template warming state.
+
+    Matches the frontend ``AgentSessionInfo`` type in
+    ``web/src/types/index.ts`` — one entry per ``meeting_selected_templates``
+    row, with state derived from the latest ``HostedAgentSessionORM`` row
+    (if any) for the (meeting_id, template_id) pair.
+
+    Attributes:
+        template_id: Template UUID.
+        template_name: Human-readable template name for the in-room spinner.
+        state: One of ``warming``, ``ready``, ``failed``, ``stopped``.
+        hosted_session_id: Latest hosted session row ID (if any).
+        error: Failure reason when state is ``failed``.
+    """
+
+    template_id: UUID
+    template_name: str
+    state: str
+    hosted_session_id: UUID | None = None
+    error: str | None = None
+
+
+class AgentSessionsResponse(BaseModel):
+    """List of per-template warming states for a meeting."""
+
+    meeting_id: UUID
+    sessions: list[AgentSessionInfo]
+
+
+def _derive_session_state(session: HostedAgentSessionORM | None, in_flight: bool) -> str:
+    """Map DB+in-memory state to a frontend ``AgentWarmingState``.
+
+    Precedence:
+      1. In-flight background warm task → ``warming``.
+      2. No session row → ``warming`` (selection exists but warm hasn't
+         started yet, e.g. before ``POST /start``).
+      3. ``status == "failed"`` → ``failed``.
+      4. ``status == "stopped"`` → ``stopped``.
+      5. ``status == "active"`` and ``anthropic_session_id`` set → ``ready``.
+      6. Anything else with ``status == "active"`` → ``warming``.
+    """
+    if in_flight:
+        return "warming"
+    if session is None:
+        return "warming"
+    if session.status == "failed":
+        return "failed"
+    if session.status == "stopped":
+        return "stopped"
+    if session.status == "active" and session.anthropic_session_id:
+        return "ready"
+    return "warming"
+
+
+@router.get("/{meeting_id}/agent-sessions", response_model=AgentSessionsResponse)
+async def list_agent_sessions(
+    meeting_id: UUID,
+    current_user: CurrentUserOrAgent,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> AgentSessionsResponse:
+    """Return per-template warming state for every selected agent.
+
+    One entry per ``meeting_selected_templates`` row. For each template
+    the latest ``HostedAgentSessionORM`` row (by ``started_at`` desc) is
+    consulted and combined with the in-memory ``_warming_tasks`` map to
+    derive the frontend's ``AgentWarmingState``.
+
+    Args:
+        meeting_id: Meeting UUID.
+        current_user: Authenticated user or agent (must own or be invited).
+        db: Database session.
+
+    Returns:
+        One ``AgentSessionInfo`` per selected template.
+
+    Raises:
+        HTTPException: 404 if the meeting is missing or not accessible.
+    """
+    await _assert_meeting_accessible(db, meeting_id, current_user)
+
+    sel_result = await db.execute(
+        select(MeetingSelectedTemplateORM, AgentTemplateORM)
+        .join(
+            AgentTemplateORM,
+            AgentTemplateORM.id == MeetingSelectedTemplateORM.template_id,
+        )
+        .where(MeetingSelectedTemplateORM.meeting_id == meeting_id)
+        .order_by(MeetingSelectedTemplateORM.created_at)
+    )
+    pairs = sel_result.all()
+
+    sessions: list[AgentSessionInfo] = []
+    for _sel, template in pairs:
+        latest_result = await db.execute(
+            select(HostedAgentSessionORM)
+            .where(
+                HostedAgentSessionORM.meeting_id == meeting_id,
+                HostedAgentSessionORM.template_id == template.id,
+            )
+            .order_by(HostedAgentSessionORM.started_at.desc())
+            .limit(1)
+        )
+        latest = latest_result.scalar_one_or_none()
+
+        task = _warming_tasks.get((meeting_id, template.id))
+        in_flight = task is not None and not task.done()
+
+        state = _derive_session_state(latest, in_flight)
+        sessions.append(
+            AgentSessionInfo(
+                template_id=template.id,
+                template_name=template.name,
+                state=state,
+                hosted_session_id=latest.id if latest is not None else None,
+                error=latest.error_detail if latest is not None and state == "failed" else None,
+            )
+        )
+
+    return AgentSessionsResponse(meeting_id=meeting_id, sessions=sessions)
+
+
+@router.post(
+    "/{meeting_id}/agent-sessions/{template_id}/retry",
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def retry_agent_session(
+    meeting_id: UUID,
+    template_id: UUID,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    publisher: Annotated[EventPublisher, Depends(get_event_publisher)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> dict[str, str]:
+    """Re-fire background warming for a single failed/stopped agent.
+
+    Used by the frontend retry affordance on the per-agent spinner when
+    its state flipped to ``failed``. Verifies the template is still
+    selected for this meeting, enforces the template's tier, and schedules
+    a fresh ``_warm_agent_in_background`` task. Returns 202 Accepted
+    immediately — the frontend watches the ``agent.session.warmed`` /
+    ``agent.session.failed`` events to update its spinner.
+
+    Args:
+        meeting_id: Meeting UUID.
+        template_id: Template UUID to retry.
+        current_user: Authenticated user (must own or be invited).
+        db: Database session.
+        publisher: Event publisher for the background task.
+        settings: Application settings.
+
+    Returns:
+        ``{"status": "warming"}`` on successful schedule.
+
+    Raises:
+        HTTPException: 402/403 on tier, 404 if meeting/selection missing,
+            409 if a warm is already in flight for this (meeting, template).
+    """
+    require_tier(current_user, MANAGED_AGENT_MIN_TIER)
+    await _assert_meeting_accessible(db, meeting_id, current_user)
+
+    sel_result = await db.execute(
+        select(MeetingSelectedTemplateORM, AgentTemplateORM)
+        .join(
+            AgentTemplateORM,
+            AgentTemplateORM.id == MeetingSelectedTemplateORM.template_id,
+        )
+        .where(
+            MeetingSelectedTemplateORM.meeting_id == meeting_id,
+            MeetingSelectedTemplateORM.template_id == template_id,
+        )
+    )
+    row = sel_result.first()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Template is not selected for this meeting",
+        )
+    selection, template = row
+    require_tier(current_user, template.tier)
+    if selection.sop_id is not None:
+        require_tier(current_user, "business")
+
+    key = (meeting_id, template_id)
+    existing = _warming_tasks.get(key)
+    if existing is not None and not existing.done():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Warm already in flight for this template",
+        )
+
+    db_factory = _build_session_factory(settings)
+    task = asyncio.create_task(
+        _warm_agent_in_background(
+            db_factory,
+            settings,
+            current_user.id,
+            template_id,
+            meeting_id,
+            selection.system_prompt_override,
+            selection.sop_id,
+            publisher,
+        )
+    )
+    _warming_tasks[key] = task
+
+    return {"status": "warming"}
 
 
 @router.post("/{meeting_id}/end", response_model=MeetingResponse)

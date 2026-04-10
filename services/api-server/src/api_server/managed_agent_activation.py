@@ -24,6 +24,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import UUID  # noqa: TC003 — runtime type in signatures
 
@@ -82,8 +83,11 @@ async def activate_template_for_meeting(
     Performs: effective-prompt build (with optional SOP prefix), DB row
     insert, Anthropic agent resolve/create, MCP JWT mint, vault create,
     environment lookup, session create, prep-message + stream-first wait
-    for idle. On any failure the newly-inserted session row is deleted
-    and an ``HTTPException`` is raised — no silent swallow.
+    for idle. On any failure the session row is marked ``status="failed"``
+    with an ``error_detail`` and an ``HTTPException`` is raised — no
+    silent swallow. The caller is responsible for committing; callers
+    that want to persist the failed row (e.g. the background warm task)
+    must commit after catching.
 
     Args:
         db: Active SQLAlchemy async session (caller commits on success).
@@ -104,7 +108,9 @@ async def activate_template_for_meeting(
 
     Raises:
         HTTPException: 502 if the Anthropic session fails to reach idle,
-            or if any SDK call fails. The DB row is deleted first.
+            or if any SDK call fails. The session row is marked failed
+            (with ``error_detail``) before re-raising — the caller must
+            commit if it wants the failed row to persist.
     """
     # Build effective system prompt (SOP prepended for Business+ users)
     effective_prompt = system_prompt_override or template.system_prompt
@@ -174,7 +180,8 @@ async def activate_template_for_meeting(
         # Set up Anthropic session with the real agent ID
         vault_id = await create_vault(api_key, mcp_jwt)
         env_id = await get_or_create_environment(api_key)
-        title = f"Kutana · {template.name} · {meeting.title[:40]} ({str(meeting.id)[:8]})"
+        meeting_title = (meeting.title or "Untitled")[:40]
+        title = f"Kutana · {template.name} · {meeting_title} ({str(meeting.id)[:8]})"
         title = title[:100]
         anthropic_session_id = await start_session(
             api_key,
@@ -251,13 +258,17 @@ async def activate_template_for_meeting(
                     f"Managed agent session {anthropic_session_id} did not reach idle within 60s"
                 ),
             ) from None
-    except HTTPException:
-        await db.delete(session)
+    except HTTPException as http_exc:
+        session.status = "failed"
+        session.error_detail = str(http_exc.detail)[:1000]
+        session.ended_at = datetime.now(UTC)
         await db.flush()
         raise
     except Exception as exc:
         logger.exception("Failed to create Anthropic session for template %s", template.name)
-        await db.delete(session)
+        session.status = "failed"
+        session.error_detail = str(exc)[:1000]
+        session.ended_at = datetime.now(UTC)
         await db.flush()
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -298,6 +309,7 @@ async def _warm_agent_in_background(
         publisher: Event publisher for Redis Streams.
     """
     hosted_session_id: UUID | None = None
+    error_message: str | None = None
     try:
         async with db_factory() as db:
             user = (await db.execute(select(UserORM).where(UserORM.id == user_id))).scalar_one()
@@ -307,25 +319,34 @@ async def _warm_agent_in_background(
             meeting = (
                 await db.execute(select(MeetingORM).where(MeetingORM.id == meeting_id))
             ).scalar_one()
-            hosted = await activate_template_for_meeting(
-                db=db,
-                settings=settings,
-                api_key=settings.anthropic_api_key,
-                user=user,
-                template=template,
-                meeting=meeting,
-                system_prompt_override=system_prompt_override,
-                sop_id=sop_id,
+            try:
+                hosted = await activate_template_for_meeting(
+                    db=db,
+                    settings=settings,
+                    api_key=settings.anthropic_api_key,
+                    user=user,
+                    template=template,
+                    meeting=meeting,
+                    system_prompt_override=system_prompt_override,
+                    sop_id=sop_id,
+                )
+                hosted_session_id = hosted.id
+                await db.commit()
+            except Exception as exc:
+                # Commit the failed-row state (activate_* already flushed
+                # status="failed" + error_detail onto the row) so the GET
+                # agent-sessions endpoint and the retry path can see it.
+                await db.commit()
+                error_message = str(exc)
+                raise
+        if error_message is None:
+            await publisher.publish(
+                AgentSessionWarmed(
+                    meeting_id=meeting_id,
+                    template_id=template_id,
+                    hosted_session_id=hosted_session_id,
+                )
             )
-            hosted_session_id = hosted.id
-            await db.commit()
-        await publisher.publish(
-            AgentSessionWarmed(
-                meeting_id=meeting_id,
-                template_id=template_id,
-                hosted_session_id=hosted_session_id,
-            )
-        )
     except Exception as exc:
         logger.exception(
             "Background warm failed for template %s in meeting %s", template_id, meeting_id
@@ -335,7 +356,7 @@ async def _warm_agent_in_background(
                 AgentSessionFailed(
                     meeting_id=meeting_id,
                     template_id=template_id,
-                    error=str(exc),
+                    error=error_message or str(exc),
                 )
             )
         except Exception:

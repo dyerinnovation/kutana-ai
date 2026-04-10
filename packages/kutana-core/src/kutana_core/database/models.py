@@ -570,8 +570,9 @@ class HostedAgentSessionORM(Base):
         user_id: User who activated the template.
         template_id: Template being used.
         meeting_id: Meeting the hosted agent is in.
-        status: Session status (active, stopped).
+        status: Session status — one of ``active``, ``stopped``, ``failed``.
         anthropic_api_key_encrypted: Encrypted API key (optional).
+        error_detail: Human-readable failure reason when status is ``failed``.
         started_at: When the session started.
         ended_at: When the session ended.
         created_at: Record creation timestamp.
@@ -591,6 +592,7 @@ class HostedAgentSessionORM(Base):
     anthropic_session_id: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
     anthropic_agent_id: Mapped[str | None] = mapped_column(sa.String(255), nullable=True)
     summary_text: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    error_detail: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     started_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
     )
