@@ -55,7 +55,7 @@ spec:
             - name: EVAL_MODE
               value: {{ .Values.evals.mode | default "mock" | quote }}
             - name: KUTANA_API_URL
-              value: {{ .Values.evals.apiUrl | default (printf "http://api-server.%s.svc:8000/api/v1" .Release.Namespace) | quote }}
+              value: {{ .Values.evals.apiUrl | default (printf "http://api-server.%s.svc:8000/v1" .Release.Namespace) | quote }}
             - name: REDIS_URL
               value: {{ .Values.evals.redisUrl | default (printf "redis://redis.%s.svc:6379/0" .Release.Namespace) | quote }}
             - name: KUTANA_AGENT_TIER

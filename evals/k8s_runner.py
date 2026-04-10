@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-DEFAULT_API_URL = "http://api-server.kutana.svc:8000/api/v1"
+DEFAULT_API_URL = "http://api-server.kutana.svc:8000/v1"
 DEFAULT_REDIS_URL = "redis://redis.kutana.svc:6379/0"
 DEFAULT_LANGFUSE_HOST = "http://langfuse.kutana.svc:3000"
 
