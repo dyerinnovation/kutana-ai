@@ -26,3 +26,23 @@ This directory evaluates **real Anthropic managed agent sessions** against the l
 - `conftest.py` — scenario/rubric loader helpers (imported by `k8s_runner.py`, not pytest fixtures)
 - `data/` — scenarios, transcripts, rubrics
 - `Dockerfile` — thin layer on top of `api-server` base image
+
+## Running the eval job
+
+**Always** use the `/run-eval-job` skill (or directly: `bash ~/.claude/skills/run-eval-job/run.sh`) instead of running `kubectl delete` + `helm upgrade` + `kubectl logs` manually. The skill handles the full lifecycle and prevents stale-job errors.
+
+```bash
+# Default — meeting-notetaker on haiku tier
+bash ~/.claude/skills/run-eval-job/run.sh
+
+# All 10 agents
+bash ~/.claude/skills/run-eval-job/run.sh --agents all --tier haiku
+
+# Rebuild eval image first, then run
+bash ~/.claude/skills/run-eval-job/run.sh --rebuild --agents all
+
+# Specific agents, sonnet tier
+bash ~/.claude/skills/run-eval-job/run.sh --agents meeting-notetaker,action-item-tracker --tier sonnet
+```
+
+The script requires `kubectl` and `helm` on `PATH` and `charts/kutana/values-secrets.yaml` to exist (credentials come from there — never hardcode them). Set `KUTANA_REPO` if the repo is not at the default path.
