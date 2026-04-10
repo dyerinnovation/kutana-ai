@@ -21,14 +21,10 @@ spec:
           workingDir: /app
           env:
             - name: ANTHROPIC_API_KEY
-              {{- if .Values.evals.anthropicApiKey }}
-              value: {{ .Values.evals.anthropicApiKey | quote }}
-              {{- else }}
               valueFrom:
                 secretKeyRef:
                   name: {{ include "kutana.fullname" . }}-secret
                   key: ANTHROPIC_API_KEY
-              {{- end }}
             - name: LANGFUSE_SECRET_KEY
               valueFrom:
                 secretKeyRef:
