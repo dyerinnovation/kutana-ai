@@ -275,6 +275,8 @@ async def main(agent_slugs: list[str]) -> int:
     """
     api_url = os.environ.get("KUTANA_API_URL", DEFAULT_API_URL)
     auth_token = os.environ.get("KUTANA_AUTH_TOKEN", "")
+    login_email = os.environ.get("KUTANA_LOGIN_EMAIL", "")
+    login_password = os.environ.get("KUTANA_LOGIN_PASSWORD", "")
     redis_url = os.environ.get("REDIS_URL", DEFAULT_REDIS_URL)
     tier = os.environ.get("KUTANA_AGENT_TIER", "haiku")
     model = TIER_MODELS.get(tier, TIER_MODELS["haiku"])
@@ -288,6 +290,7 @@ async def main(agent_slugs: list[str]) -> int:
     logger.info("  redis_url=%s", redis_url)
     logger.info("  model=%s (tier=%s)", model, tier)
     logger.info("  agents=%s", agent_slugs)
+    logger.info("  login_email=%s", login_email or "(not set — JWT from auth_token)")
 
     rubrics = load_all_rubrics()
     scenario_pairs = load_scenarios_for_agents(agent_slugs)
@@ -308,6 +311,8 @@ async def main(agent_slugs: list[str]) -> int:
         auth_token=auth_token,
         redis_url=redis_url,
         model=model,
+        login_email=login_email,
+        login_password=login_password,
     ) as runner:
         for _scenario_slug, scenario in scenario_pairs:
             try:

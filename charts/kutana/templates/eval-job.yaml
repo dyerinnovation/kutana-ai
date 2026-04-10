@@ -64,4 +64,8 @@ spec:
               value: {{ .Values.evals.agents | default "meeting-notetaker" | quote }}
             - name: KUTANA_AUTH_TOKEN
               value: {{ .Values.evals.authToken | default "" | quote }}
+            - name: KUTANA_LOGIN_EMAIL
+              value: {{ .Values.evals.loginEmail | default "" | quote }}
+            - name: KUTANA_LOGIN_PASSWORD
+              value: {{ .Values.evals.loginPassword | default "" | quote }}
 {{- end }}

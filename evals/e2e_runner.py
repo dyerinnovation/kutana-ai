@@ -118,9 +118,13 @@ class E2ERunner:
 
     Args:
         api_base: Base URL for the Kutana API.
-        auth_token: JWT bearer token for API authentication.
+        auth_token: Bearer token (JWT or API key) for API authentication.
+            Used for meeting/transcript endpoints (CurrentUserOrAgent).
+        login_email: Optional email to exchange for a JWT via POST /auth/login.
+            Required for endpoints that need CurrentUser (e.g. agent-templates activate).
+        login_password: Password paired with login_email.
         redis_url: Redis URL for observing agent events.
-        model: Model ID to pass to the cluster API when activating agents.
+        model: Unused — kept for interface compatibility.
     """
 
     def __init__(
@@ -129,20 +133,45 @@ class E2ERunner:
         auth_token: str = "",
         redis_url: str = DEFAULT_REDIS_URL,
         model: str = "",
+        login_email: str = "",
+        login_password: str = "",
     ) -> None:
         self._api_base = api_base.rstrip("/")
         self._auth_token = auth_token
         self._redis_url = redis_url
         self._model = model
+        self._login_email = login_email
+        self._login_password = login_password
+        self._jwt_token: str = ""  # obtained via login if email/password provided
         self._session: aiohttp.ClientSession | None = None
         self._redis: aioredis.Redis[str] | None = None
 
     async def __aenter__(self) -> E2ERunner:
-        """Set up HTTP and Redis connections."""
+        """Set up HTTP and Redis connections; optionally log in to get a JWT."""
         self._session = aiohttp.ClientSession(
             headers={"Authorization": f"Bearer {self._auth_token}"},
         )
-        self._redis = aioredis.from_url(self._redis_url, decode_responses=True)
+        # Exchange email/password for a JWT if credentials provided.
+        # Required for endpoints that use CurrentUser (JWT-only) such as
+        # POST /agent-templates/{id}/activate.
+        if self._login_email and self._login_password:
+            async with self._session.post(
+                f"{self._api_base}/auth/login",
+                json={"email": self._login_email, "password": self._login_password},
+            ) as resp:
+                resp.raise_for_status()
+                data = await resp.json()
+                self._jwt_token = data["access_token"]
+            logger.info("Logged in as %s, obtained JWT", self._login_email)
+        else:
+            # Fall back to using auth_token as the JWT (works if it IS a JWT)
+            self._jwt_token = self._auth_token
+
+        self._redis = aioredis.from_url(
+            self._redis_url,
+            decode_responses=True,
+            socket_keepalive=True,
+        )
         return self
 
     async def __aexit__(self, *args: object) -> None:
@@ -196,7 +225,7 @@ class E2ERunner:
         """
         assert self._session is not None
 
-        # Resolve template name → template_id
+        # Resolve template name → template_id (uses general session; list is public).
         async with self._session.get(
             f"{self._api_base}/agent-templates",
         ) as resp:
@@ -215,9 +244,13 @@ class E2ERunner:
                 f"Available: {[t.get('name') for t in templates]}"
             )
 
+        # The activate endpoint uses CurrentUser (JWT only), so send the JWT
+        # obtained during login, not the API key used for other calls.
+        jwt_headers = {"Authorization": f"Bearer {self._jwt_token}"}
         async with self._session.post(
             f"{self._api_base}/agent-templates/{template_id}/activate",
             json={"meeting_id": str(meeting_id)},
+            headers=jwt_headers,
         ) as resp:
             resp.raise_for_status()
             data = await resp.json()
@@ -336,11 +369,16 @@ class E2ERunner:
             if block_ms <= 0:
                 break
 
-            response = await self._redis.xread(
-                streams={EVENT_STREAM_KEY: last_id},
-                count=20,
-                block=block_ms,
-            )
+            try:
+                response = await self._redis.xread(
+                    streams={EVENT_STREAM_KEY: last_id},
+                    count=20,
+                    block=block_ms,
+                )
+            except Exception as exc:
+                logger.warning("Redis xread error (will retry): %s", exc)
+                await asyncio.sleep(0.5)
+                continue
 
             if not response:
                 continue
