@@ -162,13 +162,20 @@ async def get_current_user_or_agent(
     Raises:
         HTTPException: 401 if neither auth method succeeds.
     """
-    # --- Try Bearer JWT ---
+    # --- Try Bearer JWT, then fall back to Bearer API key ---
     auth_header = request.headers.get("authorization", "")
     if auth_header.lower().startswith("bearer "):
         token = auth_header[7:]
         try:
             payload = decode_user_token(token, settings.jwt_secret)
         except Exception:
+            # Not a valid JWT — try treating it as an API key (agents pass
+            # their key in the Authorization: Bearer header)
+            try:
+                api_key_record = await validate_api_key(token, db, request)
+                return await _lookup_user(db, api_key_record.user_id)
+            except HTTPException:
+                pass
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or expired token",
