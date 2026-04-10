@@ -1,17 +1,31 @@
-"""E2E eval runner: create meeting -> activate agent -> observe MCP calls.
+"""E2E eval runner: create meeting -> select agents -> start -> observe MCP calls.
 
-Runs against the live dev cluster, creating a real meeting, activating
-a managed agent, injecting transcript segments, and observing the
-agent's actual MCP tool calls via Redis event stream.
+Runs against the live dev cluster, creating a real meeting, selecting
+managed-agent templates, starting the meeting (which fires background
+warming), injecting transcript segments, and observing the agent's
+actual MCP tool calls via the Redis event stream.
 
-**API mode** — uses the Kutana API for agent activation and observes
-events from the Redis stream. Exercises the full Kutana pipeline (audio service
-→ Redis → agent_lifecycle consumer → Anthropic → Redis → eval observer).
+**Phase A.7 decoupled flow**:
+1. ``POST /v1/meetings`` — create meeting
+2. ``PUT /v1/meetings/{id}/selected-agents`` — snapshot the desired
+   template list
+3. ``SADD kutana:presence:{meeting_id} eval-participant`` — drive
+   presence so ``PresenceReconciler`` does not reap the warmed sessions
+4. ``POST /v1/meetings/{id}/start`` — transitions to ACTIVE and fires
+   one background ``_warm_agent_in_background`` per selection
+5. Observer waits for ``agent.session.warmed`` before injecting
+   transcripts so the managed agent session is ready to receive them
+6. Inject transcript segments via Redis, observe events, end meeting
+7. ``SREM`` the presence entry so the reconciler cleans up any stragglers
+
+The old ``/v1/agent-templates/{id}/activate`` path is deprecated and is
+no longer called from here.
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import json
 import logging
@@ -26,6 +40,12 @@ logger = logging.getLogger(__name__)
 DEFAULT_API_BASE = "https://api-dev.kutana.ai/v1"
 DEFAULT_REDIS_URL = "redis://localhost:6379/0"
 EVENT_STREAM_KEY = "kutana:events"
+PRESENCE_KEY_PREFIX = "kutana:presence:"
+# Stable synthetic participant ID used to drive presence for evals. The
+# real agent-gateway would publish participant.joined events which the
+# api-server PresenceMaterializer then materializes into the same set —
+# we skip the gateway hop and write directly to the materialized set.
+EVAL_PARTICIPANT_ID = "eval-stub-participant"
 
 
 # ---------------------------------------------------------------------------
@@ -121,7 +141,7 @@ class E2ERunner:
         auth_token: Bearer token (JWT or API key) for API authentication.
             Used for meeting/transcript endpoints (CurrentUserOrAgent).
         login_email: Optional email to exchange for a JWT via POST /auth/login.
-            Required for endpoints that need CurrentUser (e.g. agent-templates activate).
+            Required for endpoints that need CurrentUser (e.g. PUT /meetings/{id}/selected-agents).
         login_password: Password paired with login_email.
         redis_url: Redis URL for observing agent events.
         model: Unused — kept for interface compatibility.
@@ -153,7 +173,7 @@ class E2ERunner:
         )
         # Exchange email/password for a JWT if credentials provided.
         # Required for endpoints that use CurrentUser (JWT-only) such as
-        # POST /agent-templates/{id}/activate.
+        # PUT /meetings/{id}/selected-agents.
         if self._login_email and self._login_password:
             async with self._session.post(
                 f"{self._api_base}/auth/login",
@@ -203,58 +223,185 @@ class E2ERunner:
             data = await resp.json()
             return UUID(data["id"])
 
-    async def activate_agent(
-        self,
-        meeting_id: UUID,
-        template_name: str,
-        model: str | None = None,
-    ) -> str:
-        """Activate a managed agent for a meeting.
-
-        Looks up the template by name, then calls
-        POST /agent-templates/{template_id}/activate.
+    async def _resolve_template_id(self, template_name: str) -> str:
+        """Resolve a template name to a template UUID via GET /agent-templates.
 
         Args:
-            meeting_id: Meeting to activate the agent in.
-            template_name: Agent template name (e.g. "Meeting Notetaker").
-            model: Ignored — the activate endpoint does not accept a model
-                override; tier-based model selection happens server-side.
+            template_name: Case-insensitive template name.
 
         Returns:
-            The hosted agent session ID.
+            Template UUID as a string.
+
+        Raises:
+            ValueError: If no template with that name exists.
         """
         assert self._session is not None
-
-        # Resolve template name → template_id (uses general session; list is public).
         async with self._session.get(
             f"{self._api_base}/agent-templates",
         ) as resp:
             resp.raise_for_status()
             templates: list[dict[str, Any]] = await resp.json()
 
-        template_id: str | None = None
         for t in templates:
             if t.get("name", "").lower() == template_name.lower():
-                template_id = t["id"]
-                break
+                return str(t["id"])
 
-        if template_id is None:
-            raise ValueError(
-                f"No agent template found with name '{template_name}'. "
-                f"Available: {[t.get('name') for t in templates]}"
-            )
+        raise ValueError(
+            f"No agent template found with name '{template_name}'. "
+            f"Available: {[t.get('name') for t in templates]}"
+        )
 
-        # The activate endpoint uses CurrentUser (JWT only), so send the JWT
-        # obtained during login, not the API key used for other calls.
+    async def set_selected_agents(
+        self,
+        meeting_id: UUID,
+        template_names: list[str],
+    ) -> list[str]:
+        """Snapshot the desired managed-agent templates on the meeting.
+
+        Calls ``PUT /v1/meetings/{meeting_id}/selected-agents`` with the
+        resolved template IDs. The endpoint fully replaces any existing
+        selection — rows not present in the body are deleted.
+
+        This is the Phase A.7 replacement for the deprecated
+        ``/v1/agent-templates/{id}/activate`` path. Actual agent warming
+        is deferred until ``start_meeting`` fires background tasks.
+
+        Args:
+            meeting_id: Meeting to attach selections to.
+            template_names: Ordered list of agent template names.
+
+        Returns:
+            The resolved template UUIDs in the same order.
+        """
+        assert self._session is not None
+        template_ids = [await self._resolve_template_id(name) for name in template_names]
+
+        body = {
+            "selections": [
+                {"template_id": tid, "system_prompt_override": None, "sop_id": None}
+                for tid in template_ids
+            ]
+        }
+        # PUT /selected-agents uses CurrentUser (JWT only).
         jwt_headers = {"Authorization": f"Bearer {self._jwt_token}"}
-        async with self._session.post(
-            f"{self._api_base}/agent-templates/{template_id}/activate",
-            json={"meeting_id": str(meeting_id)},
+        async with self._session.put(
+            f"{self._api_base}/meetings/{meeting_id}/selected-agents",
+            json=body,
             headers=jwt_headers,
         ) as resp:
             resp.raise_for_status()
-            data = await resp.json()
-            return data["id"]
+            await resp.json()
+        return template_ids
+
+    async def mark_presence(self, meeting_id: UUID) -> None:
+        """Drive synthetic presence for a meeting via the Redis set.
+
+        ``SADD kutana:presence:{meeting_id} eval-stub-participant``.
+
+        The ``PresenceReconciler`` in api-server watches this set every
+        30 seconds. Without at least one member it will shut down any
+        active managed-agent sessions for the meeting, so evals must
+        call this before ``start_meeting`` (or immediately after) and
+        keep the entry in place until the meeting ends.
+
+        Args:
+            meeting_id: Meeting whose presence set to populate.
+        """
+        assert self._redis is not None
+        await self._redis.sadd(
+            f"{PRESENCE_KEY_PREFIX}{meeting_id}",
+            EVAL_PARTICIPANT_ID,
+        )
+        logger.info("Presence SADD kutana:presence:%s", meeting_id)
+
+    async def clear_presence(self, meeting_id: UUID) -> None:
+        """Remove the synthetic presence entry for a meeting.
+
+        Called during cleanup so the reconciler does not keep the meeting
+        warm after the eval has ended. A no-op if the entry is already
+        absent.
+
+        Args:
+            meeting_id: Meeting whose presence set to drain.
+        """
+        assert self._redis is not None
+        await self._redis.srem(
+            f"{PRESENCE_KEY_PREFIX}{meeting_id}",
+            EVAL_PARTICIPANT_ID,
+        )
+        logger.debug("Presence SREM kutana:presence:%s", meeting_id)
+
+    async def wait_for_agent_warmed(
+        self,
+        meeting_id: UUID,
+        timeout: float = 90.0,
+    ) -> str | None:
+        """Block until at least one ``agent.session.warmed`` event for the meeting.
+
+        After ``start_meeting`` the api-server fires background warming
+        tasks that take 5-30 s each. This helper reads the shared event
+        stream until the first warmed event for our meeting_id arrives
+        and returns its ``hosted_session_id``. Returns ``None`` on timeout.
+
+        Args:
+            meeting_id: Meeting to wait on.
+            timeout: Maximum seconds to block.
+
+        Returns:
+            The ``hosted_session_id`` from the first warmed event, or
+            ``None`` if the timeout elapsed.
+        """
+        assert self._redis is not None
+        meeting_id_str = str(meeting_id)
+        loop = asyncio.get_event_loop()
+        deadline = loop.time() + timeout
+        last_id = "$"
+
+        while loop.time() < deadline:
+            remaining = deadline - loop.time()
+            block_ms = int(min(remaining * 1000, 2000))
+            if block_ms <= 0:
+                break
+            try:
+                response = await self._redis.xread(
+                    streams={EVENT_STREAM_KEY: last_id},
+                    count=20,
+                    block=block_ms,
+                )
+            except Exception as exc:
+                logger.warning("Redis xread error (will retry): %s", exc)
+                await asyncio.sleep(0.5)
+                continue
+            if not response:
+                continue
+            for _stream_name, entries in response:
+                for entry_id, fields in entries:
+                    last_id = entry_id
+                    event_type = fields.get("event_type", "")
+                    if event_type not in (
+                        "agent.session.warmed",
+                        "agent.session.failed",
+                    ):
+                        continue
+                    try:
+                        payload = json.loads(fields.get("payload", ""))
+                    except json.JSONDecodeError:
+                        continue
+                    if payload.get("meeting_id") != meeting_id_str:
+                        continue
+                    if event_type == "agent.session.failed":
+                        raise RuntimeError(
+                            f"Agent warming failed: {payload.get('error', 'unknown')}"
+                        )
+                    hosted_session_id = payload.get("hosted_session_id")
+                    logger.info(
+                        "Agent warmed for meeting %s (hosted_session_id=%s)",
+                        meeting_id,
+                        hosted_session_id,
+                    )
+                    return str(hosted_session_id) if hosted_session_id else ""
+        logger.warning("Timed out waiting for agent.session.warmed for meeting %s", meeting_id)
+        return None
 
     async def start_meeting(self, meeting_id: UUID) -> None:
         """Start a meeting (triggers meeting.started event in the pipeline).
@@ -422,14 +569,19 @@ class E2ERunner:
             resp.raise_for_status()
 
     async def cleanup_meeting(self, meeting_id: UUID) -> None:
-        """No-op — meetings persist after evals; end_meeting already marks them completed.
+        """Drain synthetic presence and leave the meeting row in place.
 
-        The Kutana API has no DELETE /meetings endpoint, so cleanup is a no-op.
+        The Kutana API has no DELETE /meetings endpoint, so the row
+        persists as a completed meeting. We only need to remove the
+        eval's SADD entry so the presence reconciler does not keep the
+        meeting marked as populated after the eval exits.
 
         Args:
-            meeting_id: Meeting ID (unused).
+            meeting_id: Meeting whose presence entry to drain.
         """
-        logger.debug("Skipping meeting cleanup for %s — no DELETE endpoint", meeting_id)
+        with contextlib.suppress(Exception):
+            await self.clear_presence(meeting_id)
+        logger.debug("Meeting %s cleanup complete — no DELETE endpoint", meeting_id)
 
     # -----------------------------------------------------------------------
     # Orchestrator
@@ -448,11 +600,12 @@ class E2ERunner:
     ) -> E2EResult:
         """Run a complete managed-agent eval lifecycle end-to-end.
 
-        Full lifecycle:
-          create_meeting → activate_agent → start_meeting →
+        Full lifecycle (Phase A.7 decoupled):
+          create_meeting → set_selected_agents → mark_presence →
+          start_meeting → wait_for_agent_warmed →
           inject segments (individually, with timing gaps) →
           observe all agent event types →
-          end_meeting → capture summary → cleanup
+          end_meeting → capture summary → cleanup (clears presence)
 
         Args:
             title: Meeting title.
@@ -515,12 +668,17 @@ class E2ERunner:
         result: E2EResult,
         model: str | None = None,
     ) -> None:
-        """API-mode eval: Kutana pipeline + Redis observation.
+        """API-mode eval: Phase A.7 decoupled lifecycle + Redis observation.
 
-        Starts observation before injection so no events are missed.
-        The observer runs concurrently with injection and end_meeting.
-        Uses ``stop_on_n_idle=2`` to capture both the in-meeting idle
-        and the post-summary idle without hanging until full timeout.
+        Order of operations:
+        1. Start the observation task so it catches every pipeline event.
+        2. PUT /selected-agents snapshotting the template list.
+        3. SADD the presence set so the reconciler does not reap warms.
+        4. POST /start — fires background warming.
+        5. Wait for the first ``agent.session.warmed`` event so the
+           managed-agent session is ready to receive transcripts. (If the
+           warm fails we raise and let the cleanup path drain presence.)
+        6. Inject transcripts, end meeting, collect observations.
 
         Args:
             meeting_id: Pre-created meeting UUID.
@@ -530,7 +688,7 @@ class E2ERunner:
             observe_timeout: Observation timeout in seconds.
             max_events: Max events to collect.
             result: E2EResult to populate (mutated in place).
-            model: Optional model override passed to activate_agent.
+            model: Unused — tier-based selection happens server-side.
         """
         # Start the observation task FIRST so it catches all pipeline events.
         obs_task: asyncio.Task[list[dict[str, Any]]] = asyncio.create_task(
@@ -544,15 +702,30 @@ class E2ERunner:
         # Yield to let the observation task enter its xread loop.
         await asyncio.sleep(0.2)
 
-        # Activate agent and start meeting.
-        session_id = await self.activate_agent(meeting_id, template_name, model=model)
-        result.session_id = session_id
+        # Snapshot the desired template list on the meeting row.
+        await self.set_selected_agents(meeting_id, [template_name])
+
+        # Drive presence BEFORE starting so the PresenceReconciler does
+        # not race the start handler and reap in-flight warms.
+        await self.mark_presence(meeting_id)
+
+        # Start the meeting — this fires one background warm per selection.
         await self.start_meeting(meeting_id)
-        logger.info(
-            "API mode: meeting %s started, session %s activated",
-            meeting_id,
-            session_id,
+        logger.info("API mode: meeting %s started, waiting for warmed event", meeting_id)
+
+        # Block until the first warmed event arrives so the managed agent
+        # session is actually ready to accept user.message segments.
+        hosted_session_id = await self.wait_for_agent_warmed(
+            meeting_id, timeout=min(observe_timeout, 120.0)
         )
+        if hosted_session_id is None:
+            logger.warning(
+                "No agent.session.warmed observed for meeting %s within timeout — "
+                "proceeding anyway; segments may be dropped",
+                meeting_id,
+            )
+        else:
+            result.session_id = hosted_session_id
 
         # Inject transcript segments with timing gaps.
         await self.inject_transcript(meeting_id, segments, delay=segment_delay)

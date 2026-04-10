@@ -5,11 +5,39 @@ This directory evaluates **real Anthropic managed agent sessions** against the l
 ## What a run does
 
 1. Creates a real meeting via `POST /v1/meetings`
-2. Calls `POST /v1/agent-templates/{id}/activate` — spins up an actual Anthropic managed agent session (visible in the Anthropic console)
-3. Injects `transcript.segment.final` events into Redis `kutana:events`
-4. `MeetingEventRelay` (in `services/api-server/src/api_server/agent_lifecycle.py`) forwards each segment to the live managed agent session
-5. Agent events stream back through `agent_lifecycle.stream_and_publish_events` → Redis → `E2ERunner.observe_agent_events`
-6. Judge scores the collected `agent.message` / `agent.mcp_tool_use` events + the final summary
+2. Calls `PUT /v1/meetings/{id}/selected-agents` — snapshots the desired
+   template list on the meeting row (Phase A.7 decoupled flow)
+3. Drives synthetic presence: `SADD kutana:presence:{meeting_id} eval-stub-participant`
+4. Calls `POST /v1/meetings/{id}/start` — transitions to ACTIVE and
+   fires one background `_warm_agent_in_background` task per selection
+5. Waits for the first `agent.session.warmed` event on the
+   `kutana:events` stream to confirm the managed agent session is ready
+6. Injects `transcript.segment.final` events into Redis `kutana:events`
+7. `MeetingEventRelay` (in `services/api-server/src/api_server/agent_lifecycle.py`) forwards each segment to the live managed agent session
+8. Agent events stream back through `agent_lifecycle.stream_and_publish_events` → Redis → `E2ERunner.observe_agent_events`
+9. Judge scores the collected `agent.message` / `agent.mcp_tool_use` events + the final summary
+10. Cleanup: `SREM` the presence entry so the reconciler doesn't keep the meeting warm
+
+## How presence is driven in evals
+
+The Phase A.7 `PresenceReconciler` (api-server, `agent_presence_heartbeat.py`)
+runs every 30 s and shuts down every active managed-agent session for any
+meeting with `SCARD(kutana:presence:{meeting_id}) == 0`. Evals have no
+real participants, so the harness writes a synthetic entry directly:
+
+```python
+await redis.sadd(f"kutana:presence:{meeting_id}", "eval-stub-participant")
+```
+
+The write happens **before** `POST /meetings/{id}/start` so the reconciler
+never sees an empty set while warms are in flight. The entry stays in
+place for the full eval and is drained with `SREM` during cleanup (see
+`E2ERunner.cleanup_meeting`).
+
+If you see `Presence-reconciler: meeting X has no participants, stopping
+N active session(s)` in the api-server logs during an eval run, the
+eval forgot to call `mark_presence` before `start_meeting` — fix the
+order of operations, don't relax the reconciler.
 
 ## Do NOT
 
@@ -17,6 +45,10 @@ This directory evaluates **real Anthropic managed agent sessions** against the l
 - Stub MCP tool schemas to generate synthetic `tool_use` blocks
 - Add a "mock mode" flag — if the live path is broken, fix the live path, don't shim around it
 - Add pytest tests here — the harness runs as a K8s Job via `k8s_runner.py`, not pytest
+- Call the deprecated `POST /v1/agent-templates/{id}/activate` — use
+  `PUT /v1/meetings/{id}/selected-agents` + `POST /v1/meetings/{id}/start` instead
+- Skip the `SADD kutana:presence:{meeting_id}` step — without it the
+  `PresenceReconciler` will reap the managed agent session mid-eval
 
 ## Files
 

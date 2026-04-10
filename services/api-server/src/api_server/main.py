@@ -44,8 +44,9 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Manage application startup and shutdown lifecycle.
 
-    Starts the MeetingEventRelay background task for managed agent
-    lifecycle wiring, and shuts it down gracefully on exit.
+    Starts the MeetingEventRelay, PresenceMaterializer, and
+    PresenceReconciler background tasks for the Phase A.7 decoupled
+    managed-agent lifecycle, and shuts them down gracefully on exit.
 
     Args:
         app: The FastAPI application instance.
@@ -68,13 +69,29 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     else:
         logger.info("LANGFUSE keys not set — Langfuse tracing disabled")
 
-    # Start the meeting event relay if Anthropic API key is configured
+    # Start the meeting event relay + presence heartbeat if Anthropic
+    # API key is configured. The relay handles meeting.ended shutdown,
+    # the materializer maintains the presence Redis set from the shared
+    # kutana:events stream, and the reconciler periodically warms /
+    # shuts down managed agent sessions based on live participant count.
     relay_task: asyncio.Task[None] | None = None
     relay = None
+    materializer_task: asyncio.Task[None] | None = None
+    materializer = None
+    reconciler_task: asyncio.Task[None] | None = None
+    reconciler = None
+    reconciler_redis = None
 
     if settings.anthropic_api_key:
+        from redis.asyncio import Redis
+
         from api_server.agent_lifecycle import MeetingEventRelay
+        from api_server.agent_presence_heartbeat import (
+            PresenceMaterializer,
+            PresenceReconciler,
+        )
         from api_server.deps import _build_session_factory
+        from api_server.event_publisher import EventPublisher
 
         db_factory = _build_session_factory(settings)
         relay = MeetingEventRelay(
@@ -84,12 +101,50 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         )
         relay_task = asyncio.create_task(relay.start())
         logger.info("MeetingEventRelay started")
+
+        materializer = PresenceMaterializer(redis_url=settings.redis_url)
+        materializer_task = asyncio.create_task(materializer.start())
+        logger.info("PresenceMaterializer started")
+
+        # Dedicated Redis client for the reconciler's event publisher —
+        # separate from the materializer's XREADGROUP connection so a
+        # publish error can't stall the consume loop.
+        reconciler_redis = Redis.from_url(  # type: ignore[type-arg]
+            settings.redis_url,
+            decode_responses=True,
+        )
+        reconciler = PresenceReconciler(
+            db_factory=db_factory,
+            settings=settings,
+            publisher=EventPublisher(reconciler_redis),
+            redis_url=settings.redis_url,
+        )
+        reconciler_task = asyncio.create_task(reconciler.start())
+        logger.info("PresenceReconciler started")
     else:
-        logger.info("ANTHROPIC_API_KEY not set — MeetingEventRelay disabled")
+        logger.info("ANTHROPIC_API_KEY not set — MeetingEventRelay and presence heartbeat disabled")
 
     yield
 
-    # Shutdown
+    # Shutdown — reverse start order so nothing tries to publish into
+    # a Redis client that has already been closed.
+    if reconciler is not None:
+        await reconciler.stop()
+    if reconciler_task is not None:
+        reconciler_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await reconciler_task
+    if reconciler_redis is not None:
+        with contextlib.suppress(Exception):
+            await reconciler_redis.aclose()
+
+    if materializer is not None:
+        await materializer.stop()
+    if materializer_task is not None:
+        materializer_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await materializer_task
+
     if relay is not None:
         await relay.stop()
     if relay_task is not None:
