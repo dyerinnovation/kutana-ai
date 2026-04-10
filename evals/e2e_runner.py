@@ -161,7 +161,7 @@ class E2ERunner:
             ) as resp:
                 resp.raise_for_status()
                 data = await resp.json()
-                self._jwt_token = data["access_token"]
+                self._jwt_token = data["token"]
             logger.info("Logged in as %s, obtained JWT", self._login_email)
         else:
             # Fall back to using auth_token as the JWT (works if it IS a JWT)
