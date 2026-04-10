@@ -75,7 +75,10 @@ def create_trace(
     user_id: str | None = None,
     session_id: str | None = None,
 ) -> Any:
-    """Create a new Langfuse trace.
+    """Create a new Langfuse trace (v4 API).
+
+    Opens a root span observation on a fresh trace ID. Callers should call
+    ``.update()`` then ``.end()`` on the returned object.
 
     Args:
         name: Trace name (e.g. "managed-agent-session").
@@ -85,16 +88,24 @@ def create_trace(
         session_id: Optional session ID for grouping.
 
     Returns:
-        A Langfuse trace object, or None if client not initialised.
+        A Langfuse observation object with ``.update()`` / ``.end()``, or None
+        if client not initialised.
     """
     if _client is None:
         return None
-    return _client.trace(
+    trace_id = _client.create_trace_id()
+    obs_metadata: dict[str, Any] = dict(metadata or {})
+    if tags:
+        obs_metadata["tags"] = tags
+    if user_id:
+        obs_metadata["user_id"] = user_id
+    if session_id:
+        obs_metadata["session_id"] = session_id
+    return _client.start_observation(
         name=name,
-        metadata=metadata or {},
-        tags=tags or [],
-        user_id=user_id,
-        session_id=session_id,
+        trace_context={"trace_id": trace_id, "parent_span_id": ""},
+        as_type="span",
+        metadata=obs_metadata,
     )
 
 
@@ -114,7 +125,7 @@ def score_trace(
     """
     if _client is None:
         return
-    _client.score(
+    _client.create_score(
         trace_id=trace_id,
         name=name,
         value=value,

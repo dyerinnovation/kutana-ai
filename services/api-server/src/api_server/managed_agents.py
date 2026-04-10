@@ -264,6 +264,7 @@ async def start_session(
 
     if trace is not None:
         trace.update(output={"session_id": session.id})
+        trace.end()
 
     logger.info("Started Anthropic session %s for agent %s", session.id, agent_id)
     return session.id
@@ -285,8 +286,11 @@ async def send_message(api_key: str, session_id: str, text: str) -> None:
     langfuse = get_langfuse()
     generation = None
     if langfuse is not None:
-        generation = langfuse.generation(
+        trace_id = langfuse.create_trace_id()
+        generation = langfuse.start_observation(
             name="managed-agent-send-message",
+            trace_context={"trace_id": trace_id, "parent_span_id": ""},
+            as_type="generation",
             metadata={"session_id": session_id},
             input=text[:500],  # Truncate for Langfuse display
         )
@@ -326,8 +330,11 @@ async def stream_events(api_key: str, session_id: str) -> AsyncIterator[Any]:
     langfuse = get_langfuse()
     span = None
     if langfuse is not None:
-        span = langfuse.span(
+        trace_id = langfuse.create_trace_id()
+        span = langfuse.start_observation(
             name="managed-agent-stream-events",
+            trace_context={"trace_id": trace_id, "parent_span_id": ""},
+            as_type="span",
             metadata={"session_id": session_id},
         )
 
@@ -368,8 +375,10 @@ async def end_session(api_key: str, session_id: str) -> None:
         )
         if trace is not None:
             trace.update(output={"status": "ended"})
+            trace.end()
         logger.info("Ended Anthropic session %s", session_id)
     except anthropic.APIError:
         if trace is not None:
             trace.update(output={"status": "already_closed"})
+            trace.end()
         logger.warning("Failed to end Anthropic session %s (may already be closed)", session_id)
