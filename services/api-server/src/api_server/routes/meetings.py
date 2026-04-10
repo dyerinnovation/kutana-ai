@@ -356,6 +356,12 @@ async def start_meeting(
     # Fire one background warm per selected template. Keyed (meeting_id,
     # template_id) for idempotency — if a task is already in flight we
     # leave it alone rather than racing a second activation.
+    if not selections:
+        logger.info(
+            "No templates selected for meeting %s — skipping background warm "
+            "(PresenceReconciler will backfill if templates are added later)",
+            meeting_id,
+        )
     db_factory = _build_session_factory(settings)
     for sel in selections:
         key = (meeting_id, sel.template_id)
@@ -532,6 +538,12 @@ async def set_selected_agents(
             )
         )
     await db.flush()
+    # Commit immediately so that a concurrent POST /start sees these rows.
+    # Without this, the implicit commit (via get_db_session teardown) runs
+    # after the HTTP response is sent; with sub-ms intra-cluster latency the
+    # next request can query MeetingSelectedTemplateORM before the transaction
+    # commits and see 0 rows, silently skipping agent warming.
+    await db.commit()
 
     return SelectedAgentsResponse(
         meeting_id=meeting_id,
