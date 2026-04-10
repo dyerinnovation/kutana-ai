@@ -182,25 +182,46 @@ class E2ERunner:
     ) -> str:
         """Activate a managed agent for a meeting.
 
+        Looks up the template by name, then calls
+        POST /agent-templates/{template_id}/activate.
+
         Args:
             meeting_id: Meeting to activate the agent in.
             template_name: Agent template name (e.g. "Meeting Notetaker").
-            model: Optional model override to pass to the API.
+            model: Ignored — the activate endpoint does not accept a model
+                override; tier-based model selection happens server-side.
 
         Returns:
             The hosted agent session ID.
         """
         assert self._session is not None
-        body: dict[str, Any] = {"template_name": template_name}
-        if model is not None:
-            body["model"] = model
+
+        # Resolve template name → template_id
+        async with self._session.get(
+            f"{self._api_base}/agent-templates",
+        ) as resp:
+            resp.raise_for_status()
+            templates: list[dict[str, Any]] = await resp.json()
+
+        template_id: str | None = None
+        for t in templates:
+            if t.get("name", "").lower() == template_name.lower():
+                template_id = t["id"]
+                break
+
+        if template_id is None:
+            raise ValueError(
+                f"No agent template found with name '{template_name}'. "
+                f"Available: {[t.get('name') for t in templates]}"
+            )
+
         async with self._session.post(
-            f"{self._api_base}/meetings/{meeting_id}/agents",
-            json=body,
+            f"{self._api_base}/agent-templates/{template_id}/activate",
+            json={"meeting_id": str(meeting_id)},
         ) as resp:
             resp.raise_for_status()
             data = await resp.json()
-            return data["session_id"]
+            return data["id"]
 
     async def start_meeting(self, meeting_id: UUID) -> None:
         """Start a meeting (triggers meeting.started event in the pipeline).
@@ -363,21 +384,14 @@ class E2ERunner:
             resp.raise_for_status()
 
     async def cleanup_meeting(self, meeting_id: UUID) -> None:
-        """Delete a meeting after eval completes.
+        """No-op — meetings persist after evals; end_meeting already marks them completed.
+
+        The Kutana API has no DELETE /meetings endpoint, so cleanup is a no-op.
 
         Args:
-            meeting_id: Meeting to clean up.
+            meeting_id: Meeting ID (unused).
         """
-        assert self._session is not None
-        async with self._session.delete(
-            f"{self._api_base}/meetings/{meeting_id}",
-        ) as resp:
-            if resp.status not in (200, 204, 404):
-                logger.warning(
-                    "Failed to clean up meeting %s: HTTP %s",
-                    meeting_id,
-                    resp.status,
-                )
+        logger.debug("Skipping meeting cleanup for %s — no DELETE endpoint", meeting_id)
 
     # -----------------------------------------------------------------------
     # Orchestrator
