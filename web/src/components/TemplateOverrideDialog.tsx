@@ -85,7 +85,7 @@ export function TemplateOverrideDialog({
 
   return (
     <Dialog open={template !== null} onClose={onClose}>
-      <form onSubmit={handleSave}>
+      <form onSubmit={handleSave} data-testid="template-override-dialog">
         <DialogTitle>Customize: {template?.name}</DialogTitle>
         <div className="space-y-4">
           {isBusiness && (
@@ -107,6 +107,7 @@ export function TemplateOverrideDialog({
                   </span>
                 </label>
                 <textarea
+                  data-testid="template-override-sop"
                   className="h-28 w-full rounded-lg border border-purple-800/40 bg-gray-950 px-3 py-2 text-sm text-gray-50 placeholder:text-gray-600 focus:border-purple-500 focus:ring-1 focus:ring-purple-500/40 focus:outline-none resize-none"
                   placeholder="Paste your organization's standard operating procedure here. The agent will follow these guidelines during the meeting."
                   value={sopContent}
@@ -122,6 +123,7 @@ export function TemplateOverrideDialog({
                   </span>
                 </label>
                 <textarea
+                  data-testid="template-override-custom-instructions"
                   className="h-20 w-full rounded-lg border border-purple-800/40 bg-gray-950 px-3 py-2 text-sm text-gray-50 placeholder:text-gray-600 focus:border-purple-500 focus:ring-1 focus:ring-purple-500/40 focus:outline-none resize-none"
                   placeholder="Any additional instructions for this specific meeting (e.g. focus on budget items, flag risks)."
                   value={customInstructions}
@@ -194,7 +196,9 @@ export function TemplateOverrideDialog({
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit">Save</Button>
+          <Button type="submit" data-testid="template-override-save">
+            Save
+          </Button>
         </DialogFooter>
       </form>
     </Dialog>

@@ -58,14 +58,22 @@ export async function setSelectedAgents(
 export async function getSelectedAgents(
   meetingId: string
 ): Promise<SelectedAgent[]> {
-  return apiFetch<SelectedAgent[]>(`/meetings/${meetingId}/selected-agents`);
+  const res = await apiFetch<{
+    meeting_id: string;
+    selections: SelectedAgent[];
+  }>(`/meetings/${meetingId}/selected-agents`);
+  return res.selections;
 }
 
 /** Snapshot of each selected agent's warming/ready/failed/stopped state. */
 export async function getAgentSessions(
   meetingId: string
 ): Promise<AgentSessionInfo[]> {
-  return apiFetch<AgentSessionInfo[]>(`/meetings/${meetingId}/agent-sessions`);
+  const res = await apiFetch<{
+    meeting_id: string;
+    sessions: AgentSessionInfo[];
+  }>(`/meetings/${meetingId}/agent-sessions`);
+  return res.sessions;
 }
 
 /** Ask the backend to re-warm a specific selected agent after a failure. */

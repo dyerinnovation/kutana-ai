@@ -1306,8 +1306,16 @@ function AgentSessionChip({
   };
   return (
     <div
+      data-testid={`agent-chip-${session.template_id}`}
+      data-state={session.state}
       className={`flex items-start gap-2 rounded-md border px-2.5 py-1.5 text-xs ${containerClass[session.state]}`}
     >
+      <span
+        data-testid={`agent-chip-${session.template_id}-state-${session.state}`}
+        className="sr-only"
+      >
+        {session.state}
+      </span>
       <div className="mt-0.5 flex h-4 w-4 items-center justify-center">
         {session.state === "warming" && <SpinnerIcon />}
         {session.state === "ready" && <CheckBadgeIcon />}

@@ -323,6 +323,7 @@ export function MeetingsPage() {
                             size="sm"
                             variant="outline"
                             onClick={() => toggleExpanded(meeting.id)}
+                            data-testid={`meeting-${meeting.id}-choose-agents`}
                           >
                             {isExpanded ? "Hide agents" : "Choose agents"}
                             {selectedCount > 0 && ` (${selectedCount})`}
@@ -330,6 +331,7 @@ export function MeetingsPage() {
                           <Button
                             size="sm"
                             onClick={() => handleStart(meeting.id)}
+                            data-testid={`meeting-${meeting.id}-start`}
                           >
                             Start
                           </Button>
@@ -389,6 +391,7 @@ export function MeetingsPage() {
                               >
                                 <input
                                   id={`tpl-${meeting.id}-${template.id}`}
+                                  data-testid={`meeting-${meeting.id}-template-${template.id}-checkbox`}
                                   type="checkbox"
                                   className="mt-1 h-4 w-4 rounded border-gray-600 bg-gray-800 text-emerald-500 focus:ring-emerald-500"
                                   checked={checked}
@@ -417,6 +420,7 @@ export function MeetingsPage() {
                                 {isBusiness && (
                                   <button
                                     type="button"
+                                    data-testid={`meeting-${meeting.id}-template-${template.id}-gear`}
                                     className="text-gray-500 hover:text-gray-200 transition-colors"
                                     title="Customize for this meeting"
                                     onClick={() =>
