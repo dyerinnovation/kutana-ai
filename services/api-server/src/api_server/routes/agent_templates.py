@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002 — FastAPI DI
 
+from api_server.agent_lifecycle import _wait_for_idle
 from api_server.agent_registry import AgentNotFoundError, get_agent_id_by_name
 from api_server.auth_deps import CurrentUser  # noqa: TC001 — runtime dep for FastAPI DI
 from api_server.billing_deps import MANAGED_AGENT_MIN_TIER, require_tier
@@ -22,6 +23,7 @@ from api_server.managed_agents import (
     create_vault,
     end_session,
     get_or_create_environment,
+    send_message,
     start_session,
 )
 from kutana_core.database.models import (
@@ -281,15 +283,58 @@ async def activate_template(
             # Set up Anthropic session with the real agent ID
             vault_id = await create_vault(api_key, mcp_jwt)
             env_id = await get_or_create_environment(api_key)
+            title = f"Kutana · {template.name} · {meeting.title[:40]} ({str(meeting.id)[:8]})"
+            title = title[:100]
             anthropic_session_id = await start_session(
                 api_key,
                 anthropic_agent_id,
                 env_id,
                 vault_id,
+                title=title,
             )
 
             session.anthropic_session_id = anthropic_session_id
             await db.flush()
+
+            # Send initial prep message so the agent knows its role and waits
+            # for the Meeting Started notification instead of calling tools
+            prep_text = (
+                f"You are the {template.name} for an upcoming Kutana meeting:\n"
+                f'"{meeting.title}"\n\n'
+                "The meeting has not started yet. You will receive:\n"
+                "  1. A 'Meeting Started' notification with the full participant list when the meeting begins\n"
+                "  2. Real-time transcript segments during the meeting (one user.message per segment)\n"
+                "  3. A summary request when the meeting ends\n\n"
+                "Until the Meeting Started notification arrives, do not call any tools. Wait.\n\n"
+                "Once the meeting begins, you have full access to your Kutana MCP tools "
+                "(kutana_send_chat_message, kutana_speak, kutana_raise_hand, "
+                "kutana_get_participants, kutana_get_chat_messages, etc.) and your built-in "
+                "toolset (web_search, web_fetch, bash, read, write, etc.).\n\n"
+                "Use them actively during the meeting to:\n"
+                "  - Fetch context when participants mention external references\n"
+                "  - Look up past meetings/decisions via kutana_get_entity_history\n"
+                "  - Post notes in real-time at natural breakpoints\n"
+                "  - Answer participant questions when addressed directly (via kutana_speak)\n\n"
+                "For now: acknowledge and wait."
+            )
+            await send_message(api_key, anthropic_session_id, prep_text)
+            logger.info(
+                "Sent prep message to session %s (agent %s)", anthropic_session_id, template.name
+            )
+
+            # Wait for the agent to reach idle before returning — confirms prep landed cleanly
+            try:
+                await _wait_for_idle(api_key, anthropic_session_id, timeout=60.0)
+                logger.info("Session %s reached idle after prep message", anthropic_session_id)
+            except TimeoutError:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=f"Managed agent session {anthropic_session_id} did not reach idle within 60s",
+                ) from None
+        except HTTPException:
+            await db.delete(session)
+            await db.flush()
+            raise
         except Exception as exc:
             logger.exception("Failed to create Anthropic session for template %s", template.name)
             await db.delete(session)

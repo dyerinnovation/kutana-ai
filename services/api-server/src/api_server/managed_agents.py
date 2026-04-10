@@ -235,6 +235,7 @@ async def start_session(
     agent_id: str,
     env_id: str,
     vault_id: str,
+    title: str | None = None,
 ) -> str:
     """Create a new Anthropic managed agent session.
 
@@ -243,6 +244,7 @@ async def start_session(
         agent_id: Anthropic agent ID.
         env_id: Environment ID.
         vault_id: Vault ID with MCP credentials.
+        title: Optional human-readable title shown in the Anthropic console.
 
     Returns:
         Session ID string.
@@ -259,11 +261,14 @@ async def start_session(
     )
 
     client = _get_client(api_key)
-    session = await client.beta.sessions.create(
-        agent=agent_id,
-        environment_id=env_id,
-        vault_ids=[vault_id],
-    )
+    create_kwargs: dict[str, object] = {
+        "agent": agent_id,
+        "environment_id": env_id,
+        "vault_ids": [vault_id],
+    }
+    if title:
+        create_kwargs["title"] = title
+    session = await client.beta.sessions.create(**create_kwargs)
 
     if trace is not None:
         trace.update(output={"session_id": session.id})
