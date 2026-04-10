@@ -3,19 +3,17 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002 — FastAPI DI
 
 from api_server.auth import decode_user_token, hash_api_key
 from api_server.deps import Settings, get_db_session, get_settings
 from kutana_core.database.models import AgentApiKeyORM, ApiKeyAuditLogORM, UserORM
-
-if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
 
 _bearer_scheme = HTTPBearer()
 
