@@ -177,6 +177,25 @@ export interface HostedSession {
   system_prompt_override: string | null;
 }
 
+/** An agent selection for a meeting. Shape of PUT/GET /meetings/{id}/selected-agents. */
+export interface SelectedAgent {
+  template_id: string;
+  system_prompt_override?: string | null;
+  sop_id?: string | null;
+}
+
+/** Per-agent lifecycle state rendered in the meeting room. */
+export type AgentWarmingState = "warming" | "ready" | "failed" | "stopped";
+
+/** Response shape of GET /meetings/{id}/agent-sessions — one entry per selected template. */
+export interface AgentSessionInfo {
+  template_id: string;
+  template_name: string;
+  state: AgentWarmingState;
+  hosted_session_id?: string | null;
+  error?: string | null;
+}
+
 export interface Integration {
   id: string;
   platform: string;

@@ -1,10 +1,17 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { getMeetingToken } from "@/api/meetings";
+import {
+  getAgentSessions,
+  getMeetingToken,
+  retryAgentSession,
+} from "@/api/meetings";
 import { Button } from "@/components/ui/Button";
 import { SpeakerQueuePanel } from "@/components/meeting/SpeakerQueuePanel";
+import { showToast } from "@/components/Toast";
 import type {
+  AgentSessionInfo,
+  AgentWarmingState,
   TranscriptSegment,
   Participant,
   GatewayMessage,
@@ -84,6 +91,9 @@ export function MeetingRoomPage() {
   const [turnQueue, setTurnQueue] = useState<TurnQueueEntry[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [agentEvents, setAgentEvents] = useState<AgentActivityEvent[]>([]);
+  const [agentSessions, setAgentSessions] = useState<
+    Record<string, AgentSessionInfo>
+  >({});
   const [rightTab, setRightTab] = useState<RightTab>("transcript");
   const [yourTurnAlert, setYourTurnAlert] = useState(false);
   const [chatInput, setChatInput] = useState("");
@@ -375,6 +385,41 @@ export function MeetingRoomPage() {
             timestamp: (evPayload.timestamp as number) ?? Date.now() / 1000,
           };
           setAgentEvents((prev) => [...prev, idleEvt]);
+        } else if (
+          msg.event_type === "agent.session.warmed" ||
+          msg.event_type === "agent.session.failed" ||
+          msg.event_type === "agent.session.stopped"
+        ) {
+          const templateId = evPayload.template_id as string | undefined;
+          if (!templateId) break;
+          const templateName =
+            (evPayload.template_name as string | undefined) ??
+            (evPayload.agent_name as string | undefined) ??
+            "Agent";
+          const nextState: AgentWarmingState =
+            msg.event_type === "agent.session.warmed"
+              ? "ready"
+              : msg.event_type === "agent.session.failed"
+                ? "failed"
+                : "stopped";
+          setAgentSessions((prev) => ({
+            ...prev,
+            [templateId]: {
+              template_id: templateId,
+              template_name: prev[templateId]?.template_name ?? templateName,
+              state: nextState,
+              hosted_session_id:
+                (evPayload.hosted_session_id as string | null | undefined) ??
+                prev[templateId]?.hosted_session_id ??
+                null,
+              error:
+                nextState === "failed"
+                  ? ((evPayload.error as string | undefined) ??
+                    (evPayload.message as string | undefined) ??
+                    "Agent failed to start")
+                  : null,
+            },
+          }));
         }
         break;
       }
@@ -410,6 +455,23 @@ export function MeetingRoomPage() {
         const { token } = await getMeetingToken(meetingId!);
         console.log("[Meeting] got token, cancelled=", cancelled);
         if (cancelled) return;
+
+        // Seed per-agent warming state from the server before the WS opens
+        // so the panel renders `warming` chips immediately on entry.
+        getAgentSessions(meetingId!)
+          .then((items) => {
+            if (cancelled) return;
+            setAgentSessions(() => {
+              const next: Record<string, AgentSessionInfo> = {};
+              for (const item of items) {
+                next[item.template_id] = item;
+              }
+              return next;
+            });
+          })
+          .catch(() => {
+            // Best-effort — the panel will still populate from WS events.
+          });
 
         // 2. Open WebSocket — meeting_id in URL, no join_meeting message needed
         const wsUrl = `${HUMAN_WS_BASE}?token=${token}&meeting_id=${meetingId}`;
@@ -588,6 +650,26 @@ export function MeetingRoomPage() {
     setHandRaised(next);
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: next ? "raise_hand" : "lower_hand" }));
+    }
+  }
+
+  async function handleRetryAgent(templateId: string) {
+    if (!meetingId) return;
+    // Optimistically flip back to warming so the spinner reappears.
+    setAgentSessions((prev) => {
+      const existing = prev[templateId];
+      if (!existing) return prev;
+      return {
+        ...prev,
+        [templateId]: { ...existing, state: "warming", error: null },
+      };
+    });
+    try {
+      await retryAgentSession(meetingId, templateId);
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Failed to retry agent",
+      );
     }
   }
 
@@ -862,9 +944,21 @@ export function MeetingRoomPage() {
           {/* Agent activity panel */}
           {rightTab === "agents" && (
             <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
-              {agentEvents.length === 0 && (
+              {/* Per-agent lifecycle chips (warming → ready / failed / stopped) */}
+              {Object.keys(agentSessions).length > 0 && (
+                <div className="space-y-1.5 pb-2 border-b border-gray-800">
+                  {Object.values(agentSessions).map((session) => (
+                    <AgentSessionChip
+                      key={session.template_id}
+                      session={session}
+                      onRetry={() => handleRetryAgent(session.template_id)}
+                    />
+                  ))}
+                </div>
+              )}
+              {agentEvents.length === 0 && Object.keys(agentSessions).length === 0 && (
                 <p className="text-xs text-gray-500 text-center py-6">
-                  No agent activity yet. Activate an agent template to see activity here.
+                  No agents selected for this meeting.
                 </p>
               )}
               {agentEvents.map((evt) => (
@@ -1186,6 +1280,97 @@ function ToolIcon() {
         strokeLinejoin="round"
         d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z"
       />
+    </svg>
+  );
+}
+
+/** Per-agent lifecycle chip shown in the meeting room's Agents tab. */
+function AgentSessionChip({
+  session,
+  onRetry,
+}: {
+  session: AgentSessionInfo;
+  onRetry: () => void;
+}) {
+  const label: Record<AgentWarmingState, string> = {
+    warming: `Warming ${session.template_name}...`,
+    ready: "Active",
+    failed: session.error ?? "Failed to start",
+    stopped: "Stopped — no participants",
+  };
+  const containerClass: Record<AgentWarmingState, string> = {
+    warming: "border-violet-700/40 bg-violet-950/30 text-violet-200",
+    ready: "border-emerald-700/40 bg-emerald-950/30 text-emerald-200",
+    failed: "border-red-700/40 bg-red-950/40 text-red-200",
+    stopped: "border-gray-700 bg-gray-900/60 text-gray-400",
+  };
+  return (
+    <div
+      className={`flex items-start gap-2 rounded-md border px-2.5 py-1.5 text-xs ${containerClass[session.state]}`}
+    >
+      <div className="mt-0.5 flex h-4 w-4 items-center justify-center">
+        {session.state === "warming" && <SpinnerIcon />}
+        {session.state === "ready" && <CheckBadgeIcon />}
+        {session.state === "failed" && <ErrorIcon />}
+        {session.state === "stopped" && <PauseIcon />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="font-medium text-gray-100 truncate">
+          {session.template_name}
+        </div>
+        <div className="opacity-80 truncate">{label[session.state]}</div>
+      </div>
+      {session.state === "failed" && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="rounded-md border border-red-600/50 bg-red-900/40 px-2 py-0.5 text-[11px] font-medium text-red-100 hover:bg-red-900/60"
+        >
+          Retry
+        </button>
+      )}
+    </div>
+  );
+}
+
+function SpinnerIcon() {
+  return (
+    <svg className="h-3.5 w-3.5 animate-spin text-violet-300" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+      <path
+        d="M22 12a10 10 0 0 1-10 10"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CheckBadgeIcon() {
+  return (
+    <svg className="h-3.5 w-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+    </svg>
+  );
+}
+
+function ErrorIcon() {
+  return (
+    <svg className="h-3.5 w-3.5 text-red-400" viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 9v3.75m0 3.75h.008v.008H12v-.008Zm0-15a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z"
+      />
+    </svg>
+  );
+}
+
+function PauseIcon() {
+  return (
+    <svg className="h-3.5 w-3.5 text-gray-500" viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
     </svg>
   );
 }

@@ -1,5 +1,11 @@
 import { apiFetch } from "./client";
-import type { Meeting, MeetingTokenResponse, PaginatedResponse } from "@/types";
+import type {
+  AgentSessionInfo,
+  Meeting,
+  MeetingTokenResponse,
+  PaginatedResponse,
+  SelectedAgent,
+} from "@/types";
 
 export async function listMeetings(): Promise<PaginatedResponse<Meeting>> {
   return apiFetch<PaginatedResponse<Meeting>>("/meetings");
@@ -35,4 +41,40 @@ export async function endMeeting(meetingId: string): Promise<Meeting> {
   return apiFetch<Meeting>(`/meetings/${meetingId}/end`, {
     method: "POST",
   });
+}
+
+/** Replace the full set of selected agent templates for a meeting. */
+export async function setSelectedAgents(
+  meetingId: string,
+  selections: SelectedAgent[]
+): Promise<void> {
+  return apiFetch<void>(`/meetings/${meetingId}/selected-agents`, {
+    method: "PUT",
+    body: JSON.stringify({ selections }),
+  });
+}
+
+/** Load the current set of selected agent templates for a meeting. */
+export async function getSelectedAgents(
+  meetingId: string
+): Promise<SelectedAgent[]> {
+  return apiFetch<SelectedAgent[]>(`/meetings/${meetingId}/selected-agents`);
+}
+
+/** Snapshot of each selected agent's warming/ready/failed/stopped state. */
+export async function getAgentSessions(
+  meetingId: string
+): Promise<AgentSessionInfo[]> {
+  return apiFetch<AgentSessionInfo[]>(`/meetings/${meetingId}/agent-sessions`);
+}
+
+/** Ask the backend to re-warm a specific selected agent after a failure. */
+export async function retryAgentSession(
+  meetingId: string,
+  templateId: string
+): Promise<void> {
+  return apiFetch<void>(
+    `/meetings/${meetingId}/agent-sessions/${templateId}/retry`,
+    { method: "POST" }
+  );
 }
