@@ -290,9 +290,14 @@ async def activate_template(
 
             session.anthropic_session_id = anthropic_session_id
             await db.flush()
-        except Exception:
+        except Exception as exc:
             logger.exception("Failed to create Anthropic session for template %s", template.name)
-            # Session is still created — Anthropic integration is best-effort
+            await db.delete(session)
+            await db.flush()
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Failed to create managed agent session: {exc}",
+            ) from exc
     else:
         logger.warning("ANTHROPIC_API_KEY not set — skipping managed agent session creation")
 

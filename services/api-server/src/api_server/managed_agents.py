@@ -211,13 +211,16 @@ async def create_vault(api_key: str, jwt: str) -> str:
 
     client = _get_client(api_key)
     vault = await client.beta.vaults.create(
-        name="kutana-mcp-auth",
-        secrets=[
-            {
-                "name": "authorization",
-                "value": f"Bearer {jwt}",
-            }
-        ],
+        display_name="kutana-mcp-auth",
+    )
+    await client.beta.vaults.credentials.create(
+        vault.id,
+        auth={
+            "type": "static_bearer",
+            "token": jwt,
+            "mcp_server_url": MCP_SERVER_URL,
+        },
+        display_name="kutana-mcp-bearer",
     )
     return vault.id
 
