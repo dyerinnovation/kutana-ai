@@ -344,10 +344,10 @@ async def stream_events(api_key: str, session_id: str) -> AsyncIterator[Any]:
 
     event_count = 0
     client = _get_client(api_key)
-    with client.beta.sessions.events.stream(session_id) as stream:
-        for event in stream:
-            event_count += 1
-            yield event
+    stream = await client.beta.sessions.events.stream(session_id)
+    async for event in stream:
+        event_count += 1
+        yield event
 
     if span is not None:
         span.update(output={"events_streamed": event_count})
