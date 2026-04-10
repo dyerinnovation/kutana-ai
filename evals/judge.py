@@ -164,12 +164,12 @@ async def judge_agent_response(
     scores = [
         JudgeScore(
             criterion=s["criterion"],
-            score=s["score"],
+            score=max(1.0, min(5.0, float(s["score"]))),
             reason=s["reason"],
         )
         for s in parsed["scores"]
     ]
-    overall = float(parsed["overall"])
+    overall = max(1.0, min(5.0, float(parsed["overall"])))
 
     # End generation span with judge output
     if generation is not None:
