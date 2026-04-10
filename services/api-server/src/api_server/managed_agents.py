@@ -310,7 +310,8 @@ async def send_message(api_key: str, session_id: str, text: str) -> None:
     )
 
     if generation is not None:
-        generation.end(output="message_sent")
+        generation.update(output="message_sent")
+        generation.end()
 
 
 async def stream_events(api_key: str, session_id: str) -> AsyncIterator[Any]:
@@ -343,13 +344,14 @@ async def stream_events(api_key: str, session_id: str) -> AsyncIterator[Any]:
 
     event_count = 0
     client = _get_client(api_key)
-    async with client.beta.sessions.events.stream(session_id) as stream:
-        async for event in stream:
+    with client.beta.sessions.events.stream(session_id) as stream:
+        for event in stream:
             event_count += 1
             yield event
 
     if span is not None:
-        span.end(output={"events_streamed": event_count})
+        span.update(output={"events_streamed": event_count})
+        span.end()
 
 
 async def end_session(api_key: str, session_id: str) -> None:
