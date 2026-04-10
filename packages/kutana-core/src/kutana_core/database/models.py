@@ -606,6 +606,47 @@ class HostedAgentSessionORM(Base):
     )
 
 
+class MeetingSelectedTemplateORM(Base):
+    """Join table recording which agent templates a meeting has selected.
+
+    This is the source of truth for "which agents will join this meeting"
+    — it survives api-server restarts and decouples checkbox-style
+    selection from the (expensive) activation step that warms each
+    managed agent. ``POST /v1/meetings/{id}/start`` reads this table and
+    fires one background warm per row.
+
+    Attributes:
+        meeting_id: Meeting this selection belongs to.
+        template_id: Agent template that will be activated on start.
+        system_prompt_override: Optional system prompt override captured
+            from the override dialog (Business+ only).
+        sop_id: Optional organization SOP to prepend to the agent's
+            effective system prompt.
+        created_at: Record creation timestamp.
+    """
+
+    __tablename__ = "meeting_selected_templates"
+
+    meeting_id: Mapped[UUID] = mapped_column(
+        sa.Uuid, ForeignKey("meetings.id", ondelete="CASCADE"), primary_key=True
+    )
+    template_id: Mapped[UUID] = mapped_column(
+        sa.Uuid, ForeignKey("agent_templates.id", ondelete="CASCADE"), primary_key=True
+    )
+    system_prompt_override: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
+    sop_id: Mapped[UUID | None] = mapped_column(
+        sa.Uuid, ForeignKey("organization_sops.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+
+    __table_args__ = (
+        Index("ix_meeting_selected_templates_meeting_id", "meeting_id"),
+        Index("ix_meeting_selected_templates_template_id", "template_id"),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Integration models (OAuth connections to external platforms)
 # ---------------------------------------------------------------------------

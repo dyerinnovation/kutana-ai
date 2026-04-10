@@ -2,36 +2,24 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
-import time
 from datetime import UTC
 from typing import Annotated
 
-import jwt as pyjwt
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002 — FastAPI DI
 
-from api_server.agent_registry import AgentNotFoundError, get_agent_id_by_name
 from api_server.auth_deps import CurrentUser  # noqa: TC001 — runtime dep for FastAPI DI
 from api_server.billing_deps import MANAGED_AGENT_MIN_TIER, require_tier
 from api_server.deps import Settings, get_db_session, get_settings
-from api_server.managed_agents import (
-    create_agent,
-    create_vault,
-    end_session,
-    get_or_create_environment,
-    send_message,
-    start_session,
-    stream_events,
-)
+from api_server.managed_agent_activation import activate_template_for_meeting
+from api_server.managed_agents import end_session
 from kutana_core.database.models import (
     AgentTemplateORM,
     HostedAgentSessionORM,
     MeetingORM,
-    OrganizationSOPORM,
 )
 
 logger = logging.getLogger(__name__)
@@ -168,19 +156,22 @@ async def activate_template(
     template_id: str,
     body: ActivateRequest,
     user: CurrentUser,
+    response: Response,
     db: Annotated[AsyncSession, Depends(get_db_session)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> HostedSessionResponse:
     """Activate a template for a meeting, creating a hosted agent session.
 
-    Creates an Anthropic managed agent session backed by the template's
-    system prompt. If Business+ and an SOP is selected, the SOP content
-    is prepended to the system prompt.
+    **Deprecated.** New clients should use ``PUT /v1/meetings/{id}/selected-agents``
+    followed by ``POST /v1/meetings/{id}/start``, which warms all selected
+    agents in the background behind the Start Meeting click. This endpoint is
+    retained during the migration window for the eval harness and admin tooling.
 
     Args:
         template_id: UUID of the template.
         body: Activation request with meeting_id.
         user: Authenticated user.
+        response: FastAPI response (used to attach the Deprecation header).
         db: Database session.
         settings: Application settings.
 
@@ -189,8 +180,11 @@ async def activate_template(
 
     Raises:
         HTTPException: 402/403 if user lacks the required plan tier,
-            or 404 if template or meeting not found.
+            404 if template or meeting not found, 502 if the Anthropic
+            session fails to reach idle.
     """
+    response.headers["Deprecation"] = "true"
+
     require_tier(user, MANAGED_AGENT_MIN_TIER)
 
     # Verify template exists
@@ -214,169 +208,21 @@ async def activate_template(
             detail="Meeting not found",
         )
 
-    # Build effective system prompt (SOP prepended for Business+ users)
-    effective_prompt = body.system_prompt_override or template.system_prompt
+    # SOP overrides are Business+ only
     if body.sop_id:
         require_tier(user, "business")
-        sop_result = await db.execute(
-            select(OrganizationSOPORM).where(OrganizationSOPORM.id == body.sop_id)
-        )
-        sop = sop_result.scalar_one_or_none()
-        if sop is not None:
-            effective_prompt = (
-                f"## Organization SOP: {sop.name}\n\n{sop.content}\n\n---\n\n{effective_prompt}"
-            )
 
-    # Create the DB record
-    session = HostedAgentSessionORM(
-        user_id=user.id,
-        template_id=template.id,
-        meeting_id=meeting.id,
-        status="active",
-        anthropic_api_key_encrypted=body.anthropic_api_key,
+    session = await activate_template_for_meeting(
+        db=db,
+        settings=settings,
+        api_key=settings.anthropic_api_key,
+        user=user,
+        template=template,
+        meeting=meeting,
         system_prompt_override=body.system_prompt_override,
+        sop_id=body.sop_id,
+        anthropic_api_key_override=body.anthropic_api_key,
     )
-    db.add(session)
-    await db.flush()
-
-    # Create Anthropic managed agent + session
-    api_key = settings.anthropic_api_key
-    if api_key:
-        try:
-            if body.sop_id:
-                # Org-specific agent: create a new one with the SOP-enriched prompt
-                anthropic_agent_id = await create_agent(api_key, template.name, effective_prompt)
-            else:
-                # Standard template: use pre-created registry agent
-                try:
-                    anthropic_agent_id = get_agent_id_by_name(
-                        template.name, tier=settings.kutana_agent_tier
-                    )
-                except AgentNotFoundError:
-                    logger.warning(
-                        "No registry agent for '%s' (tier=%s), falling back to create_agent",
-                        template.name,
-                        settings.kutana_agent_tier,
-                    )
-                    anthropic_agent_id = await create_agent(
-                        api_key, template.name, effective_prompt
-                    )
-            session.anthropic_agent_id = anthropic_agent_id
-
-            # Generate an MCP JWT for the managed agent
-            now = int(time.time())
-            mcp_payload = {
-                "sub": str(user.id),
-                "type": "mcp",
-                "session_id": str(session.id),
-                "scopes": [
-                    "meetings:read",
-                    "meetings:join",
-                    "meetings:chat",
-                    "turns:manage",
-                    "tasks:write",
-                ],
-                "iat": now,
-                "exp": now + 7200,  # 2 hours
-            }
-            mcp_jwt = pyjwt.encode(mcp_payload, settings.jwt_secret, algorithm="HS256")
-
-            # Set up Anthropic session with the real agent ID
-            vault_id = await create_vault(api_key, mcp_jwt)
-            env_id = await get_or_create_environment(api_key)
-            title = f"Kutana · {template.name} · {meeting.title[:40]} ({str(meeting.id)[:8]})"
-            title = title[:100]
-            anthropic_session_id = await start_session(
-                api_key,
-                anthropic_agent_id,
-                env_id,
-                vault_id,
-                title=title,
-            )
-
-            session.anthropic_session_id = anthropic_session_id
-            await db.flush()
-
-            # Send initial prep message so the agent knows its role and waits
-            # for the Meeting Started notification instead of calling tools.
-            #
-            # ORDERING: open the SSE stream BEFORE sending the prep message to
-            # avoid a race where the session reaches idle before we start listening
-            # and we hang forever waiting for an event that already fired.
-            prep_text = (
-                f"You are the {template.name} for an upcoming Kutana meeting:\n"
-                f'"{meeting.title}"\n\n'
-                "The meeting has not started yet. You will receive:\n"
-                "  1. A 'Meeting Started' notification with the full participant list when the meeting begins\n"
-                "  2. Real-time transcript segments during the meeting (one user.message per segment)\n"
-                "  3. A summary request when the meeting ends\n\n"
-                "Until the Meeting Started notification arrives, do not call any tools. Wait.\n\n"
-                "Once the meeting begins, you have full access to your Kutana MCP tools "
-                "(kutana_send_chat_message, kutana_speak, kutana_raise_hand, "
-                "kutana_get_participants, kutana_get_chat_messages, etc.) and your built-in "
-                "toolset (web_search, web_fetch, bash, read, write, etc.).\n\n"
-                "Use them actively during the meeting to:\n"
-                "  - Fetch context when participants mention external references\n"
-                "  - Look up past meetings/decisions via kutana_get_entity_history\n"
-                "  - Post notes in real-time at natural breakpoints\n"
-                "  - Answer participant questions when addressed directly (via kutana_speak)\n\n"
-                "For now: acknowledge and wait."
-            )
-
-            # 1. Start consuming the SSE stream in a background task first
-            event_gen = stream_events(api_key, anthropic_session_id)
-
-            async def _wait_for_prep_idle() -> None:
-                async for event in event_gen:
-                    etype = getattr(event, "type", None)
-                    if etype == "session.status_idle":
-                        return
-                    if etype == "session.error":
-                        error_obj = getattr(event, "error", None)
-                        msg = (
-                            getattr(error_obj, "message", str(error_obj))
-                            if error_obj
-                            else str(event)
-                        )
-                        raise HTTPException(
-                            status_code=status.HTTP_502_BAD_GATEWAY,
-                            detail=f"Agent session errored during prep: {msg}",
-                        )
-
-            idle_task: asyncio.Task[None] = asyncio.create_task(_wait_for_prep_idle())
-            # Let the event loop advance so the stream connection is established
-            await asyncio.sleep(0.1)
-
-            # 2. THEN send the prep message (stream is already open, no missed events)
-            await send_message(api_key, anthropic_session_id, prep_text)
-            logger.info(
-                "Sent prep message to session %s (agent %s)", anthropic_session_id, template.name
-            )
-
-            # 3. Wait for the session to reach idle
-            try:
-                await asyncio.wait_for(idle_task, timeout=60.0)
-                logger.info("Session %s reached idle after prep message", anthropic_session_id)
-            except TimeoutError:
-                idle_task.cancel()
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"Managed agent session {anthropic_session_id} did not reach idle within 60s",
-                ) from None
-        except HTTPException:
-            await db.delete(session)
-            await db.flush()
-            raise
-        except Exception as exc:
-            logger.exception("Failed to create Anthropic session for template %s", template.name)
-            await db.delete(session)
-            await db.flush()
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Failed to create managed agent session: {exc}",
-            ) from exc
-    else:
-        logger.warning("ANTHROPIC_API_KEY not set — skipping managed agent session creation")
 
     return HostedSessionResponse(
         id=str(session.id),

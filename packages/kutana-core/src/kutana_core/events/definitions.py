@@ -63,6 +63,42 @@ class MeetingEnded(BaseEvent):
     meeting_id: UUID
 
 
+class AgentSessionWarmed(BaseEvent):
+    """Emitted when a background-warmed managed agent reaches idle.
+
+    Flows through the agent gateway → frontend WebSocket so the per-agent
+    spinner can transition from ``warming`` → ``ready``.
+
+    Attributes:
+        meeting_id: Meeting the agent was warmed for.
+        template_id: Agent template that was activated.
+        hosted_session_id: The newly-created ``HostedAgentSessionORM`` row ID.
+    """
+
+    event_type: ClassVar[str] = "agent.session.warmed"
+    meeting_id: UUID
+    template_id: UUID
+    hosted_session_id: UUID
+
+
+class AgentSessionFailed(BaseEvent):
+    """Emitted when a background-warmed managed agent fails to activate.
+
+    Flows through the agent gateway → frontend WebSocket so the per-agent
+    spinner can transition to ``failed`` with a retry affordance.
+
+    Attributes:
+        meeting_id: Meeting the agent was being warmed for.
+        template_id: Agent template whose activation failed.
+        error: Human-readable error detail.
+    """
+
+    event_type: ClassVar[str] = "agent.session.failed"
+    meeting_id: UUID
+    template_id: UUID
+    error: str
+
+
 class TranscriptSegmentFinal(BaseEvent):
     """Emitted when a final transcript segment is available.
 

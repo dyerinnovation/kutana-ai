@@ -2,22 +2,39 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
 from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID  # noqa: TC003 — used in runtime route params
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import exists, func, or_, select
+from sqlalchemy import delete, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002 — FastAPI DI
 
 from api_server.auth_deps import CurrentUser, CurrentUserOrAgent  # noqa: TC001 — FastAPI DI
-from api_server.billing_deps import check_meeting_limit
-from api_server.deps import get_db_session, get_event_publisher
+from api_server.billing_deps import MANAGED_AGENT_MIN_TIER, check_meeting_limit, require_tier
+from api_server.deps import (
+    Settings,
+    _build_session_factory,
+    get_db_session,
+    get_event_publisher,
+    get_settings,
+)
 from api_server.event_publisher import EventPublisher  # noqa: TC001 — FastAPI DI
-from kutana_core.database.models import MeetingInviteORM, MeetingORM, UserORM
+from api_server.managed_agent_activation import _warm_agent_in_background, _warming_tasks
+from kutana_core.database.models import (
+    AgentTemplateORM,
+    MeetingInviteORM,
+    MeetingORM,
+    MeetingSelectedTemplateORM,
+    UserORM,
+)
 from kutana_core.events.definitions import MeetingEnded, MeetingStarted
 from kutana_core.models.meeting import MeetingStatus
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
 
@@ -276,20 +293,27 @@ async def update_meeting(
 @router.post("/{meeting_id}/start", response_model=MeetingResponse)
 async def start_meeting(
     meeting_id: UUID,
-    _current_user: CurrentUserOrAgent,
+    current_user: CurrentUserOrAgent,
     db: Annotated[AsyncSession, Depends(get_db_session)],
     publisher: Annotated[EventPublisher, Depends(get_event_publisher)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> MeetingResponse:
-    """Start a meeting (transition from scheduled to active).
+    """Start a meeting and fire background warming for selected agents.
 
-    Publishes a MeetingStarted event to Redis Streams so the
-    MeetingEventRelay can notify managed agent sessions.
+    Transitions the meeting to ``active``, publishes ``MeetingStarted``,
+    and schedules one background ``_warm_agent_in_background`` task per
+    row in ``meeting_selected_templates``. Activation is decoupled from
+    the HTTP response — the caller returns immediately and the frontend
+    flips each agent's in-room spinner via ``AgentSessionWarmed`` /
+    ``AgentSessionFailed`` events.
 
     Args:
         meeting_id: The UUID of the meeting to start.
-        _current_user: Authenticated user.
+        current_user: Authenticated user.
         db: Database session.
         publisher: Event publisher for Redis Streams.
+        settings: Application settings (for background DB session factory
+            and Anthropic API key).
 
     Returns:
         Updated MeetingResponse with active status.
@@ -316,9 +340,249 @@ async def start_meeting(
     await db.flush()
     await db.refresh(meeting)
 
+    # Load selections for this meeting (source of truth for which agents warm)
+    sel_result = await db.execute(
+        select(MeetingSelectedTemplateORM).where(
+            MeetingSelectedTemplateORM.meeting_id == meeting_id
+        )
+    )
+    selections = sel_result.scalars().all()
+
+    # Commit the ACTIVE transition + selections snapshot so the background
+    # tasks see the new row state through their own fresh sessions.
+    await db.commit()
+
+    # Fire one background warm per selected template. Keyed (meeting_id,
+    # template_id) for idempotency — if a task is already in flight we
+    # leave it alone rather than racing a second activation.
+    db_factory = _build_session_factory(settings)
+    for sel in selections:
+        key = (meeting_id, sel.template_id)
+        existing = _warming_tasks.get(key)
+        if existing is not None and not existing.done():
+            logger.info(
+                "Skipping duplicate warm for template %s in meeting %s (already in flight)",
+                sel.template_id,
+                meeting_id,
+            )
+            continue
+        task = asyncio.create_task(
+            _warm_agent_in_background(
+                db_factory,
+                settings,
+                current_user.id,
+                sel.template_id,
+                meeting_id,
+                sel.system_prompt_override,
+                sel.sop_id,
+                publisher,
+            )
+        )
+        _warming_tasks[key] = task
+
     await publisher.publish(MeetingStarted(meeting_id=meeting_id))
 
     return _to_response(meeting)
+
+
+# ---------------------------------------------------------------------------
+# Selected agent template endpoints
+# ---------------------------------------------------------------------------
+
+
+class SelectedTemplateItem(BaseModel):
+    """One agent template selected to join a meeting.
+
+    Attributes:
+        template_id: Agent template UUID.
+        system_prompt_override: Optional system prompt override.
+        sop_id: Optional organization SOP to prepend.
+    """
+
+    template_id: UUID
+    system_prompt_override: str | None = None
+    sop_id: UUID | None = None
+
+
+class SelectedAgentsRequest(BaseModel):
+    """PUT body for replacing a meeting's selected agents.
+
+    Attributes:
+        selections: The complete new list of selected templates. Any rows
+            not present are deleted.
+    """
+
+    selections: list[SelectedTemplateItem] = Field(default_factory=list)
+
+
+class SelectedAgentsResponse(BaseModel):
+    """Response returning the current selection for a meeting."""
+
+    meeting_id: UUID
+    selections: list[SelectedTemplateItem]
+
+
+async def _assert_meeting_accessible(
+    db: AsyncSession, meeting_id: UUID, user: UserORM
+) -> MeetingORM:
+    """Look up a meeting and enforce that the user can see it.
+
+    Accepts the meeting if the user owns it, has an invite, or the
+    meeting has no owner (legacy row).
+
+    Args:
+        db: Database session.
+        meeting_id: Meeting UUID.
+        user: Authenticated user.
+
+    Returns:
+        The meeting row.
+
+    Raises:
+        HTTPException: 404 if missing or not accessible to the user.
+    """
+    invite_exists = exists(
+        select(MeetingInviteORM.id).where(
+            MeetingInviteORM.meeting_id == meeting_id,
+            MeetingInviteORM.user_id == user.id,
+        )
+    )
+    result = await db.execute(
+        select(MeetingORM).where(
+            MeetingORM.id == meeting_id,
+            or_(
+                MeetingORM.owner_id == user.id,
+                MeetingORM.owner_id.is_(None),
+                invite_exists,
+            ),
+        )
+    )
+    meeting = result.scalar_one_or_none()
+    if meeting is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meeting not found",
+        )
+    return meeting
+
+
+@router.put("/{meeting_id}/selected-agents", response_model=SelectedAgentsResponse)
+async def set_selected_agents(
+    meeting_id: UUID,
+    body: SelectedAgentsRequest,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> SelectedAgentsResponse:
+    """Replace the agent templates selected to join this meeting.
+
+    The full selection set is replaced on each PUT — rows not present in
+    the body are deleted. Each template is tier-checked against the
+    caller so users can't smuggle in templates above their plan.
+
+    Args:
+        meeting_id: Meeting UUID.
+        body: The new selection set.
+        current_user: Authenticated user (must own or be invited to the meeting).
+        db: Database session.
+
+    Returns:
+        The newly-persisted selection.
+
+    Raises:
+        HTTPException: 402/403 if the user lacks the plan tier for any
+            referenced template, 404 if the meeting is missing, or 404 if
+            any referenced template does not exist.
+    """
+    require_tier(current_user, MANAGED_AGENT_MIN_TIER)
+    await _assert_meeting_accessible(db, meeting_id, current_user)
+
+    # Validate every template exists + enforce its tier requirement
+    template_ids = [s.template_id for s in body.selections]
+    if template_ids:
+        tmpl_result = await db.execute(
+            select(AgentTemplateORM).where(AgentTemplateORM.id.in_(template_ids))
+        )
+        templates_by_id = {t.id: t for t in tmpl_result.scalars().all()}
+        missing = [str(tid) for tid in template_ids if tid not in templates_by_id]
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Template(s) not found: {', '.join(missing)}",
+            )
+        for sel in body.selections:
+            template = templates_by_id[sel.template_id]
+            require_tier(current_user, template.tier)
+            if sel.sop_id is not None:
+                require_tier(current_user, "business")
+
+    # Replace the selection set atomically
+    await db.execute(
+        delete(MeetingSelectedTemplateORM).where(
+            MeetingSelectedTemplateORM.meeting_id == meeting_id
+        )
+    )
+    for sel in body.selections:
+        db.add(
+            MeetingSelectedTemplateORM(
+                meeting_id=meeting_id,
+                template_id=sel.template_id,
+                system_prompt_override=sel.system_prompt_override,
+                sop_id=sel.sop_id,
+            )
+        )
+    await db.flush()
+
+    return SelectedAgentsResponse(
+        meeting_id=meeting_id,
+        selections=[
+            SelectedTemplateItem(
+                template_id=sel.template_id,
+                system_prompt_override=sel.system_prompt_override,
+                sop_id=sel.sop_id,
+            )
+            for sel in body.selections
+        ],
+    )
+
+
+@router.get("/{meeting_id}/selected-agents", response_model=SelectedAgentsResponse)
+async def get_selected_agents(
+    meeting_id: UUID,
+    current_user: CurrentUserOrAgent,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> SelectedAgentsResponse:
+    """Return the agent templates currently selected for this meeting.
+
+    Args:
+        meeting_id: Meeting UUID.
+        current_user: Authenticated user or agent.
+        db: Database session.
+
+    Returns:
+        The current selection (possibly empty).
+
+    Raises:
+        HTTPException: 404 if the meeting is missing or not accessible.
+    """
+    await _assert_meeting_accessible(db, meeting_id, current_user)
+
+    result = await db.execute(
+        select(MeetingSelectedTemplateORM)
+        .where(MeetingSelectedTemplateORM.meeting_id == meeting_id)
+        .order_by(MeetingSelectedTemplateORM.created_at)
+    )
+    rows = result.scalars().all()
+    return SelectedAgentsResponse(
+        meeting_id=meeting_id,
+        selections=[
+            SelectedTemplateItem(
+                template_id=row.template_id,
+                system_prompt_override=row.system_prompt_override,
+                sop_id=row.sop_id,
+            )
+            for row in rows
+        ],
+    )
 
 
 @router.post("/{meeting_id}/end", response_model=MeetingResponse)
