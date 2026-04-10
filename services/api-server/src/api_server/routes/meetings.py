@@ -42,7 +42,7 @@ class MeetingCreateRequest(BaseModel):
 
     platform: str = "kutana"
     title: str | None = None
-    scheduled_at: datetime
+    scheduled_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class MeetingResponse(BaseModel):
