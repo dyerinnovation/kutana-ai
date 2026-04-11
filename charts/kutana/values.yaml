@@ -214,6 +214,12 @@ storage:
   useSSL: "false"
 
 # ---------------------------------------------------------------------------
+# Langfuse Ingress — routes langfuse.spark-b0f2.local → sibling langfuse-web service
+# ---------------------------------------------------------------------------
+langfuseIngress:
+  enabled: false  # Ingress already exists as a manually-applied resource (langfuse-web)
+
+# ---------------------------------------------------------------------------
 # Ingress
 # ---------------------------------------------------------------------------
 ingress:
