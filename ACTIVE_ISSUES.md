@@ -15,6 +15,15 @@ Scratchpad for bugs found, being fixed, or recently fixed. Not for planned work 
 - **Fix:** pending
 - **Notes:** Distinct from Phase A.6 notetaker prompt issue. This is the same error class as iter-1's `activate-legacy-badrequest` but now reproducing on the `/v1/meetings/{id}/start` path, so it's no longer confined to the deprecated `/activate` route. Likely blocking for any managed agent that uses tools mid-meeting (not just notetaker). Scenarios 1 and 2 probably only worked because those agents didn't call tools in the iter-2 run.
 
+### eval-job-langfuse-dns
+
+- **Status:** open
+- **Found:** 2026-04-10, langfuse-setup-verify run
+- **Symptom:** Eval pod cannot reach Langfuse — all OTEL spans fail with `NameResolutionError: Failed to resolve 'langfuse.kutana.svc'`. Zero eval traces land in Langfuse UI.
+- **Root cause:** `charts/kutana/templates/eval-job.yaml` line ~49: `LANGFUSE_HOST=http://langfuse.{{ .Release.Namespace }}.svc:3000`. Official Langfuse chart names the web service `langfuse-web`, so correct hostname is `langfuse-web.{{ .Release.Namespace }}.svc:3000`. `configmap.yaml` already has the correct name — only `eval-job.yaml` was missed during chart migration.
+- **Fix:** Change `langfuse.{{ .Release.Namespace }}` → `langfuse-web.{{ .Release.Namespace }}` in `eval-job.yaml:49`, redeploy, rerun eval.
+- **Notes:** Api-server traces land correctly (api-server configmap has correct hostname). Only the eval K8s Job is affected.
+
 ### activate-legacy-badrequest
 
 - **Status:** won't-fix (dies with deprecated path)
