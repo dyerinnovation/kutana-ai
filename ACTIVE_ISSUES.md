@@ -24,6 +24,15 @@ Scratchpad for bugs found, being fixed, or recently fixed. Not for planned work 
 - **Fix:** Change `langfuse.{{ .Release.Namespace }}` → `langfuse-web.{{ .Release.Namespace }}` in `eval-job.yaml:49`, redeploy, rerun eval.
 - **Notes:** Api-server traces land correctly (api-server configmap has correct hostname). Only the eval K8s Job is affected.
 
+### langfuse-traces-no-meeting-id
+
+- **Status:** open
+- **Found:** 2026-04-10, langfuse-setup-verify run
+- **Symptom:** All 87 api-server Langfuse traces (`managed-agent-start-session`, `managed-agent-send-message`, `managed-agent-end-session`) have empty `metadata.meeting_id` and null Langfuse `sessionId`. Filtering traces by meeting UUID in the Langfuse UI returns 0 results. Only `metadata.session_id` (Anthropic session ID, e.g., `sesn_011CZw3s37P45p6Fsq65SdTm`) is present.
+- **Root cause:** `services/api-server/src/api_server/managed_agents.py` and `agent_lifecycle.py` `create_trace()` calls do not pass `meeting_id` to metadata, and do not set the Langfuse `session_id` parameter to the meeting UUID.
+- **Fix:** In `managed_agents.py` / `agent_lifecycle.py`, add `meeting_id=<uuid>` to metadata in every `create_trace()` call. Pass `session_id=<meeting_uuid>` so Langfuse groups traces by meeting.
+- **Notes:** Non-blocking for infra verification — traces land and are queryable by Anthropic session ID. Blocks the intended meeting-based observability workflow.
+
 ### activate-legacy-badrequest
 
 - **Status:** won't-fix (dies with deprecated path)
