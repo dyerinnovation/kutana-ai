@@ -140,59 +140,13 @@ web:
       memory: 128Mi
 
 # ---------------------------------------------------------------------------
-# Langfuse (self-hosted observability for LLM traces)
-# ---------------------------------------------------------------------------
-langfuse:
-  enabled: true
-  image:
-    repository: langfuse/langfuse
-    tag: "3"
-  resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      cpu: 500m
-      memory: 1Gi
-  env:
-    NEXTAUTH_URL: "http://langfuse.spark-b0f2.local"
-    TELEMETRY_ENABLED: "false"
-  postgres:
-    image:
-      repository: postgres
-      tag: 16-alpine
-    persistence:
-      size: 5Gi
-    credentials:
-      database: langfuse
-      username: langfuse
-      password: langfuse
-  clickhouse:
-    image:
-      repository: clickhouse/clickhouse-server
-      tag: "24.3-alpine"
-    persistence:
-      size: 5Gi
-    resources:
-      requests:
-        cpu: 100m
-        memory: 512Mi
-      limits:
-        cpu: "1"
-        memory: 2Gi
-    credentials:
-      database: langfuse
-      username: default
-      password: langfuse
-
-# ---------------------------------------------------------------------------
 # Observability
 # ---------------------------------------------------------------------------
 observability:
   sentryDsn: ""
   slackWebhookUrl: ""
   logFormat: "json"
-  langfusePublicKey: "pk-lf-77c5dc94-c77b-49a8-8db4-2b5cacf27ca2"
+  langfusePublicKey: "pk-lf-488e116f-af55-484b-90ca-99af76dea911"
 
 # ---------------------------------------------------------------------------
 # Secrets (base64-encoded values — override at install time)

@@ -1,0 +1,88 @@
+# Langfuse Helm chart values for Kutana AI / DGX Spark
+#
+# Chart: oci://ghcr.io/langfuse/langfuse-k8s/charts/langfuse
+# Version: 1.5.25 (appVersion: 3.167.1)
+# Install: see infra/langfuse/install.sh
+#
+# Secrets come from infra/langfuse/secrets.yaml (NOT this file).
+# See infra/langfuse/secrets.example.yaml for required keys.
+# ---------------------------------------------------------------------------
+
+langfuse:
+  nextauth:
+    url: "http://langfuse.spark-b0f2.local"
+
+  # salt and nextauth.secret are provided via secrets.yaml
+
+  features:
+    telemetryEnabled: false
+
+  # REDIS_PORT: the Langfuse worker Zod schema validates REDIS_PORT as a required
+  # number even when REDIS_CONNECTION_STRING is set; the chart omits it for external
+  # Redis, so we inject it here.
+  additionalEnv:
+    - name: REDIS_PORT
+      value: "6379"
+
+  web:
+    ingress:
+      enabled: true
+      className: nginx
+      annotations:
+        nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+      hosts:
+        - host: langfuse.spark-b0f2.local
+          paths:
+            - path: /
+              pathType: Prefix
+      tls: []
+
+# ---------------------------------------------------------------------------
+# Redis — reuse the existing redis.kutana.svc instance
+# ---------------------------------------------------------------------------
+redis:
+  deploy: false
+  host: "redis.kutana.svc"
+  port: 6379
+  auth:
+    password: ""
+
+# ---------------------------------------------------------------------------
+# S3 / MinIO — reuse existing minio.kutana.svc instance
+# ---------------------------------------------------------------------------
+s3:
+  deploy: false
+  storageProvider: "s3"
+  forcePathStyle: true
+  region: "us-east-1"
+  endpoint: "http://minio.kutana.svc:9000"
+  eventUpload:
+    enabled: true
+    bucket: "langfuse-events"
+    region: "us-east-1"
+  batchExport:
+    enabled: false
+  mediaUpload:
+    enabled: false
+    bucket: "langfuse-media"
+    region: "us-east-1"
+  # accessKeyId and secretAccessKey are provided via secrets.yaml
+
+# ---------------------------------------------------------------------------
+# ClickHouse — deploy bundled fresh instance
+# ---------------------------------------------------------------------------
+clickhouse:
+  deploy: true
+  auth:
+    username: "default"
+    # password provided via secrets.yaml
+
+# ---------------------------------------------------------------------------
+# PostgreSQL — deploy bundled fresh instance
+# ---------------------------------------------------------------------------
+postgresql:
+  deploy: true
+  auth:
+    username: "langfuse"
+    database: "langfuse"
+    # password provided via secrets.yaml
