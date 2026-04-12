@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import {
+  RoomEvent,
+  Track,
+  type Room as LkRoom,
+  type RemoteParticipant as LkRemoteParticipant,
+} from "livekit-client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLiveKitRoom } from "@/hooks/useLiveKitRoom";
 import {
   getAgentSessions,
   getMeetingToken,
@@ -15,7 +22,6 @@ import type {
   TranscriptSegment,
   Participant,
   GatewayMessage,
-  TtsAudioPayload,
   ChatMessage,
   TurnQueueEntry,
   TurnQueuePayload,
@@ -30,13 +36,6 @@ const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL;
 const HUMAN_WS_BASE = WS_BASE_URL
   ? `${WS_BASE_URL.replace(/^https?:/, wsProto)}/connect`
   : `${wsProto}//${window.location.host}/human/connect`;
-const SAMPLE_RATE = 16000;
-
-// Energy gate: drop audio frames where the RMS level is below this threshold.
-// This prevents streaming pure silence / ambient noise to the STT backend,
-// which is the primary cause of Whisper hallucinations ("Thank you." etc.).
-// ~0.01 ≈ -40 dBFS — consistent with what major meeting platforms use.
-const RMS_SILENCE_THRESHOLD = 0.01;
 
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 type RightTab = "transcript" | "chat" | "agents";
@@ -80,10 +79,12 @@ export function MeetingRoomPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  const lk = useLiveKitRoom(meetingId ?? null);
+
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [error, setError] = useState<string | null>(null);
-  const [isMuted, setIsMuted] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
+  const [canPlaybackAudio, setCanPlaybackAudio] = useState(true);
   const [transcripts, setTranscripts] = useState<TranscriptSegment[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [speakingNames, setSpeakingNames] = useState<Set<string>>(new Set());
@@ -99,10 +100,6 @@ export function MeetingRoomPage() {
   const [chatInput, setChatInput] = useState("");
 
   const wsRef = useRef<WebSocket | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const playbackContextRef = useRef<AudioContext | null>(null);
-  const workletRef = useRef<AudioWorkletNode | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const agentEndRef = useRef<HTMLDivElement>(null);
@@ -143,80 +140,8 @@ export function MeetingRoomPage() {
       wsRef.current.close();
       wsRef.current = null;
     }
-    if (workletRef.current) {
-      workletRef.current.disconnect();
-      workletRef.current = null;
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-    if (playbackContextRef.current) {
-      playbackContextRef.current.close();
-      playbackContextRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
   }, []);
 
-  const playTtsAudio = useCallback(async (payload: TtsAudioPayload) => {
-    const { speaker_name, data, format } = payload;
-
-    // Decode base64 → ArrayBuffer
-    const binary = atob(data);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    const audioBuffer = bytes.buffer;
-
-    // Lazy-create a playback AudioContext (separate from the capture context)
-    if (!playbackContextRef.current) {
-      playbackContextRef.current = new AudioContext();
-    }
-    const ctx = playbackContextRef.current;
-
-    // Resume context if suspended (browser autoplay policy)
-    if (ctx.state === "suspended") {
-      await ctx.resume();
-    }
-
-    let decoded: AudioBuffer;
-    if (format === "pcm_s16le") {
-      // Raw signed 16-bit little-endian PCM — convert manually
-      const pcm16 = new Int16Array(audioBuffer);
-      const float32 = new Float32Array(pcm16.length);
-      for (let i = 0; i < pcm16.length; i++) {
-        float32[i] = pcm16[i] / (pcm16[i] < 0 ? 0x8000 : 0x7fff);
-      }
-      // Use source sample rate from payload, or 24000 (Cartesia default)
-      const sourceSampleRate = payload.sample_rate || 24000;
-      decoded = ctx.createBuffer(1, float32.length, sourceSampleRate);
-      decoded.copyToChannel(float32, 0);
-    } else {
-      // WAV / MP3 / any other container — let the browser decode it
-      try {
-        decoded = await ctx.decodeAudioData(audioBuffer);
-      } catch (err) {
-        console.error("[TTS] decodeAudioData failed:", err);
-        return;
-      }
-    }
-
-    // Mark speaker as active, play, then clear
-    setSpeakingNames((prev) => new Set([...prev, speaker_name]));
-    const source = ctx.createBufferSource();
-    source.buffer = decoded;
-    source.connect(ctx.destination);
-    source.onended = () => {
-      setSpeakingNames((prev) => {
-        const next = new Set(prev);
-        next.delete(speaker_name);
-        return next;
-      });
-    };
-    source.start();
-  }, []);
 
   const handleWsMessage = useCallback((event: MessageEvent) => {
     let msg: GatewayMessage;
@@ -278,9 +203,7 @@ export function MeetingRoomPage() {
         break;
       case "event": {
         const evPayload = msg.payload as Record<string, unknown>;
-        if (msg.event_type === "tts.audio") {
-          void playTtsAudio(evPayload as unknown as TtsAudioPayload);
-        } else if (msg.event_type === "chat.message.received") {
+        if (msg.event_type === "chat.message.received") {
           const cm: ChatMessage = {
             id: `${evPayload.sender_id}-${evPayload.timestamp ?? Date.now()}`,
             sender_id: evPayload.sender_id as string,
@@ -440,7 +363,7 @@ export function MeetingRoomPage() {
         break;
       }
     }
-  }, [playTtsAudio]);
+  }, [user?.id]);
 
   // Connect on mount
   useEffect(() => {
@@ -500,84 +423,6 @@ export function MeetingRoomPage() {
           if (!cancelled) setStatus("disconnected");
         };
 
-        // 3. Start audio capture (optional — meeting works without mic)
-        try {
-          console.log("[Meeting] calling getUserMedia, mediaDevices=", !!navigator.mediaDevices);
-          let stream: MediaStream;
-          try {
-            stream = await navigator.mediaDevices.getUserMedia({
-              audio: {
-                sampleRate: { ideal: SAMPLE_RATE },
-                channelCount: { ideal: 1 },
-                echoCancellation: true,
-                noiseSuppression: true,
-              },
-            });
-          } catch {
-            // Fallback: accept any audio device
-            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          }
-          console.log("[Meeting] getUserMedia succeeded, cancelled=", cancelled);
-          if (cancelled) {
-            stream.getTracks().forEach((t) => t.stop());
-            return;
-          }
-          streamRef.current = stream;
-
-          const audioCtx = new AudioContext({ sampleRate: SAMPLE_RATE });
-          audioContextRef.current = audioCtx;
-
-          // Use ScriptProcessorNode as fallback (widely supported)
-          const source = audioCtx.createMediaStreamSource(stream);
-          const processor = audioCtx.createScriptProcessor(4096, 1, 1);
-
-          processor.onaudioprocess = (e: AudioProcessingEvent) => {
-            if (
-              wsRef.current?.readyState !== WebSocket.OPEN ||
-              isMutedRef.current
-            )
-              return;
-
-            const input = e.inputBuffer.getChannelData(0);
-
-            // Energy gate: skip silent frames to avoid sending ambient noise to
-            // the STT backend (primary cause of Whisper hallucinations).
-            let sumSq = 0;
-            for (let i = 0; i < input.length; i++) sumSq += input[i] * input[i];
-            const rms = Math.sqrt(sumSq / input.length);
-            if (rms < RMS_SILENCE_THRESHOLD) return;
-            // Convert Float32 [-1,1] to Int16
-            const pcm16 = new Int16Array(input.length);
-            for (let i = 0; i < input.length; i++) {
-              const s = Math.max(-1, Math.min(1, input[i]));
-              pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-            }
-
-            // Base64 encode
-            const bytes = new Uint8Array(pcm16.buffer);
-            let binary = "";
-            for (let i = 0; i < bytes.length; i++) {
-              binary += String.fromCharCode(bytes[i]);
-            }
-            const b64 = btoa(binary);
-
-            wsRef.current.send(
-              JSON.stringify({
-                type: "audio_data",
-                data: b64,
-                sample_rate: SAMPLE_RATE,
-              })
-            );
-          };
-
-          source.connect(processor);
-          processor.connect(audioCtx.destination);
-        } catch (audioErr) {
-          console.warn("[Meeting] Audio capture unavailable:", audioErr);
-          if (!cancelled) {
-            setError("No microphone detected — you can still view the meeting.");
-          }
-        }
       } catch (err) {
         console.error("[Meeting] connect() error:", err);
         if (!cancelled) {
@@ -600,11 +445,14 @@ export function MeetingRoomPage() {
     };
   }, [meetingId, handleWsMessage, cleanup]);
 
-  // Keep a ref for mute state so the audio callback can read it
-  const isMutedRef = useRef(isMuted);
+  // Track LiveKit autoplay gate
   useEffect(() => {
-    isMutedRef.current = isMuted;
-  }, [isMuted]);
+    if (!lk.room || lk.status !== "connected") return;
+    setCanPlaybackAudio(lk.room.canPlaybackAudio);
+    const handler = () => setCanPlaybackAudio(lk.room!.canPlaybackAudio);
+    lk.room.on(RoomEvent.AudioPlaybackStatusChanged, handler);
+    return () => { lk.room?.off(RoomEvent.AudioPlaybackStatusChanged, handler); };
+  }, [lk.room, lk.status]);
 
   function handleLeave() {
     cleanup();
@@ -630,19 +478,6 @@ export function MeetingRoomPage() {
       is_agent: false,
     }]);
     setChatInput("");
-  }
-
-  function toggleMute() {
-    setIsMuted((prev) => {
-      const next = !prev;
-      // Also mute the actual media track
-      if (streamRef.current) {
-        streamRef.current.getAudioTracks().forEach((t) => {
-          t.enabled = !next;
-        });
-      }
-      return next;
-    });
   }
 
   function toggleHand() {
@@ -698,6 +533,29 @@ export function MeetingRoomPage() {
         </div>
       )}
 
+      {/* LiveKit status banners */}
+      {lk.status === "reconnecting" && (
+        <div className="mb-3 rounded-lg border border-amber-700 bg-amber-950/50 px-4 py-2.5 text-sm text-amber-400">
+          Audio reconnecting...
+        </div>
+      )}
+      {lk.status === "error" && lk.error && (
+        <div className="mb-3 rounded-lg border border-red-800 bg-red-950/50 px-4 py-2.5 text-sm text-red-400">
+          Audio error: {lk.error.message}
+        </div>
+      )}
+
+      {/* Autoplay gate — browser blocked audio autoplay */}
+      {!canPlaybackAudio && (
+        <button
+          type="button"
+          onClick={() => lk.room?.startAudio()}
+          className="mb-3 w-full rounded-lg border border-blue-700 bg-blue-950/50 px-4 py-2.5 text-sm text-blue-300 hover:bg-blue-900/50 transition-colors text-left"
+        >
+          Click to enable audio playback
+        </button>
+      )}
+
       {/* Your turn alert */}
       {yourTurnAlert && (
         <div className="mb-3 rounded-lg border border-emerald-600 bg-emerald-900/40 px-4 py-2.5 text-sm text-emerald-300 flex items-center gap-2 animate-pulse">
@@ -723,6 +581,17 @@ export function MeetingRoomPage() {
           <h2 className="text-sm font-semibold text-gray-300 mb-4">
             Participants ({totalCount})
           </h2>
+
+          {/* Video tiles — only shown when VITE_ENABLE_VIDEO=1 */}
+          {import.meta.env.VITE_ENABLE_VIDEO === "1" && lk.room && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              <LocalVideoTile room={lk.room} />
+              {lk.participants.map((p) => (
+                <RemoteVideoTile key={p.identity} participant={p} />
+              ))}
+            </div>
+          )}
+
           <div className={`grid ${getGridClasses(totalCount)} gap-4`}>
             {/* Current user card */}
             <div className={`relative flex flex-col items-center justify-center ${getTileHeight(totalCount)} w-full rounded-xl border border-emerald-700/50 bg-gray-900/50 p-4`}>
@@ -730,7 +599,7 @@ export function MeetingRoomPage() {
                 <div className={`${getAvatarSize(totalCount)} rounded-full bg-emerald-600 flex items-center justify-center font-semibold text-white`}>
                   {user?.name?.charAt(0).toUpperCase() ?? "?"}
                 </div>
-                {!isMuted && (
+                {lk.localMicEnabled && (
                   <div className={`absolute inset-0 ${getAvatarSize(totalCount)} rounded-full border-2 border-green-400 animate-pulse`} />
                 )}
               </div>
@@ -743,7 +612,7 @@ export function MeetingRoomPage() {
                   <HandIcon className="h-4 w-4" />
                 </div>
               )}
-              {isMuted && (
+              {!lk.localMicEnabled && (
                 <div className="absolute top-3 right-3 text-red-400" title="Muted">
                   <MicOffIconSmall />
                 </div>
@@ -754,7 +623,9 @@ export function MeetingRoomPage() {
             {otherParticipants.map((p) => {
               const isAgent = isAgentParticipant(p);
               const isActive = activeSpeaker?.id === p.id;
-              const isSpeakingViaTts = speakingNames.has(p.name);
+              const isSpeakingViaTts =
+                speakingNames.has(p.name) ||
+                lk.activeSpeakerIdentities.includes(p.id);
               const hasHandRaised = turnQueue.some((q) => q.participant_id === p.id);
               return (
                 <div
@@ -1016,10 +887,10 @@ export function MeetingRoomPage() {
       {/* Sticky bottom controls bar */}
       <div className="mt-4 flex items-center justify-center gap-4 border-t border-gray-800 pt-4">
         <Button
-          variant={isMuted ? "destructive" : "outline"}
-          onClick={toggleMute}
+          variant={!lk.localMicEnabled ? "destructive" : "outline"}
+          onClick={() => void lk.enableMic(!lk.localMicEnabled)}
         >
-          {isMuted ? (
+          {!lk.localMicEnabled ? (
             <>
               <MicOffIcon /> Unmute
             </>
@@ -1380,5 +1251,49 @@ function PauseIcon() {
     <svg className="h-3.5 w-3.5 text-gray-500" viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
     </svg>
+  );
+}
+
+/** Local camera video tile — rendered only when VITE_ENABLE_VIDEO=1 */
+function LocalVideoTile({ room }: { room: LkRoom }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    const pub = room.localParticipant.getTrackPublication(Track.Source.Camera);
+    const track = pub?.track;
+    if (!track) return;
+    track.attach(el);
+    return () => { track.detach(el); };
+  }, [room]);
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      muted
+      playsInline
+      className="w-32 h-24 rounded-lg object-cover bg-gray-800 border border-gray-700"
+    />
+  );
+}
+
+/** Remote participant camera video tile — rendered only when VITE_ENABLE_VIDEO=1 */
+function RemoteVideoTile({ participant }: { participant: LkRemoteParticipant }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const pub = participant.getTrackPublication(Track.Source.Camera);
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !pub?.track) return;
+    pub.track.attach(el);
+    return () => { pub.track?.detach(el); };
+  }, [pub]);
+  if (!pub?.isSubscribed) return null;
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      className="w-32 h-24 rounded-lg object-cover bg-gray-800 border border-gray-700"
+    />
   );
 }

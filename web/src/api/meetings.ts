@@ -7,6 +7,12 @@ import type {
   SelectedAgent,
 } from "@/types";
 
+export interface LiveKitTokenResponse {
+  token: string;
+  url: string;
+  roomName: string;
+}
+
 export async function listMeetings(): Promise<PaginatedResponse<Meeting>> {
   return apiFetch<PaginatedResponse<Meeting>>("/meetings");
 }
@@ -29,6 +35,16 @@ export async function getMeetingToken(
     method: "POST",
     body: JSON.stringify({ meeting_id: meetingId }),
   });
+}
+
+export async function getLiveKitToken(
+  meetingId: string
+): Promise<LiveKitTokenResponse> {
+  const raw = await apiFetch<{ token: string; url: string; room_name: string }>(
+    `/meetings/${meetingId}/livekit-token`,
+    { method: "POST" }
+  );
+  return { token: raw.token, url: raw.url, roomName: raw.room_name };
 }
 
 export async function startMeeting(meetingId: string): Promise<Meeting> {
