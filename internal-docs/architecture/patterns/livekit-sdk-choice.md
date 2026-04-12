@@ -69,6 +69,21 @@ The api-server uses only the `livekit-api` package — **not** the `livekit` rtc
 
 Skipping the rtc dependency keeps the api-server image small and avoids pulling in native WebRTC binaries on a service that doesn't need them. Only agent-gateway (which actually connects to rooms) depends on the `livekit` rtc SDK.
 
+## Web Client: `livekit-client` (browser SDK)
+
+The React web client uses the `livekit-client` npm package — the official browser SDK — not any server-side rtc SDK. It runs entirely in the browser over WebRTC.
+
+**`useLiveKitRoom` hook** (`web/src/hooks/useLiveKitRoom.ts`) is the single integration point:
+1. Fetches a short-lived JWT from `POST /v1/meetings/{id}/livekit-token` (api-server).
+2. Calls `new Room().connect(livekitUrl, token)` with the received token.
+3. Publishes a `LocalAudioTrack` (replaces the deprecated `createScriptProcessor` WebSocket audio path).
+4. Subscribes to all remote audio tracks (agent TTS output + other human participants).
+5. Exposes `status`, `participants`, `isMuted`, and `toggleMute()` to the component tree.
+
+The hook is feature-flagged via `VITE_ENABLE_VIDEO` (see `LIVEKIT-MIGRATION-NOTES.md`). When the flag is false the hook exits early and `MeetingRoomPage` falls back to the legacy WebSocket path, preserving rollback capability without a branch switch.
+
+**Why `livekit-client` and not `livekit-agents`**: `livekit-agents` is a Python/Node server-side framework; there is no browser equivalent. The browser SDK is purely a WebRTC transport layer, which is all the web client needs.
+
 ## References
 
 - `packages/kutana-providers/src/kutana_providers/audio/livekit_adapter.py` — LiveKitAudioAdapter
