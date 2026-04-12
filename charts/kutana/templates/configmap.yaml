@@ -53,3 +53,6 @@ data:
   # Langfuse (LLM observability)
   LANGFUSE_HOST: "http://langfuse-web.{{ .Release.Namespace }}.svc:3000"
   LANGFUSE_PUBLIC_KEY: {{ .Values.observability.langfusePublicKey | default "" | quote }}
+  # LiveKit (WebRTC SFU)
+  LIVEKIT_URL: "ws://livekit-server.{{ .Release.Namespace }}.svc:7880"
+  AGENT_GATEWAY_LIVEKIT_URL: "ws://livekit-server.{{ .Release.Namespace }}.svc:7880"

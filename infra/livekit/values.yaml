@@ -1,0 +1,40 @@
+# LiveKit Helm chart values for Kutana AI / DGX Spark
+#
+# Chart: livekit/livekit-server
+# Repo:  https://helm.livekit.io
+# Install: see infra/livekit/install.sh
+#
+# API keys come from the livekit-credentials K8s secret (NOT this file).
+# See infra/livekit/secrets.example.yaml for how to create it.
+# ---------------------------------------------------------------------------
+
+replicaCount: 1
+terminationGracePeriodSeconds: 3600
+
+livekit:
+  port: 7880
+  log_level: info
+  rtc:
+    use_external_ip: false
+    tcp_port: 7881
+    port_range_start: 50000
+    port_range_end: 60000
+  redis:
+    address: redis.kutana.svc.cluster.local:6379
+  turn:
+    enabled: false
+
+storeKeysInSecret:
+  enabled: true
+  existingSecret: livekit-credentials
+
+loadBalancer:
+  type: disable
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 512Mi

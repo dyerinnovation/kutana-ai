@@ -163,6 +163,8 @@ secrets:
   langfuseNextauthSecret: ""
   langfuseSalt: ""
   langfuseSecretKey: ""
+  livekitApiKey: ""
+  livekitApiSecret: ""
 
 # ---------------------------------------------------------------------------
 # Stripe Billing (non-secret config — populate from scripts/stripe_setup.py)
@@ -234,3 +236,4 @@ ingress:
     web: dev.kutana.ai
     api: api-dev.kutana.ai
     ws: ws-dev.kutana.ai
+    livekit: livekit-dev.kutana.ai
