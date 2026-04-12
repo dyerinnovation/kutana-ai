@@ -19,6 +19,8 @@ class ProviderType(enum.StrEnum):
     EXTRACTOR = "extractor"
     TURN_MANAGER = "turn_manager"
     CHAT_STORE = "chat_store"
+    AUDIO_ADAPTER = "audio_adapter"
+    AUDIO_PUBLISHER = "audio_publisher"
 
 
 class ProviderRegistry:
@@ -177,6 +179,23 @@ def _build_default_registry() -> ProviderRegistry:
 
     # Chat store providers
     registry.register(ProviderType.CHAT_STORE, "redis", RedisChatStore)
+
+    # Audio adapter/publisher providers (optional — requires livekit extra)
+    try:
+        from kutana_providers.audio.livekit_adapter import LiveKitAudioAdapter
+
+        registry.register(ProviderType.AUDIO_ADAPTER, "livekit", LiveKitAudioAdapter)
+    except ImportError:
+        logger.debug("livekit not installed; skipping LiveKitAudioAdapter registration")
+
+    try:
+        from kutana_providers.audio.livekit_publisher import (
+            LiveKitAudioPublisher,  # type: ignore[import]
+        )
+
+        registry.register(ProviderType.AUDIO_PUBLISHER, "livekit", LiveKitAudioPublisher)
+    except ImportError:
+        logger.debug("livekit not installed; skipping LiveKitAudioPublisher registration")
 
     return registry
 

@@ -29,6 +29,7 @@ groq = ["groq>=0.11"]
 aws = ["aioboto3>=13.0"]
 gcp = ["google-cloud-pubsub>=2.0"]
 nats = ["nats-py>=2.7"]
+livekit = ["livekit>=1.0,<2.0"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/kutana_providers"]
