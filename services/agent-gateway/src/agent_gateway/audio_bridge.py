@@ -108,6 +108,17 @@ class AudioBridge:
 
         logger.info("Created audio pipeline for meeting %s", meeting_id)
 
+    def get_pipeline(self, meeting_id: UUID) -> AudioPipeline | None:
+        """Return the active AudioPipeline for a meeting, or None.
+
+        Args:
+            meeting_id: The meeting whose pipeline to retrieve.
+
+        Returns:
+            The active AudioPipeline, or None if not yet created.
+        """
+        return self._pipelines.get(meeting_id)
+
     async def process_audio(self, meeting_id: UUID, audio_bytes: bytes) -> None:
         """Forward PCM16 audio to the meeting's pipeline.
 

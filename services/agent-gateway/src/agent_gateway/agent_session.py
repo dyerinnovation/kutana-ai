@@ -186,6 +186,11 @@ class AgentSessionHandler:
         if self._audio_bridge is not None:
             await self._audio_bridge.ensure_pipeline(msg.meeting_id)
 
+        # Ensure LiveKit worker for this meeting
+        room_name = await self._lookup_room_name(msg.meeting_id)
+        if room_name and self._manager.livekit_url:
+            await self._manager.ensure_livekit_worker(msg.meeting_id, room_name)
+
         # Infer high-level audio capability from granted capabilities
         self.audio_capability = self._infer_audio_capability(msg.tts_enabled)
 
@@ -361,6 +366,7 @@ class AgentSessionHandler:
             if self._audio_bridge is not None:
                 await self._audio_bridge.close_pipeline(self.meeting_id)
             self._manager.leave_meeting(self.session_id, self.meeting_id)
+            await self._manager.cleanup_livekit_worker(self.meeting_id)
             await self._persist_leave()
             logger.info(
                 "Agent %s left meeting %s: %s",
@@ -693,6 +699,16 @@ class AgentSessionHandler:
             )
             return
 
+        # If a LiveKit worker is active, route TTS directly into the room
+        worker = self._manager.livekit_workers.get(self.meeting_id)
+        if worker and worker.publisher:
+            audio = await self._tts_bridge.synthesize_text(
+                self.session_id, msg.text, self.tts_voice
+            )
+            if audio is not None:
+                await worker.publisher.push_audio(audio)
+            return
+
         success = await self._tts_bridge.synthesize_and_broadcast(
             session_id=self.session_id,
             meeting_id=self.meeting_id,
@@ -750,14 +766,40 @@ class AgentSessionHandler:
             if self._audio_bridge is not None:
                 await self._audio_bridge.close_pipeline(self.meeting_id)
             self._manager.leave_meeting(self.session_id, self.meeting_id)
+            await self._manager.cleanup_livekit_worker(self.meeting_id)
             await self._persist_leave()
         if self._tts_bridge is not None and self.tts_enabled:
             self._tts_bridge.release_session(self.session_id)
         self._manager.unregister(self.session_id)
 
     # ------------------------------------------------------------------
-    # Database persistence helpers
+    # Database helpers
     # ------------------------------------------------------------------
+
+    async def _lookup_room_name(self, meeting_id: UUID) -> str | None:
+        """Query RoomORM.name for the given meeting.
+
+        Args:
+            meeting_id: The meeting whose associated room name to look up.
+
+        Returns:
+            The room name string, or None if not found or DB is unavailable.
+        """
+        if self._db_factory is None:
+            return None
+        try:
+            from sqlalchemy import select
+
+            from kutana_core.database.models import RoomORM
+
+            async with self._db_factory() as db:
+                stmt = select(RoomORM).where(RoomORM.meeting_id == meeting_id)
+                result = await db.execute(stmt)
+                room = result.scalar_one_or_none()
+                return room.name if room else None
+        except Exception:
+            logger.warning("Failed to look up room name for meeting %s", meeting_id)
+            return None
 
     async def _persist_join(self, meeting_id: UUID) -> None:
         """Create an AgentSessionORM record when joining a meeting.

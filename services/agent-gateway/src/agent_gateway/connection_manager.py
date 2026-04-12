@@ -8,8 +8,10 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 if TYPE_CHECKING:
     from uuid import UUID
 
+    from agent_gateway.audio_bridge import AudioBridge
     from agent_gateway.audio_router import AudioRouter
     from agent_gateway.chat_bridge import ChatBridge
+    from agent_gateway.livekit_worker import LiveKitAgentWorker
     from agent_gateway.tts_bridge import TTSBridge
     from agent_gateway.turn_bridge import TurnBridge
 
@@ -57,9 +59,14 @@ class ConnectionManager:
         _sessions: Map of session_id -> session handler.
         _meeting_sessions: Map of meeting_id -> set of session_ids.
         _audio_routers: Map of meeting_id -> AudioRouter for the audio sidecar.
+        livekit_workers: Map of meeting_id -> LiveKitAgentWorker for the bot participant.
         _max_connections: Maximum allowed concurrent connections.
         redis: Optional Redis client for channel publishing.
         _audio_vad_timeout_s: VAD silence timeout forwarded to new AudioRouters.
+        audio_bridge: Shared AudioBridge for STT pipeline access.
+        livekit_url: LiveKit server WebSocket URL (empty disables LiveKit).
+        livekit_api_key: LiveKit API key for bot token signing.
+        livekit_api_secret: LiveKit API secret for bot token signing.
     """
 
     def __init__(
@@ -76,12 +83,17 @@ class ConnectionManager:
         self._sessions: dict[UUID, Any] = {}  # AgentSessionHandler | HumanSessionHandler
         self._meeting_sessions: dict[UUID, set[UUID]] = {}
         self._audio_routers: dict[UUID, AudioRouter] = {}
+        self.livekit_workers: dict[UUID, LiveKitAgentWorker] = {}
         self._max_connections = max_connections
         self._audio_vad_timeout_s = audio_vad_timeout_s
         self.redis: Any | None = None
         self.turn_bridge: TurnBridge | None = None
         self.chat_bridge: ChatBridge | None = None
         self.tts_bridge: TTSBridge | None = None
+        self.audio_bridge: AudioBridge | None = None
+        self.livekit_url: str = ""
+        self.livekit_api_key: str = ""
+        self.livekit_api_secret: str = ""
 
     @property
     def active_count(self) -> int:
@@ -234,3 +246,47 @@ class ConnectionManager:
             await router.stop()
             del self._audio_routers[meeting_id]
             logger.info("AudioRouter cleaned up for meeting %s", meeting_id)
+
+    # ------------------------------------------------------------------
+    # LiveKit worker management
+    # ------------------------------------------------------------------
+
+    async def ensure_livekit_worker(self, meeting_id: UUID, room_name: str) -> LiveKitAgentWorker:
+        """Get or create a LiveKitAgentWorker for a meeting.
+
+        Args:
+            meeting_id: The meeting to join as a bot participant.
+            room_name: Name of the LiveKit room to connect to.
+
+        Returns:
+            The active LiveKitAgentWorker for the meeting.
+        """
+        if meeting_id in self.livekit_workers:
+            return self.livekit_workers[meeting_id]
+
+        from agent_gateway.livekit_worker import LiveKitAgentWorker
+
+        worker = LiveKitAgentWorker(
+            meeting_id=meeting_id,
+            livekit_room_name=room_name,
+            livekit_url=self.livekit_url,
+            livekit_api_key=self.livekit_api_key,
+            livekit_api_secret=self.livekit_api_secret,
+            audio_bridge=self.audio_bridge,
+        )
+        await worker.connect()
+        self.livekit_workers[meeting_id] = worker
+        return worker
+
+    async def cleanup_livekit_worker(self, meeting_id: UUID) -> None:
+        """Disconnect and remove the worker when the meeting has no participants.
+
+        Args:
+            meeting_id: The meeting whose worker to clean up.
+        """
+        if self._meeting_sessions.get(meeting_id):
+            return
+        worker = self.livekit_workers.pop(meeting_id, None)
+        if worker is not None:
+            await worker.disconnect()
+            logger.info("LiveKit worker cleaned up for meeting %s", meeting_id)

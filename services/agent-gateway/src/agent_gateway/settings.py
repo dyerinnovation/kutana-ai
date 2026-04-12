@@ -56,6 +56,10 @@ class AgentGatewaySettings(BaseSettings):
     tts_elevenlabs_api_key: str = ""
     tts_char_limit: int = 100_000
     tts_default_voice: str = "en_US-lessac-medium"
+    # LiveKit settings
+    livekit_url: str = ""
+    livekit_api_key: str = ""
+    livekit_api_secret: str = ""
 
     model_config = {
         "env_prefix": "AGENT_GATEWAY_",

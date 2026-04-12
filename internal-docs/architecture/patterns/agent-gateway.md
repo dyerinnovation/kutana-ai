@@ -96,3 +96,47 @@ The `EventRelay` consumes from Redis Streams (`kutana:events`) using consumer gr
 - `Meeting` — dial_in_number/meeting_code now optional; added room_id, room_name, meeting_type
 - `Participant` — added connection_type, agent_config_id, OBSERVER role
 - `AgentConfig` — added agent_type, protocol_version, default_capabilities, max_concurrent_sessions
+
+## LiveKit Audio Integration
+
+### Overview
+
+Phase 2 adds LiveKit as the audio/video transport layer for the agent-gateway. Every meeting gets a LiveKit room. Human audio flows in via LiveKit WebRTC (browser/mobile); agent TTS flows back out through LiveKit. The agent-gateway joins each room as a bot participant via `LiveKitAgentWorker`.
+
+### Data Flow
+
+```
+Human (browser/mobile)
+   ↕ LiveKit WebRTC
+LiveKit SFU
+   ↕ livekit rtc SDK
+agent-gateway bot (LiveKitAgentWorker)
+   ├─ LiveKitAudioAdapter → AudioBridge → STT → Redis → EventRelay → agents
+   └─ TTSBridge.synthesize_text() → LiveKitAudioPublisher → LiveKit → humans
+```
+
+### Key Classes
+
+| Class | Location | Responsibility |
+|-------|----------|----------------|
+| `LiveKitAgentWorker` | `agent_gateway/livekit_worker.py` | Owns `rtc.Room` connection, one per meeting. Creates on first participant join, destroys on last leave. |
+| `LiveKitAudioAdapter` | `kutana_providers/audio/livekit_adapter.py` | Subscribes to room audio tracks. Spawns a per-participant async consumer task that reads `rtc.AudioFrame` objects, resamples/downmixes to PCM16 16 kHz mono, and pipes to `AudioPipeline`/STT. |
+| `LiveKitAudioPublisher` | `kutana_providers/audio/livekit_publisher.py` | Publishes TTS output into the room as a `LocalAudioTrack`. Accepts PCM16 24 kHz bytes from `TTSBridge`, splits into 20 ms frames, and forwards to `rtc.AudioSource`. |
+
+### Worker Lifecycle
+
+Mirrors the `AudioRouter` pattern — `ensure_livekit_worker()` is called on participant join to create the `rtc.Room` connection if one does not already exist, and `cleanup_livekit_worker()` is called when the last participant leaves to disconnect and release the room. LiveKit server `empty_timeout` acts as a safety net in case cleanup is not called (e.g. after a crash).
+
+### SDK Choice
+
+Kutana uses the `livekit` rtc SDK only — **not** the `livekit-agents` framework. The rtc SDK provides raw transport primitives (`rtc.Room`, `rtc.AudioStream`, `rtc.AudioSource`, `rtc.LocalAudioTrack`) that plug into the existing `AudioBridge`/`TTSBridge` orchestration stack without competing with it.
+
+The `livekit-agents` framework owns room lifecycle and has its own opinionated STT → LLM → TTS pipeline; adding it would create two competing orchestration layers and doesn't fit Kutana's multi-agent meeting model (multiple AI agents per room, mixed-minus audio, per-speaker VAD, turn queues). See `livekit-sdk-choice.md` for the full rationale.
+
+### TTS Routing
+
+`agent_session._handle_spoken_text()` checks whether an active `LiveKitAgentWorker` exists for the meeting. If one is found, it calls `TTSBridge.synthesize_text()` and pipes the resulting PCM16 bytes to `publisher.push_audio()` for delivery via LiveKit. If no worker is present the call falls through to the legacy WebSocket broadcast path, maintaining backward compatibility.
+
+### No Meeting Type Branching
+
+Every meeting uses the same LiveKit audio path. Agent-only meetings (no human participants) have idle rooms with no audio tracks flowing. There is no conditional branching on meeting type, and no overhead for agent-only rooms beyond holding an open room connection.

@@ -114,6 +114,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         whisper_model_size=_settings.whisper_model_size,
         whisper_api_url=_settings.whisper_api_url,
     )
+    _connection_manager.audio_bridge = _audio_bridge
+    _connection_manager.livekit_url = _settings.livekit_url
+    _connection_manager.livekit_api_key = _settings.livekit_api_key
+    _connection_manager.livekit_api_secret = _settings.livekit_api_secret
+    logger.info(
+        "LiveKit bot participant: %s",
+        "enabled" if _settings.livekit_url else "disabled (AGENT_GATEWAY_LIVEKIT_URL not set)",
+    )
 
     # Initialise TurnBridge (Redis-backed turn management)
     from kutana_providers.turn_management.redis_turn_manager import RedisTurnManager
@@ -180,6 +188,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     yield
 
     logger.info("agent-gateway shutting down")
+    if _connection_manager is not None:
+        for _worker in list(_connection_manager.livekit_workers.values()):
+            await _worker.disconnect()
+        _connection_manager.livekit_workers.clear()
     if _chat_bridge is not None:
         await _chat_bridge.stop()
         _chat_bridge = None
