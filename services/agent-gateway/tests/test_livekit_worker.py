@@ -129,11 +129,13 @@ class TestConnect:
         mock_api.AccessToken.assert_called_once_with(_LK_KEY, _LK_SECRET)
         token_builder.with_identity.assert_called_once_with(f"kutana-gateway-{meeting_id}")
 
-        grants_arg = token_builder.with_grants.call_args[0][0]
-        assert grants_arg.room_join is True
-        assert grants_arg.room == _LK_ROOM
-        assert grants_arg.can_subscribe is True
-        assert grants_arg.can_publish is True
+        # VideoGrants is constructed with the correct kwargs.
+        mock_api.VideoGrants.assert_called_once_with(
+            room_join=True,
+            room=_LK_ROOM,
+            can_subscribe=True,
+            can_publish=True,
+        )
 
     async def test_connect_skips_adapter_when_no_pipeline(self, worker, mock_bridge) -> None:
         """connect() skips adapter creation when AudioBridge returns None pipeline."""
