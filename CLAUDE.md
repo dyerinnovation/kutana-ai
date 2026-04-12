@@ -40,6 +40,7 @@ See `internal-docs/development/TASKLIST.md` for the task queue.
 ## Key References
 
 - **Architecture patterns:** `internal-docs/architecture/patterns/` (core, providers, message-bus, memory, service-patterns, auth, mcp-server, uv, git, stripe-billing)
+- **Screen Sharing & Agent Vision:** pattern doc at `internal-docs/architecture/patterns/screen-sharing.md`; full feasibility research at `~/Documents/dev/research-and-planning/kutana-screen-sharing-research.md`. VP9/contentHint=text encoding, Electron desktopCapturer bridge, Agent Gateway VideoStream→PIL→base64 pipeline, `kutana_screenshot` MCP tool, on-demand-only privacy rules.
 - **Agent integration:** `internal-docs/architecture/patterns/cli-mcp-skill.md` (CLI / MCP / Skill architecture)
 - `internal-docs/architecture/patterns/claude-code-channels.md` — Claude Code channels spec and Kutana integration plan
 - **Task queue:** `../shared-docs/development/TASKLIST.md`
