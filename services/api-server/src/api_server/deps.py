@@ -20,6 +20,8 @@ from api_server.event_publisher import EventPublisher
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from api_server.services.livekit_service import LiveKitService
+
 logger = logging.getLogger(__name__)
 
 
@@ -95,6 +97,12 @@ class Settings(BaseSettings):
     langfuse_secret_key: str = ""
     langfuse_public_key: str = ""
     langfuse_host: str = "http://localhost:3100"
+
+    # LiveKit (WebRTC) — room provisioning + participant token issuance
+    livekit_url: str = ""
+    livekit_api_key: str = ""
+    livekit_api_secret: str = ""
+    livekit_token_ttl_seconds: int = 21600
 
 
 @lru_cache(maxsize=1)
@@ -178,6 +186,32 @@ async def get_redis(
         yield client
     finally:
         await client.aclose()
+
+
+@lru_cache(maxsize=1)
+def get_livekit_service() -> LiveKitService:
+    """Return cached singleton LiveKitService built from application settings.
+
+    The service is constructed lazily so local/test environments without
+    LiveKit configured can still import this module. Callers should check
+    ``settings.livekit_url`` before invoking async methods that talk to the
+    LiveKit server.
+
+    Returns:
+        A singleton :class:`LiveKitService` instance.
+    """
+    # Imported lazily to avoid a hard dependency at module import time —
+    # the livekit_service module is added by a parallel teammate and may
+    # not always be available during partial check-ins.
+    from api_server.services.livekit_service import LiveKitService
+
+    settings = get_settings()
+    return LiveKitService(
+        url=settings.livekit_url,
+        api_key=settings.livekit_api_key,
+        api_secret=settings.livekit_api_secret,
+        token_ttl_seconds=settings.livekit_token_ttl_seconds,
+    )
 
 
 async def get_event_publisher(

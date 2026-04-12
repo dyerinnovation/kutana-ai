@@ -20,16 +20,19 @@ from api_server.deps import (
     _build_session_factory,
     get_db_session,
     get_event_publisher,
+    get_livekit_service,
     get_settings,
 )
 from api_server.event_publisher import EventPublisher  # noqa: TC001 — FastAPI DI
 from api_server.managed_agent_activation import _warm_agent_in_background, _warming_tasks
+from api_server.services.livekit_service import LiveKitService  # noqa: TC001 — FastAPI DI
 from kutana_core.database.models import (
     AgentTemplateORM,
     HostedAgentSessionORM,
     MeetingInviteORM,
     MeetingORM,
     MeetingSelectedTemplateORM,
+    RoomORM,
     UserORM,
 )
 from kutana_core.events.definitions import MeetingEnded, MeetingStarted
@@ -298,6 +301,7 @@ async def start_meeting(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     publisher: Annotated[EventPublisher, Depends(get_event_publisher)],
     settings: Annotated[Settings, Depends(get_settings)],
+    lk: Annotated[LiveKitService, Depends(get_livekit_service)],
 ) -> MeetingResponse:
     """Start a meeting and fire background warming for selected agents.
 
@@ -340,6 +344,31 @@ async def start_meeting(
     meeting.started_at = datetime.now(tz=UTC)
     await db.flush()
     await db.refresh(meeting)
+
+    # Provision (or look up) a LiveKit room for this meeting. If LiveKit is
+    # not configured (local dev) skip gracefully so the rest of the start
+    # flow still works.
+    if settings.livekit_url:
+        room_result = await db.execute(select(RoomORM).where(RoomORM.meeting_id == meeting_id))
+        room = room_result.scalar_one_or_none()
+        if room is None:
+            room = RoomORM(
+                name=f"meeting-{meeting_id}",
+                meeting_id=meeting_id,
+                status="active",
+            )
+            db.add(room)
+            await db.flush()
+            await db.refresh(room)
+        sid = await lk.ensure_room(room.name)
+        room.livekit_room_id = sid
+        await db.flush()
+    else:
+        logger.debug(
+            "LiveKit not configured (livekit_url empty) — skipping room provisioning "
+            "for meeting %s",
+            meeting_id,
+        )
 
     # Load selections for this meeting (source of truth for which agents warm)
     sel_result = await db.execute(
@@ -595,6 +624,76 @@ async def get_selected_agents(
             )
             for row in rows
         ],
+    )
+
+
+# ---------------------------------------------------------------------------
+# LiveKit participant token
+# ---------------------------------------------------------------------------
+
+
+class LiveKitTokenResponse(BaseModel):
+    """Response payload for the LiveKit participant token endpoint.
+
+    Attributes:
+        token: Short-lived participant JWT signed with the LiveKit API secret.
+        url: The LiveKit server URL the client should connect to.
+        room_name: The LiveKit room name (matches ``rooms.name``).
+    """
+
+    token: str
+    url: str
+    room_name: str
+
+
+@router.post("/{meeting_id}/livekit-token", response_model=LiveKitTokenResponse)
+async def issue_livekit_token(
+    meeting_id: UUID,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    lk: Annotated[LiveKitService, Depends(get_livekit_service)],
+) -> LiveKitTokenResponse:
+    """Issue a LiveKit participant JWT for the authenticated user.
+
+    The meeting must be accessible to the caller (owner or invitee) and a
+    LiveKit room must already be provisioned for the meeting (normally via
+    ``POST /meetings/{id}/start``).
+
+    Args:
+        meeting_id: Meeting UUID.
+        current_user: Authenticated user (must own or be invited).
+        db: Database session.
+        settings: Application settings (for the LiveKit server URL).
+        lk: LiveKit service dependency for token generation.
+
+    Returns:
+        ``{token, url, room_name}`` ready for a LiveKit SDK connect call.
+
+    Raises:
+        HTTPException: 404 if the meeting is missing or not accessible,
+            409 if no room has been provisioned for the meeting yet.
+    """
+    await _assert_meeting_accessible(db, meeting_id, current_user)
+
+    room_result = await db.execute(select(RoomORM).where(RoomORM.meeting_id == meeting_id))
+    room = room_result.scalar_one_or_none()
+    if room is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Room not provisioned — call /start first",
+        )
+
+    user_name = current_user.name or current_user.email
+    token = lk.generate_participant_token(
+        user_id=current_user.id,
+        user_name=user_name,
+        room_name=room.name,
+    )
+    return LiveKitTokenResponse(
+        token=token,
+        url=settings.livekit_url,
+        room_name=room.name,
     )
 
 

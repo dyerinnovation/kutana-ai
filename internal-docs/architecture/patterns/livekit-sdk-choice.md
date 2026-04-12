@@ -60,6 +60,15 @@ Browser ──WebRTC──→ LiveKit Room ←──rtc.Room──── Agent G
 
 The `LiveKitAudioAdapter` and `LiveKitAudioPublisher` are the only components that touch the `livekit` rtc SDK. Everything above `AudioPipeline` and `TTSBridge` is transport-agnostic.
 
+## api-server: `livekit-api` only (no rtc)
+
+The api-server uses only the `livekit-api` package — **not** the `livekit` rtc SDK. api-server never joins rooms; its LiveKit responsibilities are limited to:
+
+- Room provisioning via `LiveKitAPI.room.create_room()` (REST, idempotent).
+- Participant JWT generation via `api.AccessToken(...).with_grants(VideoGrants(...)).to_jwt()`.
+
+Skipping the rtc dependency keeps the api-server image small and avoids pulling in native WebRTC binaries on a service that doesn't need them. Only agent-gateway (which actually connects to rooms) depends on the `livekit` rtc SDK.
+
 ## References
 
 - `packages/kutana-providers/src/kutana_providers/audio/livekit_adapter.py` — LiveKitAudioAdapter
