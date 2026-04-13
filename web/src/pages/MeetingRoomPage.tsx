@@ -1175,11 +1175,17 @@ function AgentSessionChip({
     failed: "border-red-700/40 bg-red-950/40 text-red-200",
     stopped: "border-gray-700 bg-gray-900/60 text-gray-400",
   };
+  const indicatorClass: Record<AgentWarmingState, string> = {
+    warming: "bg-violet-900/70 ring-2 ring-violet-500/60",
+    ready: "bg-emerald-900/70 ring-2 ring-emerald-500/60",
+    failed: "bg-red-900/70 ring-2 ring-red-500/60",
+    stopped: "bg-gray-800 ring-2 ring-gray-600/70",
+  };
   return (
     <div
       data-testid={`agent-chip-${session.template_id}`}
       data-state={session.state}
-      className={`flex items-start gap-2 rounded-md border px-2.5 py-1.5 text-xs ${containerClass[session.state]}`}
+      className={`flex items-center gap-2.5 rounded-md border px-2.5 py-1.5 text-xs ${containerClass[session.state]}`}
     >
       <span
         data-testid={`agent-chip-${session.template_id}-state-${session.state}`}
@@ -1187,7 +1193,10 @@ function AgentSessionChip({
       >
         {session.state}
       </span>
-      <div className="mt-0.5 flex h-4 w-4 items-center justify-center">
+      <div
+        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors ${indicatorClass[session.state]}`}
+        aria-label={`Agent ${session.state}`}
+      >
         {session.state === "warming" && <SpinnerIcon />}
         {session.state === "ready" && <CheckBadgeIcon />}
         {session.state === "failed" && <ErrorIcon />}
@@ -1214,7 +1223,7 @@ function AgentSessionChip({
 
 function SpinnerIcon() {
   return (
-    <svg className="h-3.5 w-3.5 animate-spin text-violet-300" viewBox="0 0 24 24" fill="none">
+    <svg className="h-4 w-4 animate-spin text-violet-200" viewBox="0 0 24 24" fill="none">
       <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
       <path
         d="M22 12a10 10 0 0 1-10 10"
@@ -1228,7 +1237,7 @@ function SpinnerIcon() {
 
 function CheckBadgeIcon() {
   return (
-    <svg className="h-3.5 w-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor">
+    <svg className="h-4 w-4 text-emerald-300" viewBox="0 0 24 24" fill="none" strokeWidth={2.5} stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
     </svg>
   );
@@ -1236,7 +1245,7 @@ function CheckBadgeIcon() {
 
 function ErrorIcon() {
   return (
-    <svg className="h-3.5 w-3.5 text-red-400" viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor">
+    <svg className="h-4 w-4 text-red-300" viewBox="0 0 24 24" fill="none" strokeWidth={2.5} stroke="currentColor">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -1248,7 +1257,7 @@ function ErrorIcon() {
 
 function PauseIcon() {
   return (
-    <svg className="h-3.5 w-3.5 text-gray-500" viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor">
+    <svg className="h-4 w-4 text-gray-300" viewBox="0 0 24 24" fill="none" strokeWidth={2.5} stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
     </svg>
   );
