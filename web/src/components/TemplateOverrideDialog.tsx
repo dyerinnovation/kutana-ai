@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { AgentTemplate } from "@/types";
-import { PROMPT_PRESETS } from "@/lib/promptPresets";
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogTitle, DialogFooter } from "@/components/ui/Dialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,7 +25,6 @@ interface TemplateOverrideDialogProps {
 function buildSystemPromptOverride(
   sopContent: string,
   customInstructions: string,
-  promptOverride: string,
 ): string | null {
   const parts: string[] = [];
   if (sopContent.trim()) {
@@ -34,9 +32,6 @@ function buildSystemPromptOverride(
   }
   if (customInstructions.trim()) {
     parts.push(`## Custom Instructions\n\n${customInstructions.trim()}`);
-  }
-  if (promptOverride.trim()) {
-    parts.push(promptOverride.trim());
   }
   return parts.length > 0 ? parts.join("\n\n---\n\n") : null;
 }
@@ -59,23 +54,19 @@ export function TemplateOverrideDialog({
 
   const [sopContent, setSopContent] = useState("");
   const [customInstructions, setCustomInstructions] = useState("");
-  const [showPromptCustomize, setShowPromptCustomize] = useState(false);
-  const [promptOverride, setPromptOverride] = useState("");
 
   useEffect(() => {
     if (!template) return;
     setSopContent("");
     setCustomInstructions("");
-    setShowPromptCustomize(Boolean(initial?.system_prompt_override));
-    setPromptOverride(initial?.system_prompt_override ?? "");
   }, [template, initial]);
 
   function handleSave(e: FormEvent) {
     e.preventDefault();
     if (!template) return;
     const systemPromptOverride = isBusiness
-      ? buildSystemPromptOverride(sopContent, customInstructions, promptOverride)
-      : promptOverride.trim() ? promptOverride.trim() : null;
+      ? buildSystemPromptOverride(sopContent, customInstructions)
+      : null;
     onSave({
       system_prompt_override: systemPromptOverride,
       sop_id: initial?.sop_id ?? null,
@@ -88,13 +79,13 @@ export function TemplateOverrideDialog({
       <form onSubmit={handleSave} data-testid="template-override-dialog">
         <DialogTitle>Customize: {template?.name}</DialogTitle>
         <div className="space-y-4">
-          {isBusiness && (
+          {isBusiness ? (
             <div className="rounded-lg border border-purple-800/40 bg-purple-950/20 p-4 space-y-4">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-purple-300">
+                <span className="text-sm font-medium text-gray-100">
                   Business Configuration
                 </span>
-                <span className="inline-flex items-center rounded-full bg-purple-600/20 border border-purple-500/30 px-1.5 py-0 text-[10px] font-medium text-purple-400">
+                <span className="inline-flex items-center rounded-full bg-purple-600/20 border border-purple-500/30 px-1.5 py-0 text-[10px] font-medium text-gray-100">
                   Business+
                 </span>
               </div>
@@ -131,66 +122,11 @@ export function TemplateOverrideDialog({
                 />
               </div>
             </div>
+          ) : (
+            <p className="text-sm text-gray-400">
+              No customization options available for this template on your plan.
+            </p>
           )}
-
-          <div>
-            <button
-              type="button"
-              onClick={() => setShowPromptCustomize(!showPromptCustomize)}
-              className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
-            >
-              <svg
-                className={`h-3.5 w-3.5 transition-transform ${showPromptCustomize ? "rotate-90" : ""}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8.25 4.5l7.5 7.5-7.5 7.5"
-                />
-              </svg>
-              Customize Prompt (optional)
-            </button>
-
-            {showPromptCustomize && (
-              <div className="mt-3 space-y-3">
-                <div className="flex flex-wrap gap-1.5">
-                  {PROMPT_PRESETS.map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => setPromptOverride(preset.prompt)}
-                      className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                        promptOverride === preset.prompt
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200"
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-                <textarea
-                  className="h-32 w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-50 placeholder:text-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 focus:outline-none resize-none"
-                  placeholder={
-                    isBusiness
-                      ? "Override the full system prompt (combined with SOP and custom instructions above)."
-                      : "Enter a custom system prompt..."
-                  }
-                  value={promptOverride}
-                  onChange={(e) => setPromptOverride(e.target.value)}
-                />
-                <p className="text-xs text-gray-500">
-                  {isBusiness
-                    ? "Combined with Business configuration above when provided."
-                    : "Leave blank to use the template\u2019s default prompt."}
-                </p>
-              </div>
-            )}
-          </div>
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
