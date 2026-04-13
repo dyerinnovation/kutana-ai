@@ -2,7 +2,6 @@ import { useEffect, useState, type FormEvent } from "react";
 import type { AgentTemplate, HostedSession, Meeting } from "@/types";
 import { activateTemplate } from "@/api/agentTemplates";
 import { listMeetings } from "@/api/meetings";
-import { PROMPT_PRESETS } from "@/lib/promptPresets";
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogTitle, DialogFooter } from "@/components/ui/Dialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,7 +20,6 @@ interface ActivateTemplateDialogProps {
 function buildSystemPromptOverride(
   sopContent: string,
   customInstructions: string,
-  promptOverride: string,
 ): string | undefined {
   const parts: string[] = [];
   if (sopContent.trim()) {
@@ -29,9 +27,6 @@ function buildSystemPromptOverride(
   }
   if (customInstructions.trim()) {
     parts.push(`## Custom Instructions\n\n${customInstructions.trim()}`);
-  }
-  if (promptOverride.trim()) {
-    parts.push(promptOverride.trim());
   }
   return parts.length > 0 ? parts.join("\n\n---\n\n") : undefined;
 }
@@ -53,17 +48,11 @@ export function ActivateTemplateDialog({
   const [sopContent, setSopContent] = useState("");
   const [customInstructions, setCustomInstructions] = useState("");
 
-  // Prompt customization (all tiers)
-  const [showPromptCustomize, setShowPromptCustomize] = useState(false);
-  const [promptOverride, setPromptOverride] = useState("");
-
   // Load meetings when dialog opens
   useEffect(() => {
     if (!template) return;
     setSelectedMeetingId("");
     setError(null);
-    setShowPromptCustomize(false);
-    setPromptOverride("");
     setSopContent("");
     setCustomInstructions("");
     listMeetings()
@@ -85,8 +74,8 @@ export function ActivateTemplateDialog({
     setError(null);
     try {
       const systemPromptOverride = isBusiness
-        ? buildSystemPromptOverride(sopContent, customInstructions, promptOverride)
-        : promptOverride || undefined;
+        ? buildSystemPromptOverride(sopContent, customInstructions)
+        : undefined;
 
       const session = await activateTemplate(
         template.id,
@@ -149,7 +138,7 @@ export function ActivateTemplateDialog({
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"
+                    d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"
                   />
                 </svg>
                 <span className="text-sm font-medium text-purple-300">
@@ -196,66 +185,6 @@ export function ActivateTemplateDialog({
               </div>
             </div>
           )}
-
-          {/* Prompt customization — all tiers */}
-          <div>
-            <button
-              type="button"
-              onClick={() => setShowPromptCustomize(!showPromptCustomize)}
-              className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
-            >
-              <svg
-                className={`h-3.5 w-3.5 transition-transform ${showPromptCustomize ? "rotate-90" : ""}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8.25 4.5l7.5 7.5-7.5 7.5"
-                />
-              </svg>
-              Customize Prompt (optional)
-            </button>
-
-            {showPromptCustomize && (
-              <div className="mt-3 space-y-3">
-                <div className="flex flex-wrap gap-1.5">
-                  {PROMPT_PRESETS.map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => setPromptOverride(preset.prompt)}
-                      className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                        promptOverride === preset.prompt
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200"
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-                <textarea
-                  className="h-32 w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-50 placeholder:text-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 focus:outline-none resize-none"
-                  placeholder={
-                    isBusiness
-                      ? "Override the full system prompt (combined with SOP and custom instructions above)."
-                      : "Enter a custom system prompt..."
-                  }
-                  value={promptOverride}
-                  onChange={(e) => setPromptOverride(e.target.value)}
-                />
-                <p className="text-xs text-gray-500">
-                  {isBusiness
-                    ? "Combined with Business configuration above when provided."
-                    : "Leave blank to use the template\u2019s default prompt."}
-                </p>
-              </div>
-            )}
-          </div>
 
           {error && (
             <div className="rounded-lg border border-red-800 bg-red-950/50 px-3 py-2 text-sm text-red-400">
