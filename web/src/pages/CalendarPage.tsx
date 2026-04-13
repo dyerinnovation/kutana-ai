@@ -77,12 +77,33 @@ function statusColor(status: string) {
   return "bg-gray-500";
 }
 
+// Meeting block colors.
+// Rule: green = active (in progress), blue = scheduled (upcoming),
+// gray = completed/other. Legend rendered in the calendar header.
 function statusBlockColor(status: string) {
   if (status === "active")
-    return "bg-green-600/30 border-green-500/50 text-green-300";
+    return "bg-green-500/25 border-green-400/60 text-green-50";
   if (status === "scheduled")
-    return "bg-blue-600/30 border-blue-500/50 text-blue-300";
-  return "bg-gray-600/30 border-gray-500/50 text-gray-300";
+    return "bg-blue-500/25 border-blue-400/60 text-blue-50";
+  return "bg-gray-500/25 border-gray-400/60 text-gray-100";
+}
+
+function StatusLegend() {
+  const items: Array<{ label: string; dot: string }> = [
+    { label: "Active", dot: "bg-green-400" },
+    { label: "Scheduled", dot: "bg-blue-400" },
+    { label: "Completed", dot: "bg-gray-400" },
+  ];
+  return (
+    <div className="flex items-center gap-3 text-[11px] text-gray-400">
+      {items.map((it) => (
+        <span key={it.label} className="inline-flex items-center gap-1.5">
+          <span className={cn("h-2 w-2 rounded-full", it.dot)} />
+          {it.label}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 /* ─── Component ──────────────────────────────────────────────────────────── */
@@ -238,9 +259,8 @@ export function CalendarPage() {
     : [];
 
   function openSchedule(date?: Date, time?: string, endTime?: string) {
-    const d = date ?? selectedDate;
-    if (!d) return;
-    if (date) setSelectedDate(date);
+    const d = date ?? selectedDate ?? new Date();
+    if (!selectedDate || date) setSelectedDate(d);
     setCreateTitle("");
     setCreateDescription("");
     setCreateTime(time ?? "09:00");
@@ -433,19 +453,20 @@ export function CalendarPage() {
                         <div
                           key={m.id}
                           className={cn(
-                            "absolute left-1 right-1 rounded border px-1.5 py-0.5 text-[11px] leading-tight overflow-hidden cursor-default",
+                            "absolute left-1 right-1 rounded border px-1.5 py-0.5 text-[11px] leading-tight overflow-hidden cursor-default antialiased subpixel-antialiased",
                             statusBlockColor(m.status)
                           )}
                           style={{
                             top: `${top}px`,
                             height: `${hourHeight - 2}px`,
+                            textRendering: "geometricPrecision",
                           }}
                           title={`${m.title || "Untitled"} — ${mDate.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`}
                         >
-                          <p className="font-medium truncate">
+                          <p className="font-medium truncate text-white">
                             {m.title || "Untitled"}
                           </p>
-                          <p className="opacity-70 text-[10px]">
+                          <p className="text-[10px] text-gray-200">
                             {mDate.toLocaleTimeString(undefined, {
                               hour: "numeric",
                               minute: "2-digit",
@@ -540,7 +561,14 @@ export function CalendarPage() {
           <Button variant="outline" size="sm" onClick={goToday}>
             Today
           </Button>
+          <Button size="sm" onClick={() => openSchedule()}>
+            Schedule Meeting
+          </Button>
         </div>
+      </div>
+
+      <div className="flex justify-end">
+        <StatusLegend />
       </div>
 
       {isLoading ? (
@@ -684,13 +712,13 @@ export function CalendarPage() {
                               </button>
                               <span
                                 className={cn(
-                                  "inline-flex flex-shrink-0 items-center rounded-md px-2 py-0.5 text-[10px] font-medium",
+                                  "inline-flex flex-shrink-0 items-center rounded-md px-2 py-0.5 text-[10px] font-medium antialiased",
                                   m.status === "active"
-                                    ? "bg-green-600/20 text-green-400 border border-green-500/30"
+                                    ? "bg-green-600/40 text-green-50 border border-green-400/60"
                                     : m.status ===
                                         "completed"
-                                      ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
-                                      : "bg-gray-600/20 text-gray-400 border border-gray-500/30"
+                                      ? "bg-blue-600/40 text-blue-50 border border-blue-400/60"
+                                      : "bg-gray-600/40 text-gray-100 border border-gray-400/60"
                                 )}
                               >
                                 {m.status
@@ -753,12 +781,14 @@ export function CalendarPage() {
                 value={createTime}
                 onChange={(e) => setCreateTime(e.target.value)}
                 required
+                className="[color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-60 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
               />
               <Input
                 label="End"
                 type="time"
                 value={createEndTime}
                 onChange={(e) => setCreateEndTime(e.target.value)}
+                className="[color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-60 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
               />
             </div>
             <div className="space-y-1.5">
