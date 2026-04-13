@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { Agent, AgentTemplate } from "@/types";
-import { listAgents } from "@/api/agents";
+import { deleteAgent, listAgents } from "@/api/agents";
 import { listTemplates } from "@/api/agentTemplates";
 import { formatCapability } from "@/lib/capabilities";
 import { Button } from "@/components/ui/Button";
@@ -12,6 +12,7 @@ import {
   CardContent,
 } from "@/components/ui/Card";
 import { ActivateTemplateDialog } from "@/components/ActivateTemplateDialog";
+import { Dialog, DialogFooter, DialogTitle } from "@/components/ui/Dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { AGENT_CONFIG_LIMIT, meetsTier, planLabel } from "@/lib/planLimits";
 import { UpgradeBadge } from "@/components/UpgradeBadge";
@@ -49,6 +50,26 @@ export function AgentsPage() {
   // Activate modal state
   const [activateTarget, setActivateTarget] = useState<AgentTemplate | null>(null);
 
+  // Delete confirm state
+  const [deleteTarget, setDeleteTarget] = useState<Agent | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteAgent(deleteTarget.id);
+      setAgents((prev) => prev.filter((a) => a.id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete agent");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   useEffect(() => {
     listAgents()
       .then((res) => setAgents(res.items))
@@ -79,7 +100,7 @@ export function AgentsPage() {
               Your Agents
             </h1>
             <p className="mt-0.5 text-sm text-gray-400">
-              AI agents that join and listen to your meetings
+              Your AI Agents that join meetings
             </p>
           </div>
           {(() => {
@@ -137,39 +158,47 @@ export function AgentsPage() {
         {agents.length > 0 && (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {agents.map((agent) => (
-              <Link key={agent.id} to={`/agents/${agent.id}`}>
-                <Card className="card-interactive h-full cursor-pointer border-gray-800">
-                  <CardHeader>
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-600/15 text-sm font-semibold text-blue-400">
-                        {agent.name.charAt(0).toUpperCase()}
+              <div key={agent.id} className="relative">
+                <Link to={`/agents/${agent.id}`}>
+                  <Card className="card-interactive h-full cursor-pointer border-gray-800">
+                    <CardHeader>
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-600/15 text-sm font-semibold text-blue-400">
+                          {agent.name.charAt(0).toUpperCase()}
+                        </div>
+                        <CardTitle className="pt-0.5">{agent.name}</CardTitle>
                       </div>
-                      <CardTitle className="pt-0.5">{agent.name}</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="mb-3 text-xs font-medium text-gray-400">
-                      {agent.capabilities.includes("listen") && agent.capabilities.includes("speak")
-                        ? "Voice Agent"
-                        : agent.capabilities.includes("speak")
-                          ? "Text + Speech (Kutana TTS)"
-                          : "Text Only"}
-                    </p>
-                    {agent.capabilities.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {agent.capabilities.map((cap) => (
-                          <span
-                            key={cap}
-                            className="inline-flex items-center rounded-md border border-gray-700 bg-gray-800 px-2 py-0.5 text-[10px] font-medium text-gray-400"
-                          >
-                            {formatCapability(cap)}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </Link>
+                    </CardHeader>
+                    <CardContent>
+                      {agent.capabilities.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {agent.capabilities.map((cap) => (
+                            <span
+                              key={cap}
+                              className="inline-flex items-center rounded-md border border-gray-700 bg-gray-800 px-2 py-0.5 text-[10px] font-medium text-gray-400"
+                            >
+                              {formatCapability(cap)}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Link>
+                <button
+                  type="button"
+                  aria-label={`Delete ${agent.name}`}
+                  title="Delete agent"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDeleteTarget(agent);
+                  }}
+                  className="absolute right-2 top-2 rounded-md p-1.5 text-gray-500 hover:bg-red-950/40 hover:text-red-400 transition-colors"
+                >
+                  <TrashIcon />
+                </button>
+              </div>
             ))}
           </div>
         )}
@@ -306,7 +335,58 @@ export function AgentsPage() {
         template={activateTarget}
         onClose={() => setActivateTarget(null)}
       />
+
+      <Dialog
+        open={deleteTarget !== null}
+        onClose={() => {
+          if (!deleting) {
+            setDeleteTarget(null);
+            setDeleteError(null);
+          }
+        }}
+      >
+        <DialogTitle>Delete agent?</DialogTitle>
+        <p className="text-sm text-gray-400">
+          This will permanently delete{" "}
+          <span className="font-medium text-gray-50">{deleteTarget?.name}</span>{" "}
+          and revoke its API keys. This cannot be undone.
+        </p>
+        {deleteError && (
+          <div className="mt-3 rounded-lg border border-red-800 bg-red-950/50 px-3 py-2 text-sm text-red-400">
+            {deleteError}
+          </div>
+        )}
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setDeleteTarget(null);
+              setDeleteError(null);
+            }}
+            disabled={deleting}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleConfirmDelete}
+            disabled={deleting}
+            className="bg-red-600 hover:bg-red-500 focus-visible:ring-red-500"
+          >
+            {deleting ? "Deleting…" : "Delete"}
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+    </svg>
   );
 }
 

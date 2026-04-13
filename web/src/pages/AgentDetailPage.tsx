@@ -315,7 +315,7 @@ export function AgentDetailPage() {
                   Connect via the channel server integration for Claude Code
                   agents.
                 </p>
-                <Link to="/docs/connecting-agents/claude-code-channel">
+                <Link to="/docs/claude-code-channel">
                   <Button variant="outline" size="sm" className="w-full">
                     View Guide
                   </Button>
@@ -332,7 +332,7 @@ export function AgentDetailPage() {
                   Use the OpenClaw skill to connect agents with built-in meeting
                   capabilities.
                 </p>
-                <Link to="/docs/connecting-agents/kutana-skill">
+                <Link to="/docs/openclaw-skill">
                   <Button variant="outline" size="sm" className="w-full">
                     View Guide
                   </Button>
@@ -349,7 +349,7 @@ export function AgentDetailPage() {
                   Connect any MCP-compatible agent using the generic quickstart
                   guide.
                 </p>
-                <Link to="/docs/connecting-agents/mcp-quickstart">
+                <Link to="/docs/mcp-server">
                   <Button variant="outline" size="sm" className="w-full">
                     View Guide
                   </Button>

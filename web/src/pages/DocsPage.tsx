@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 type Section =
@@ -58,8 +59,30 @@ function Collapsible({ title, defaultOpen = false, children }: { title: string; 
 
 /* ─── Page ──────────────────────────────────────────────────────────────── */
 
+const SECTION_IDS = new Set<string>(sections.map((s) => s.id));
+
+function sectionFromPath(pathname: string): Section {
+  const match = pathname.match(/^\/docs\/(.+?)\/?$/);
+  const slug = match?.[1];
+  if (slug && SECTION_IDS.has(slug)) return slug as Section;
+  return "getting-started";
+}
+
 export function DocsPage() {
-  const [active, setActive] = useState<Section>("getting-started");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [active, setActiveState] = useState<Section>(() =>
+    sectionFromPath(location.pathname)
+  );
+
+  useEffect(() => {
+    setActiveState(sectionFromPath(location.pathname));
+  }, [location.pathname]);
+
+  const setActive = (s: Section) => {
+    setActiveState(s);
+    navigate(s === "getting-started" ? "/docs" : `/docs/${s}`);
+  };
 
   // Ordered groups for sidebar rendering
   const groupOrder = ["Kutana Agents", "Connecting Your Agent", "Feeds"];

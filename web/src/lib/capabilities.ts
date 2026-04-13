@@ -4,6 +4,10 @@ export const CAPABILITY_LABELS: Record<string, string> = {
   summarization: "Summarization",
   action_items: "Action Items",
   voice: "Voice",
+  text_only: "Text",
+  text_tts: "Text + Kutana Text-to-Speech (TTS)",
+  listen: "Listen",
+  speak: "Speak",
 };
 
 export const CAPABILITY_TOOLTIPS: Record<string, string> = {
