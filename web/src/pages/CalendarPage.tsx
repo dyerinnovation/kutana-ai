@@ -3,6 +3,7 @@ import type { Meeting } from "@/types";
 import { listMeetings, createMeeting } from "@/api/meetings";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { TimeSelect, defaultUpcomingHalfHourTime } from "@/components/ui/DateTimePicker";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Dialog, DialogTitle, DialogFooter } from "@/components/ui/Dialog";
 import { cn } from "@/lib/utils";
@@ -121,7 +122,7 @@ export function CalendarPage() {
   // Create meeting dialog
   const [showCreate, setShowCreate] = useState(false);
   const [createTitle, setCreateTitle] = useState("");
-  const [createTime, setCreateTime] = useState("09:00");
+  const [createTime, setCreateTime] = useState(() => defaultUpcomingHalfHourTime());
   const [isCreating, setIsCreating] = useState(false);
 
   // Current time indicator (updates every minute)
@@ -142,7 +143,11 @@ export function CalendarPage() {
 
   // Schedule meeting dialog — extended fields
   const [createDescription, setCreateDescription] = useState("");
-  const [createEndTime, setCreateEndTime] = useState("10:00");
+  const [createEndTime, setCreateEndTime] = useState(() => {
+    const [h, m] = defaultUpcomingHalfHourTime().split(":").map(Number);
+    const endH = Math.min(h + 1, HOUR_END);
+    return `${String(endH).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  });
 
   useEffect(() => {
     loadMeetings();
@@ -263,11 +268,16 @@ export function CalendarPage() {
     if (!selectedDate || date) setSelectedDate(d);
     setCreateTitle("");
     setCreateDescription("");
-    setCreateTime(time ?? "09:00");
-    setCreateEndTime(endTime ?? (() => {
-      const startH = parseInt(time ?? "09", 10);
-      return `${String(Math.min(startH + 1, HOUR_END)).padStart(2, "0")}:00`;
-    })());
+    const start = time ?? defaultUpcomingHalfHourTime();
+    setCreateTime(start);
+    setCreateEndTime(
+      endTime ??
+        (() => {
+          const [sh, sm] = start.split(":").map(Number);
+          const endH = Math.min(sh + 1, HOUR_END);
+          return `${String(endH).padStart(2, "0")}:${String(sm).padStart(2, "0")}`;
+        })(),
+    );
     setShowCreate(true);
   }
 
@@ -775,20 +785,16 @@ export function CalendarPage() {
               required
             />
             <div className="grid grid-cols-2 gap-3">
-              <Input
+              <TimeSelect
                 label="Start"
-                type="time"
                 value={createTime}
-                onChange={(e) => setCreateTime(e.target.value)}
+                onChange={setCreateTime}
                 required
-                className="[color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-60 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
               />
-              <Input
+              <TimeSelect
                 label="End"
-                type="time"
                 value={createEndTime}
-                onChange={(e) => setCreateEndTime(e.target.value)}
-                className="[color-scheme:dark] [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-60 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                onChange={setCreateEndTime}
               />
             </div>
             <div className="space-y-1.5">

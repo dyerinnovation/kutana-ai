@@ -13,6 +13,11 @@ import { listTemplates } from "@/api/agentTemplates";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import {
+  DateTimePicker,
+  formatDateTimeLocal,
+  nearestUpcomingHalfHour,
+} from "@/components/ui/DateTimePicker";
+import {
   Card,
   CardHeader,
   CardTitle,
@@ -63,7 +68,9 @@ export function MeetingsPage() {
   // Create meeting state
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
+  const [scheduledAt, setScheduledAt] = useState(() =>
+    formatDateTimeLocal(nearestUpcomingHalfHour()),
+  );
   const [isCreating, setIsCreating] = useState(false);
 
   // Per-meeting agent selection state
@@ -459,11 +466,10 @@ export function MeetingsPage() {
               onChange={(e) => setTitle(e.target.value)}
               required
             />
-            <Input
+            <DateTimePicker
               label="Date & Time"
-              type="datetime-local"
               value={scheduledAt}
-              onChange={(e) => setScheduledAt(e.target.value)}
+              onChange={setScheduledAt}
               required
             />
             <div className="space-y-1.5">
