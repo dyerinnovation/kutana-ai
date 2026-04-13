@@ -49,7 +49,7 @@ export default function HeroSection() {
       <div className="relative z-10 flex flex-col items-center text-center max-w-[800px] w-full">
         <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-8">
           <span className="bg-gradient-to-br from-green-500 to-lime-400 bg-clip-text text-transparent">
-            The meeting platform where{" "}
+            The Meeting Platform where{" "}
             <span className="text-lime-400 font-extrabold" style={{ WebkitTextFillColor: "#a3e635" }}>
               AI&nbsp;Agents
             </span>{" "}

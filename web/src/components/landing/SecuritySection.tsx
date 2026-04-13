@@ -1,3 +1,5 @@
+import GetStartedCTA from "./GetStartedCTA";
+
 export function SecuritySection() {
   return (
     <section
@@ -37,6 +39,7 @@ export function SecuritySection() {
             Review our privacy policy for details on how your data is handled.
           </p>
         </div>
+        <GetStartedCTA />
       </div>
     </section>
   );

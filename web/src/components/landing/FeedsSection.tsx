@@ -1,3 +1,5 @@
+import GetStartedCTA from "./GetStartedCTA";
+
 interface FeedCard {
   name: string;
   icon: React.ReactNode;
@@ -132,6 +134,7 @@ export function FeedsSection() {
             </div>
           ))}
         </div>
+        <GetStartedCTA />
       </div>
     </section>
   );

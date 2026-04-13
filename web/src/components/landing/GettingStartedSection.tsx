@@ -1,4 +1,5 @@
 import { useState } from "react";
+import GetStartedCTA from "./GetStartedCTA";
 
 const tabs = [
   {
@@ -136,6 +137,7 @@ export function GettingStartedSection() {
             </div>
           </div>
         </div>
+        <GetStartedCTA />
       </div>
     </section>
   );

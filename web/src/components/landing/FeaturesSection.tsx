@@ -1,4 +1,5 @@
 import { useState } from "react";
+import GetStartedCTA from "./GetStartedCTA";
 
 interface Feature {
   icon: React.ReactNode;
@@ -230,6 +231,7 @@ export function FeaturesSection() {
             ))}
           </div>
         </div>
+        <GetStartedCTA />
       </div>
     </section>
   );

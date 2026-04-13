@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import GetStartedCTA from "./GetStartedCTA";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -465,7 +466,7 @@ export default function MeetingDiagramSection() {
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
-          if (e.isIntersecting && e.intersectionRatio >= 0.1) {
+          if (e.isIntersecting && e.intersectionRatio >= 0.35) {
             inViewRef.current = true;
             if (!startedRef.current) {
               startedRef.current = true;
@@ -1091,6 +1092,7 @@ export default function MeetingDiagramSection() {
               ))}
             </div>
           </div>
+          <GetStartedCTA />
         </div>
       </section>
     </>

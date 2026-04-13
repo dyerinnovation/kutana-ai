@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import GetStartedCTA from "./GetStartedCTA";
 
 const slides = [
   {
@@ -137,6 +138,7 @@ export function UseCasesSection() {
             ))}
           </div>
         </div>
+        <GetStartedCTA />
       </div>
     </section>
   );

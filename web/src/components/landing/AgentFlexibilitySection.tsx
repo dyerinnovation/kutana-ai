@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import GetStartedCTA from "./GetStartedCTA";
 
 /* ------------------------------------------------------------------ */
 /*  Tab data                                                           */
@@ -239,6 +240,7 @@ export default function AgentFlexibilitySection() {
             </div>
           </div>
         </div>
+        <GetStartedCTA />
       </div>
     </section>
   );

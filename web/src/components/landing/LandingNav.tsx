@@ -57,13 +57,13 @@ export default function LandingNav() {
           <div className="flex items-center gap-4">
             <Link
               to="/login"
-              className="text-white/70 hover:text-green-500 transition-colors duration-300 text-sm hidden md:inline"
+              className="text-white/70 hover:text-green-500 transition-colors duration-300 text-sm"
             >
               Sign In
             </Link>
             <Link
               to="/register"
-              className="hidden md:inline-flex items-center px-5 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white text-sm font-semibold transition-colors duration-300"
+              className="inline-flex items-center px-3 py-1.5 sm:px-5 sm:py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs sm:text-sm font-semibold transition-colors duration-300 whitespace-nowrap"
             >
               Get Started
             </Link>

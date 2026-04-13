@@ -1,3 +1,5 @@
+import GetStartedCTA from "./GetStartedCTA";
+
 interface FlowStep {
   label: string;
   value: string;
@@ -82,6 +84,7 @@ export default function ContextSection() {
             </div>
           </div>
         </div>
+        <GetStartedCTA />
       </div>
     </section>
   );
