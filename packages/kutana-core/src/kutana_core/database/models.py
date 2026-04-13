@@ -48,6 +48,9 @@ class MeetingORM(Base):
     started_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), nullable=True)
     ended_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="scheduled")
+    is_test_meeting: Mapped[bool] = mapped_column(
+        sa.Boolean(), nullable=False, server_default=sa.false(), default=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
     )

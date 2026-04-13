@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import type { AgentTemplate, Meeting, SelectedAgent } from "@/types";
 import {
   createMeeting,
+  deleteMeeting,
   endMeeting,
   getSelectedAgents,
   listMeetings,
@@ -79,6 +80,10 @@ export function MeetingsPage() {
   // Debounce timers for PUT /selected-agents, keyed by meeting id.
   const debounceTimersRef = useRef<Record<string, number>>({});
 
+  // Delete confirmation dialog target.
+  const [deleteTarget, setDeleteTarget] = useState<Meeting | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   useEffect(() => {
     loadMeetings();
     listTemplates()
@@ -150,6 +155,22 @@ export function MeetingsPage() {
       setError(
         err instanceof Error ? err.message : "Failed to start meeting"
       );
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await deleteMeeting(deleteTarget.id);
+      setMeetings((prev) => prev.filter((m) => m.id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Failed to delete meeting",
+      );
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -356,6 +377,18 @@ export function MeetingsPage() {
                           </Button>
                         </>
                       )}
+                      {meeting.status !== "active" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setDeleteTarget(meeting)}
+                          data-testid={`meeting-${meeting.id}-delete`}
+                          aria-label="Delete meeting"
+                          title="Delete meeting"
+                        >
+                          Delete
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -489,6 +522,41 @@ export function MeetingsPage() {
             </Button>
           </DialogFooter>
         </form>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog
+        open={deleteTarget !== null}
+        onClose={() => !isDeleting && setDeleteTarget(null)}
+      >
+        <DialogTitle>Delete meeting?</DialogTitle>
+        <p className="text-sm text-gray-300">
+          This will permanently delete{" "}
+          <span className="font-medium text-gray-100">
+            {deleteTarget?.title || "this meeting"}
+          </span>{" "}
+          and all associated transcripts, tasks, and agent sessions. This
+          cannot be undone.
+        </p>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setDeleteTarget(null)}
+            disabled={isDeleting}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={confirmDelete}
+            disabled={isDeleting}
+            data-testid="confirm-delete-meeting"
+          >
+            {isDeleting ? "Deleting..." : "Delete"}
+          </Button>
+        </DialogFooter>
       </Dialog>
 
       {/* Per-template override dialog */}

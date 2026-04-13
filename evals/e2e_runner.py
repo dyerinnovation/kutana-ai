@@ -217,7 +217,7 @@ class E2ERunner:
         assert self._session is not None
         async with self._session.post(
             f"{self._api_base}/meetings",
-            json={"title": title},
+            json={"title": title, "is_test_meeting": True},
         ) as resp:
             resp.raise_for_status()
             data = await resp.json()
@@ -569,19 +569,27 @@ class E2ERunner:
             resp.raise_for_status()
 
     async def cleanup_meeting(self, meeting_id: UUID) -> None:
-        """Drain synthetic presence and leave the meeting row in place.
+        """Drain synthetic presence and DELETE the test meeting row.
 
-        The Kutana API has no DELETE /meetings endpoint, so the row
-        persists as a completed meeting. We only need to remove the
-        eval's SADD entry so the presence reconciler does not keep the
-        meeting marked as populated after the eval exits.
+        Calls ``DELETE /v1/meetings/{id}`` which cascades across tasks,
+        decisions, transcripts, agent sessions, rooms, invites and
+        selected templates. The meeting was created with
+        ``is_test_meeting=True`` so only eval-owned rows are ever removed.
 
         Args:
-            meeting_id: Meeting whose presence entry to drain.
+            meeting_id: Meeting whose presence entry to drain and row to delete.
         """
+        assert self._session is not None
         with contextlib.suppress(Exception):
             await self.clear_presence(meeting_id)
-        logger.debug("Meeting %s cleanup complete — no DELETE endpoint", meeting_id)
+        try:
+            async with self._session.delete(
+                f"{self._api_base}/meetings/{meeting_id}",
+            ) as resp:
+                if resp.status not in (204, 404):
+                    logger.warning("DELETE /meetings/%s returned %s", meeting_id, resp.status)
+        except Exception as exc:
+            logger.warning("Failed to delete test meeting %s: %s", meeting_id, exc)
 
     # -----------------------------------------------------------------------
     # Orchestrator
