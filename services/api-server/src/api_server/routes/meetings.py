@@ -27,12 +27,18 @@ from api_server.event_publisher import EventPublisher  # noqa: TC001 — FastAPI
 from api_server.managed_agent_activation import _warm_agent_in_background, _warming_tasks
 from api_server.services.livekit_service import LiveKitService  # noqa: TC001 — FastAPI DI
 from kutana_core.database.models import (
+    AgentSessionORM,
     AgentTemplateORM,
+    DecisionORM,
+    FeedRunORM,
     HostedAgentSessionORM,
     MeetingInviteORM,
     MeetingORM,
     MeetingSelectedTemplateORM,
+    MeetingSummaryORM,
     RoomORM,
+    TaskORM,
+    TranscriptSegmentORM,
     UserORM,
 )
 from kutana_core.events.definitions import MeetingEnded, MeetingStarted
@@ -60,6 +66,7 @@ class MeetingCreateRequest(BaseModel):
     platform: str = "kutana"
     title: str | None = None
     scheduled_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    is_test_meeting: bool = False
 
 
 class MeetingResponse(BaseModel):
@@ -209,6 +216,7 @@ async def create_meeting(
         scheduled_at=body.scheduled_at,
         status=MeetingStatus.SCHEDULED.value,
         owner_id=current_user.id,
+        is_test_meeting=body.is_test_meeting,
     )
     db.add(meeting)
     current_user.meetings_this_month += 1
@@ -292,6 +300,55 @@ async def update_meeting(
     await db.flush()
     await db.refresh(meeting)
     return _to_response(meeting)
+
+
+@router.delete("/{meeting_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_meeting(
+    meeting_id: UUID,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> None:
+    """Delete a meeting owned by the current user and cascade-remove children.
+
+    Removes rows in tables that FK to meetings (tasks, decisions, transcripts,
+    agent sessions, hosted agent sessions, feed runs, summaries, rooms,
+    invites, selected templates) before deleting the meeting itself.
+
+    Args:
+        meeting_id: Meeting to delete.
+        current_user: Authenticated user.
+        db: Database session.
+
+    Raises:
+        HTTPException: 404 if the meeting is missing, 403 if the caller
+            is not the owner.
+    """
+    result = await db.execute(select(MeetingORM).where(MeetingORM.id == meeting_id))
+    meeting = result.scalar_one_or_none()
+    if meeting is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Meeting not found")
+    if meeting.owner_id is not None and meeting.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this meeting",
+        )
+
+    for model in (
+        TaskORM,
+        DecisionORM,
+        TranscriptSegmentORM,
+        AgentSessionORM,
+        HostedAgentSessionORM,
+        FeedRunORM,
+        MeetingSummaryORM,
+        RoomORM,
+        MeetingInviteORM,
+        MeetingSelectedTemplateORM,
+    ):
+        await db.execute(delete(model).where(model.meeting_id == meeting_id))
+
+    await db.delete(meeting)
+    await db.flush()
 
 
 @router.post("/{meeting_id}/start", response_model=MeetingResponse)

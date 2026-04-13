@@ -53,6 +53,12 @@ export async function startMeeting(meetingId: string): Promise<Meeting> {
   });
 }
 
+export async function deleteMeeting(meetingId: string): Promise<void> {
+  return apiFetch<void>(`/meetings/${meetingId}`, {
+    method: "DELETE",
+  });
+}
+
 export async function endMeeting(meetingId: string): Promise<Meeting> {
   return apiFetch<Meeting>(`/meetings/${meetingId}/end`, {
     method: "POST",
