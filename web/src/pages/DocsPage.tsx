@@ -1159,8 +1159,8 @@ function FeedsOverview() {
         <h1 className="text-2xl font-bold text-gray-50">Feeds</h1>
         <p className="mt-2 text-gray-400">
           Feeds are integrations that connect your Kutana meetings to external
-          platforms. Pull context in before a meeting starts, or push enriched
-          meeting context out when it ends.
+          platforms. Pull context in before a meeting starts, or push it out
+          when it ends as enriched meeting context.
         </p>
       </div>
 
