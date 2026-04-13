@@ -1,44 +1,10 @@
 /**
- * Kutana AI "K" logo mark — green rounded rect with a bold white K.
- * Used in the landing page nav and the in-app sidebar.
+ * Kutana "Rosette" logo mark — an 8-petal rosette (Swahili door motif)
+ * with a green→purple gradient on a black rounded-rect background.
+ *
+ * Source: Figma "Kutana AI — Icon Exploration", node 44:14.
  */
-export function KutanaKMark({ size = 36, className }: { size?: number; className?: string }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 40 40"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-label="Kutana AI"
-    >
-      <rect width="40" height="40" rx="8" ry="8" fill="#10B981" />
-      <text
-        x="20"
-        y="29"
-        textAnchor="middle"
-        fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-        fontSize="23"
-        fontWeight="800"
-        fill="white"
-      >
-        K
-      </text>
-    </svg>
-  );
-}
 
-/**
- * Kutana AI logo mark — a C-arc ring with an AI node dot in the gap.
- *
- * Concept: the arc represents meeting participants arranged in a circle
- * (with a gap); the dot in the gap is the AI agent connecting to the meeting.
- *
- * The gradient background variant (default) uses a signal-green emerald fill.
- * The bare variant (bare=true) renders just the mark on a transparent bg,
- * useful for embedding inside an already-colored container.
- */
 interface LogoMarkProps {
   /** Width/height in pixels. Default: 28 */
   size?: number;
@@ -47,53 +13,40 @@ interface LogoMarkProps {
   className?: string;
 }
 
-export function KutanaLogoMark({ size = 28, bare = false, className }: LogoMarkProps) {
-  // Arc geometry: center (14,14), radius 7
-  // Opening on the right — gap spans roughly 45° to 315° (clockwise through right)
-  // Arc endpoints: at ±45° from the right side (i.e., 315° and 45°)
-  //   315°: x = 14 + 7*cos(315°) = 18.95,  y = 14 + 7*sin(315°) = 9.05
-  //    45°: x = 18.95,                       y = 18.95
-  // SVG arc: large-arc=1, sweep=0 (CCW) traverses the long way through the left.
-  // AI node dot sits at the midpoint of the gap: rightmost point (21, 14).
+export function KutanaRosetteMark({ size = 28, bare = false, className }: LogoMarkProps) {
+  const gradId = "kutana-rosette-gradient";
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 28 28"
+      viewBox="0 0 512 512"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
-      aria-label="Kutana AI"
+      aria-label="Kutana"
     >
       <defs>
-        <linearGradient
-          id="kutana-logo-gradient"
-          x1="0"
-          y1="0"
-          x2="28"
-          y2="28"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#6ee7b7" />
-          <stop offset="1" stopColor="#059669" />
+        <linearGradient id={gradId} x1="512" y1="512" x2="0" y2="0" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#16A34A" />
+          <stop offset="0.5" stopColor="#2D7FB3" />
+          <stop offset="1" stopColor="#9B30FF" />
         </linearGradient>
       </defs>
 
-      {/* Background — omitted in bare mode */}
-      {!bare && (
-        <rect width="28" height="28" rx="7" fill="url(#kutana-logo-gradient)" />
-      )}
+      {!bare && <rect width="512" height="512" rx="96" fill="#0B0B0F" />}
 
-      {/* C-arc: participants in a meeting ring */}
-      <path
-        d="M18.95 9.05 A7 7 0 1 0 18.95 18.95"
-        stroke="white"
-        strokeWidth="2.25"
-        strokeLinecap="round"
-      />
+      <g transform="translate(256 256)" fill={`url(#${gradId})`}>
+        <ellipse rx="85" ry="27.5" />
+        <ellipse rx="85" ry="27.5" transform="rotate(45)" />
+        <ellipse rx="85" ry="27.5" transform="rotate(90)" />
+        <ellipse rx="85" ry="27.5" transform="rotate(135)" />
+      </g>
 
-      {/* AI node dot: the agent connecting to the meeting */}
-      <circle cx="21" cy="14" r="1.75" fill="white" />
+      <circle cx="256" cy="256" r="20" fill="#E5E7EB" />
     </svg>
   );
 }
+
+// Back-compat aliases so existing callsites keep working.
+export const KutanaKMark = KutanaRosetteMark;
+export const KutanaLogoMark = KutanaRosetteMark;
